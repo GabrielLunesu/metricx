@@ -30,16 +30,17 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.models import User, Connection, ProviderEnum
 from app.services.token_service import store_connection_token
+from app.utils.env import require_env  # utility to fetch env vars with mandatory check
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth/meta", tags=["Meta OAuth"])
 
 # OAuth configuration from environment
-META_APP_ID = os.getenv("META_APP_ID")
-META_APP_SECRET = os.getenv("META_APP_SECRET")
-META_REDIRECT_URI = os.getenv("META_OAUTH_REDIRECT_URI", "http://localhost:8000/auth/meta/callback")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+META_APP_ID = require_env("META_APP_ID")
+META_APP_SECRET = require_env("META_APP_SECRET")
+META_REDIRECT_URI = require_env("META_OAUTH_REDIRECT_URI")
+FRONTEND_URL = require_env("FRONTEND_URL")
 
 META_AUTH_URL = "https://www.facebook.com/v24.0/dialog/oauth"
 META_TOKEN_URL = "https://graph.facebook.com/v24.0/oauth/access_token"

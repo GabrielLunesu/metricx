@@ -39,6 +39,53 @@ services:
         reservations:
           memory: 512M
 
+  # RQ Worker - processes sync jobs from Redis queue
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m app.workers.start_worker
+    environment:
+      # Required for worker
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
+      
+      # Google SDK config (required for SDK, not user tokens)
+      GOOGLE_DEVELOPER_TOKEN: ${GOOGLE_DEVELOPER_TOKEN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      
+      # Optional: Only used for /from-env fallback endpoints (OAuth provides these)
+      META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
+      META_AD_ACCOUNT_ID: ${META_AD_ACCOUNT_ID:-}
+      GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN:-}
+      GOOGLE_CUSTOMER_ID: ${GOOGLE_CUSTOMER_ID:-}
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        reservations:
+          memory: 256M
+    restart: always
+
+  # Scheduler - enqueues sync jobs based on connection frequency settings
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m app.services.sync_scheduler
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        reservations:
+          memory: 128M
+    restart: always
+
   frontend:
     domainname: www.adnavi.app
     build:

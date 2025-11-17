@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 import enum
 
-from sqlalchemy import Column, String, DateTime, Enum, Integer, ForeignKey, Numeric, JSON
+from sqlalchemy import Column, String, DateTime, Enum, Integer, ForeignKey, Numeric, JSON, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -160,6 +160,19 @@ class Connection(Base):
     # REFERENCES: docs/living-docs/GOOGLE_INTEGRATION_STATUS.MD (Date & timezone, Currency model)
     timezone = Column(String, nullable=True)
     currency_code = Column(String, nullable=True)
+
+    # Sync automation tracking
+    # WHAT: Fields for managing near-realtime sync jobs and tracking sync health
+    # WHY: Users need control over sync frequency and visibility into sync status
+    # REFERENCES: docs/living-docs/REALTIME_SYNC_STATUS.md
+    sync_frequency = Column(String, default="manual")  # manual, realtime, 30min, hourly, daily
+    last_sync_attempted_at = Column(DateTime, nullable=True)  # Last sync start (success or failure)
+    last_sync_completed_at = Column(DateTime, nullable=True)  # Last successful completion
+    last_metrics_changed_at = Column(DateTime, nullable=True)  # Last actual data change (freshness)
+    total_syncs_attempted = Column(Integer, default=0)  # Counter: all attempts
+    total_syncs_with_changes = Column(Integer, default=0)  # Counter: syncs with DB writes
+    sync_status = Column(String, default="idle")  # idle, syncing, error
+    last_sync_error = Column(Text, nullable=True)  # Error message from last failure
 
     # Foreign key - EVERY connection belongs to exactly ONE workspace
     # This ensures data isolation between different companies

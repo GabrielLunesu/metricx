@@ -266,79 +266,46 @@ export async function ensureMetaConnectionFromEnv() {
   return res.json();
 }
 
-// Sync Meta Ads entities (campaigns, adsets, ads).
-// WHY: UI sync button triggers entity sync.
-// Returns: { success: boolean, synced: { campaigns_created, campaigns_updated, adsets_created, adsets_updated, ads_created, ads_updated, duration_seconds }, errors: [] }
-export async function syncMetaEntities({ workspaceId, connectionId }) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/connections/${connectionId}/sync-entities`, {
+// Enqueue async sync job for a connection.
+// Returns: { job_id, status }
+export async function enqueueSyncJob({ connectionId }) {
+  const res = await fetch(`${BASE}/connections/${connectionId}/sync-now`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
   });
   if (!res.ok) {
     const msg = await res.text();
-    throw new Error(`Failed to sync entities: ${res.status} ${msg}`);
+    throw new Error(`Failed to enqueue sync: ${res.status} ${msg}`);
   }
   return res.json();
 }
 
-// Sync Meta Ads metrics (insights).
-// WHY: UI sync button triggers metrics sync after entities.
-// Returns: { success: boolean, synced: { facts_ingested, facts_skipped, date_range, ads_processed, duration_seconds }, errors: [] }
-export async function syncMetaMetrics({ workspaceId, connectionId, startDate = null, endDate = null, forceRefresh = false }) {
-  const body = {};
-  if (startDate) body.start_date = startDate;
-  if (endDate) body.end_date = endDate;
-  if (forceRefresh) body.force_refresh = forceRefresh;
-  
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/connections/${connectionId}/sync-metrics`, {
-    method: "POST",
+// Update sync frequency.
+export async function updateSyncFrequency({ connectionId, syncFrequency }) {
+  const res = await fetch(`${BASE}/connections/${connectionId}/sync-frequency`, {
+    method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify({ sync_frequency: syncFrequency })
   });
   if (!res.ok) {
     const msg = await res.text();
-    throw new Error(`Failed to sync metrics: ${res.status} ${msg}`);
+    throw new Error(`Failed to update sync frequency: ${res.status} ${msg}`);
   }
   return res.json();
 }
 
-// Sync Google Ads entities (customers' campaigns, ad groups, ads).
-// WHAT: Same endpoint shape as Meta, routed to Google sync on backend.
-// WHY: Parity in UI; separation of concerns via shared path per connection.
-// REFERENCES: backend/app/routers (google_sync planned)
-export async function syncGoogleEntities({ workspaceId, connectionId }) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/connections/${connectionId}/sync-google-entities`, {
-    method: "POST",
+// Fetch sync status for a connection.
+export async function getSyncStatus({ connectionId }) {
+  const res = await fetch(`${BASE}/connections/${connectionId}/sync-status`, {
+    method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
   });
   if (!res.ok) {
     const msg = await res.text();
-    throw new Error(`Failed to sync entities: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-// Sync Google Ads metrics (daily performance).
-// WHAT: 90-day backfill + incremental; same path shape.
-// WHY: Keep UI consistent across providers.
-export async function syncGoogleMetrics({ workspaceId, connectionId, startDate = null, endDate = null, forceRefresh = false }) {
-  const body = {};
-  if (startDate) body.start_date = startDate;
-  if (endDate) body.end_date = endDate;
-  if (forceRefresh) body.force_refresh = forceRefresh;
-  
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/connections/${connectionId}/sync-google-metrics`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Failed to sync metrics: ${res.status} ${msg}`);
+    throw new Error(`Failed to fetch sync status: ${res.status} ${msg}`);
   }
   return res.json();
 }

@@ -264,8 +264,47 @@ class ConnectionOut(BaseModel):
     status: str = Field(description="Connection status")
     connected_at: datetime = Field(description="Connection timestamp")
     workspace_id: UUID = Field(description="Associated workspace ID")
+    sync_frequency: str = Field(description="Sync cadence", default="manual")
+    sync_status: str = Field(description="Sync state", default="idle")
+    last_sync_attempted_at: Optional[datetime] = None
+    last_sync_completed_at: Optional[datetime] = None
+    last_metrics_changed_at: Optional[datetime] = None
+    total_syncs_attempted: int = 0
+    total_syncs_with_changes: int = 0
+    last_sync_error: Optional[str] = None
     
     model_config = {"from_attributes": True}
+
+
+class SyncFrequencyUpdate(BaseModel):
+    """Request body for updating sync frequency."""
+
+    sync_frequency: str = Field(
+        description="Desired frequency: manual, realtime, 30min, hourly, daily",
+        examples=["manual", "realtime", "30min", "hourly", "daily"],
+    )
+
+
+class ConnectionSyncStatus(BaseModel):
+    """Current sync state for a connection."""
+
+    sync_frequency: str
+    sync_status: str
+    last_sync_attempted_at: Optional[datetime] = None
+    last_sync_completed_at: Optional[datetime] = None
+    last_metrics_changed_at: Optional[datetime] = None
+    total_syncs_attempted: int
+    total_syncs_with_changes: int
+    last_sync_error: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class SyncJobResponse(BaseModel):
+    """Response when enqueuing a sync job."""
+
+    job_id: str = Field(description="RQ job identifier")
+    status: str = Field(description="State after enqueue (queued)")
 
 
 # Entity Schemas
