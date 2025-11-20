@@ -42,10 +42,17 @@ META_APP_SECRET = require_env("META_APP_SECRET")
 META_REDIRECT_URI = require_env("META_OAUTH_REDIRECT_URI")
 FRONTEND_URL = require_env("FRONTEND_URL")
 
+# Optional configuration for flexibility
+# Default scopes if not specified in env
+DEFAULT_SCOPES = ["ads_management", "ads_read", "business_management", "read_insights", "email"]
+env_scopes = os.getenv("META_OAUTH_SCOPES")
+META_SCOPES = env_scopes.split(",") if env_scopes else DEFAULT_SCOPES
+
+META_CONFIG_ID = os.getenv("META_OAUTH_CONFIG_ID")
+
 META_AUTH_URL = "https://www.facebook.com/v24.0/dialog/oauth"
 META_TOKEN_URL = "https://graph.facebook.com/v24.0/oauth/access_token"
 META_EXCHANGE_TOKEN_URL = "https://graph.facebook.com/v24.0/oauth/access_token"
-META_SCOPES = ["ads_management", "ads_read", "business_management", "read_insights"]
 
 
 @router.get("/authorize")
@@ -72,11 +79,21 @@ async def meta_authorize(
         "client_id": META_APP_ID,
         "redirect_uri": META_REDIRECT_URI,
         "response_type": "code",
-        "scope": ",".join(META_SCOPES),  # Meta uses comma-separated scopes
         "state": str(current_user.workspace_id),  # Pass workspace ID for callback
     }
+
+    # Use config_id if available (Facebook Login for Business), otherwise use scopes
+    if META_CONFIG_ID:
+        params["config_id"] = META_CONFIG_ID
+        params["override_default_response_type"] = "true"
+        logger.info(f"[META_OAUTH] Using config_id: {META_CONFIG_ID}")
+    else:
+        params["scope"] = ",".join(META_SCOPES)  # Meta uses comma-separated scopes
+        logger.info(f"[META_OAUTH] Using scopes: {params['scope']}")
+    
     
     auth_url = f"{META_AUTH_URL}?{urlencode(params)}"
+    logger.info(f"[META_OAUTH] Generated Auth URL: {auth_url}")
     logger.info(f"[META_OAUTH] Redirecting user {current_user.id} to Meta consent screen")
     
     return RedirectResponse(url=auth_url)

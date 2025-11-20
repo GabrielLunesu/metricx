@@ -2,6 +2,8 @@
 
 **Date**: 2025-11-14  
 **Status**: ✅ Complete and Tested  
+
+> **Note:** General availability sync intervals are now 5min, 10min, 30min, hourly, and daily; the original realtime (30s) path remains in the codebase but is gated via docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md for teams with special access.
 **Migration**: `fe534aa60c90_add_sync_frequency_to_connections` applied
 
 ---
@@ -628,4 +630,3 @@ All success criteria met:
 **Total Time**: ~4 hours  
 **Files Changed**: 21 files (9 created, 12 modified)  
 **Status**: ✅ Ready for Production
-

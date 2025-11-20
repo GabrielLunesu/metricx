@@ -322,10 +322,13 @@ export default function SettingsPage() {
                         className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-200"
                       >
                         <option value="manual">Manual</option>
-                        <option value="realtime">Realtime (~30s)</option>
+                        <option value="5min">Every 5 min</option>
+                        <option value="10min">Every 10 min</option>
                         <option value="30min">Every 30 min</option>
                         <option value="hourly">Hourly</option>
                         <option value="daily">Daily</option>
+                        {/* Realtime (~30s) sync remains in code but requires special access (see docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md) */}
+                        {/* <option value="realtime">Realtime (~30s)</option> */}
                       </select>
                     </div>
 

@@ -280,8 +280,8 @@ class SyncFrequencyUpdate(BaseModel):
     """Request body for updating sync frequency."""
 
     sync_frequency: str = Field(
-        description="Desired frequency: manual, realtime, 30min, hourly, daily",
-        examples=["manual", "realtime", "30min", "hourly", "daily"],
+        description="Desired frequency: manual, 5min, 10min, 30min, hourly, daily (realtime reserved for special access)",
+        examples=["manual", "5min", "10min", "30min", "hourly", "daily"],
     )
 
 

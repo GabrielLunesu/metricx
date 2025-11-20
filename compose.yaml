@@ -19,6 +19,21 @@ services:
       # OpenAI API Key
       OPENAI_API_KEY: 
 
+      # Token Encryption (Required)
+      TOKEN_ENCRYPTION_KEY:
+
+      # Meta OAuth Configuration
+      META_APP_ID:
+      META_APP_SECRET:
+      META_OAUTH_SCOPES: ${META_OAUTH_SCOPES:-}
+      META_OAUTH_CONFIG_ID: ${META_OAUTH_CONFIG_ID:-} 
+
+       # OAuth Redirect URIs - ADD THESE
+      META_OAUTH_REDIRECT_URI:
+      GOOGLE_OAUTH_REDIRECT_URI:
+      FRONTEND_URL: "https://www.adnavi.app"
+      BACKEND_URL:
+
       # Forwarded Allow IPs
       FORWARDED_ALLOW_IPS: "*"
       
@@ -50,6 +65,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
+      JWT_SECRET: ${JWT_SECRET}
       
       # Google SDK config (required for SDK, not user tokens)
       GOOGLE_DEVELOPER_TOKEN: ${GOOGLE_DEVELOPER_TOKEN:-}

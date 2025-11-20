@@ -18,7 +18,7 @@ import logging
 import os
 import time
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 from redis import Redis
 from rq import Queue
@@ -29,9 +29,11 @@ from app.models import Connection
 
 logger = logging.getLogger(__name__)
 
-SYNC_INTERVALS: Dict[str, int] = {
+SYNC_INTERVALS: Dict[str, Optional[int]] = {
     "manual": None,
-    "realtime": 30,       # seconds
+    # "realtime": 30,       # seconds (requires special access per docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md)
+    "5min": 5 * 60,
+    "10min": 10 * 60,
     "30min": 30 * 60,
     "hourly": 60 * 60,
     "daily": 24 * 60 * 60,
@@ -125,4 +127,3 @@ def run_scheduler() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     run_scheduler()
-

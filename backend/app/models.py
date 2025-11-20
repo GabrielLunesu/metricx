@@ -165,7 +165,10 @@ class Connection(Base):
     # WHAT: Fields for managing near-realtime sync jobs and tracking sync health
     # WHY: Users need control over sync frequency and visibility into sync status
     # REFERENCES: docs/living-docs/REALTIME_SYNC_STATUS.md
-    sync_frequency = Column(String, default="manual")  # manual, realtime, 30min, hourly, daily
+    sync_frequency = Column(
+        String,
+        default="manual",
+    )  # manual, 5min, 10min, 30min, hourly, daily (realtime reserved via docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md)
     last_sync_attempted_at = Column(DateTime, nullable=True)  # Last sync start (success or failure)
     last_sync_completed_at = Column(DateTime, nullable=True)  # Last successful completion
     last_metrics_changed_at = Column(DateTime, nullable=True)  # Last actual data change (freshness)

@@ -272,7 +272,15 @@ def enqueue_sync_job(
     return schemas.SyncJobResponse(job_id=job.id, status="queued")
 
 
-VALID_SYNC_FREQUENCIES = {"manual", "realtime", "30min", "hourly", "daily"}
+VALID_SYNC_FREQUENCIES = {
+    "manual",
+    "5min",
+    "10min",
+    "30min",
+    "hourly",
+    "daily",
+    # "realtime",  # 30s interval reserved for power users (see docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md)
+}
 
 
 @router.patch(

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-async def ingest_metrics_internal(
+def ingest_metrics_internal(
     workspace_id: UUID,
     facts: List[MetricFactCreate],
     db: Session
@@ -52,12 +52,12 @@ async def ingest_metrics_internal(
     WHY:
     - meta_sync needs to call ingestion without HTTP/FastAPI dependencies
     - Reuses all ingestion logic (deduplication, entity creation, etc.)
-    
+
     WHAT:
     - Same logic as ingest_metrics endpoint but without auth/HTTP layer
     - Returns dict instead of response model
     - Commits transaction
-    
+
     WHERE:
     - Called by meta_sync.py during metrics synchronization
     - Can be called by other internal services
@@ -499,4 +499,3 @@ def ingest_metrics(
         skipped=skipped,
         errors=errors
     )
-

@@ -20,13 +20,10 @@ from sqlalchemy.orm import sessionmaker, Session
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     # Attempt to load from local .env for developer convenience
-    try:
-        from dotenv import load_dotenv  # type: ignore
-
-        load_dotenv()
-        DATABASE_URL = os.getenv("DATABASE_URL")
-    except Exception:
-        pass
+    # Attempt to load from local .env for developer convenience
+    from app.utils.env import load_env_file
+    load_env_file()
+    DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     # Provide a clear error early if not configured
     raise RuntimeError("DATABASE_URL is not set. Ensure backend/.env is loaded or env var is exported.")

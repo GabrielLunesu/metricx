@@ -34,15 +34,12 @@ logger = logging.getLogger(__name__)
 
 if not JWT_SECRET or not TOKEN_ENCRYPTION_KEY:
     # Attempt to load from local .env if running in dev
-    try:
-        from dotenv import load_dotenv  # type: ignore
-
-        load_dotenv()
-        JWT_SECRET = JWT_SECRET or os.getenv("JWT_SECRET", "")
-        JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRES_MINUTES", "10080"))
-        TOKEN_ENCRYPTION_KEY = TOKEN_ENCRYPTION_KEY or os.getenv("TOKEN_ENCRYPTION_KEY", "")
-    except Exception:
-        pass
+    # Attempt to load from local .env if running in dev
+    from app.utils.env import load_env_file
+    load_env_file()
+    JWT_SECRET = JWT_SECRET or os.getenv("JWT_SECRET", "")
+    JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRES_MINUTES", "10080"))
+    TOKEN_ENCRYPTION_KEY = TOKEN_ENCRYPTION_KEY or os.getenv("TOKEN_ENCRYPTION_KEY", "")
 
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET is not set. Ensure backend/.env is created or env var is exported.")
