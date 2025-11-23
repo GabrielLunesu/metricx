@@ -216,7 +216,7 @@ export async function fetchConnections({ workspaceId, provider = null, status = 
   if (provider) params.set('provider', provider);
   if (status) params.set('status', status);
 
-  const res = await fetch(`${BASE}/connections?${params.toString()}`, {
+  const res = await fetch(`${BASE}/connections/?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
