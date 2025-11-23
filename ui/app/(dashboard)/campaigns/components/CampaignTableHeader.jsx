@@ -1,19 +1,21 @@
 export default function CampaignTableHeader() {
   return (
-    <div className="glass-card rounded-t-3xl border border-b-0 border-neutral-200/60 px-8 py-4 sticky-header">
-      <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-neutral-500 uppercase tracking-wide">
-        <div className="col-span-3">Campaign Name</div>
-        <div className="col-span-1">Platform</div>
-        <div className="col-span-1 text-right">Revenue</div>
-        <div className="col-span-1 text-right">Spend</div>
-        <div className="col-span-1 text-right">ROAS</div>
-        <div className="col-span-1 text-right">Conv.</div>
-        <div className="col-span-1 text-right">CPC</div>
-        <div className="col-span-1 text-right">CTR</div>
-        <div className="col-span-1">Status</div>
-        <div className="col-span-1">Trend</div>
+    <div className="px-6 md:px-8 py-3 border-b border-slate-100 bg-slate-50/80 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+      <div className="grid grid-cols-[40px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,1fr)] gap-4 items-center">
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            className="custom-checkbox cursor-pointer"
+            aria-label="Select all campaigns"
+          />
+        </div>
+        <div>Campaign</div>
+        <div>Platform</div>
+        <div className="text-right">Spend</div>
+        <div className="text-right">Revenue</div>
+        <div className="text-right">ROAS</div>
+        <div className="text-right">Trend</div>
       </div>
     </div>
   );
 }
-

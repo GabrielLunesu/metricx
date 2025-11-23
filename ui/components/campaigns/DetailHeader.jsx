@@ -1,25 +1,45 @@
 import Link from "next/link";
+import StatusPill from "../StatusPill";
+import PlatformBadge from "./PlatformBadge";
 
-export default function DetailHeader({ name, platform, status, timeframe = 'Last 7 days', subtitle, loading }) {
+export default function DetailHeader({
+  name,
+  platform,
+  status,
+  timeframe = "Last 7 days",
+  subtitle,
+  loading,
+}) {
   return (
-    <div className="mb-4">
-      <div className="text-xs text-slate-400 mb-1">
-        <Link href="/campaigns" className="hover:underline">Campaigns</Link> <span className="mx-1">›</span> <span className="text-slate-300">{name}</span>
+    <header className="mb-6">
+      <div className="text-[11px] text-slate-400 mb-2">
+        <Link href="/campaigns" className="hover:underline">
+          Campaigns
+        </Link>
+        <span className="mx-1">›</span>
+        <span className="text-slate-300">{name}</span>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-medium tracking-tight">{name}</h2>
-            {loading ? <span className="text-xs text-cyan-400">Loading…</span> : null}
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+              {name}
+            </h2>
+            {loading && (
+              <span className="text-[11px] text-cyan-500">Loading…</span>
+            )}
           </div>
-          <div className="text-slate-400 text-sm mt-1">{platform} • {status} • {timeframe}</div>
-          <div className="text-xs text-neutral-500 mt-1">{subtitle || 'Last updated —'}</div>
+          <div className="flex items-center gap-3 mt-2 text-xs">
+            <PlatformBadge platform={platform} />
+            <StatusPill status={status} />
+            <span className="text-slate-400">•</span>
+            <span className="text-slate-500">{timeframe}</span>
+          </div>
+          <div className="text-[11px] text-slate-400 mt-2">
+            {subtitle || "Last updated —"}
+          </div>
         </div>
-        {/* <div className="flex items-center gap-2">
-          <button className="rounded-full px-3 py-1.5 text-sm border border-slate-600/40 bg-slate-900/35">Export</button>
-          <button className="rounded-full px-3 py-1.5 text-sm border border-slate-600/40 bg-slate-900/35">Customize</button>
-        </div> */}
       </div>
-    </div>
+    </header>
   );
 }

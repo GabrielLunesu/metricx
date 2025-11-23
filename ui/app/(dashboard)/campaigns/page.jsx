@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { currentUser } from "@/lib/auth";
 import { campaignsApiClient, campaignsAdapter } from "../../../lib";
 import TopToolbar from "./components/TopToolbar";
@@ -103,6 +103,49 @@ export default function CampaignsPage() {
 
   const { rows, meta, pagination } = campaignsData;
 
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const summary = useMemo(() => {
+    if (!rows || rows.length === 0) {
+      return null;
+    }
+    const activeCount = rows.filter((r) => r.status === "active").length;
+    const totalSpend = rows.reduce((sum, r) => sum + (r.spendRaw || 0), 0);
+    const totalRevenue = rows.reduce(
+      (sum, r) => sum + (r.revenueRaw || 0),
+      0
+    );
+    const avgRoas = totalSpend > 0 ? totalRevenue / totalSpend : null;
+
+    const totalSpendFormatted = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(totalSpend || 0);
+
+    const avgRoasFormatted =
+      avgRoas != null && !Number.isNaN(avgRoas)
+        ? `${avgRoas.toFixed(1)}x`
+        : "—";
+
+    return { activeCount, totalSpendFormatted, avgRoasFormatted };
+  }, [rows]);
+
   if (initialLoading) {
     return (
       <div className="p-12 text-center">
@@ -124,7 +167,7 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       <TopToolbar
         meta={meta}
         filters={filters}
@@ -136,53 +179,108 @@ export default function CampaignsPage() {
         onSortChange={handleSortChange}
         onTimeRangeChange={handleTimeRangeChange}
         loading={loading}
+        summary={summary}
       />
 
-      <div className="space-y-0">
+      <div className="rounded-[24px] border border-slate-200 bg-white shadow-lg shadow-slate-200/50 overflow-hidden relative">
         <CampaignTableHeader />
 
-        <div className="space-y-2 pb-2">
+        <div className="divide-y divide-slate-50">
           {loading && (
-            <Card className="rounded-2xl p-8 text-center text-neutral-500">Loading campaigns...</Card>
+            <Card className="rounded-none border-0 p-8 text-center text-neutral-500">
+              Loading campaigns...
+            </Card>
           )}
           {error && (
-            <Card className="rounded-2xl p-8 text-center text-red-500">
+            <Card className="rounded-none border-0 p-8 text-center text-red-500">
               {error}
-              <button onClick={fetchCampaigns} className="ml-2 text-cyan-400 hover:underline">Retry</button>
+              <button
+                onClick={fetchCampaigns}
+                className="ml-2 text-cyan-400 hover:underline"
+              >
+                Retry
+              </button>
             </Card>
           )}
           {!loading && !error && rows.length === 0 && (
-            <Card className="rounded-2xl p-8 text-center text-neutral-500">
+            <Card className="rounded-none border-0 p-8 text-center text-neutral-500">
               No campaigns found for the selected filters and date range.
             </Card>
           )}
-          {!loading && !error && rows.map((row) => (
-            <CampaignRow key={row.id} row={row} onClick={() => handleCampaignClick(row.id)} />
-          ))}
+          {!loading &&
+            !error &&
+            rows.map((row) => (
+              <CampaignRow
+                key={row.id}
+                row={row}
+                selected={selectedIds.has(row.id)}
+                onRowClick={() => handleCampaignClick(row.id)}
+                onSelectToggle={() => toggleSelected(row.id)}
+              />
+            ))}
         </div>
 
         {/* Pagination */}
         {!loading && !error && rows.length > 0 && (
-          <div className="flex items-center justify-between px-3 py-2 text-xs text-slate-400">
+          <div className="flex items-center justify-between px-6 py-3 text-[11px] text-slate-400 border-t border-slate-100 bg-slate-50/60">
             <span>
-              Showing {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} -{" "}
-              {Math.min(pagination.page * pagination.pageSize, pagination.total)} of {pagination.total} campaigns
+              Showing{" "}
+              {Math.min(
+                (pagination.page - 1) * pagination.pageSize + 1,
+                pagination.total
+              )}{" "}
+              -{" "}
+              {Math.min(
+                pagination.page * pagination.pageSize,
+                pagination.total
+              )}{" "}
+              of {pagination.total} campaigns
             </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-2 py-1 rounded-full border border-white/10 hover:border-slate-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed bg-white"
               >
                 Prev
               </button>
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page * pagination.pageSize >= pagination.total}
-                className="px-2 py-1 rounded-full border border-white/10 hover:border-slate-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={
+                  pagination.page * pagination.pageSize >= pagination.total
+                }
+                className="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed bg-white"
               >
                 Next
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Floating bulk actions */}
+        {selectedIds.size > 0 && (
+          <div className="pointer-events-none">
+            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+              <div className="flex items-center gap-4 px-6 py-3 bg-slate-900 text-white rounded-full shadow-xl shadow-slate-900/30 border border-slate-700/60">
+                <span className="text-xs font-medium text-slate-300 border-r border-slate-700 pr-4">
+                  {selectedIds.size} selected
+                </span>
+                <button className="flex items-center gap-2 text-xs font-medium text-slate-200 hover:text-white transition-colors">
+                  Pause
+                </button>
+                <button className="flex items-center gap-2 text-xs font-medium text-slate-200 hover:text-white transition-colors">
+                  Budget +20%
+                </button>
+                <button className="flex items-center gap-2 text-xs font-medium text-slate-200 hover:text-white transition-colors">
+                  Export
+                </button>
+                <button
+                  className="ml-2 p-1 rounded-full hover:bg-slate-800 transition-colors"
+                  onClick={clearSelection}
+                >
+                  <span className="text-slate-400 text-xs">✕</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

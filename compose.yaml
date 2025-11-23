@@ -19,6 +19,21 @@ services:
       # OpenAI API Key
       OPENAI_API_KEY: 
 
+      # Token Encryption (Required)
+      TOKEN_ENCRYPTION_KEY:
+
+      # Meta OAuth Configuration
+      META_APP_ID:
+      META_APP_SECRET:
+      META_OAUTH_SCOPES: ${META_OAUTH_SCOPES:-}
+      META_OAUTH_CONFIG_ID: ${META_OAUTH_CONFIG_ID:-} 
+
+       # OAuth Redirect URIs - ADD THESE
+      META_OAUTH_REDIRECT_URI:
+      GOOGLE_OAUTH_REDIRECT_URI:
+      FRONTEND_URL: "https://www.adnavi.app"
+      BACKEND_URL:
+
       # Forwarded Allow IPs
       FORWARDED_ALLOW_IPS: "*"
       
@@ -39,34 +54,50 @@ services:
         reservations:
           memory: 512M
 
-  frontend:
-    domainname: www.adnavi.app
+  # RQ Worker - processes sync jobs from Redis queue
+  worker:
     build:
-      context: ./ui
+      context: ./backend
       dockerfile: Dockerfile
-      args:
-        # Backend URL passed at build time for Next.js
-        # IMPORTANT: NEXT_PUBLIC_* vars are embedded at build time, not runtime
-        # After backend deploys, get the actual URL from: defang services
-        # Then update this and rebuild frontend: defang compose up frontend
-        NEXT_PUBLIC_API_BASE: "https://t8zgrthold5r2-backend--8000.prod2.defang.dev"
-    ports:
-      - mode: ingress
-        target: 3000
+    command: python -m app.workers.start_worker
     environment:
-      # Note: NEXT_PUBLIC_API_BASE is set at build time via build args above
-      # Runtime env vars won't override NEXT_PUBLIC_* vars in Next.js
-      NODE_ENV: production
-      NEXT_TELEMETRY_DISABLED: "1"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 20s
+      # Required for worker
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      
+      # Google SDK config (required for SDK, not user tokens)
+      GOOGLE_DEVELOPER_TOKEN: ${GOOGLE_DEVELOPER_TOKEN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      
+      # Optional: Only used for /from-env fallback endpoints (OAuth provides these)
+      META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
+      META_AD_ACCOUNT_ID: ${META_AD_ACCOUNT_ID:-}
+      GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN:-}
+      GOOGLE_CUSTOMER_ID: ${GOOGLE_CUSTOMER_ID:-}
     depends_on:
       - backend
     deploy:
       resources:
         reservations:
-          memory: 1G
+          memory: 256M
+    restart: always
+
+  # Scheduler - enqueues sync jobs based on connection frequency settings
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: python -m app.services.sync_scheduler
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        reservations:
+          memory: 128M
+    restart: always

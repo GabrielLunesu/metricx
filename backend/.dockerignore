@@ -25,3 +25,7 @@ defang
 defang.exe
 # Ignore our project-level state
 .defang
+
+# Local environment files
+.env
+.env.*

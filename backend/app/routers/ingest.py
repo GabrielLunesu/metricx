@@ -34,13 +34,14 @@ from ..database import get_db
 from ..deps import get_current_user
 from ..schemas import MetricFactCreate, MetricFactIngestResponse, UserOut
 from ..models import MetricFact, Entity, Import, Fetch, Connection, Workspace
+from app.services.sync_comparison import has_metrics_changed
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-async def ingest_metrics_internal(
+def ingest_metrics_internal(
     workspace_id: UUID,
     facts: List[MetricFactCreate],
     db: Session
@@ -51,12 +52,12 @@ async def ingest_metrics_internal(
     WHY:
     - meta_sync needs to call ingestion without HTTP/FastAPI dependencies
     - Reuses all ingestion logic (deduplication, entity creation, etc.)
-    
+
     WHAT:
     - Same logic as ingest_metrics endpoint but without auth/HTTP layer
     - Returns dict instead of response model
     - Commits transaction
-    
+
     WHERE:
     - Called by meta_sync.py during metrics synchronization
     - Can be called by other internal services
@@ -117,22 +118,25 @@ async def ingest_metrics_internal(
             ).first()
             
             if existing_fact:
-                # Update existing fact instead of skipping
-                existing_fact.spend = fact.spend
-                existing_fact.impressions = fact.impressions
-                existing_fact.clicks = fact.clicks
-                existing_fact.conversions = fact.conversions
-                existing_fact.revenue = fact.revenue
-                existing_fact.leads = fact.leads
-                existing_fact.installs = fact.installs
-                existing_fact.purchases = fact.purchases
-                existing_fact.visitors = fact.visitors
-                existing_fact.profit = fact.profit
-                existing_fact.currency = fact.currency
-                existing_fact.import_id = import_record.id
-                existing_fact.ingested_at = datetime.now(timezone.utc)
-                ingested += 1
-                logger.debug(f"[INGEST] Updated existing fact: {natural_key}")
+                if has_metrics_changed(existing_fact, fact):
+                    existing_fact.spend = fact.spend
+                    existing_fact.impressions = fact.impressions
+                    existing_fact.clicks = fact.clicks
+                    existing_fact.conversions = fact.conversions
+                    existing_fact.revenue = fact.revenue
+                    existing_fact.leads = fact.leads
+                    existing_fact.installs = fact.installs
+                    existing_fact.purchases = fact.purchases
+                    existing_fact.visitors = fact.visitors
+                    existing_fact.profit = fact.profit
+                    existing_fact.currency = fact.currency
+                    existing_fact.import_id = import_record.id
+                    existing_fact.ingested_at = datetime.now(timezone.utc)
+                    ingested += 1
+                    logger.debug(f"[INGEST] Updated existing fact: {natural_key}")
+                else:
+                    skipped += 1
+                    logger.debug(f"[INGEST] No changes for fact: {natural_key}")
             else:
                 # Create new MetricFact
                 metric_fact = MetricFact(
@@ -495,4 +499,3 @@ def ingest_metrics(
         skipped=skipped,
         errors=errors
     )
-

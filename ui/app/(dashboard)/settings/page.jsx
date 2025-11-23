@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Settings, RefreshCw, ExternalLink, Calendar, Trash2, AlertTriangle } from 'lucide-react';
 import { currentUser } from '@/lib/auth';
-import { fetchConnections, ensureGoogleConnectionFromEnv, ensureMetaConnectionFromEnv, deleteUserAccount, deleteConnection } from '@/lib/api';
+import { fetchConnections, ensureGoogleConnectionFromEnv, ensureMetaConnectionFromEnv, deleteUserAccount, deleteConnection, updateSyncFrequency } from '@/lib/api';
 import MetaSyncButton from '@/components/MetaSyncButton';
 import GoogleSyncButton from '@/components/GoogleSyncButton';
 import GoogleConnectButton from '@/components/GoogleConnectButton';
@@ -30,6 +30,25 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deletingConnectionId, setDeletingConnectionId] = useState(null);
+  const [frequencySavingId, setFrequencySavingId] = useState(null);
+
+  const refreshConnectionsList = async (workspaceId, mounted = true) => {
+    let connectionsData = await fetchConnections({ workspaceId });
+
+    const hasGoogle = (connectionsData.connections || []).some(c => c.provider === 'google');
+    if (!hasGoogle) {
+      await ensureGoogleConnectionFromEnv();
+      connectionsData = await fetchConnections({ workspaceId });
+    }
+
+    const hasMeta = (connectionsData.connections || []).some(c => c.provider === 'meta');
+    if (!hasMeta) {
+      await ensureMetaConnectionFromEnv();
+      connectionsData = await fetchConnections({ workspaceId });
+    }
+
+    if (mounted) setConnections(connectionsData.connections || []);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -42,23 +61,7 @@ export default function SettingsPage() {
         setUser(currentUserData);
 
         if (currentUserData?.workspace_id) {
-          let connectionsData = await fetchConnections({ workspaceId: currentUserData.workspace_id });
-
-          // If Google connection missing, attempt to create from env (no-op if env missing)
-          const hasGoogle = (connectionsData.connections || []).some(c => c.provider === 'google');
-          if (!hasGoogle) {
-            await ensureGoogleConnectionFromEnv();
-            connectionsData = await fetchConnections({ workspaceId: currentUserData.workspace_id });
-          }
-
-          // If Meta connection missing, attempt to create from env (no-op if env missing)
-          const hasMeta = (connectionsData.connections || []).some(c => c.provider === 'meta');
-          if (!hasMeta) {
-            await ensureMetaConnectionFromEnv();
-            connectionsData = await fetchConnections({ workspaceId: currentUserData.workspace_id });
-          }
-
-          if (mounted) setConnections(connectionsData.connections || []);
+          await refreshConnectionsList(currentUserData.workspace_id, mounted);
         }
       } catch (err) {
         if (mounted) {
@@ -80,11 +83,10 @@ export default function SettingsPage() {
   }, []);
 
   const handleSyncComplete = () => {
-    // Refresh connections after sync
     if (user?.workspace_id) {
-      fetchConnections({ workspaceId: user.workspace_id })
-        .then(data => setConnections(data.connections || []))
-        .catch(err => console.error('Failed to refresh connections:', err));
+      refreshConnectionsList(user.workspace_id).catch((err) =>
+        console.error('Failed to refresh connections:', err)
+      );
     }
   };
 
@@ -105,6 +107,19 @@ export default function SettingsPage() {
       alert('Failed to delete connection: ' + (err.message || 'Unknown error'));
     } finally {
       setDeletingConnectionId(null);
+    }
+  };
+
+  const handleFrequencyChange = async (connectionId, value) => {
+    if (!user?.workspace_id) return;
+    setFrequencySavingId(connectionId);
+    try {
+      await updateSyncFrequency({ connectionId, syncFrequency: value });
+      await refreshConnectionsList(user.workspace_id);
+    } catch (err) {
+      alert('Failed to update frequency: ' + (err.message || 'Unknown error'));
+    } finally {
+      setFrequencySavingId(null);
     }
   };
 
@@ -291,25 +306,71 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                {/* Sync Button for Meta Ads */}
-                {connection.provider === 'meta' && connection.status === 'active' && (
-                  <div className="mt-4 pt-4 border-t border-neutral-200">
-                    <MetaSyncButton
-                      workspaceId={user.workspace_id}
-                      connectionId={connection.id}
-                      onSyncComplete={handleSyncComplete}
-                    />
-                  </div>
-                )}
+                {connection.status === 'active' && (
+                  <div className="mt-4 pt-4 border-t border-neutral-200 space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-neutral-900">Sync Frequency</p>
+                        <p className="text-xs text-neutral-500">
+                          Choose how often AdNavi automatically syncs this account.
+                        </p>
+                      </div>
+                      <select
+                        value={connection.sync_frequency || 'manual'}
+                        disabled={frequencySavingId === connection.id}
+                        onChange={(e) => handleFrequencyChange(connection.id, e.target.value)}
+                        className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-200"
+                      >
+                        <option value="manual">Manual</option>
+                        <option value="5min">Every 5 min</option>
+                        <option value="10min">Every 10 min</option>
+                        <option value="30min">Every 30 min</option>
+                        <option value="hourly">Hourly</option>
+                        <option value="daily">Daily</option>
+                        {/* Realtime (~30s) sync remains in code but requires special access (see docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md) */}
+                        {/* <option value="realtime">Realtime (~30s)</option> */}
+                      </select>
+                    </div>
 
-                {/* Sync Button for Google Ads */}
-                {connection.provider === 'google' && connection.status === 'active' && (
-                  <div className="mt-4 pt-4 border-t border-neutral-200">
-                    <GoogleSyncButton
-                      workspaceId={user.workspace_id}
-                      connectionId={connection.id}
-                      onSyncComplete={handleSyncComplete}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-neutral-600">
+                      <div>
+                        <p className="text-neutral-500 uppercase tracking-wide text-[10px]">Status</p>
+                        <p className="font-medium text-neutral-900">{connection.sync_status || 'idle'}</p>
+                      </div>
+                      <div>
+                        <p className="text-neutral-500 uppercase tracking-wide text-[10px]">Last Attempt</p>
+                        <p className="font-medium">{formatDate(connection.last_sync_attempted_at)}</p>
+                      </div>
+                      <div>
+                        <p className="text-neutral-500 uppercase tracking-wide text-[10px]">Last Change</p>
+                        <p className="font-medium">{formatDate(connection.last_metrics_changed_at)}</p>
+                      </div>
+                    </div>
+
+                    {connection.last_sync_error && (
+                      <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">
+                        Last error: {connection.last_sync_error}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="text-xs text-neutral-500 flex-1">
+                        Attempts: {connection.total_syncs_attempted} · With Changes: {connection.total_syncs_with_changes}
+                      </div>
+                      {connection.provider === 'meta' ? (
+                        <MetaSyncButton
+                          workspaceId={user.workspace_id}
+                          connectionId={connection.id}
+                          onSyncComplete={handleSyncComplete}
+                        />
+                      ) : (
+                        <GoogleSyncButton
+                          workspaceId={user.workspace_id}
+                          connectionId={connection.id}
+                          onSyncComplete={handleSyncComplete}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

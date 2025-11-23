@@ -12,6 +12,8 @@ from ..deps import get_current_user
 from ..models import User, Connection, Workspace, ProviderEnum
 from ..services.token_service import store_connection_token
 from ..services.google_ads_client import GAdsClient
+from redis import Redis
+from rq import Queue
 import os
 from datetime import datetime
 
@@ -219,6 +221,114 @@ def ensure_meta_connection_from_env(
     db.commit()
     db.refresh(connection)
     return connection
+
+
+def _get_connection_for_workspace(
+    db: Session,
+    workspace_id: UUID,
+    connection_id: UUID,
+) -> Connection:
+    connection = (
+        db.query(Connection)
+        .filter(
+            Connection.id == connection_id,
+            Connection.workspace_id == workspace_id,
+        )
+        .first()
+    )
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    return connection
+
+
+@router.post(
+    "/{connection_id}/sync-now",
+    response_model=schemas.SyncJobResponse,
+    summary="Enqueue an immediate sync job for this connection",
+)
+def enqueue_sync_job(
+    connection_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    connection = _get_connection_for_workspace(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        connection_id=connection_id,
+    )
+
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    queue = Queue("sync_jobs", connection=Redis.from_url(redis_url))
+    job = queue.enqueue(
+        "app.workers.sync_worker.process_sync_job",
+        str(connection.id),
+        str(connection.workspace_id),
+    )
+
+    connection.sync_status = "queued"
+    connection.last_sync_error = None
+    db.commit()
+
+    return schemas.SyncJobResponse(job_id=job.id, status="queued")
+
+
+VALID_SYNC_FREQUENCIES = {
+    "manual",
+    "5min",
+    "10min",
+    "30min",
+    "hourly",
+    "daily",
+    # "realtime",  # 30s interval reserved for power users (see docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md)
+}
+
+
+@router.patch(
+    "/{connection_id}/sync-frequency",
+    response_model=schemas.ConnectionSyncStatus,
+    summary="Update automated sync frequency",
+)
+def update_sync_frequency(
+    connection_id: UUID,
+    payload: schemas.SyncFrequencyUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if payload.sync_frequency not in VALID_SYNC_FREQUENCIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid sync_frequency. Allowed: {', '.join(sorted(VALID_SYNC_FREQUENCIES))}",
+        )
+
+    connection = _get_connection_for_workspace(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        connection_id=connection_id,
+    )
+
+    connection.sync_frequency = payload.sync_frequency
+    db.commit()
+    db.refresh(connection)
+
+    return schemas.ConnectionSyncStatus.model_validate(connection)
+
+
+@router.get(
+    "/{connection_id}/sync-status",
+    response_model=schemas.ConnectionSyncStatus,
+    summary="Get sync status for a connection",
+)
+def get_sync_status(
+    connection_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    connection = _get_connection_for_workspace(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        connection_id=connection_id,
+    )
+    return schemas.ConnectionSyncStatus.model_validate(connection)
 
 
 @router.post(

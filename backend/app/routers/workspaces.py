@@ -4,7 +4,7 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 
 from .. import schemas
@@ -339,6 +339,7 @@ def get_workspace_campaigns(
     # Build query for campaigns
     query = (
         db.query(Entity)
+        .options(joinedload(Entity.connection))
         .filter(Entity.workspace_id == workspace_uuid)
         .filter(Entity.level == LevelEnum.campaign)
     )
@@ -348,12 +349,9 @@ def get_workspace_campaigns(
         query = query.filter(Entity.status == entity_status)
     
     # Filter by provider if provided
-    if provider:
-        # Get campaigns that have facts from this provider
-        query = (
-            query.join(MetricFact, MetricFact.entity_id == Entity.id)
-            .filter(MetricFact.provider == provider)
-        )
+    if provider and provider != "all":
+        query = query.join(MetricFact, MetricFact.entity_id == Entity.id)
+        query = query.filter(MetricFact.provider == provider)
     
     # Execute query and get distinct campaigns
     campaigns = query.distinct().all()
@@ -363,7 +361,8 @@ def get_workspace_campaigns(
             {
                 "id": str(c.id),
                 "name": c.name,
-                "status": c.status  # Already a string, not an enum
+                "status": c.status,  # Already a string, not an enum
+                "platform": c.connection.provider.value if c.connection and c.connection.provider else None
             }
             for c in campaigns
         ]

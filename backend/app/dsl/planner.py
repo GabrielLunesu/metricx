@@ -179,8 +179,17 @@ def build_plan(query: MetricQuery) -> Optional[Plan]:
     
     if query.time_range.start and query.time_range.end:
         # Absolute date range provided
+        # Ensure they're date objects (Pydantic should handle this, but be defensive)
         start = query.time_range.start
         end = query.time_range.end
+        
+        # Convert strings to date objects if needed
+        if isinstance(start, str):
+            from datetime import datetime as dt
+            start = dt.fromisoformat(start).date()
+        if isinstance(end, str):
+            from datetime import datetime as dt
+            end = dt.fromisoformat(end).date()
     else:
         # Relative date range (last_n_days)
         timeframe_desc = query.timeframe_description.lower() if query.timeframe_description else ""

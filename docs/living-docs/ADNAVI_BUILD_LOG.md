@@ -210,7 +210,7 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 - Data Viz: KPIStatCard, Sparkline, LineChart
 - Panels: NotificationsPanel, NotificationItem, CompanyCard, VisitorsChartCard, UseCasesList, UseCaseItem
 - Primitives: Card, IconBadge, KeyValue
-- Utils: cn.js, lib/api.js (KPI data fetching, workspace info)
+- Utils: cn.js, lib/api.js (KPIs, workspace info, entity performance, QA)
 - Sections: components/sections/HomeKpiStrip.jsx (container for dashboard KPIs)
  - Assist: AssistantSection (greeting + prompt + quick actions)
  - Analytics (page-specific):
@@ -798,6 +798,26 @@ QA System & UI Dashboards (Already Working ✅)
 | - 2025-10-11T20:30:00Z — **FEATURE**: Finance & P&L Backend Integration ✅ — Real-time P&L from MetricFact + manual costs with strict SoC.
   - **Overview**: Connected Finance page to backend with zero business logic in UI; all calculations server-side
   - **Data source**: MetricFact (real-time ad spend) + ManualCost (user costs) for complete P&L view
+
+### 2025-11-23T13:30:00Z — **UI POLISH**: Campaigns Toolbar Visibility & API Enhancements ✅ — Improved filter contrast and extended API capabilities.
+
+**Summary**: Addressed user feedback regarding visibility of selected filters in the Campaigns toolbar by switching to high-contrast styling (black text). Enhanced API client with new entity performance fetching and QA context support.
+
+**Files Modified**:
+- `ui/app/(dashboard)/campaigns/components/TopToolbar.jsx`:
+  - Updated "All Status" filter to use `bg-slate-100 text-slate-900` (was dark bg).
+  - Updated Platform filter to use `text-black` when selected.
+  - Updated Time Range pills to use `font-black` and `text-slate-900`.
+  - Darkened subtitle text for better readability.
+- `ui/lib/api.js`:
+  - Added `fetchEntityPerformance` function (migrating/consolidating from campaignsApiClient?).
+  - Updated `fetchWorkspaceKpis` to support `campaignId` filtering.
+  - Updated `fetchQA` to accept `context` object for follow-up questions.
+- `ui/components/finance/FinanceHeader.jsx`: Minor formatting fix.
+
+**Impact**:
+- **UX**: Much better visibility for selected filter states in the Campaigns view.
+- **Dev**: API client now supports more granular fetching (campaign-level KPIs) and better QA context handling.
   - **Pnl table**: Kept for future EOD locking but not used in Finance page initially (optimization opportunity)
   - **Architecture**: Thin API client → Adapter → UI components (strict separation of concerns)
   - **Files created (backend)**:

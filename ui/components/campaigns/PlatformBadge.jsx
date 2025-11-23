@@ -1,20 +1,36 @@
-export default function PlatformBadge({ platform }) {
-  const config = {
-    meta: { color: 'bg-blue-500', letter: 'M', label: 'Meta' },
-    google: { color: 'bg-red-500', letter: 'G', label: 'Google' },
-    tiktok: { color: 'bg-black', letter: 'T', label: 'TikTok' },
-  };
+import { Facebook, Instagram, Youtube, Search } from "lucide-react";
 
-  // Normalize platform name to lowercase key
-  const normalizedPlatform = platform?.toLowerCase().replace(/\s+ads?$/i, '').trim();
-  const badge = config[normalizedPlatform] || { color: 'bg-slate-400', letter: platform?.[0]?.toUpperCase() || '?', label: platform };
+export default function PlatformBadge({ platform }) {
+  const normalized =
+    platform?.toLowerCase().replace(/\s+ads?$/i, "").trim() || "";
+
+  let label = platform || "—";
+  let dotColor = "bg-slate-400";
+  let Icon = null;
+
+  if (normalized === "meta" || normalized === "facebook") {
+    label = "Meta";
+    dotColor = "bg-blue-500";
+    Icon = Facebook;
+  } else if (normalized === "instagram") {
+    label = "Meta";
+    dotColor = "bg-purple-500";
+    Icon = Instagram;
+  } else if (normalized === "google") {
+    label = "Google";
+    dotColor = "bg-blue-500";
+    Icon = Search;
+  } else if (normalized === "youtube") {
+    label = "YouTube";
+    dotColor = "bg-red-500";
+    Icon = Youtube;
+  }
 
   return (
-    <span 
-      className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${badge.color} text-white text-xs font-semibold shadow-sm`}
-      title={badge.label}
-    >
-      {badge.letter}
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-[10px] font-medium text-slate-600">
+      <span className={`w-1 h-1 rounded-full ${dotColor}`} />
+      {Icon && <Icon className="w-3 h-3 text-slate-500" />}
+      <span>{label}</span>
     </span>
   );
 }

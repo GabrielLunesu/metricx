@@ -35,11 +35,11 @@ router = APIRouter(
     
     This endpoint:
     - Creates a new workspace named "New workspace" for the user
-    - Creates a user with Admin role (temporary default)
+    - Creates a user with Owner role (temporary default)
     - Stores encrypted password credentials
     - Returns user information without auto-login
     
-    **Note**: All new users are currently given Admin role. This will be updated
+    **Note**: All new users are currently given Owner role. This will be updated
     in the future to support invitation-based role assignment.
     """,
     responses={
@@ -52,7 +52,7 @@ router = APIRouter(
                         "id": "123e4567-e89b-12d3-a456-426614174000",
                         "email": "john.doe@company.com",
                         "name": "john.doe",
-                        "role": "Admin",
+                        "role": "Owner",
                         "workspace_id": "456e7890-e89b-12d3-a456-426614174001"
                     }
                 }
@@ -74,7 +74,7 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 
     - If email already exists, respond with 400.
     - Create a `Workspace` named "New workspace".
-    - Create `User` with role Admin (temporary default) and a simple `name` derived from email.
+    - Create `User` with role Owner (temporary default) and a simple `name` derived from email.
     - Create `AuthCredential` storing the bcrypt hash.
     - Do not auto-login.
     """
@@ -90,12 +90,12 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     # Use local-part as a friendly default name
     default_name = payload.email.split("@")[0]
 
-    # NOTE: All users are Admin for now; tighten later with invites/roles
+    # NOTE: All users are Owner for now; tighten later with invites/roles
     user = User(
         email=payload.email,
         name=default_name,
-        # Persist Admin temporarily for all signups (future: invites/roles)
-        role=RoleEnum.admin,
+        # Persist Owner temporarily for all signups (future: invites/roles)
+        role=RoleEnum.owner,
         workspace_id=workspace.id,
     )
     db.add(user)
@@ -138,7 +138,7 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
                             "id": "123e4567-e89b-12d3-a456-426614174000",
                             "email": "john.doe@company.com",
                             "name": "John Doe",
-                            "role": "Admin",
+                            "role": "Owner",
                             "workspace_id": "456e7890-e89b-12d3-a456-426614174001"
                         }
                     }
@@ -451,5 +451,3 @@ def delete_account(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete account: {str(e)}"
         )
-
-

@@ -321,12 +321,16 @@ def _execute_metrics_plan(
     
     if plan.need_timeseries:
         # Use UnifiedMetricService for consistent timeseries
-        timeseries_points = service.get_timeseries(
+        timeseries_dict = service.get_timeseries(
             workspace_id=workspace_id,
             metrics=metrics,
             time_range=time_range,
             filters=filters
         )
+        
+        # Extract timeseries for the primary metric
+        # get_timeseries now returns Dict[str, List[MetricTimePoint]]
+        timeseries_points = timeseries_dict.get(metric_name, [])
         
         # Convert to expected format
         timeseries = [
@@ -483,7 +487,7 @@ def _execute_multi_metric_plan(
     
     if plan.need_timeseries:
         # Use UnifiedMetricService for consistent timeseries
-        timeseries_points = service.get_timeseries(
+        timeseries_dict = service.get_timeseries(
             workspace_id=workspace_id,
             metrics=metrics,
             time_range=time_range,
@@ -491,6 +495,11 @@ def _execute_multi_metric_plan(
         )
         
         # Convert to expected format
+        # For multi-metric, we'll return timeseries for the first metric
+        # (or we could return all metrics' timeseries)
+        primary_metric = metrics[0]
+        timeseries_points = timeseries_dict.get(primary_metric, [])
+        
         timeseries = [
             {
                 "date": point.date,
