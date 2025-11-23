@@ -229,10 +229,10 @@ export default function AnalyticsHeader({
                     </div>
 
                     {/* Date Picker */}
-                    <div className="relative z-50">
+                    <div className="relative z-50 w-full sm:w-auto">
                         <button
                             onClick={() => setShowDateMenu(!showDateMenu)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-cyan-300 hover:shadow-md transition-all text-xs font-semibold text-slate-700"
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-cyan-300 hover:shadow-md transition-all text-xs font-semibold text-slate-700 w-full sm:w-auto"
                         >
                             <Calendar className="w-4 h-4 text-slate-400" />
                             {getDateLabel()}
@@ -240,7 +240,7 @@ export default function AnalyticsHeader({
                         </button>
 
                         {showDateMenu && (
-                            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-[100] animate-scale-up origin-top-right">
+                            <div className="absolute left-0 right-0 sm:left-auto sm:right-0 mt-2 w-full sm:w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-[100] animate-scale-up origin-top-right">
                                 {!showCustomDate ? (
                                     <>
                                         <button onClick={() => handleDateSelect('today')} className="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-sm text-slate-700 font-medium transition-colors">Today</button>
@@ -249,25 +249,41 @@ export default function AnalyticsHeader({
                                         <button onClick={() => handleDateSelect('7d')} className="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-sm text-slate-700 font-medium transition-colors">Last 7 Days</button>
                                         <button onClick={() => handleDateSelect('30d')} className="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-sm text-slate-700 font-medium transition-colors">Last 30 Days</button>
                                         <div className="h-px bg-slate-100 my-1"></div>
-                                        <button onClick={() => handleDateSelect('custom')} className="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-sm text-slate-700 font-medium transition-colors flex justify-between items-center">
-                                            Custom Range <ChevronDown className="w-3 h-3 -rotate-90" />
-                                        </button>
+                                        <button onClick={() => setShowCustomDate(true)} className="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-sm text-cyan-600 font-semibold transition-colors">Custom Range...</button>
                                     </>
                                 ) : (
                                     <div className="p-2">
-                                        <button onClick={() => setShowCustomDate(false)} className="text-xs text-slate-400 hover:text-slate-600 mb-3 flex items-center gap-1">
-                                            <ChevronDown className="w-3 h-3 rotate-90" /> Back
-                                        </button>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-sm font-semibold text-slate-900">Custom Range</h3>
+                                            <button onClick={() => setShowCustomDate(false)} className="text-slate-400 hover:text-slate-600">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="text-[10px] font-bold text-slate-400 uppercase">Start Date</label>
-                                                <input type="date" value={tempStart} onChange={(e) => setTempStart(e.target.value)} className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-cyan-400" />
+                                                <label className="block text-xs font-medium text-slate-600 mb-1">Start Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={tempStart}
+                                                    onChange={(e) => setTempStart(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                                />
                                             </div>
                                             <div>
-                                                <label className="text-[10px] font-bold text-slate-400 uppercase">End Date</label>
-                                                <input type="date" value={tempEnd} onChange={(e) => setTempEnd(e.target.value)} className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-cyan-400" />
+                                                <label className="block text-xs font-medium text-slate-600 mb-1">End Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={tempEnd}
+                                                    onChange={(e) => setTempEnd(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                                />
                                             </div>
-                                            <button onClick={applyCustomDate} className="w-full py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-xs font-bold shadow-lg shadow-cyan-200 transition-all">Apply Range</button>
+                                            <button
+                                                onClick={applyCustomDate}
+                                                className="w-full px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg text-sm font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all shadow-sm"
+                                            >
+                                                Apply
+                                            </button>
                                         </div>
                                     </div>
                                 )}

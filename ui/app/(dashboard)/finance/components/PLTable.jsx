@@ -40,26 +40,33 @@ export default function PLTable({
       currency: "USD",
     }).format(value);
 
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+  const monthName = monthNames[selectedMonth - 1];
+
   return (
-    <div className="glass-card rounded-xl overflow-hidden flex flex-col h-full border border-slate-200 shadow-sm bg-white">
-      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white/80">
+    <div className="glass-card rounded-2xl overflow-hidden flex flex-col h-full border border-slate-200 shadow-sm bg-white">
+      <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-br from-white to-slate-50/50">
         <div>
-          <h2 className="text-sm font-semibold text-slate-800">
-            Profit &amp; Loss Statement
+          <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            Profit & Loss Statement
+            <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">
+              {monthName}
+            </span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Line items for ad spend and manual costs
           </p>
         </div>
         <button
           onClick={onAddCost}
-          className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[11px] font-semibold border border-blue-100 hover:bg-blue-100 transition-colors"
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold hover:from-blue-600 hover:to-blue-700 shadow-sm shadow-blue-500/20 hover:shadow-md hover:shadow-blue-500/30 transition-all"
         >
-          Add Cost
+          + Add Cost
         </button>
       </div>
 
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 overflow-x-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] uppercase text-slate-400 font-semibold tracking-wider">
@@ -79,13 +86,13 @@ export default function PLTable({
               const categoryCosts = row.isManual
                 ? manualCosts.filter((c) => c.category === row.category)
                 : [];
+              const singleManualCost = categoryCosts.length === 1 ? categoryCosts[0] : null;
 
               return (
                 <tr
                   key={row.id}
-                  className={`${
-                    isLastRow ? "border-b-2 border-slate-200" : "border-b border-slate-100"
-                  } transition-all ${isExcluded ? "opacity-50" : ""}`}
+                  className={`${isLastRow ? "border-b-2 border-slate-200" : "border-b border-slate-100"
+                    } transition-all ${isExcluded ? "opacity-50" : ""}`}
                 >
                   <td className="text-center py-3 px-6">
                     <input
@@ -99,22 +106,25 @@ export default function PLTable({
                     <div
                       onClick={() =>
                         row.isManual &&
-                        setActiveDropdown(isDropdownOpen ? null : row.id)
+                        (singleManualCost
+                          ? onEditCost?.(singleManualCost)
+                          : setActiveDropdown(isDropdownOpen ? null : row.id))
                       }
                       className={row.isManual ? "cursor-pointer" : ""}
                     >
                       <p
-                        className={`text-sm font-medium ${
-                          isExcluded
-                            ? "line-through text-slate-400"
-                            : "text-slate-700"
-                        }`}
+                        className={`text-sm font-medium ${isExcluded
+                          ? "line-through text-slate-400"
+                          : "text-slate-700"
+                          }`}
                       >
                         {row.category}
                       </p>
                       {row.isManual && (
                         <p className="text-[11px] text-blue-500 mt-0.5 hover:text-blue-600">
-                          Manual entry - click to manage
+                          {singleManualCost
+                            ? "Manual entry - click to edit"
+                            : "Manual entry - click to manage"}
                         </p>
                       )}
                     </div>
@@ -130,11 +140,10 @@ export default function PLTable({
                   </td>
                   <td className="text-right py-3 px-6 font-mono">
                     <span
-                      className={`text-sm font-semibold ${
-                        isExcluded
-                          ? "line-through text-slate-400"
-                          : "text-slate-800"
-                      }`}
+                      className={`text-sm font-semibold ${isExcluded
+                        ? "line-through text-slate-400"
+                        : "text-slate-800"
+                        }`}
                     >
                       {row.actual}
                     </span>

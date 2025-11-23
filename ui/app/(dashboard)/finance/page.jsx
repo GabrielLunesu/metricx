@@ -37,7 +37,7 @@ export default function FinancePage() {
   // Auth state
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  
+
   // UI state
   const [compareEnabled, setCompareEnabled] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
@@ -51,7 +51,7 @@ export default function FinancePage() {
   const [showAddCost, setShowAddCost] = useState(false);
   const [editingCost, setEditingCost] = useState(null);
   const [manualCosts, setManualCosts] = useState([]);
-  
+
   // Get current user
   useEffect(() => {
     let mounted = true;
@@ -71,11 +71,11 @@ export default function FinancePage() {
       mounted = false;
     };
   }, []);
-  
+
   // Fetch manual costs when user loads
   useEffect(() => {
     if (!user) return;
-    
+
     async function fetchManualCosts() {
       try {
         const { listManualCosts } = await import("@/lib/financeApiClient");
@@ -85,24 +85,24 @@ export default function FinancePage() {
         console.error('Failed to fetch manual costs:', err);
       }
     }
-    
+
     fetchManualCosts();
   }, [user]);
-  
+
   // Fetch P&L data when user/period/compare changes
   useEffect(() => {
     if (!user) return;
-    
+
     async function fetchData() {
       setLoading(true);
       setError(null);
-      
+
       try {
         const { periodStart, periodEnd } = getPeriodDatesForMonth(
           selectedPeriod.year,
           selectedPeriod.month
         );
-        
+
         const apiResponse = await getPnLStatement({
           workspaceId: user.workspace_id,
           granularity: 'month',
@@ -110,7 +110,7 @@ export default function FinancePage() {
           periodEnd,
           compare: compareEnabled
         });
-        
+
         const adapted = adaptPnLStatement(apiResponse);
         setViewModel(adapted);
       } catch (err) {
@@ -120,19 +120,19 @@ export default function FinancePage() {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, [user, selectedPeriod, compareEnabled]);
-  
+
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
     setExcludedRows(new Set()); // Reset excluded rows when changing periods
   };
-  
+
   const handleCompareToggle = (enabled) => {
     setCompareEnabled(enabled);
   };
-  
+
   const handleRowToggle = (rowId) => {
     setExcludedRows(prev => {
       const newSet = new Set(prev);
@@ -150,12 +150,12 @@ export default function FinancePage() {
     setEditingCost(null);
     setShowAddCost(true);
   };
-  
+
   const handleEditCost = (cost) => {
     setEditingCost(cost);
     setShowAddCost(true);
   };
-  
+
   const handleSubmitCost = async (payload) => {
     try {
       if (editingCost) {
@@ -171,15 +171,15 @@ export default function FinancePage() {
         const { createManualCost } = await import("@/lib/financeApiClient");
         await createManualCost({ workspaceId: user.workspace_id, cost: payload });
       }
-      
+
       setShowAddCost(false);
       setEditingCost(null);
-      
+
       // Refetch manual costs
       const { listManualCosts } = await import("@/lib/financeApiClient");
       const costs = await listManualCosts({ workspaceId: user.workspace_id });
       setManualCosts(costs);
-      
+
       // Refetch P&L
       const { periodStart, periodEnd } = getPeriodDatesForMonth(
         selectedPeriod.year,
@@ -199,17 +199,20 @@ export default function FinancePage() {
       alert('Failed to save cost: ' + err.message);
     }
   };
-  
+
   const handleDeleteCost = async (costId) => {
     try {
       const { deleteManualCost } = await import("@/lib/financeApiClient");
       await deleteManualCost({ workspaceId: user.workspace_id, costId });
-      
+
+      setShowAddCost(false);
+      setEditingCost(null);
+
       // Refetch manual costs
       const { listManualCosts } = await import("@/lib/financeApiClient");
       const costs = await listManualCosts({ workspaceId: user.workspace_id });
       setManualCosts(costs);
-      
+
       // Refetch P&L
       const { periodStart, periodEnd } = getPeriodDatesForMonth(
         selectedPeriod.year,
@@ -229,21 +232,21 @@ export default function FinancePage() {
       alert('Failed to delete cost: ' + err.message);
     }
   };
-  
+
   // Calculate adjusted totals based on excluded rows
   const getAdjustedTotals = () => {
     if (!viewModel) return { totalRevenue: 0, totalSpend: 0 };
-    
+
     const activeSpend = viewModel.rows
       .filter(row => !excludedRows.has(row.id))
       .reduce((sum, row) => sum + (row.actualRaw || 0), 0);
-    
+
     return {
       totalRevenue: viewModel.summary?.totalRevenue?.rawValue || 0,
       totalSpend: activeSpend
     };
   };
-  
+
   // Auth loading state
   if (authLoading) {
     return <LoadingAnimation message="Checking authentication..." />;
@@ -260,12 +263,12 @@ export default function FinancePage() {
       </div>
     );
   }
-  
+
   // Loading P&L data
   if (loading) {
     return <LoadingAnimation message="Loading financial data..." />;
   }
-  
+
   // Error state
   if (error) {
     return (
@@ -276,7 +279,7 @@ export default function FinancePage() {
       </div>
     );
   }
-  
+
   // No data
   if (!viewModel) {
     return (
@@ -285,7 +288,7 @@ export default function FinancePage() {
       </div>
     );
   }
-  
+
   return (
     <>
       {/* Header / Controls */}
@@ -297,7 +300,7 @@ export default function FinancePage() {
       />
 
       {/* Main Finance Content */}
-      <div className="px-6 lg:px-8 pb-10 pt-6">
+      <div className=" ">
         <div className="max-w-[1400px] mx-auto space-y-6">
           {/* Hero Finance Strip */}
           <FinancialSummaryCards
@@ -348,6 +351,7 @@ export default function FinancePage() {
                 rows={viewModel.rows}
                 onRowToggle={handleRowToggle}
                 mode="revenueOnly"
+                selectedMonth={selectedPeriod.month}
               />
             </div>
 
@@ -362,6 +366,7 @@ export default function FinancePage() {
                 rows={viewModel.rows}
                 onRowToggle={handleRowToggle}
                 mode="compositionOnly"
+                selectedMonth={selectedPeriod.month}
               />
 
               {/* Financial AI Summary (Copilot Integration) */}
@@ -382,6 +387,7 @@ export default function FinancePage() {
             setEditingCost(null);
           }}
           onSubmit={handleSubmitCost}
+          onDelete={handleDeleteCost}
           defaultMonth={selectedPeriod.month}
           defaultYear={selectedPeriod.year}
           editingCost={editingCost}

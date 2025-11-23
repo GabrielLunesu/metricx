@@ -111,7 +111,7 @@ const ChartTooltipContent = React.forwardRef(
 
             if (labelFormatter) {
                 return (
-                    <div className={cn("font-medium", labelClassName)}>
+                    <div className={cn("font-bold", labelClassName)}>
                         {labelFormatter(value, payload)}
                     </div>
                 )
@@ -140,7 +140,7 @@ const ChartTooltipContent = React.forwardRef(
             <div
                 ref={ref}
                 className={cn(
-                    "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
+                    "grid min-w-[8rem] items-start rounded-lg border border-border/50 bg-white px-2.5 py-1.5 text-xs shadow-xl",
                     className
                 )}
             >
@@ -187,7 +187,7 @@ const ChartTooltipContent = React.forwardRef(
                                         )}
                                         <div
                                             className={cn(
-                                                "flex flex-1 justify-between leading-none",
+                                                "flex flex-1 justify-between gap-2 leading-none",
                                                 nestLabel ? "items-end" : "items-center"
                                             )}
                                         >

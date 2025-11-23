@@ -40,25 +40,28 @@ export default function UnitEconomicsTable({ workspaceId, timeframe }) {
                 });
 
                 if (res && res.items) {
-                    setItems(res.items.map(item => {
-                        const spend = item.metrics.spend || 0;
-                        const revenue = item.metrics.revenue || 0;
-                        const conversions = item.metrics.conversions || 0;
+                    setItems(res.items
+                        .filter(item => item && item.metrics) // Filter out items without metrics
+                        .map(item => {
+                            const spend = item.metrics?.spend || 0;
+                            const revenue = item.metrics?.revenue || 0;
+                            const conversions = item.metrics?.conversions || 0;
 
-                        // Calculate proxy metrics
-                        // Price -> CPA (Cost per Acquisition) = Spend / Conversions
-                        const cpa = conversions > 0 ? spend / conversions : 0;
+                            // Calculate proxy metrics
+                            // Price -> CPA (Cost per Acquisition) = Spend / Conversions
+                            const cpa = conversions > 0 ? spend / conversions : 0;
 
-                        // Margin % = (Revenue - Spend) / Revenue
-                        const margin = revenue > 0 ? ((revenue - spend) / revenue) : 0;
+                            // Margin % = (Revenue - Spend) / Revenue
+                            const margin = revenue > 0 ? ((revenue - spend) / revenue) : 0;
 
-                        return {
-                            id: item.entity_id,
-                            name: item.entity_name,
-                            price: cpa,
-                            margin: margin
-                        };
-                    }));
+                            return {
+                                id: item.entity_id,
+                                name: item.entity_name || 'Unknown',
+                                price: cpa,
+                                margin: margin
+                            };
+                        })
+                    );
                 }
             } catch (err) {
                 console.error("Failed to fetch Unit Economics:", err);

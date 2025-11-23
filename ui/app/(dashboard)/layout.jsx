@@ -1,10 +1,12 @@
 // Dashboard-scoped layout. Provides the shell (sidebar + content area).
 "use client";
-import Sidebar from "./dashboard/components/Sidebar";
+import { Sidebar, AuroraBackground } from "./components/shared";
 import FooterDashboard from "../../components/FooterDashboard";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { currentUser } from "../../lib/auth";
+import { AnimatePresence, motion } from "framer-motion";
+
 
 export default function DashboardLayout({ children }) {
   const [authed, setAuthed] = useState(null);
@@ -48,26 +50,35 @@ export default function DashboardLayout({ children }) {
     return null;
   }
 
+  const contentClass = immersive || isCopilot ? "w-full h-full" : "max-w-[1600px] mx-auto p-4 md:p-8 space-y-8";
+
   return (
     <div className="min-h-screen w-full aurora-bg relative overflow-hidden text-slate-800 font-sans antialiased selection:bg-cyan-100 selection:text-cyan-900">
 
-      {/* AdNavi Aurora Layer™ (Ambient Background Blobs) */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-5%] w-[50vw] h-[50vw] bg-cyan-300/40 rounded-full blur-[100px] animate-breathe"></div>
-        <div className="absolute bottom-[-10%] right-[-5%] w-[60vw] h-[60vw] bg-blue-300/40 rounded-full blur-[100px] animate-breathe" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-[20%] right-[10%] w-[30vw] h-[30vw] bg-teal-200/50 rounded-full blur-[80px] animate-breathe" style={{ animationDelay: '4s' }}></div>
-      </div>
+      {/* AdNavi Aurora Layer™ */}
+      <AuroraBackground />
 
       {/* Dashboard Shell */}
       <div className={`flex h-screen overflow-hidden ${immersive ? "" : ""}`}>
         {/* Sidebar */}
         {!immersive && <Sidebar />}
 
-        {/* Main Content */}
-        <main className={`flex-1 h-full ${!isCopilot ? 'overflow-y-auto' : 'overflow-hidden'} overflow-x-hidden relative ${immersive || isCopilot ? "p-0" : ""}`}>
-          <div className={immersive || isCopilot ? "w-full h-full" : "max-w-[1600px] mx-auto p-4 md:p-8 space-y-8"}>
-            {children}
-            {!immersive && !isCopilot && <div className="mt-12"><FooterDashboard /></div>}
+        {/* Main Content - Add left padding when sidebar is visible */}
+        <main className={`flex-1 h-full ${!isCopilot ? 'overflow-y-auto' : 'overflow-hidden'} overflow-x-hidden relative ${immersive || isCopilot ? "p-0" : "md:pl-[90px]"}`}>
+          <div className={contentClass}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="h-full"
+              >
+                {children}
+                {!immersive && !isCopilot && <div className="mt-12"><FooterDashboard /></div>}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

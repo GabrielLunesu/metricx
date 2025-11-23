@@ -14,6 +14,7 @@ export default function ChartsSection({
   rows = [],
   onRowToggle,
   mode = "both", // "both" | "revenueOnly" | "compositionOnly"
+  selectedMonth,
 }) {
   const revenueChartRef = useRef(null);
   const revenueChartInstance = useRef(null);
@@ -134,6 +135,7 @@ export default function ChartsSection({
       excludedRows={excludedRows}
       totalRevenue={totalRevenue}
       totalSpend={totalSpend}
+      selectedMonth={selectedMonth}
     />
   );
 
