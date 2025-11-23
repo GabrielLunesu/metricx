@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import KpiCard from "./KpiCard";
+import KpiCard from "./KPICard";
 import { fetchWorkspaceKpis } from "@/lib/api";
 
 export default function KpiStrip({ workspaceId, timeframe }) {
