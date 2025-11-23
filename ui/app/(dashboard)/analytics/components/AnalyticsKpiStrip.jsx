@@ -7,7 +7,7 @@ const METRICS_CONFIG = [
     { key: 'spend', label: 'Spend', format: 'currency', inverse: true },
     { key: 'revenue', label: 'Revenue', format: 'currency', inverse: false },
     { key: 'roas', label: 'ROAS', format: 'number', suffix: 'x', inverse: false },
-    { key: 'cpa', label: 'CPA', format: 'currency', inverse: true },
+    { key: 'cpa', label: 'CPA', format: 'currency', inverse: true, decimals: 2 },
     { key: 'ctr', label: 'CTR', format: 'percentage', inverse: false },
     { key: 'cpc', label: 'CPC', format: 'currency', inverse: true, decimals: 2 },
     { key: 'cvr', label: 'Conv. Rate', format: 'percentage', inverse: false },
@@ -153,14 +153,11 @@ export default function AnalyticsKpiStrip({
                             {formatValue(value, config)}
                         </div>
 
-                        <div className="flex items-center gap-1 mt-1">
-                            {/* Simulated Progress Bar */}
-                            <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                <div className={`h-full ${getBarColor(config.key)}`} style={{ width: `${Math.random() * 40 + 40}%` }}></div>
-                            </div>
-                            <span className={`text-[10px] ${getTrendColor(delta, config.inverse)}`}>
+                        <div className="flex items-center gap-1 mt-2">
+                            <span className={`text-[10px] font-medium ${getTrendColor(delta, config.inverse)} bg-opacity-10 px-1.5 py-0.5 rounded-full ${delta > 0 ? (config.inverse ? 'bg-red-100' : 'bg-emerald-100') : (config.inverse ? 'bg-emerald-100' : 'bg-red-100')}`}>
                                 {delta ? `${delta > 0 ? '+' : ''}${(delta * 100).toFixed(1)}%` : '—'}
                             </span>
+                            <span className="text-[10px] text-slate-400">vs prev.</span>
                         </div>
                     </div>
                 );

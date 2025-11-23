@@ -330,7 +330,7 @@ export default function AnalyticsDrillDown({
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-50/50 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
                             <tr>

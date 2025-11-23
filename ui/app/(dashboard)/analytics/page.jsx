@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
         <div className="blob-3 absolute top-[40%] left-[30%] w-[40vw] h-[40vw] animate-pulse-slow rounded-full blur-3xl opacity-40" style={{ animationDelay: '-8s' }}></div>
       </div>
 
-      <div className="w-full px-6 md:px-2 space-y-6">
+      <div className="w-full px-3 md:px-6 space-y-6">
 
         {/* Header */}
         <AnalyticsHeader

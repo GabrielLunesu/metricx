@@ -213,7 +213,7 @@ export default function AnalyticsHeader({
                 <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
 
                     {/* Provider Toggle */}
-                    <div className="flex p-1 bg-slate-100/80 backdrop-blur-md rounded-xl border border-white/50 shadow-inner-light">
+                    <div className="flex p-1 bg-slate-100/80 backdrop-blur-md rounded-xl border border-white/50 shadow-inner-light overflow-x-auto no-scrollbar max-w-[100vw]">
                         {displayProviders.map((p) => (
                             <button
                                 key={p}
@@ -275,9 +275,10 @@ export default function AnalyticsHeader({
                         )}
                     </div>
 
-                    <button className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 text-slate-400 transition-colors">
+                    {/* Filter Button, for future use */}
+                    {/* <button className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 text-slate-400 transition-colors">
                         <SlidersHorizontal className="w-4 h-4" />
-                    </button>
+                    </button> */}
                 </div>
             </div>
         </header>
