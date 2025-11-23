@@ -101,35 +101,3 @@ services:
         reservations:
           memory: 128M
     restart: always
-
-  frontend:
-    domainname: www.adnavi.app
-    build:
-      context: ./ui
-      dockerfile: Dockerfile
-      args:
-        # Backend URL passed at build time for Next.js
-        # IMPORTANT: NEXT_PUBLIC_* vars are embedded at build time, not runtime
-        # After backend deploys, get the actual URL from: defang services
-        # Then update this and rebuild frontend: defang compose up frontend
-        NEXT_PUBLIC_API_BASE: "https://t8zgrthold5r2-backend--8000.prod2.defang.dev"
-    ports:
-      - mode: ingress
-        target: 3000
-    environment:
-      # Note: NEXT_PUBLIC_API_BASE is set at build time via build args above
-      # Runtime env vars won't override NEXT_PUBLIC_* vars in Next.js
-      NODE_ENV: production
-      NEXT_TELEMETRY_DISABLED: "1"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 20s
-    depends_on:
-      - backend
-    deploy:
-      resources:
-        reservations:
-          memory: 1G
