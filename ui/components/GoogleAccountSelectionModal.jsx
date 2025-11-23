@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Building2 } from 'lucide-react';
 
+import { getApiBase } from '../lib/config';
+
 /**
  * GoogleAccountSelectionModal Component
  * 
@@ -10,11 +12,11 @@ import { Check, X, Building2 } from 'lucide-react';
  * WHY: Allow users to choose specific accounts when multiple are available (MCC scenario)
  * WHERE USED: Settings page, triggered by GoogleConnectButton
  */
-export default function GoogleAccountSelectionModal({ 
-  open, 
-  onClose, 
+export default function GoogleAccountSelectionModal({
+  open,
+  onClose,
   sessionId,
-  onSuccess 
+  onSuccess
 }) {
   const [accounts, setAccounts] = useState([]);
   const [mccs, setMccs] = useState([]);  // All MCCs, even without children
@@ -31,7 +33,7 @@ export default function GoogleAccountSelectionModal({
       try {
         setLoading(true);
         setError(null);
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+        const baseUrl = getApiBase();
         const response = await fetch(`${baseUrl}/auth/google/accounts?session_id=${sessionId}`, {
           credentials: 'include',
         });
@@ -43,7 +45,7 @@ export default function GoogleAccountSelectionModal({
         const data = await response.json();
         setAccounts(data.accounts || []);
         setMccs(data.mccs || []);  // Store MCC info
-        
+
         // Pre-select all accounts by default
         if (data.accounts && data.accounts.length > 0) {
           setSelectedIds(new Set(data.accounts.map(acc => acc.id)));
@@ -87,7 +89,7 @@ export default function GoogleAccountSelectionModal({
     try {
       setSubmitting(true);
       setError(null);
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+      const baseUrl = getApiBase();
       const response = await fetch(`${baseUrl}/auth/google/connect-selected`, {
         method: 'POST',
         headers: {
@@ -119,7 +121,7 @@ export default function GoogleAccountSelectionModal({
 
   // Group ad accounts by their parent MCC
   const accountsByParent = {};
-  
+
   // Initialize all MCCs (even if they have no children)
   mccs.forEach(mcc => {
     accountsByParent[mcc.id] = {
@@ -128,7 +130,7 @@ export default function GoogleAccountSelectionModal({
       accounts: []
     };
   });
-  
+
   // Group accounts under their parent MCCs
   accounts.forEach(acc => {
     const parentKey = acc.parent_id || 'standalone';
@@ -153,8 +155,8 @@ export default function GoogleAccountSelectionModal({
               Choose which accounts you want to connect to AdNavi
             </p>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-neutral-500 hover:text-black transition-colors"
           >
             <X className="w-5 h-5" />
@@ -179,7 +181,7 @@ export default function GoogleAccountSelectionModal({
                     className="w-4 h-4 rounded border-neutral-300"
                   />
                   <span className="text-sm font-medium">
-                    {selectedIds.size === accounts.length ? 'Deselect All' : 'Select All'} 
+                    {selectedIds.size === accounts.length ? 'Deselect All' : 'Select All'}
                     ({selectedIds.size} of {accounts.length})
                   </span>
                 </label>
@@ -204,7 +206,7 @@ export default function GoogleAccountSelectionModal({
                   {group.accounts.length > 0 ? (
                     <div className="border-t border-neutral-200 bg-white">
                       {group.accounts.map(acc => (
-                        <label 
+                        <label
                           key={acc.id}
                           className="flex items-center gap-3 p-3 pl-10 cursor-pointer hover:bg-neutral-50 border-b border-neutral-100 last:border-b-0"
                         >
@@ -234,7 +236,7 @@ export default function GoogleAccountSelectionModal({
 
               {/* Standalone Ad Accounts (no parent MCC) */}
               {accountsByParent['standalone']?.accounts.map(acc => (
-                <label 
+                <label
                   key={acc.id}
                   className="flex items-center gap-3 p-3 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-50"
                 >

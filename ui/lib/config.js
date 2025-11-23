@@ -8,24 +8,17 @@
  * 1. NEXT_PUBLIC_API_BASE environment variable (set during build for production)
  * 2. Fallback to localhost for local development
  */
+/**
+ * Get the backend API base URL
+ * 
+ * We use a relative path '/api' which is proxied by Next.js to the actual backend.
+ * This ensures cookies are treated as first-party (Same-Origin), which is critical
+ * for Safari/iOS ITP compliance and prevents login issues on mobile.
+ * 
+ * See next.config.mjs for the proxy configuration.
+ */
 export function getApiBase() {
-  // Check if we have the env var set during build
-  const envBase = process.env.NEXT_PUBLIC_API_BASE;
-  
-  // If we have it and it's not empty, use it
-  if (envBase && envBase.trim() !== '') {
-    return envBase;
-  }
-  
-  // Fallback for local development
-  // This runs when NEXT_PUBLIC_API_BASE is not set (local dev)
-  if (typeof window !== 'undefined') {
-    // Client-side: use localhost
-    return 'http://localhost:8000';
-  } else {
-    // Server-side: use localhost (for SSR)
-    return 'http://localhost:8000';
-  }
+  return '/api';
 }
 
 /**

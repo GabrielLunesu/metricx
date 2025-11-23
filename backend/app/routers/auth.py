@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from .. import schemas
@@ -156,7 +156,12 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         }
     }
 )
-def login_user(payload: schemas.UserLogin, response: Response, db: Session = Depends(get_db)):
+def login_user(
+    payload: schemas.UserLogin,
+    response: Response,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """Authenticate a user and set an HTTP-only JWT cookie.
 
     Cookie:
@@ -178,18 +183,27 @@ def login_user(payload: schemas.UserLogin, response: Response, db: Session = Dep
     settings = get_settings()
     max_age = 7 * 24 * 3600
 
-    # Cookie settings that work for both local dev and production
-    # For local: domain=None, secure=False
-    # For production: domain=None (same-site), secure=True for HTTPS
+    # Cookie settings that work for both local dev and production.
+    # We use SameSite=None to allow cross-site requests (required when frontend
+    # and backend are on different domains, e.g. Defang deployment).
+    # Secure must be True when SameSite=None.
     cookie_kwargs = {
         "key": "access_token",
         "value": cookie_value,
         "httponly": True,
-        "samesite": "none",  # Changed to 'none' for cross-site cookies
-        "secure": True,  # Required when samesite='none'
+        "samesite": "none",
+        "secure": True,
         "max_age": max_age,
         "path": "/",
     }
+
+    # When running over plain HTTP (common for local dev or LAN/mobile testing),
+    # browsers will ignore cookies with SameSite=None and Secure=True.
+    # In that case, fall back to SameSite=Lax and secure=False so the cookie
+    # is actually stored and subsequent /auth/me calls succeed.
+    if request.url.scheme == "http":
+        cookie_kwargs["samesite"] = "lax"
+        cookie_kwargs["secure"] = False
     
     # Only set domain if explicitly configured (None for most cases)
     if settings.COOKIE_DOMAIN:
@@ -267,7 +281,7 @@ def get_me(user: User = Depends(get_current_user)):
         }
     }
 )
-def logout_user(response: Response):
+def logout_user(response: Response, request: Request):
     """Clear the access token cookie."""
     settings = get_settings()
     
@@ -280,6 +294,10 @@ def logout_user(response: Response):
         "secure": True,
         "path": "/",
     }
+
+    if request.url.scheme == "http":
+        cookie_kwargs["samesite"] = "lax"
+        cookie_kwargs["secure"] = False
     
     if settings.COOKIE_DOMAIN:
         cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
@@ -330,6 +348,7 @@ def logout_user(response: Response):
 )
 def delete_account(
     response: Response,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -436,6 +455,10 @@ def delete_account(
             "secure": True,
             "path": "/",
         }
+        
+        if request.url.scheme == "http":
+            cookie_kwargs["samesite"] = "lax"
+            cookie_kwargs["secure"] = False
         
         if settings.COOKIE_DOMAIN:
             cookie_kwargs["domain"] = settings.COOKIE_DOMAIN

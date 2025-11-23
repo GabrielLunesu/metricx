@@ -10,6 +10,7 @@ from sqladmin import Admin, ModelView
 from starlette.middleware.sessions import SessionMiddleware
 import os
 import logging
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -343,6 +344,10 @@ def create_app() -> FastAPI:
             }
         ]
     )
+    
+    # Add ProxyHeadersMiddleware to trust X-Forwarded-Proto headers from load balancers
+    # This ensures request.url.scheme is correctly set to "https" in production
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
     settings = get_settings()
     

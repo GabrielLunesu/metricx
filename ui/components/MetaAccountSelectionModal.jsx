@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Check, X } from 'lucide-react';
 
+import { getApiBase } from '../lib/config';
+
 /**
  * MetaAccountSelectionModal Component
  * 
@@ -10,9 +12,9 @@ import { Check, X } from 'lucide-react';
  * WHY: Allow users to choose specific accounts when multiple are available
  * WHERE USED: Settings page, triggered by MetaConnectButton
  */
-export default function MetaAccountSelectionModal({ 
-  open, 
-  onClose, 
+export default function MetaAccountSelectionModal({
+  open,
+  onClose,
   sessionId,
   onSuccess,
   existingConnections = [] // Pass existing connections to show which are already connected
@@ -22,7 +24,7 @@ export default function MetaAccountSelectionModal({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Create a set of existing account IDs for quick lookup
   const existingAccountIds = new Set(
     existingConnections
@@ -38,7 +40,7 @@ export default function MetaAccountSelectionModal({
       try {
         setLoading(true);
         setError(null);
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+        const baseUrl = getApiBase();
         const response = await fetch(`${baseUrl}/auth/meta/accounts?session_id=${sessionId}`, {
           credentials: 'include',
         });
@@ -49,7 +51,7 @@ export default function MetaAccountSelectionModal({
 
         const data = await response.json();
         setAccounts(data.accounts || []);
-        
+
         // Pre-select all accounts by default
         if (data.accounts && data.accounts.length > 0) {
           setSelectedIds(new Set(data.accounts.map(acc => acc.id)));
@@ -93,7 +95,7 @@ export default function MetaAccountSelectionModal({
     try {
       setSubmitting(true);
       setError(null);
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+      const baseUrl = getApiBase();
       const response = await fetch(`${baseUrl}/auth/meta/connect-selected`, {
         method: 'POST',
         headers: {
@@ -134,8 +136,8 @@ export default function MetaAccountSelectionModal({
               Choose which accounts you want to connect to AdNavi
             </p>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-neutral-500 hover:text-black transition-colors"
           >
             <X className="w-5 h-5" />
@@ -160,7 +162,7 @@ export default function MetaAccountSelectionModal({
                     className="w-4 h-4 rounded border-neutral-300"
                   />
                   <span className="text-sm font-medium">
-                    {selectedIds.size === accounts.length ? 'Deselect All' : 'Select All'} 
+                    {selectedIds.size === accounts.length ? 'Deselect All' : 'Select All'}
                     ({selectedIds.size} of {accounts.length})
                   </span>
                 </label>
@@ -170,15 +172,14 @@ export default function MetaAccountSelectionModal({
               {accounts.map(acc => {
                 const accountId = acc.account_id || acc.id.replace('act_', '');
                 const isAlreadyConnected = existingAccountIds.has(accountId);
-                
+
                 return (
-                  <label 
+                  <label
                     key={acc.id}
-                    className={`flex items-center gap-3 p-3 border rounded-lg ${
-                      isAlreadyConnected 
-                        ? 'border-blue-200 bg-blue-50 cursor-default' 
-                        : 'border-neutral-200 cursor-pointer hover:bg-neutral-50'
-                    }`}
+                    className={`flex items-center gap-3 p-3 border rounded-lg ${isAlreadyConnected
+                      ? 'border-blue-200 bg-blue-50 cursor-default'
+                      : 'border-neutral-200 cursor-pointer hover:bg-neutral-50'
+                      }`}
                   >
                     <input
                       type="checkbox"
