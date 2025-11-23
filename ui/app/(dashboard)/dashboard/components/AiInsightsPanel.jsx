@@ -40,7 +40,7 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
                     newInsights.push({
                         type: 'warning',
                         text: res1.answer,
-                        action: 'Review'
+
                     });
                 }
 
@@ -48,7 +48,7 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
                     newInsights.push({
                         type: 'opportunity',
                         text: res2.answer,
-                        action: 'Scale'
+
                     });
                 }
 
@@ -126,7 +126,7 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
                 >
                     {insight.type === 'warning' && (
                         <div className="absolute top-4 right-4">
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping"></div>
+                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full "></div>
                         </div>
                     )}
                     <div className="flex gap-3">
@@ -138,20 +138,10 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
                             )}
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-slate-800 leading-relaxed line-clamp-3">
+                            <p className="text-xs font-medium text-slate-800 leading-relaxed">
                                 {insight.text}
                             </p>
-                            <div className="flex gap-2 mt-3">
-                                {insight.type === 'warning' ? (
-                                    <button className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-medium text-slate-600 hover:border-amber-400 transition-colors shadow-sm">
-                                        {insight.action}
-                                    </button>
-                                ) : (
-                                    <button className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg text-[10px] font-medium shadow-glow-sm hover:opacity-90 transition-opacity">
-                                        {insight.action}
-                                    </button>
-                                )}
-                            </div>
+
                         </div>
                     </div>
                 </div>

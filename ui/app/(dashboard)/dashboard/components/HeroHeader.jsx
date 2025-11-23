@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Mic } from "lucide-react";
+import { Search, SendHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -28,7 +28,7 @@ export default function HeroHeader({ user, actions }) {
                 <h1 className="text-3xl pb-2 md:text-5xl font-semibold tracking-tight text-slate-900 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">
                     Good morning, {displayName}.
                 </h1>
-                <p className="text-slate-900 text-xl mt-2 font-light">
+                <p className="text-slate-900 text-xl mt-2 font-normal">
                     Here's what's happening with your business today.
                 </p>
             </div>
@@ -48,7 +48,7 @@ export default function HeroHeader({ user, actions }) {
                     />
                     <div className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer">
                         <div className="bg-gradient-to-tr from-cyan-500 to-blue-500 p-1.5 rounded-full shadow-lg shadow-cyan-500/30">
-                            <Mic className="w-4 h-4 text-white" />
+                            <SendHorizontal className="w-4 h-4 text-white" />
                         </div>
                     </div>
                 </form>
