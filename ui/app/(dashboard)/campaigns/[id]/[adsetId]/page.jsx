@@ -63,7 +63,7 @@ export default function AdSetDetailPage() {
   const meta = data?.meta;
 
   return (
-    <div className="max-w-[1200px] mx-auto">
+    <div className="max-w-[1400px] mx-auto px-4 md:px-0">
       <DetailHeader
         name={meta?.title || 'Ad Set'}
         platform={rows[0]?.platform || '—'}
@@ -72,7 +72,7 @@ export default function AdSetDetailPage() {
         subtitle={meta?.subtitle}
         loading={isPending}
       />
-      <div className="mb-6" />
+      <div className="mb-4" />
       <EntityTable 
         title={meta?.title || 'Ads'} 
         rows={rows} 

@@ -8,12 +8,12 @@
 
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Download, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export default function TopBar({ selectedPeriod, onPeriodChange, compareEnabled, onCompareToggle }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  
+
   // Handle click outside to close dropdown
   useEffect(() => {
     function handleClickOutside(event) {
@@ -21,19 +21,19 @@ export default function TopBar({ selectedPeriod, onPeriodChange, compareEnabled,
         setIsDropdownOpen(false);
       }
     }
-    
+
     if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isDropdownOpen]);
-  
+
   // Generate all period options
   const periods = [];
   const now = new Date();
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
-  
+
   // Generate last 12 months
   for (let i = 0; i < 12; i++) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -49,107 +49,96 @@ export default function TopBar({ selectedPeriod, onPeriodChange, compareEnabled,
     onPeriodChange?.({ year: period.year, month: period.month });
     setIsDropdownOpen(false);
   };
-  
+
   const isSelected = (period) => {
     return selectedPeriod.year === period.year && selectedPeriod.month === period.month;
   };
-  
+
   const getCurrentLabel = () => {
     const current = periods.find(p => isSelected(p));
     return current?.label || 'Select Period';
   };
 
+  const hasCustomSelected = periods.some(p => !p.isMain && isSelected(p));
+
   return (
-    <div className="sticky top-6 z-30 mb-8">
-      <div className="glass-bar rounded-3xl border border-black/5 shadow-2xl p-8 relative overflow-hidden">
-        {/* Cyan divider glow */}
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-40"></div>
-        
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-semibold tracking-tight text-black">Finance & P&L Overview</h1>
-            <div className="h-0.5 w-24 bg-gradient-to-r from-cyan-400 to-transparent mt-3"></div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Period Selector */}
-            <div className="flex items-center gap-2">
-              {/* Main buttons - This Month, Last Month */}
-              <div className="flex items-center gap-2 px-1 py-1 rounded-full bg-white/60 border border-black/5">
-                {periods.filter(p => p.isMain).map((period, idx) => (
+    <header className="shrink-0 rounded-lg px-6 lg:px-8 py-6 border-b border-slate-200/60 bg-white/70 backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 z-20">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Finance &amp; P&amp;L Overview</h1>
+        <p className="text-sm text-slate-500 mt-1 font-light">See how your ad spend turns into profit.</p>
+      </div>
+
+      <div className="flex items-center gap-3 bg-white p-1.5 rounded-full border border-slate-200 shadow-sm">
+        {/* Period selector pill */}
+        <div className="flex gap-1">
+          {periods.filter(p => p.isMain).map((period, idx) => (
+            <button
+              key={idx}
+              onClick={() => handlePeriodClick(period)}
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${isSelected(period)
+                  ? 'text-blue-700 bg-blue-50 border border-blue-100 shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                }`}
+            >
+              {period.label === 'This Month' ? 'This Month' : period.label === 'Last Month' ? 'Last Month' : period.label}
+            </button>
+          ))}
+
+          {/* Custom / other months */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className={`px-4 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition-all ${hasCustomSelected
+                  ? 'text-blue-700 bg-blue-50 border border-blue-100 shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                }`}
+            >
+              {hasCustomSelected ? getCurrentLabel() : 'Custom'}
+              <ChevronDown className={`w-3 h-3 opacity-60 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-64 glass-panel rounded-2xl border border-slate-200 shadow-float p-2 max-h-80 overflow-y-auto z-50">
+                {periods.filter(p => !p.isMain).map((period, idx) => (
                   <button
                     key={idx}
                     onClick={() => handlePeriodClick(period)}
-                    className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                      isSelected(period)
-                        ? 'bg-white text-cyan-600 border border-cyan-400/40 shadow-sm'
-                        : 'text-neutral-600 hover:bg-white'
-                    }`}
+                    className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${isSelected(period)
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-slate-600 hover:bg-slate-50'
+                      }`}
                   >
                     {period.label}
                   </button>
                 ))}
               </div>
-              
-              {/* Dropdown for other months, highest z-index */}
-              <div className="relative z-50" ref={dropdownRef}>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                    periods.some(p => !p.isMain && isSelected(p))
-                      ? 'bg-white text-cyan-600 border border-cyan-400/40 shadow-sm'
-                      : 'bg-white/60 text-neutral-600 hover:bg-white border border-black/5'
-                  }`}
-                >
-                  {periods.some(p => !p.isMain && isSelected(p)) ? getCurrentLabel() : 'Other months'}
-                  <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {isDropdownOpen && (
-                  <div className="absolute top-full mt-2 right-0 w-64 glass-card rounded-2xl border border-black/5 shadow-xl p-2 max-h-80 overflow-y-auto">
-                    {periods.filter(p => !p.isMain).map((period, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handlePeriodClick(period)}
-                        className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                          isSelected(period)
-                            ? 'bg-cyan-50 text-cyan-600'
-                            : 'text-neutral-600 hover:bg-neutral-50'
-                        }`}
-                      >
-                        {period.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Export Button */}
-            <button className="px-5 py-2.5 rounded-full bg-black text-white text-sm font-medium border border-cyan-400/40 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all flex items-center gap-2 relative overflow-hidden group">
-              <span className="relative z-10">Export</span>
-              <Download className="w-4 h-4 relative z-10" strokeWidth={1.5} />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent shimmer-effect opacity-0 group-hover:opacity-100"></div>
-            </button>
+            )}
           </div>
         </div>
-        
-        {/* Comparison Toggle */}
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <div className="relative w-12 h-6 bg-white/60 rounded-full border border-black/5 transition-all">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={compareEnabled}
-                onChange={(e) => onCompareToggle?.(e.target.checked)}
-              />
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-cyan-500 rounded-full transition-all shadow-sm ${compareEnabled ? 'translate-x-6' : ''}`}></div>
-            </div>
-            <span className="text-sm font-medium text-neutral-600 group-hover:text-black transition-all">Compare vs previous period</span>
-          </label>
+
+        <div className="h-4 w-px bg-slate-200 mx-1" />
+
+        {/* Compare toggle */}
+        <div className="flex items-center gap-2 pr-3 pl-1">
+          <div className="relative inline-block w-8 h-4 align-middle select-none transition duration-200 ease-in">
+            <input
+              type="checkbox"
+              id="finance-compare-toggle"
+              className="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-slate-200 appearance-none cursor-pointer transition-all duration-300 left-0 top-0 shadow-sm checked:right-0 checked:border-blue-500"
+              checked={compareEnabled}
+              onChange={(e) => onCompareToggle?.(e.target.checked)}
+            />
+            <label
+              htmlFor="finance-compare-toggle"
+              className="toggle-label block overflow-hidden h-4 rounded-full bg-slate-200 cursor-pointer"
+            />
+          </div>
+          <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wide">
+            Compare
+          </span>
         </div>
       </div>
-    </div>
+    </header>
   );
 }

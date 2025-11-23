@@ -3,9 +3,6 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { fetchQA } from "@/lib/api";
 import { currentUser } from "@/lib/auth";
-import SnapshotHeader from "./components/SnapshotHeader";
-import InsightCards from "./components/InsightCards";
-import FactWidgets from "./components/FactWidgets";
 import ConversationThread from "./components/ConversationThread";
 import { renderMarkdownLite } from "@/lib/markdown";
 import ChatConsole from "./components/ChatConsole";
@@ -47,7 +44,7 @@ export default function CopilotPage() {
 
   const handleSubmit = (q) => {
     if (!resolvedWs || !q.trim() || loading) return;
-    
+
     // Add user message immediately with timestamp (optimistic UI)
     const userMessage = {
       type: 'user',
@@ -81,21 +78,14 @@ export default function CopilotPage() {
   };
 
   return (
-    <main className="flex-1 pt-12 pb-32 px-8 max-w-5xl mx-auto page-transition">
-      {/* AI Header Section */}
-      <SnapshotHeader />
+    <div className="mesh-bg min-h-screen flex flex-col">
+      {/* Conversation Area */}
+      <main className="flex-1 overflow-y-auto pt-8 pb-48 w-full">
+        <ConversationThread messages={messages} isLoading={loading} />
+      </main>
 
-      {/* Insight Stack */}
-      {/* <InsightCards /> */}
-
-      {/* Real-time Fact Widgets */}
-      {/* <FactWidgets /> */}
-
-      {/* Conversation History */}
-      <ConversationThread messages={messages} isLoading={loading} />
-
-      {/* Floating Conversation Console */}
+      {/* Fixed Input Bar */}
       <ChatConsole onSubmit={handleSubmit} disabled={loading || !resolvedWs} />
-    </main>
+    </div>
   );
 }

@@ -4,13 +4,13 @@
 
 import { getApiBase } from './config';
 
-const BASE = getApiBase(); 
+const BASE = getApiBase();
 
 
 
 export async function fetchWorkspaceKpis({
   workspaceId,
-  metrics = ["spend","revenue","conversions","roas"],
+  metrics = ["spend", "revenue", "conversions", "roas"],
   lastNDays = 7,
   dayOffset = 0,
   compareToPrevious = true,
@@ -20,12 +20,14 @@ export async function fetchWorkspaceKpis({
   onlyActive = false,
   customStartDate = null,
   customEndDate = null,
-  entityName = null
+  entityName = null,
+  campaignId = null
 }) {
   const params = new URLSearchParams();
   if (provider) params.set("provider", provider);
   if (level) params.set("level", level);
   if (entityName) params.set("entity_name", entityName);
+  if (campaignId) params.set("campaign_id", campaignId);
   if (onlyActive) params.set("only_active", "true");
   else params.set("only_active", "false");
 
@@ -51,7 +53,7 @@ export async function fetchWorkspaceKpis({
     end.setDate(end.getDate() - dayOffset);
     const start = new Date(end);
     start.setDate(start.getDate() - lastNDays + 1);
-    
+
     timeRange = {
       start: formatDate(start),
       end: formatDate(end)
@@ -97,14 +99,24 @@ export async function fetchWorkspaceKpis({
 // 5. Execute via SQLAlchemy (workspace-scoped, safe math)
 // 6. Build human-readable answer (template-based)
 // 7. Log to telemetry (success/failure tracking)
-export async function fetchQA({ workspaceId, question }) {
+// 7. Log to telemetry (success/failure tracking)
+export async function fetchQA({ workspaceId, question, context = {} }) {
+  // Append context to question if provided
+  let finalQuestion = question;
+  if (context && Object.keys(context).length > 0) {
+    const contextStr = Object.entries(context)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+    finalQuestion = `${question} (Context: ${contextStr})`;
+  }
+
   const res = await fetch(
     `${BASE}/qa/?workspace_id=${workspaceId}`,
     {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question: finalQuestion })
     }
   );
   if (!res.ok) {
@@ -175,15 +187,15 @@ export async function fetchWorkspaceProviders({ workspaceId }) {
 // Fetch campaigns for dropdown filtering.
 // WHY: Chart grouping by campaign requires campaign list.
 // Returns: { campaigns: [{ id, name, status }, ...] }
-export async function fetchWorkspaceCampaigns({ 
-  workspaceId, 
-  provider = null, 
-  status = 'active' 
+export async function fetchWorkspaceCampaigns({
+  workspaceId,
+  provider = null,
+  status = 'active'
 }) {
   const params = new URLSearchParams();
   if (provider) params.set('provider', provider);
   if (status) params.set('entity_status', status);
-  
+
   const res = await fetch(`${BASE}/workspaces/${workspaceId}/campaigns?${params.toString()}`, {
     method: "GET",
     credentials: "include",
@@ -203,7 +215,7 @@ export async function fetchConnections({ workspaceId, provider = null, status = 
   const params = new URLSearchParams();
   if (provider) params.set('provider', provider);
   if (status) params.set('status', status);
-  
+
   const res = await fetch(`${BASE}/connections?${params.toString()}`, {
     method: "GET",
     credentials: "include",
@@ -325,4 +337,69 @@ export async function deleteUserAccount() {
     throw new Error(`Failed to delete account: ${res.status} ${msg}`);
   }
   return res.json();
+}
+
+export async function fetchEntityPerformance({
+  workspaceId,
+  entityType = 'campaign',
+  timeRange = { last_n_days: 7 },
+  limit = 25,
+  sortBy = 'roas',
+  sortDir = 'desc',
+  status = 'active',
+  campaignId = null,
+  provider = null
+}) {
+  const params = new URLSearchParams();
+  params.set('entity_level', entityType);
+  params.set('page_size', limit);
+  params.set('sort_by', sortBy);
+  params.set('sort_dir', sortDir);
+  params.set('status', status);
+  if (campaignId) params.set('parent_id', campaignId);
+  if (provider) params.set('platform', provider);
+
+  if (timeRange.start && timeRange.end) {
+    // Custom date range - backend expects date_end to be exclusive
+    // FastAPI defaults timeframe=7d, so explicitly mark custom ranges
+    params.set('timeframe', 'custom');
+    params.set('date_start', timeRange.start);
+
+    const endDate = new Date(timeRange.end);
+    endDate.setDate(endDate.getDate() + 1); // Make end exclusive
+    params.set('date_end', endDate.toISOString().split('T')[0]);
+  } else if (timeRange.last_n_days) {
+    // Use timeframe param for known presets (backend prefers this)
+    if (timeRange.last_n_days === 7) {
+      params.set('timeframe', '7d');
+    } else if (timeRange.last_n_days === 30) {
+      params.set('timeframe', '30d');
+    } else {
+      // For other values (like 1 for yesterday), convert to actual dates
+      params.set('timeframe', 'custom');
+      const end = new Date();
+      end.setDate(end.getDate() + 1); // Make end exclusive (tomorrow)
+      const start = new Date();
+      start.setDate(start.getDate() - timeRange.last_n_days + 1);
+
+      params.set('date_start', start.toISOString().split('T')[0]);
+      params.set('date_end', end.toISOString().split('T')[0]);
+    }
+  }
+
+  const res = await fetch(`${BASE}/entity-performance/list?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch entity performance: ${res.status} ${msg}`);
+  }
+
+  // Transform response to match expected format if needed, 
+  // but for now return as is (TopCreative expects .items which might be .rows in actual response)
+  const data = await res.json();
+  return { items: data.rows, meta: data.meta };
 }

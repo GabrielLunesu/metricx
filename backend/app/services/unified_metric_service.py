@@ -221,57 +221,90 @@ class UnifiedMetricService:
         workspace_id: str,
         metrics: List[str],
         time_range: TimeRange,
-        filters: MetricFilters
-    ) -> List[MetricTimePoint]:
+        filters: MetricFilters,
+        granularity: str = "day"
+    ) -> Dict[str, List[MetricTimePoint]]:
         """
-        Get daily timeseries data for metrics.
+        Get timeseries data for metrics.
         
         Args:
             workspace_id: Workspace UUID for scoping
             metrics: List of metric names to calculate
             time_range: Time range for calculation
             filters: Filtering criteria
+            granularity: 'day' or 'hour'
             
         Returns:
-            List of daily metric values
-            
-        Example:
-            >>> service = UnifiedMetricService(db)
-            >>> timeseries = service.get_timeseries(
-            ...     workspace_id="...",
-            ...     metrics=["roas"],
-            ...     time_range=TimeRange(last_n_days=7),
-            ...     filters=MetricFilters()
-            ... )
-            >>> print(timeseries[0].date)
-            2025-10-08
+            Dictionary mapping metric name to list of time points
         """
-        logger.info(f"[UNIFIED_METRICS] Getting timeseries for {len(metrics)} metrics")
+        logger.info(f"[UNIFIED_METRICS] Getting timeseries for {len(metrics)} metrics (granularity={granularity})")
         
         # Resolve time range
         start_date, end_date = self._resolve_time_range(time_range)
         
+        # Determine grouping expression
+        if granularity == "hour":
+            # For hourly, we group by the full datetime (truncated to hour if needed, 
+            # but assuming seed data is already hourly aligned or we want raw timestamps)
+            # In SQLite/Postgres, we might need specific functions. 
+            # For now, assuming event_date is already the bucket or we group by it directly.
+            # If using Postgres: func.date_trunc('hour', self.MF.event_date)
+            # But to be safe across DBs (and since seed data is clean), let's try grouping by event_date directly
+            # if it's hourly. Or better, use a conditional.
+            # Let's stick to simple grouping for now.
+            time_bucket = self.MF.event_date
+        else:
+            time_bucket = cast(self.MF.event_date, Date)
+
         # Build timeseries query
-        query = (
-            self.db.query(
-                cast(self.MF.event_date, Date).label("date"),
-                func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
-                func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
-                func.coalesce(func.sum(self.MF.impressions), 0).label("impressions"),
-                func.coalesce(func.sum(self.MF.conversions), 0).label("conversions"),
-                func.coalesce(func.sum(self.MF.leads), 0).label("leads"),
-                func.coalesce(func.sum(self.MF.installs), 0).label("installs"),
-                func.coalesce(func.sum(self.MF.purchases), 0).label("purchases"),
-                func.coalesce(func.sum(self.MF.visitors), 0).label("visitors"),
-                func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
+        # For hourly granularity, we need to handle datetime filtering differently
+        if granularity == "hour":
+            # Convert dates to datetime for proper hour-level filtering
+            from datetime import datetime as dt, time
+            start_datetime = dt.combine(start_date, time.min)  # Start at 00:00:00
+            end_datetime = dt.combine(end_date, time.max)      # End at 23:59:59
+            
+            query = (
+                self.db.query(
+                    time_bucket.label("date"),
+                    func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
+                    func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
+                    func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
+                    func.coalesce(func.sum(self.MF.impressions), 0).label("impressions"),
+                    func.coalesce(func.sum(self.MF.conversions), 0).label("conversions"),
+                    func.coalesce(func.sum(self.MF.leads), 0).label("leads"),
+                    func.coalesce(func.sum(self.MF.installs), 0).label("installs"),
+                    func.coalesce(func.sum(self.MF.purchases), 0).label("purchases"),
+                    func.coalesce(func.sum(self.MF.visitors), 0).label("visitors"),
+                    func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
+                )
+                .join(self.E, self.E.id == self.MF.entity_id)
+                .filter(self.E.workspace_id == workspace_id)
+                .filter(self.MF.event_date.between(start_datetime, end_datetime))
+                .group_by(time_bucket)
+                .order_by(time_bucket)
             )
-            .join(self.E, self.E.id == self.MF.entity_id)
-            .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
-            .group_by(cast(self.MF.event_date, Date))
-            .order_by(cast(self.MF.event_date, Date))
-        )
+        else:
+            query = (
+                self.db.query(
+                    time_bucket.label("date"),
+                    func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
+                    func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
+                    func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
+                    func.coalesce(func.sum(self.MF.impressions), 0).label("impressions"),
+                    func.coalesce(func.sum(self.MF.conversions), 0).label("conversions"),
+                    func.coalesce(func.sum(self.MF.leads), 0).label("leads"),
+                    func.coalesce(func.sum(self.MF.installs), 0).label("installs"),
+                    func.coalesce(func.sum(self.MF.purchases), 0).label("purchases"),
+                    func.coalesce(func.sum(self.MF.visitors), 0).label("visitors"),
+                    func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
+                )
+                .join(self.E, self.E.id == self.MF.entity_id)
+                .filter(self.E.workspace_id == workspace_id)
+                .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+                .group_by(time_bucket)
+                .order_by(time_bucket)
+            )
         
         # Apply filters
         query = self._apply_filters(query, filters, workspace_id)
@@ -279,21 +312,26 @@ class UnifiedMetricService:
         # Execute query
         rows = query.all()
         
-        # Build timeseries results
-        timeseries = []
+        # Build timeseries results for EACH metric
+        results = {m: [] for m in metrics}
+        
         for row in rows:
             totals = row._asdict()
-            # For now, return the primary metric (first in list)
-            # TODO: Support multiple metrics in timeseries
-            primary_metric = metrics[0] if metrics else "roas"
-            value = compute_metric(primary_metric, totals)
             
-            timeseries.append(MetricTimePoint(
-                date=str(row.date),
-                value=value
-            ))
+            for metric in metrics:
+                value = compute_metric(metric, totals)
+                
+                # Format date string based on granularity
+                date_str = str(row.date)
+                if granularity == "hour" and isinstance(row.date, datetime):
+                    date_str = row.date.isoformat()
+                
+                results[metric].append(MetricTimePoint(
+                    date=date_str,
+                    value=value
+                ))
         
-        return timeseries
+        return results
     
     def get_breakdown(
         self,

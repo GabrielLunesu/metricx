@@ -287,8 +287,8 @@ export default function FinancePage() {
   }
   
   return (
-    <div>
-      {/* Sticky Top Bar with Filters */}
+    <>
+      {/* Header / Controls */}
       <TopBar
         selectedPeriod={selectedPeriod}
         onPeriodChange={handlePeriodChange}
@@ -296,58 +296,83 @@ export default function FinancePage() {
         onCompareToggle={handleCompareToggle}
       />
 
-      {/* Core Metrics Row (P&L Summary Cards) */}
-      <FinancialSummaryCards 
-        summary={{
-          ...viewModel.summary,
-          totalSpend: {
-            ...viewModel.summary.totalSpend,
-            value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(getAdjustedTotals().totalSpend),
-            rawValue: getAdjustedTotals().totalSpend
-          },
-          grossProfit: {
-            ...viewModel.summary.grossProfit,
-            value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(getAdjustedTotals().totalRevenue - getAdjustedTotals().totalSpend),
-            rawValue: getAdjustedTotals().totalRevenue - getAdjustedTotals().totalSpend
-          },
-          netRoas: {
-            ...viewModel.summary.netRoas,
-            value: getAdjustedTotals().totalSpend > 0 ? `${(getAdjustedTotals().totalRevenue / getAdjustedTotals().totalSpend).toFixed(2)}×` : 'N/A',
-            rawValue: getAdjustedTotals().totalSpend > 0 ? getAdjustedTotals().totalRevenue / getAdjustedTotals().totalSpend : 0
-          }
-        }}
-        showComparison={viewModel.hasComparison}
-      />
+      {/* Main Finance Content */}
+      <div className="px-6 lg:px-8 pb-10 pt-6">
+        <div className="max-w-[1400px] mx-auto space-y-6">
+          {/* Hero Finance Strip */}
+          <FinancialSummaryCards
+            summary={{
+              ...viewModel.summary,
+              totalSpend: {
+                ...viewModel.summary.totalSpend,
+                value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(getAdjustedTotals().totalSpend),
+                rawValue: getAdjustedTotals().totalSpend
+              },
+              grossProfit: {
+                ...viewModel.summary.grossProfit,
+                value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(getAdjustedTotals().totalRevenue - getAdjustedTotals().totalSpend),
+                rawValue: getAdjustedTotals().totalRevenue - getAdjustedTotals().totalSpend
+              },
+              netRoas: {
+                ...viewModel.summary.netRoas,
+                value: getAdjustedTotals().totalSpend > 0 ? `${(getAdjustedTotals().totalRevenue / getAdjustedTotals().totalSpend).toFixed(2)}×` : 'N/A',
+                rawValue: getAdjustedTotals().totalSpend > 0 ? getAdjustedTotals().totalRevenue / getAdjustedTotals().totalSpend : 0
+              }
+            }}
+            showComparison={viewModel.hasComparison}
+          />
 
-      {/* Editable P&L Grid */}
-      <PLTable 
-        // selected month
-        selectedMonth={selectedPeriod.month}
-        rows={viewModel.rows} 
-        excludedRows={excludedRows}
-        onRowToggle={handleRowToggle}
-        onAddCost={handleAddCost}
-        manualCosts={manualCosts}
-        onEditCost={handleEditCost}
-        onDeleteCost={handleDeleteCost}
-      />
+          {/* Middle Section: P&L + Charts + Composition + Copilot */}
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            {/* Left Column: P&L + Revenue charts */}
+            <div className="xl:col-span-7 flex flex-col gap-6">
+              {/* Editable P&L Grid */}
+              <PLTable
+                selectedMonth={selectedPeriod.month}
+                rows={viewModel.rows}
+                excludedRows={excludedRows}
+                onRowToggle={handleRowToggle}
+                onAddCost={handleAddCost}
+                manualCosts={manualCosts}
+                onEditCost={handleEditCost}
+                onDeleteCost={handleDeleteCost}
+              />
 
-      {/* Variance Visualization Section */}
-      <ChartsSection 
-        composition={viewModel.composition} 
-        timeseries={viewModel.timeseries}
-        totalRevenue={getAdjustedTotals().totalRevenue}
-        totalSpend={getAdjustedTotals().totalSpend}
-        excludedRows={excludedRows}
-        rows={viewModel.rows}
-        onRowToggle={handleRowToggle}
-      />
+              {/* Revenue Chart */}
+              <ChartsSection
+                composition={viewModel.composition}
+                timeseries={viewModel.timeseries}
+                totalRevenue={getAdjustedTotals().totalRevenue}
+                totalSpend={getAdjustedTotals().totalSpend}
+                excludedRows={excludedRows}
+                rows={viewModel.rows}
+                onRowToggle={handleRowToggle}
+                mode="revenueOnly"
+              />
+            </div>
 
-      {/* Financial AI Summary (Copilot Integration) */}
-      <AIFinancialSummary 
-        workspaceId={user.workspace_id}
-        selectedPeriod={selectedPeriod}
-      />
+            {/* Right Column: Composition + Financial Copilot */}
+            <div className="xl:col-span-5 flex flex-col gap-6">
+              <ChartsSection
+                composition={viewModel.composition}
+                timeseries={viewModel.timeseries}
+                totalRevenue={getAdjustedTotals().totalRevenue}
+                totalSpend={getAdjustedTotals().totalSpend}
+                excludedRows={excludedRows}
+                rows={viewModel.rows}
+                onRowToggle={handleRowToggle}
+                mode="compositionOnly"
+              />
+
+              {/* Financial AI Summary (Copilot Integration) */}
+              <AIFinancialSummary
+                workspaceId={user.workspace_id}
+                selectedPeriod={selectedPeriod}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {showAddCost && (
         <ManualCostModal
@@ -362,6 +387,6 @@ export default function FinancePage() {
           editingCost={editingCost}
         />
       )}
-    </div>
+    </>
   );
 }

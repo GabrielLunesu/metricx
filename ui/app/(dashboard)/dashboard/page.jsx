@@ -1,17 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
 import { currentUser } from "../../../lib/auth";
-import AssistantSection from "./components/AssistantSection";
-import HomeKpiStrip from "./components/HomeKpiStrip";
-import NotificationsPanel from "./components/NotificationsPanel";
-import CompanyInfoCard from "./components/CompanyInfoCard";
-import VisitorsChartCard from "./components/VisitorsChartCard";
-import UseCasesList from "./components/UseCasesList";
+import HeroHeader from "./components/HeroHeader";
+import KpiStrip from "./components/KpiStrip";
+import MoneyPulseChart from "./components/MoneyPulseChart";
+import AiInsightsPanel from "./components/AiInsightsPanel";
+import TopCreative from "./components/TopCreative";
+import PlatformSpendMix from "./components/PlatformSpendMix";
+import UnitEconomicsTable from "./components/UnitEconomicsTable";
+import TimeframeSelector from "./components/TimeframeSelector";
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+  const [timeframe, setTimeframe] = useState('last_7_days');
+
   useEffect(() => {
     let mounted = true;
     currentUser()
@@ -32,49 +35,50 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-6">Checking authentication…</div>;
+    return <div className="p-6 text-slate-500">Loading dashboard...</div>;
   }
 
   if (!user) {
     return (
       <div className="p-6">
-        <div className="max-w-2xl mx-auto glass-card rounded-3xl border border-neutral-200/60 p-6">
-          <h2 className="text-xl font-medium mb-2 text-neutral-900">You must be signed in.</h2>
-          <a href="/" className="text-cyan-600 hover:text-cyan-700 underline">Go to sign in</a>
+        <div className="max-w-2xl mx-auto glass-panel rounded-3xl p-6">
+          <h2 className="text-xl font-medium mb-2 text-slate-900">You must be signed in.</h2>
+          <a href="/login" className="text-cyan-600 hover:text-cyan-700 underline">Go to sign in</a>
         </div>
       </div>
     );
   }
-  
-  // Define which metrics to show on the dashboard
-  const dashboardMetrics = ["spend", "revenue", "roas", "clicks", "conversions", "impressions"];
 
   return (
     <div>
-      {/* Hero Section with chat input */}
-      <AssistantSection workspaceId={user.workspace_id} />
+      {/* Hero Header */}
+      <HeroHeader
+        user={user}
+        actions={<TimeframeSelector value={timeframe} onChange={setTimeframe} />}
+      />
 
-      {/* KPI Cards Grid with time range controls */}
-      <div className="mb-12">
-        <HomeKpiStrip 
-          workspaceId={user.workspace_id} 
-          metrics={dashboardMetrics}
-        />
+      {/* KPI Strip */}
+      <div className="mt-8">
+        <KpiStrip workspaceId={user.workspace_id} timeframe={timeframe} />
       </div>
 
-      {/* Notifications Panel */}
-      <NotificationsPanel />
+      {/* Middle Section: Money Pulse & AI Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+        <MoneyPulseChart workspaceId={user.workspace_id} timeframe={timeframe} />
+        <AiInsightsPanel workspaceId={user.workspace_id} timeframe={timeframe} />
+      </div>
 
-      {/* Company Info + Visitors Section */}
-      <div className="mb-12">
-        <div className="grid grid-cols-2 gap-6">
-          <CompanyInfoCard />
-          <VisitorsChartCard />
+      {/* Bottom Section: Top Ads & Product Table */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8 pb-8">
+        <TopCreative workspaceId={user.workspace_id} timeframe={timeframe} />
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium text-slate-800 tracking-tight">Platform Spend Mix</h3>
+          </div>
+          <PlatformSpendMix workspaceId={user.workspace_id} timeframe={timeframe} />
+          <UnitEconomicsTable workspaceId={user.workspace_id} timeframe={timeframe} />
         </div>
       </div>
-
-      {/* Discover Use Cases */}
-      <UseCasesList />
     </div>
   );
 }

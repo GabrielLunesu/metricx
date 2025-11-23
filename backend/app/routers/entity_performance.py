@@ -123,15 +123,18 @@ def _base_query(
     MF = models.MetricFact
     Connection = models.Connection
     
+    connection_alias = None
+
     # For leaf levels (ads/creatives), start from Entity and LEFT JOIN MetricFact
     if level in (models.LevelEnum.ad, models.LevelEnum.creative):
         entity = aliased(models.Entity)
+        connection_alias = aliased(models.Connection)
         query = (
             db.query(
                 entity.id.label("entity_id"),
                 entity.name.label("entity_name"),
                 entity.status,
-                func.coalesce(func.max(MF.provider), Connection.provider).label("provider"),  # Get provider from connection if no facts
+                func.coalesce(func.max(MF.provider), connection_alias.provider).label("provider"),  # Get provider from connection if no facts
                 func.max(MF.ingested_at).label("last_updated"),
                 func.coalesce(func.sum(MF.spend), 0).label("spend"),
                 func.coalesce(func.sum(MF.revenue), 0).label("revenue"),
@@ -140,7 +143,7 @@ def _base_query(
                 func.coalesce(func.sum(MF.conversions), 0).label("conversions"),
             )
             .select_from(entity)
-            .join(Connection, Connection.id == entity.connection_id)
+            .join(connection_alias, connection_alias.id == entity.connection_id)
             .outerjoin(MF, 
                 (MF.entity_id == entity.id) &
                 (func.date(MF.event_date) >= start) &
@@ -154,7 +157,7 @@ def _base_query(
         # Start from ancestor entities, LEFT JOIN through hierarchy to MetricFact
         leaf = aliased(models.Entity)
         ancestor = aliased(models.Entity)
-        connection = aliased(models.Connection)
+        connection_alias = aliased(models.Connection)
         mapping = campaign_ancestor_cte(db) if level == models.LevelEnum.campaign else adset_ancestor_cte(db)
 
         query = (
@@ -162,7 +165,7 @@ def _base_query(
                 ancestor.id.label("entity_id"),
                 ancestor.name.label("entity_name"),
                 ancestor.status,
-                func.coalesce(func.max(MF.provider), connection.provider).label("provider"),  # Get provider from connection if no facts
+                func.coalesce(func.max(MF.provider), connection_alias.provider).label("provider"),  # Get provider from connection if no facts
                 func.max(MF.ingested_at).label("last_updated"),
                 func.coalesce(func.sum(MF.spend), 0).label("spend"),
                 func.coalesce(func.sum(MF.revenue), 0).label("revenue"),
@@ -171,7 +174,7 @@ def _base_query(
                 func.coalesce(func.sum(MF.conversions), 0).label("conversions"),
             )
             .select_from(ancestor)
-            .join(connection, connection.id == ancestor.connection_id)
+            .join(connection_alias, connection_alias.id == ancestor.connection_id)
             .join(mapping, mapping.c.ancestor_id == ancestor.id)
             .join(leaf, leaf.id == mapping.c.leaf_id)
             .outerjoin(MF,
@@ -193,9 +196,9 @@ def _base_query(
             raise HTTPException(status_code=400, detail="Unsupported platform filter") from exc
         # Filter by connection provider (works for both entities with and without facts)
         if level == models.LevelEnum.ad:
-            query = query.filter(Connection.provider == provider)
+            query = query.filter(connection_alias.provider == provider)
         else:
-            query = query.filter(connection.provider == provider)
+            query = query.filter(connection_alias.provider == provider)
 
     if status and status.lower() != "all":
         query = query.filter(entity_alias.status == status)
@@ -218,10 +221,7 @@ def _base_query(
     ]
     
     # Add provider to group_by - use connection provider since we're joining it
-    if level in (models.LevelEnum.ad, models.LevelEnum.creative):
-        group_columns.append(Connection.provider)
-    else:
-        group_columns.append(connection.provider)
+    group_columns.append(connection_alias.provider)
 
     return query.group_by(*group_columns)
 
@@ -397,8 +397,7 @@ def list_entities_performance(
 
     workspace_id = str(current_user.workspace_id)
     level = _resolve_entity_level(entity_level)
-    if level not in (models.LevelEnum.campaign, models.LevelEnum.adset):
-        raise HTTPException(status_code=400, detail="Only campaign or adset level supported")
+    # Allow campaign, adset, and ad levels
 
     start, end = _date_range(date_start, date_end, timeframe)
     base = _base_query(

@@ -72,7 +72,7 @@ export default function CampaignDetailPage() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto">
+    <div className="max-w-[1400px] mx-auto px-4 md:px-0">
       <DetailHeader
         name={meta?.title || 'Campaign'}
         platform={rows[0]?.platform || '—'}
@@ -81,10 +81,10 @@ export default function CampaignDetailPage() {
         subtitle={meta?.subtitle}
         loading={isPending}
       />
-      <div className="mb-6" />
-      <EntityTable 
-        title="Ad Sets" 
-        rows={rows} 
+      <div className="mb-4" />
+      <EntityTable
+        title="Ad Sets"
+        rows={rows}
         loading={isPending}
         error={error}
         onRowClick={handleAdSetClick}

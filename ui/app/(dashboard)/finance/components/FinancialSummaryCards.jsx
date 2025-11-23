@@ -6,7 +6,7 @@
  * REFERENCES: lib/pnlAdapter.js:adaptPnLStatement
  */
 
-import { TrendingUp, TrendingDown, CheckCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, CheckCircle, Wallet, CreditCard, Coins, BarChart4, ArrowUpRight, Minus } from "lucide-react";
 
 export default function FinancialSummaryCards({ summary, showComparison }) {
   if (!summary) return null;
@@ -14,28 +14,44 @@ export default function FinancialSummaryCards({ summary, showComparison }) {
   const cards = [
     {
       data: summary.totalRevenue,
+      label: "Total Revenue",
+      icon: Wallet,
+      badgeColor: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      badgeIcon: ArrowUpRight,
       progressColor: 'from-cyan-400 to-cyan-600',
       delay: '0ms',
     },
     {
       data: summary.totalSpend,
+      label: "Total Spend",
+      icon: CreditCard,
+      badgeColor: "bg-red-50 text-red-600 border-red-100",
+      badgeIcon: ArrowUpRight,
       progressColor: 'from-neutral-400 to-neutral-600',
       delay: '100ms',
     },
     {
       data: summary.grossProfit,
+      label: "Gross Profit",
+      icon: Coins,
+      badgeColor: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      badgeIcon: ArrowUpRight,
       progressColor: 'from-green-400 to-green-600',
       delay: '200ms',
     },
     {
       data: summary.netRoas,
+      label: "Net ROAS",
+      icon: BarChart4,
+      badgeColor: "bg-slate-100 text-slate-600 border-slate-200",
+      badgeIcon: Minus,
       valueColor: 'text-cyan-600',
       delay: '300ms',
       showCheck: true,
     },
   ];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card, idx) => {
         const hasDelta = showComparison && card.data.delta;
         const isPositive = hasDelta && !card.data.delta.startsWith('-');
@@ -43,28 +59,37 @@ export default function FinancialSummaryCards({ summary, showComparison }) {
         const trendColor = card.showCheck 
           ? 'bg-green-50 text-green-600 border-green-200' 
           : (isPositive ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200');
+        const LeadingIcon = card.icon;
+        const BadgeIcon = card.badgeIcon;
         
         return (
           <div
             key={idx}
-            className="glass-card rounded-3xl border border-black/5 shadow-xl p-6 lg:p-8 relative overflow-hidden card-hover fade-up-in min-w-0"
+            className="glass-card rounded-xl p-5 relative overflow-hidden group hover:shadow-float transition-all border border-slate-200/80 bg-white"
             style={{ animationDelay: card.delay }}
           >
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-cyan-400 rounded-full blur-[80px] opacity-20 pulse-glow-aura" style={{ animationDelay: `${idx * 2}s` }}></div>
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-neutral-500 mb-3">{card.data.label}</p>
-              <p className={`text-3xl sm:text-3xl lg:text-3xl font-bold tracking-tight mb-3 truncate ${card.valueColor || 'text-black'}`} title={card.data.value}>
-                {card.data.value}
-              </p>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 to-slate-100 group-hover:from-blue-400 group-hover:to-blue-300 transition-all" />
+            <div className="flex justify-between items-start mb-4 relative z-10">
+              <div className="p-2 rounded-lg bg-slate-50 text-slate-400">
+                {LeadingIcon && <LeadingIcon className="w-4 h-4" />}
+              </div>
               {hasDelta && (
-                <div className="flex items-center gap-2 mb-4">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${trendColor}`}>
-                    <TrendIcon className="w-3 h-3" strokeWidth={2} />
-                    {card.data.delta}
-                  </span>
-                  <span className="text-xs text-neutral-400">vs prev period</span>
-                </div>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${card.badgeColor}`}>
+                  {BadgeIcon && <BadgeIcon className="w-3 h-3" />}
+                  {card.data.delta}
+                </span>
               )}
+            </div>
+            <div className="space-y-1 relative z-10">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                {card.label || card.data.label}
+              </p>
+              <h3
+                className={`text-2xl font-bold text-slate-900 tracking-tight truncate ${card.valueColor || ''}`}
+                title={card.data.value}
+              >
+                {card.data.value}
+              </h3>
             </div>
           </div>
         );
@@ -72,4 +97,3 @@ export default function FinancialSummaryCards({ summary, showComparison }) {
     </div>
   );
 }
-
