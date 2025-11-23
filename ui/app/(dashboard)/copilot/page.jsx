@@ -78,7 +78,7 @@ export default function CopilotPage() {
   };
 
   return (
-    <div className="mesh-bg min-h-screen flex flex-col">
+    <div className="mesh-bg h-full relative flex flex-col">
       {/* Conversation Area */}
       <main className="flex-1 overflow-y-auto pt-8 pb-48 w-full">
         <ConversationThread messages={messages} isLoading={loading} />

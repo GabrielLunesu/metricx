@@ -13,10 +13,9 @@ function AIMessage({ text, isTyping }) {
         <div className="bubble-ai p-1.5 rounded-2xl">
           <div className="bg-white/50 rounded-xl p-5">
             {isTyping ? (
-              <div className="ai-typing">
-                <span></span>
-                <span></span>
-                <span></span>
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span>Getting your data...</span>
               </div>
             ) : (
               <div className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: text }} />

@@ -41,6 +41,8 @@ export default function DashboardLayout({ children }) {
     );
   }
 
+  const isCopilot = pathname === "/copilot";
+
   // Don't render dashboard if not authenticated (will redirect)
   if (!authed) {
     return null;
@@ -62,10 +64,10 @@ export default function DashboardLayout({ children }) {
         {!immersive && <Sidebar />}
 
         {/* Main Content */}
-        <main className={`flex-1 h-full overflow-y-auto overflow-x-hidden relative ${immersive ? "p-0" : ""}`}>
-          <div className={immersive ? "w-full" : "max-w-[1600px] mx-auto p-4 md:p-8 space-y-8"}>
+        <main className={`flex-1 h-full ${!isCopilot ? 'overflow-y-auto' : 'overflow-hidden'} overflow-x-hidden relative ${immersive || isCopilot ? "p-0" : ""}`}>
+          <div className={immersive || isCopilot ? "w-full h-full" : "max-w-[1600px] mx-auto p-4 md:p-8 space-y-8"}>
             {children}
-            {!immersive && <div className="mt-12"><FooterDashboard /></div>}
+            {!immersive && !isCopilot && <div className="mt-12"><FooterDashboard /></div>}
           </div>
         </main>
       </div>

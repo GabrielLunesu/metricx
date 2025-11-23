@@ -25,7 +25,7 @@ export default function ChatConsole({ onSubmit, disabled }) {
   };
 
   return (
-    <div className="fixed bottom-0 w-full z-50">
+    <div className="absolute bottom-0 w-full z-50">
       {/* Gradient Fade for background */}
       <div className="absolute bottom-0 w-full h-48 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent pointer-events-none"></div>
 
