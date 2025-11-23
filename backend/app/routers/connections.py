@@ -31,7 +31,7 @@ router = APIRouter(
 
 
 @router.get(
-    "/",
+    "",
     response_model=schemas.ConnectionListResponse,
     summary="List ad platform connections",
     description="""
@@ -332,7 +332,7 @@ def get_sync_status(
 
 
 @router.post(
-    "/",
+    "",
     response_model=schemas.ConnectionOut,
     status_code=status.HTTP_201_CREATED,
     summary="Create new connection",

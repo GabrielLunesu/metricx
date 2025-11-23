@@ -30,7 +30,7 @@ from app.deps import get_current_user
 router = APIRouter(prefix="/qa", tags=["qa"])
 
 
-@router.post("/", response_model=QAResult)
+@router.post("", response_model=QAResult)
 def ask_question(
     req: QARequest,
     workspace_id: str = Query(..., description="Workspace context for scoping queries"),
