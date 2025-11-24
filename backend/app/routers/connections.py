@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .. import schemas
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import User, Connection, Workspace, ProviderEnum
+from ..models import User, Connection, Workspace, ProviderEnum, WorkspaceMember, RoleEnum
 from ..services.token_service import store_connection_token
 from ..services.google_ads_client import GAdsClient
 from redis import Redis
@@ -28,6 +28,28 @@ router = APIRouter(
         500: {"model": schemas.ErrorResponse, "description": "Internal Server Error"},
     }
 )
+
+
+def _require_connection_permission(
+    db: Session,
+    user: User,
+    workspace_id,
+    roles=(RoleEnum.owner, RoleEnum.admin),
+):
+    membership = (
+        db.query(WorkspaceMember)
+        .filter(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id == user.id,
+            WorkspaceMember.status == "active",
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this workspace")
+    if membership.role not in roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions for this action")
+    return membership
 
 
 @router.get(
@@ -50,6 +72,7 @@ def list_connections(
     offset: int = Query(0, ge=0, description="Number of results to skip")
 ):
     """List connections for the current workspace."""
+    _require_connection_permission(db, current_user, current_user.workspace_id, roles=(RoleEnum.owner, RoleEnum.admin, RoleEnum.viewer))
     query = db.query(Connection).filter(
         Connection.workspace_id == current_user.workspace_id
     )
@@ -92,6 +115,8 @@ def ensure_google_connection_from_env(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    _require_connection_permission(db, current_user, current_user.workspace_id)
+
     customer_id = os.getenv("GOOGLE_CUSTOMER_ID")
     refresh_token = os.getenv("GOOGLE_REFRESH_TOKEN")
     developer_token = os.getenv("GOOGLE_DEVELOPER_TOKEN")
@@ -180,6 +205,8 @@ def ensure_meta_connection_from_env(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    _require_connection_permission(db, current_user, current_user.workspace_id)
+
     access_token = os.getenv("META_ACCESS_TOKEN")
     ad_account_id = os.getenv("META_AD_ACCOUNT_ID")
     
@@ -251,6 +278,7 @@ def enqueue_sync_job(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _require_connection_permission(db, current_user, current_user.workspace_id)
     connection = _get_connection_for_workspace(
         db=db,
         workspace_id=current_user.workspace_id,
@@ -294,6 +322,7 @@ def update_sync_frequency(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _require_connection_permission(db, current_user, current_user.workspace_id)
     if payload.sync_frequency not in VALID_SYNC_FREQUENCIES:
         raise HTTPException(
             status_code=400,
@@ -349,12 +378,7 @@ def create_connection(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new ad platform connection."""
-    # Check if user has admin rights
-    if current_user.role.value not in ["Owner", "Admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only workspace owners and admins can create connections"
-        )
+    _require_connection_permission(db, current_user, current_user.workspace_id)
     
     # Check if connection with same external_account_id already exists
     existing = db.query(Connection).filter(
@@ -394,6 +418,7 @@ def get_connection(
     current_user: User = Depends(get_current_user)
 ):
     """Get connection by ID."""
+    _require_connection_permission(db, current_user, current_user.workspace_id, roles=(RoleEnum.owner, RoleEnum.admin, RoleEnum.viewer))
     connection = db.query(Connection).filter(
         Connection.id == connection_id,
         Connection.workspace_id == current_user.workspace_id
@@ -425,12 +450,7 @@ def update_connection(
     current_user: User = Depends(get_current_user)
 ):
     """Update connection."""
-    # Check if user has admin rights
-    if current_user.role.value not in ["Owner", "Admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only workspace owners and admins can update connections"
-        )
+    _require_connection_permission(db, current_user, current_user.workspace_id)
     
     connection = db.query(Connection).filter(
         Connection.id == connection_id,
@@ -477,13 +497,6 @@ def delete_connection(
     
     logger = logging.getLogger(__name__)
     
-    # Only owners can delete connections due to data impact
-    if current_user.role.value != "Owner":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only workspace owners can delete connections"
-        )
-    
     connection = db.query(Connection).filter(
         Connection.id == connection_id,
         Connection.workspace_id == current_user.workspace_id
@@ -494,6 +507,8 @@ def delete_connection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Connection not found"
         )
+
+    _require_connection_permission(db, current_user, connection.workspace_id)
     
     logger.info(f"[DELETE_CONNECTION] Starting deletion of connection {connection_id} ({connection.name})")
     

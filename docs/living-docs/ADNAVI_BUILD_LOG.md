@@ -17,7 +17,7 @@ _Last updated: 2025-10-28T18:00:00Z_
 - Framework: Next.js 15.5.4 (App Router, **JSX only**)
 - Backend: FastAPI + SQLAlchemy 2.x + Alembic, Postgres via Docker
 - Auth: Email/password, JWT (HTTP-only cookie), simple cookie session
-- Repo doc path: `docs/ADNAVI_BUILD_LOG.md` (this file). UI companion doc: `docs/living-docs/ui/living-ui-doc.md`.
+- Repo doc path: `docs/ADNAVI_BUILD_LOG.md` (this file). UI companion doc: `docs/living-docs/ui/living-ui-doc.md`. Workspace plan: `docs/living-docs/workspace-management.md`.
 
 ### 1.1 Frontend — `ui/`
 - Routing: `/` (Homepage), `/dashboard`, `/analytics`, `/copilot`, `/finance`, `/campaigns`, `/campaigns/[id]`
@@ -317,6 +317,23 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 - Deleted remaining `ui/data/*` mock modules (analytics, campaigns, copilot, finance, notifications, visitors, useCases, kpis/timeRanges) and unused legacy UI components (finance, analytics, notifications, visitors, use cases, campaign rules/sort dropdown).
 - Campaign detail pages now exclude the legacy RulesPanel import; remaining components rely on live API data and inline copy only.
 - Updated UI living doc with mock-free status and noted the hardcoded workspace ID gap in campaign detail views.
+
+### 2025-11-24T15:55:50Z — **PLANNING UPDATE**: Workspace management plan refined
+- Updated `docs/living-docs/workspace-management.md` with single-owner rule, default workspace on registration (`<FirstName>'s Workspace`), invite accept/decline flow via email for existing users, and expanded tests/risk mitigations.
+
+### 2025-11-24T16:14:45Z — **BACKEND**: Multi-workspace scaffolding (memberships + invites)
+- Added `workspace_members` and `workspace_invites` models + migration (`20251124_000001_add_workspace_members_invites.py`) enforcing single-owner-per-workspace.
+- Auth now hydrates memberships/pending invites and backfills legacy users; registration creates `<FirstName>'s Workspace` and owner membership.
+- Workspace endpoints upgraded: list/create/switch workspaces, member add/update/remove (owner-only), and invite create/accept/decline for existing users.
+- User responses now include `active_workspace_id`, `memberships`, and pending invites for UI switching.
+
+### 2025-11-24T16:40:00Z — **BACKEND**: Connection permissions tightened for multi-workspace
+- Connections endpoints now enforce membership roles: listing/reading allowed for all members; create/update/delete/sync/actions require Owner/Admin via `_require_connection_permission`.
+- Campaign detail pages (UI) already use active workspace; backend is now aligned to prevent viewers from mutating OAuth connections.
+
+### 2025-11-24T17:59:29Z — **FRONTEND**: Workspace switcher added
+- Added `ui/components/WorkspaceSwitcher.jsx` and surfaced it in dashboard layout; switches via `/workspaces/{id}/switch`, refreshes user context, and reloads data.
+- Lint pass succeeded after changes.
 
 ### 2025-11-24T14:05:00Z — **DOCS/CLEANUP**: UI living doc added; removed unused company mock/card and stale mock data
 - Added `docs/living-docs/ui/living-ui-doc.md` as the single source for UI routes/components/data/patterns with maintenance guidance for non-technical readers.

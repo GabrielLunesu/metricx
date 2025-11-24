@@ -2,37 +2,51 @@
 // WHY: Container component that fetches workspace info from API
 // This allows the sidebar to show real-time sync status
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { fetchWorkspaceInfo } from "../lib/api";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
+import { currentUser } from "../lib/auth";
 
 export default function WorkspaceSummary({ workspaceId }) {
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [refreshing, startTransition] = useTransition();
 
   useEffect(() => {
     if (!workspaceId) return;
-    
+
     let mounted = true;
-    
-    // Fetch workspace info
-    fetchWorkspaceInfo(workspaceId)
-      .then((data) => {
-        if (mounted) {
-          setInfo(data);
-          setError(null);
-        }
-      })
-      .catch((err) => {
-        if (mounted) {
-          setError(err.message);
-        }
-      })
-      .finally(() => {
-        if (mounted) {
-          setLoading(false);
-        }
-      });
+
+    const load = async () => {
+      try {
+        const u = await currentUser();
+        if (mounted) setUser(u);
+      } catch {
+        // ignore
+      }
+
+      fetchWorkspaceInfo(workspaceId)
+        .then((data) => {
+          if (mounted) {
+            setInfo(data);
+            setError(null);
+          }
+        })
+        .catch((err) => {
+          if (mounted) {
+            setError(err.message);
+          }
+        })
+        .finally(() => {
+          if (mounted) {
+            setLoading(false);
+          }
+        });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -85,21 +99,27 @@ export default function WorkspaceSummary({ workspaceId }) {
   if (!info) return null;
 
   return (
-    <div className="rounded-xl p-4 border border-slate-800/60 bg-slate-900/40">
-      <h4 className="text-sm font-medium text-slate-300 mb-3">Current Workspace</h4>
+    <div className="rounded-xl p-4 border border-slate-800/60 bg-slate-900/40 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-medium text-slate-300">Current Workspace</h4>
+          <div className="text-xs text-slate-400 mt-1">Last sync: {formatLastSync(info.last_sync)}</div>
+        </div>
+        {user && <WorkspaceSwitcher user={user} />}
+      </div>
       <div className="space-y-2 text-xs text-slate-400">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden />
           <span className="text-slate-200">{info.name}</span>
         </div>
         <div className="flex items-center justify-between pt-2">
-          <span>Last sync: {formatLastSync(info.last_sync)}</span>
-          <button 
-            className="hover:text-white transition-colors" 
+          <span>Active: {user?.active_workspace_id === workspaceId ? "Yes" : "No"}</span>
+          <button
+            className="hover:text-white transition-colors"
             aria-label="Refresh"
-            onClick={() => window.location.reload()}
+            onClick={() => startTransition(() => window.location.reload())}
           >
-            ↻
+            {refreshing ? "…" : "↻"}
           </button>
         </div>
       </div>

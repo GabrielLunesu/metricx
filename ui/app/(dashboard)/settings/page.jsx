@@ -45,7 +45,8 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'connections', label: 'Connections' },
     { id: 'profile', label: 'Profile' },
-    { id: 'users', label: 'Users' }
+    { id: 'users', label: 'Members' },
+    { id: 'invites', label: 'Invites' }
   ];
 
   if (loading) {
@@ -93,7 +94,8 @@ export default function SettingsPage() {
       <div className="mt-8">
         {activeTab === 'connections' && <ConnectionsTab user={user} />}
         {activeTab === 'profile' && <ProfileTab user={user} />}
-        {activeTab === 'users' && <UsersTab />}
+        {activeTab === 'users' && <UsersTab user={user} />}
+        {activeTab === 'invites' && <UsersTab user={user} view="invites" />}
       </div>
     </div>
   );

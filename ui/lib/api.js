@@ -141,6 +141,32 @@ export async function fetchWorkspaceInfo(workspaceId) {
   return res.json();
 }
 
+export async function fetchWorkspaces() {
+  const res = await fetch(`${BASE}/workspaces`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch workspaces: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function switchWorkspace(workspaceId) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/switch`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to switch workspace: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
 export async function fetchQaLog(workspaceId) {
   const res = await fetch(`${BASE}/qa-log/${workspaceId}`, {
     method: "GET",

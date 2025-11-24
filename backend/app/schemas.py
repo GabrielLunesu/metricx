@@ -73,12 +73,25 @@ class UserOut(BaseModel):
         example="John Doe"
     )
     role: RoleEnum = Field(
-        description="User role within the workspace",
+        description="User role within the active workspace",
         example="Admin"
     )
     workspace_id: UUID = Field(
-        description="ID of the workspace this user belongs to",
+        description="Active workspace ID (legacy field; mirrors active_workspace_id)",
         example="456e7890-e89b-12d3-a456-426614174001"
+    )
+    active_workspace_id: UUID | None = Field(
+        default=None,
+        description="Active workspace ID",
+        example="456e7890-e89b-12d3-a456-426614174001"
+    )
+    memberships: list["WorkspaceMemberOutLite"] = Field(
+        default_factory=list,
+        description="All workspace memberships for this user"
+    )
+    pending_invites: list["WorkspaceInviteOut"] = Field(
+        default_factory=list,
+        description="Pending workspace invites for this user"
     )
     avatar_url: Optional[str] = Field(
         None,
@@ -185,7 +198,9 @@ class ErrorResponse(BaseModel):
 class SuccessResponse(BaseModel):
     """Standard success response."""
     
-    detail: str = Field(
+    status: str = Field(default="ok", description="Status message")
+    detail: str | None = Field(
+        default=None,
         description="Success message",
         example="Operation completed successfully"
     )
@@ -250,6 +265,18 @@ class WorkspaceOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class WorkspaceWithRole(BaseModel):
+    """Workspace summary with membership role/status."""
+
+    id: UUID
+    name: str
+    created_at: datetime
+    role: RoleEnum
+    status: str = "active"
+
+    model_config = {"from_attributes": True}
+
+
 class WorkspaceInfo(BaseModel):
     """
     Summary info for sidebar display.
@@ -262,6 +289,53 @@ class WorkspaceInfo(BaseModel):
     name: str = Field(description="Workspace name")
     last_sync: Optional[datetime] = Field(description="Last successful sync timestamp")
     
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceMemberOutLite(BaseModel):
+    workspace_id: UUID
+    workspace_name: str | None = None
+    role: RoleEnum
+    status: str = "active"
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceMemberOut(WorkspaceMemberOutLite):
+    user_id: UUID
+    created_at: datetime
+    updated_at: datetime | None = None
+    user_email: str | None = None
+    user_name: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceMemberCreate(BaseModel):
+    user_id: UUID
+    role: RoleEnum
+
+
+class WorkspaceMemberUpdate(BaseModel):
+    role: RoleEnum
+
+
+class WorkspaceInviteCreate(BaseModel):
+    email: EmailStr
+    role: RoleEnum
+
+
+class WorkspaceInviteOut(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    workspace_name: str | None = None
+    email: EmailStr
+    role: RoleEnum
+    status: str
+    invited_by: UUID
+    created_at: datetime
+    responded_at: datetime | None = None
+
     model_config = {"from_attributes": True}
 
 
@@ -444,7 +518,7 @@ class PnlOut(BaseModel):
 class WorkspaceListResponse(BaseModel):
     """Response schema for workspace list."""
     
-    workspaces: List[WorkspaceOut] = Field(description="List of workspaces")
+    workspaces: List[WorkspaceWithRole] = Field(description="List of workspaces with roles")
     total: int = Field(description="Total number of workspaces")
 
 
@@ -1196,3 +1270,10 @@ class MetricsSyncResponse(BaseModel):
             }
         }
     }
+
+
+# Resolve forward references for nested models
+WorkspaceMemberOutLite.model_rebuild()
+WorkspaceMemberOut.model_rebuild()
+WorkspaceInviteOut.model_rebuild()
+UserOut.model_rebuild()

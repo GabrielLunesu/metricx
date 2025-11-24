@@ -6,7 +6,7 @@ import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User } 
 import { useEffect, useRef, useState } from "react";
 import { currentUser, logout } from "../../../../lib/auth";
 import features from "../../../../lib/features";
-import { fetchWorkspaceInfo } from "../../../../lib/api";
+import { fetchWorkspaceInfo, fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
 import NavItem from "./NavItem";
 import LogoMark from "./LogoMark";
 import ProfileAvatar from "./ProfileAvatar";
@@ -15,6 +15,7 @@ export default function Sidebar() {
     const pathname = usePathname();
     const [user, setUser] = useState(null);
     const [workspace, setWorkspace] = useState(null);
+    const [workspaces, setWorkspaces] = useState([]);
     const [showLogout, setShowLogout] = useState(false);
     const avatarRef = useRef(null);
 
@@ -32,12 +33,27 @@ export default function Sidebar() {
                     .then((ws) => mounted && setWorkspace(ws))
                     .catch((err) => console.error("Failed to fetch workspace info:", err));
             }
+
+            // Fetch all workspaces
+            fetchWorkspaces()
+                .then((data) => mounted && setWorkspaces(data.workspaces || []))
+                .catch((err) => console.error("Failed to fetch workspaces:", err));
         });
 
         return () => {
             mounted = false;
         };
     }, []);
+
+    const handleSwitchWorkspace = async (workspaceId) => {
+        if (workspaceId === workspace?.id) return;
+        try {
+            await switchWorkspace(workspaceId);
+            window.location.reload(); // Reload to refresh context
+        } catch (err) {
+            console.error("Failed to switch workspace:", err);
+        }
+    };
 
     const navItems = [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/dashboard" },
@@ -71,11 +87,54 @@ export default function Sidebar() {
     return (
         <>
             <aside className="hidden md:flex fixed left-6 top-6 bottom-6 w-[72px] flex-col items-center py-8 glass-panel rounded-[24px] z-50 justify-between transition-all duration-300 hover:border-cyan-200/50">
-                {/* Logo */}
-                <LogoMark
-                    initial={workspace?.name?.charAt(0)?.toUpperCase() || "AN"}
-                    href="/dashboard"
-                />
+                {/* Logo / Workspace Switcher */}
+                <div className="relative group/ws">
+                    <button
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-xl shadow-slate-300/50 mb-8 cursor-pointer relative overflow-hidden transition-transform active:scale-95"
+                    >
+                        {/* Shimmer effect */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rotate-45 translate-y-full group-hover/ws:-translate-y-full transition-transform duration-700"></div>
+
+                        <span className="font-bold text-xs tracking-tighter relative z-10">
+                            {workspace?.name?.charAt(0)?.toUpperCase() || "AN"}
+                        </span>
+
+                        {/* Dropdown Indicator */}
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[4px] border-b-white/30 mb-1"></div>
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    <div className="absolute left-full top-0 ml-4 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 opacity-0 invisible group-hover/ws:opacity-100 group-hover/ws:visible transition-all duration-200 -translate-x-2 group-hover/ws:translate-x-0 z-50">
+                        <div className="px-3 py-2 border-b border-slate-50 mb-1">
+                            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Switch Workspace</p>
+                        </div>
+
+                        <div className="max-h-64 overflow-y-auto space-y-1">
+                            {workspaces.map((ws) => (
+                                <button
+                                    key={ws.id}
+                                    onClick={() => handleSwitchWorkspace(ws.id)}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${ws.id === workspace?.id
+                                        ? "bg-cyan-50 text-cyan-700 font-medium"
+                                        : "text-slate-600 hover:bg-slate-50"
+                                        }`}
+                                >
+                                    <span className="truncate">{ws.name}</span>
+                                    {ws.id === workspace?.id && (
+                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-slate-50">
+                            <button className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2">
+                                <span className="text-lg leading-none">+</span>
+                                Create Workspace
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Nav */}
                 <nav className="flex flex-col gap-6 w-full items-center">
@@ -117,7 +176,7 @@ export default function Sidebar() {
                                 />
                             </button>
                             {showLogout && (
-                                <div className="absolute left-1/2 -translate-x-1/2 -top-14 bg-white shadow-lg rounded-xl border border-slate-100 px-3 py-2 text-sm whitespace-nowrap">
+                                <div className="absolute left-full bottom-0 ml-4 bg-white shadow-lg rounded-xl border border-slate-100 px-3 py-2 text-sm whitespace-nowrap z-50">
                                     <button
                                         className="text-slate-700 hover:text-red-500 transition-colors"
                                         onClick={(e) => { e.preventDefault(); handleLogout(); }}

@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 from .. import schemas
 from ..database import get_db
 from ..deps import get_current_user, get_settings
-from ..models import User, Workspace, AuthCredential, RoleEnum
+from ..models import User, Workspace, WorkspaceMember, WorkspaceInvite, AuthCredential, RoleEnum, InviteStatusEnum
 from ..security import create_access_token, get_password_hash, verify_password
 import secrets
 from datetime import datetime, timedelta
+from sqlalchemy.orm import joinedload
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,50 @@ router = APIRouter(
         500: {"model": schemas.ErrorResponse, "description": "Internal Server Error"},
     }
 )
+
+
+def _hydrate_user_context(db: Session, user: User) -> User:
+    """Attach memberships and pending invites to the user for response shaping."""
+    user_query = (
+        db.query(User)
+        .options(joinedload(User.memberships).joinedload(WorkspaceMember.workspace))
+        .filter(User.id == user.id)
+    )
+    hydrated = user_query.first()
+    if not hydrated:
+        return user
+
+    memberships = hydrated.memberships or []
+    # Backfill membership for legacy users
+    if not memberships and hydrated.workspace_id:
+        legacy_membership = WorkspaceMember(
+            workspace_id=hydrated.workspace_id,
+            user_id=hydrated.id,
+            role=hydrated.role,
+            status="active",
+        )
+        db.add(legacy_membership)
+        db.commit()
+        db.refresh(legacy_membership)
+        memberships = [legacy_membership]
+
+    # Attach workspace_name for serialization
+    for m in memberships:
+        m.workspace_name = m.workspace.name if m.workspace else None
+
+    hydrated.active_workspace_id = hydrated.workspace_id
+    hydrated.memberships = memberships
+
+    pending_invites = (
+        db.query(WorkspaceInvite)
+        .filter(
+            WorkspaceInvite.email == hydrated.email,
+            WorkspaceInvite.status == InviteStatusEnum.pending,
+        )
+        .all()
+    )
+    hydrated.pending_invites = pending_invites
+    return hydrated
 
 
 @router.post(
@@ -85,15 +130,16 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
-    # Create a workspace for the new user
-    workspace = Workspace(name="New workspace")
+    # Create a workspace for the new user (FirstName's Workspace)
+    first_name = (payload.name.split(" ")[0] or "My").strip().title()
+    workspace = Workspace(name=f"{first_name}'s Workspace")
     db.add(workspace)
     db.flush()  # assign workspace.id without committing yet
 
     # Generate verification token
     verification_token = secrets.token_urlsafe(32)
 
-    # NOTE: All users are Owner for now; tighten later with invites/roles
+    # NOTE: All new users are Owner of their default workspace
     user = User(
         email=payload.email,
         name=payload.name,
@@ -106,6 +152,15 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.flush()  # assign user.id
 
+    # Add membership record (single owner per workspace)
+    membership = WorkspaceMember(
+        workspace_id=workspace.id,
+        user_id=user.id,
+        role=RoleEnum.owner,
+        status="active",
+    )
+    db.add(membership)
+
     credential = AuthCredential(user_id=user.id, password_hash=get_password_hash(payload.password))
     db.add(credential)
 
@@ -115,7 +170,7 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     # Log verification link (Mock email service)
     logger.info(f"[AUTH] Verification link for {user.email}: http://localhost:3000/auth/verify-email?token={verification_token}")
     
-    return user
+    return _hydrate_user_context(db, user)
 
 
 @router.post(
@@ -220,6 +275,7 @@ def login_user(
     
     response.set_cookie(**cookie_kwargs)
 
+    user = _hydrate_user_context(db, user)
     return schemas.LoginResponse(user=schemas.UserOut.model_validate(user))
 
 
@@ -261,9 +317,13 @@ def login_user(
     },
     dependencies=[Depends(get_current_user)]
 )
-def get_me(user: User = Depends(get_current_user)):
+def get_me(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     """Return the current authenticated user."""
-    return user
+    hydrated = _hydrate_user_context(db, user)
+    return hydrated
 
 
 @router.put(
@@ -321,7 +381,7 @@ def update_profile(
 
     db.commit()
     db.refresh(current_user)
-    return current_user
+    return _hydrate_user_context(db, current_user)
 
 
 @router.post(

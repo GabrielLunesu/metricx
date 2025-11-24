@@ -63,10 +63,13 @@ def get_current_user(
     if not subject:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
-    user = db.query(User).filter(User.email == subject).first()
+    user = (
+        db.query(User)
+        .filter(User.email == subject)
+        .first()
+    )
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
-
 
 
