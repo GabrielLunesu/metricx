@@ -3,14 +3,14 @@
 
 import { getApiBase } from './config';
 
-const BASE_URL = getApiBase(); 
+const BASE_URL = getApiBase();
 
-export async function register(email, password) {
+export async function register(name, email, password) {
   const res = await fetch(`${BASE_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ name, email, password }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

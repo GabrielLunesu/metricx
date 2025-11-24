@@ -6,16 +6,15 @@ import { useEffect, useState, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DetailHeader from '../../../../components/campaigns/DetailHeader';
 import EntityTable from '../../../../components/campaigns/EntityTable';
-import RulesPanel from '../../../../components/campaigns/RulesPanel';
 import { campaignsApiClient, campaignsAdapter } from '../../../../lib';
+import { currentUser } from '../../../../lib/auth';
 
 export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id;
-  // TODO: Get workspace ID from auth context
-  const workspaceId = "1e72698a-1f6c-4abb-9b99-48dba86508ce";
   
+  const [workspaceId, setWorkspaceId] = useState(null);
   const [filters, setFilters] = useState({ 
     timeframe: '7d',
     status: 'active',
@@ -27,8 +26,20 @@ export default function CampaignDetailPage() {
   const [error, setError] = useState(null);
   const [isPending, startTransition] = useTransition();
 
+  // Resolve workspace from auth (active workspace)
   useEffect(() => {
-    if (!id) return;
+    let mounted = true;
+    currentUser().then((u) => {
+      if (!mounted) return;
+      setWorkspaceId(u?.workspace_id || u?.active_workspace_id);
+    }).catch(() => {
+      if (mounted) setWorkspaceId(null);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!id || !workspaceId) return;
     let isMounted = true;
     startTransition(() => {
       campaignsApiClient.fetchEntityPerformance({
@@ -63,6 +74,9 @@ export default function CampaignDetailPage() {
     return <div className="text-slate-400">No campaign selected.</div>;
   }
 
+  if (!workspaceId) {
+    return <div className="text-slate-400">No workspace selected.</div>;
+  }
   const rows = data?.rows || [];
   const meta = data?.meta;
 
@@ -89,7 +103,6 @@ export default function CampaignDetailPage() {
         error={error}
         onRowClick={handleAdSetClick}
       />
-      {/* <RulesPanel /> */}
     </div>
   );
 }

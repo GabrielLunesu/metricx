@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 import enum
 
-from sqlalchemy import Column, String, DateTime, Enum, Integer, ForeignKey, Numeric, JSON, Text
+from sqlalchemy import Column, String, DateTime, Enum, Integer, ForeignKey, Numeric, JSON, Text, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -24,6 +24,12 @@ class RoleEnum(str, enum.Enum):
     owner = "Owner"
     admin = "Admin"
     viewer = "Viewer"
+
+class InviteStatusEnum(str, enum.Enum):
+    pending = "pending"
+    accepted = "accepted"
+    declined = "declined"
+    expired = "expired"
 
 
 class ProviderEnum(str, enum.Enum):
@@ -93,7 +99,9 @@ class Workspace(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships - these create reverse lookups
-    users = relationship("User", back_populates="workspace")  # All users in this workspace
+    users = relationship("User", back_populates="workspace")  # Active workspace for the user (legacy single workspace)
+    memberships = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
+    invites = relationship("WorkspaceInvite", back_populates="workspace", cascade="all, delete-orphan")
     connections = relationship("Connection", back_populates="workspace")  # All ad platform connections
     entities = relationship("Entity", back_populates="workspace")  # All entities (campaigns, ads, etc)
     compute_runs = relationship("ComputeRun", back_populates="workspace")  # All compute runs
@@ -121,10 +129,21 @@ class User(Base):
     name = Column(String, nullable=False)
     role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
 
-    # Foreign key - links this user to ONE workspace
-    # When creating a user in admin, you must select which workspace they belong to
+    # Profile fields
+    avatar_url = Column(String, nullable=True)
+
+    # Security / Verification fields
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
+    
+    # Password Reset
+    reset_token = Column(String, nullable=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
+
+    # Active workspace context (legacy single-workspace field; now treated as "active workspace")
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
     workspace = relationship("Workspace", back_populates="users")
+    memberships = relationship("WorkspaceMember", back_populates="user", cascade="all, delete-orphan")
 
     # 1:1 credential for local password-based auth
     credential = relationship("AuthCredential", back_populates="user", uselist=False)
@@ -135,6 +154,42 @@ class User(Base):
     # This is used to display the model in the admin interface.
     def __str__(self):
         return f"{self.name} ({self.email})"
+
+
+class WorkspaceMember(Base):
+    """Join table mapping users to workspaces with a role.
+    
+    NOTE: We retain the `users.workspace_id` field as the active workspace pointer for compatibility.
+    """
+    __tablename__ = "workspace_members"
+    __table_args__ = (UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    status = Column(String, default="active")  # active, removed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    workspace = relationship("Workspace", back_populates="memberships")
+    user = relationship("User", back_populates="memberships")
+
+
+class WorkspaceInvite(Base):
+    """Pending invites for existing users (email-based)."""
+    __tablename__ = "workspace_invites"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    invited_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    email = Column(String, nullable=False)
+    role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    status = Column(Enum(InviteStatusEnum, values_callable=lambda obj: [e.value for e in obj]), default=InviteStatusEnum.pending, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    responded_at = Column(DateTime, nullable=True)
+
+    workspace = relationship("Workspace", back_populates="invites")
 
 
 class Connection(Base):
