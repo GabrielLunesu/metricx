@@ -10,6 +10,9 @@ from ..database import get_db
 from ..deps import get_current_user, get_settings
 from ..models import User, Workspace, AuthCredential, RoleEnum
 from ..security import create_access_token, get_password_hash, verify_password
+import secrets
+from datetime import datetime, timedelta
+
 
 logger = logging.getLogger(__name__)
 
@@ -87,16 +90,18 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(workspace)
     db.flush()  # assign workspace.id without committing yet
 
-    # Use local-part as a friendly default name
-    default_name = payload.email.split("@")[0]
+    # Generate verification token
+    verification_token = secrets.token_urlsafe(32)
 
     # NOTE: All users are Owner for now; tighten later with invites/roles
     user = User(
         email=payload.email,
-        name=default_name,
+        name=payload.name,
         # Persist Owner temporarily for all signups (future: invites/roles)
         role=RoleEnum.owner,
         workspace_id=workspace.id,
+        verification_token=verification_token,
+        is_verified=False
     )
     db.add(user)
     db.flush()  # assign user.id
@@ -106,6 +111,10 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(user)
+    
+    # Log verification link (Mock email service)
+    logger.info(f"[AUTH] Verification link for {user.email}: http://localhost:3000/auth/verify-email?token={verification_token}")
+    
     return user
 
 
@@ -255,6 +264,162 @@ def login_user(
 def get_me(user: User = Depends(get_current_user)):
     """Return the current authenticated user."""
     return user
+
+
+@router.put(
+    "/me",
+    response_model=schemas.UserOut,
+    summary="Update user profile",
+    description="Update current user's name, email, or avatar."
+)
+def update_profile(
+    payload: schemas.UserUpdate,
+    response: Response,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update user profile fields."""
+    if payload.name is not None:
+        current_user.name = payload.name
+    if payload.avatar_url is not None:
+        current_user.avatar_url = payload.avatar_url
+    if payload.email is not None and payload.email != current_user.email:
+        # Check if email is taken
+        existing = db.query(User).filter(User.email == payload.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        current_user.email = payload.email
+        current_user.is_verified = False
+        current_user.verification_token = secrets.token_urlsafe(32)
+        logger.info(f"[AUTH] Re-verification link for {current_user.email}: http://localhost:3000/auth/verify-email?token={current_user.verification_token}")
+
+        # Refresh the JWT token with the new email
+        token = create_access_token(subject=current_user.email)
+        cookie_value = f"Bearer {token}"
+        settings = get_settings()
+        max_age = 7 * 24 * 3600
+
+        cookie_kwargs = {
+            "key": "access_token",
+            "value": cookie_value,
+            "httponly": True,
+            "samesite": "none",
+            "secure": True,
+            "max_age": max_age,
+            "path": "/",
+        }
+
+        if request.url.scheme == "http":
+            cookie_kwargs["samesite"] = "lax"
+            cookie_kwargs["secure"] = False
+        
+        if settings.COOKIE_DOMAIN:
+            cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
+        
+        response.set_cookie(**cookie_kwargs)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post(
+    "/change-password",
+    response_model=schemas.SuccessResponse,
+    summary="Change password",
+    description="Change the current user's password."
+)
+def change_password(
+    payload: schemas.PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Change password for authenticated user."""
+    cred = db.query(AuthCredential).filter(AuthCredential.user_id == current_user.id).first()
+    if not cred or not verify_password(payload.old_password, cred.password_hash):
+        raise HTTPException(status_code=400, detail="Invalid current password")
+
+    cred.password_hash = get_password_hash(payload.new_password)
+    db.commit()
+    return schemas.SuccessResponse(detail="Password updated successfully")
+
+
+@router.post(
+    "/forgot-password",
+    response_model=schemas.SuccessResponse,
+    summary="Request password reset",
+    description="Send a password reset link to the user's email."
+)
+def request_password_reset(
+    payload: schemas.PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
+    """Generate reset token and log link (mock email)."""
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        # Don't reveal user existence
+        return schemas.SuccessResponse(detail="If email exists, reset link sent")
+
+    token = secrets.token_urlsafe(32)
+    user.reset_token = token
+    user.reset_token_expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+
+    logger.info(f"[AUTH] Password reset link for {user.email}: http://localhost:3000/auth/reset-password?token={token}")
+    return schemas.SuccessResponse(detail="If email exists, reset link sent")
+
+
+@router.post(
+    "/reset-password",
+    response_model=schemas.SuccessResponse,
+    summary="Confirm password reset",
+    description="Reset password using a valid token."
+)
+def confirm_password_reset(
+    payload: schemas.PasswordResetConfirm,
+    db: Session = Depends(get_db)
+):
+    """Reset password with token."""
+    user = db.query(User).filter(
+        User.reset_token == payload.token,
+        User.reset_token_expires_at > datetime.utcnow()
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    cred = db.query(AuthCredential).filter(AuthCredential.user_id == user.id).first()
+    if cred:
+        cred.password_hash = get_password_hash(payload.new_password)
+    
+    user.reset_token = None
+    user.reset_token_expires_at = None
+    db.commit()
+
+    return schemas.SuccessResponse(detail="Password reset successfully")
+
+
+@router.post(
+    "/verify-email",
+    response_model=schemas.SuccessResponse,
+    summary="Verify email",
+    description="Verify email address using a token."
+)
+def verify_email(
+    payload: schemas.EmailVerification,
+    db: Session = Depends(get_db)
+):
+    """Verify email with token."""
+    user = db.query(User).filter(User.verification_token == payload.token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid token")
+
+    user.is_verified = True
+    user.verification_token = None
+    db.commit()
+
+    return schemas.SuccessResponse(detail="Email verified successfully")
 
 
 @router.post(

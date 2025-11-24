@@ -339,6 +339,76 @@ export async function deleteUserAccount() {
   return res.json();
 }
 
+export async function updateProfile({ name, email, avatar_url }) {
+  const res = await fetch(`${BASE}/auth/me`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, avatar_url })
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to update profile: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function changePassword({ old_password, new_password }) {
+  const res = await fetch(`${BASE}/auth/change-password`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ old_password, new_password })
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to change password: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function requestPasswordReset({ email }) {
+  const res = await fetch(`${BASE}/auth/forgot-password`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to request password reset: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function confirmPasswordReset({ token, new_password }) {
+  const res = await fetch(`${BASE}/auth/reset-password`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, new_password })
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to reset password: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function verifyEmail({ token }) {
+  const res = await fetch(`${BASE}/auth/verify-email`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token })
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to verify email: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
 export async function fetchEntityPerformance({
   workspaceId,
   entityType = 'campaign',

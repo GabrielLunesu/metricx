@@ -15,6 +15,10 @@ class UserCreate(BaseModel):
         description="User email address",
         example="user@company.com"
     )
+    name: str = Field(
+        description="User full name",
+        example="John Doe"
+    )
     password: constr(min_length=8) = Field(
         description="Password (minimum 8 characters)",
         example="securePassword123"
@@ -24,6 +28,7 @@ class UserCreate(BaseModel):
         "json_schema_extra": {
             "example": {
                 "email": "john.doe@company.com",
+                "name": "John Doe",
                 "password": "securePassword123"
             }
         }
@@ -75,6 +80,11 @@ class UserOut(BaseModel):
         description="ID of the workspace this user belongs to",
         example="456e7890-e89b-12d3-a456-426614174001"
     )
+    avatar_url: Optional[str] = Field(
+        None,
+        description="URL to user avatar image",
+        example="https://example.com/avatar.png"
+    )
 
     model_config = {
         "from_attributes": True,
@@ -84,10 +94,40 @@ class UserOut(BaseModel):
                 "email": "john.doe@company.com",
                 "name": "John Doe",
                 "role": "Admin",
-                "workspace_id": "456e7890-e89b-12d3-a456-426614174001"
+                "workspace_id": "456e7890-e89b-12d3-a456-426614174001",
+                "avatar_url": "https://example.com/avatar.png"
             }
         }
     }
+
+
+class UserUpdate(BaseModel):
+    """Payload for updating user profile."""
+    name: Optional[str] = Field(None, description="User display name")
+    email: Optional[EmailStr] = Field(None, description="User email address")
+    avatar_url: Optional[str] = Field(None, description="Avatar URL")
+
+
+class PasswordChange(BaseModel):
+    """Payload for changing password."""
+    old_password: str = Field(..., description="Current password")
+    new_password: constr(min_length=8) = Field(..., description="New password (min 8 chars)")
+
+
+class PasswordResetRequest(BaseModel):
+    """Payload for requesting password reset."""
+    email: EmailStr = Field(..., description="User email address")
+
+
+class PasswordResetConfirm(BaseModel):
+    """Payload for confirming password reset."""
+    token: str = Field(..., description="Reset token")
+    new_password: constr(min_length=8) = Field(..., description="New password (min 8 chars)")
+
+
+class EmailVerification(BaseModel):
+    """Payload for verifying email."""
+    token: str = Field(..., description="Verification token")
 
 
 class TokenPayload(BaseModel):

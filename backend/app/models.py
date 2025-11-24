@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 import enum
 
-from sqlalchemy import Column, String, DateTime, Enum, Integer, ForeignKey, Numeric, JSON, Text
+from sqlalchemy import Column, String, DateTime, Enum, Integer, ForeignKey, Numeric, JSON, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -120,6 +120,17 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+
+    # Profile fields
+    avatar_url = Column(String, nullable=True)
+
+    # Security / Verification fields
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
+    
+    # Password Reset
+    reset_token = Column(String, nullable=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
 
     # Foreign key - links this user to ONE workspace
     # When creating a user in admin, you must select which workspace they belong to
