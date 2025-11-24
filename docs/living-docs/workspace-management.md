@@ -112,6 +112,7 @@ New requirements from product:
 - How to surface invites for users not yet registered? (out of scope now).
 
 ## 10) Work Log (update as we progress)
+- 2025-11-24T18:10:00Z — Migration fix: added DB-side UUID defaults (`gen_random_uuid()`) for `workspace_members` and `workspace_invites` IDs to avoid insert failures outside ORM.
 - 2025-11-24T17:59:29Z — Added frontend workspace switcher (dashboard shell) using `/workspaces/{id}/switch` and refreshed user context; lint clean.
 - 2025-11-24T16:40:00Z — Tightened connection permissions: connection create/update/delete/sync require Owner/Admin membership; viewing connections allowed for all members (backend guard).
 - 2025-11-24T16:14:45Z — Backend scaffolding: added `workspace_members` + `workspace_invites` models/migration, single-owner enforcement helpers, workspace list/create/switch + member CRUD + invite accept/decline APIs, auth hydration returns memberships/pending invites.
