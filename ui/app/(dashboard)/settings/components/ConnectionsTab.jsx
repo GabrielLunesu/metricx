@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, Trash2, Calendar, AlertTriangle } from 'lucide-react';
+import { Trash2, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
 import { fetchConnections, ensureGoogleConnectionFromEnv, ensureMetaConnectionFromEnv, deleteConnection, updateSyncFrequency } from '@/lib/api';
 import MetaSyncButton from '@/components/MetaSyncButton';
 import GoogleSyncButton from '@/components/GoogleSyncButton';
@@ -81,8 +82,9 @@ export default function ConnectionsTab({ user }) {
                 const data = await fetchConnections({ workspaceId: user.workspace_id });
                 setConnections(data.connections || []);
             }
+            toast.success("Connection removed");
         } catch (err) {
-            alert('Failed to delete connection: ' + (err.message || 'Unknown error'));
+            toast.error(err?.message || 'Failed to delete connection');
         } finally {
             setDeletingConnectionId(null);
         }
@@ -94,8 +96,9 @@ export default function ConnectionsTab({ user }) {
         try {
             await updateSyncFrequency({ connectionId, syncFrequency: value });
             await refreshConnectionsList(user.workspace_id);
+            toast.success("Sync frequency updated");
         } catch (err) {
-            alert('Failed to update frequency: ' + (err.message || 'Unknown error'));
+            toast.error(err?.message || 'Failed to update sync frequency');
         } finally {
             setFrequencySavingId(null);
         }

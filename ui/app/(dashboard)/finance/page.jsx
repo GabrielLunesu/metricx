@@ -22,6 +22,7 @@
 
 "use client";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { currentUser } from "@/lib/auth";
 import TopBar from "./components/TopBar";
 import FinancialSummaryCards from "./components/FinancialSummaryCards";
@@ -83,6 +84,7 @@ export default function FinancePage() {
         setManualCosts(costs);
       } catch (err) {
         console.error('Failed to fetch manual costs:', err);
+        toast.error("Could not load manual costs. Safe to retry.");
       }
     }
 
@@ -111,15 +113,16 @@ export default function FinancePage() {
           compare: compareEnabled
         });
 
-        const adapted = adaptPnLStatement(apiResponse);
-        setViewModel(adapted);
-      } catch (err) {
-        console.error('Failed to fetch P&L:', err);
-        setError('Failed to load financial data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
+      const adapted = adaptPnLStatement(apiResponse);
+      setViewModel(adapted);
+    } catch (err) {
+      console.error('Failed to fetch P&L:', err);
+      setError('Failed to load financial data. Please try again.');
+      toast.error("Finance data failed to load");
+    } finally {
+      setLoading(false);
     }
+  }
 
     fetchData();
   }, [user, selectedPeriod, compareEnabled]);
@@ -194,9 +197,10 @@ export default function FinancePage() {
       });
       const adapted = adaptPnLStatement(apiResponse);
       setViewModel(adapted);
+      toast.success(editingCost ? "Cost updated" : "Cost added");
     } catch (err) {
       console.error('Failed to save cost:', err);
-      alert('Failed to save cost: ' + err.message);
+      toast.error(err?.message || 'Failed to save cost');
     }
   };
 
@@ -227,9 +231,10 @@ export default function FinancePage() {
       });
       const adapted = adaptPnLStatement(apiResponse);
       setViewModel(adapted);
+      toast.success("Cost deleted");
     } catch (err) {
       console.error('Failed to delete cost:', err);
-      alert('Failed to delete cost: ' + err.message);
+      toast.error(err?.message || 'Failed to delete cost');
     }
   };
 
