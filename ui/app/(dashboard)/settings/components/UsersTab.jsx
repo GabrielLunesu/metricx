@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { Users, Loader2, Shield, Trash2, Plus, UserPlus, Mail, Check, X } from 'lucide-react';
+import { Users, Loader2, Shield, Trash2, UserPlus, Mail, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { currentUser } from '@/lib/auth';
 import { getApiBase } from '@/lib/config';
 
 const ROLE_OPTIONS = [
-  { value: 'Owner', label: 'Owner' },
   { value: 'Admin', label: 'Admin' },
   { value: 'Viewer', label: 'Viewer' },
 ];
@@ -20,10 +19,10 @@ export default function UsersTab({ user, view = 'members' }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Admin');
 
-  const canManage = user?.memberships?.some((m) => m.workspace_id === user?.workspace_id && (m.role === 'Owner' || m.role === 'Admin'));
-
   const apiBase = getApiBase();
   const workspaceId = user?.active_workspace_id || user?.workspace_id;
+  const canManage = user?.memberships?.some((m) => m.workspace_id === workspaceId && (m.role === 'Owner' || m.role === 'Admin'));
+  const isOwner = user?.memberships?.some((m) => m.workspace_id === workspaceId && m.role === 'Owner');
 
   const fetchMembers = () => {
     if (!workspaceId) return;
@@ -223,7 +222,7 @@ export default function UsersTab({ user, view = 'members' }) {
           <div key={m.user_id} className="p-4 border border-neutral-200 rounded-xl bg-white flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-700 font-semibold">
-                {m.workspace_name?.charAt(0) || 'M'}
+                {m.user_name?.charAt(0)?.toUpperCase() || 'M'}
               </div>
               <div>
                 <div className="font-semibold text-neutral-900">{m.user_name || m.user_id}</div>
@@ -232,7 +231,7 @@ export default function UsersTab({ user, view = 'members' }) {
             </div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-1 rounded-full text-xs bg-neutral-100 text-neutral-700 capitalize">{m.role.toLowerCase()}</span>
-              {canManage && m.role !== 'Owner' && (
+              {isOwner && m.role !== 'Owner' && (
                 <button
                   onClick={() => handleRemove(m.user_id)}
                   className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
