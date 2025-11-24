@@ -210,7 +210,7 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 - Shell: Logo, Sidebar, SidebarSection, NavItem, WorkspaceSummary (now fetches real data), UserMini, Topbar, AppProviders (global toasts), app/global-error.jsx (render failover)
 - Inputs: PromptInput, QuickAction, TimeRangeChips
 - Data Viz: KPIStatCard, Sparkline, LineChart
-- Panels: NotificationsPanel, NotificationItem, VisitorsChartCard, UseCasesList, UseCaseItem
+- Panels: Page-specific panels live under `ui/app/(dashboard)/*` (e.g., AiInsightsPanel, MoneyPulseChart, TopCreative); legacy generic panels removed.
 - Primitives: Card, IconBadge, KeyValue
 - Utils: cn.js, lib/api.js (KPIs, workspace info, entity performance, QA), lib/validation.js (zod schemas for forms)
 - Sections: components/sections/HomeKpiStrip.jsx (container for dashboard KPIs)
@@ -246,7 +246,7 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 ---
 
 ## 7) Mock Data Sources (Frontend `ui/`)
-- `ui/data/kpis.js`, `ui/data/notifications.js`, `ui/data/visitors.js`, `ui/data/useCases.js`
+- None; all `ui/data/*` mock modules removed (pages rely on live APIs or inline copy).
 - Analytics: `ui/data/analytics/header.js`, `ui/data/analytics/kpis.js`, `ui/data/analytics/adsets.js`, `ui/data/analytics/chart.js`, `ui/data/analytics/opportunities.js`, `ui/data/analytics/rules.js`, `ui/data/analytics/panel.js`
  - Copilot: `ui/data/copilot/context.js`, `ui/data/copilot/seedMessages.js`, `ui/data/copilot/suggestions.js`, `ui/data/copilot/placeholders.js`
  - Finance: `ui/data/finance/kpis.js`, `ui/data/finance/costs.js`, `ui/data/finance/series.js`, `ui/data/finance/rules.js`, `ui/data/finance/timeRanges.js`
@@ -313,9 +313,14 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 
 ## 11) Changelog
 
-### 2025-11-24T14:05:00Z — **DOCS/CLEANUP**: UI living doc added; removed unused company mock/card
+### 2025-11-24T15:06:34Z — **CLEANUP**: Removed all UI mock data and legacy components
+- Deleted remaining `ui/data/*` mock modules (analytics, campaigns, copilot, finance, notifications, visitors, useCases, kpis/timeRanges) and unused legacy UI components (finance, analytics, notifications, visitors, use cases, campaign rules/sort dropdown).
+- Campaign detail pages now exclude the legacy RulesPanel import; remaining components rely on live API data and inline copy only.
+- Updated UI living doc with mock-free status and noted the hardcoded workspace ID gap in campaign detail views.
+
+### 2025-11-24T14:05:00Z — **DOCS/CLEANUP**: UI living doc added; removed unused company mock/card and stale mock data
 - Added `docs/living-docs/ui/living-ui-doc.md` as the single source for UI routes/components/data/patterns with maintenance guidance for non-technical readers.
-- Removed unused `ui/components/CompanyCard.jsx` and `ui/data/company.js` (legacy mock); updated inventories/mock lists accordingly.
+- Removed unused `ui/components/CompanyCard.jsx`, `ui/data/company.js`, `ui/data/kpis.js`, `ui/data/finance/kpis.js`, `ui/data/finance/timeRanges.js` (legacy mocks); updated inventories/mock lists accordingly.
 
 ### 2025-11-24T13:54:30Z — **ROBUSTNESS**: Global error boundary, toasts, validated finance/settings forms
 - Added `ui/app/global-error.jsx` to catch render failures with a branded recovery screen and retry CTA; wired `AppProviders` in `ui/app/layout.jsx` with `sonner` toaster so runtime errors never land users on a blank page.

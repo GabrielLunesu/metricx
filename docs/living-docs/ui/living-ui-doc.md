@@ -58,13 +58,8 @@
 - Error/Providers: `ui/app/global-error.jsx`, `ui/app/providers.jsx`.
 - Canvas (feature): `ui/features/canvas/components/*` for node rendering (uses `KeyValue`).
 
-## 5) Mock Data (still used)
-- Dashboard: `ui/data/kpis.js`, `ui/data/notifications.js`, `ui/data/visitors.js`, `ui/data/useCases.js`.
-- Analytics: `ui/data/analytics/*` (header, kpis, adsets, chart, opportunities, rules, panel).
-- Copilot: `ui/data/copilot/*` (context, seedMessages, suggestions, placeholders).
-- Finance: `ui/data/finance/*` (kpis, costs, series, rules, timeRanges) — used as placeholders in some components.
-- Campaigns: `ui/data/campaigns/*` (campaigns, detail, rules, sorters).
-- Removed as unused: `ui/data/company.js` (legacy card).
+## 5) Mock Data
+- All legacy mock data files have been removed. UI relies on live API responses and small inline copy only (no `ui/data/*` usage remains).
 
 ## 6) Loading, Errors, Feedback
 - Auth gating: dashboard layout shows centered spinner while checking `/auth/me`.
@@ -82,9 +77,10 @@
 
 ## 8) Known Gaps / Opportunities
 - Accessibility and responsive polish <1024px still pending.
-- Some sections still use mock cards/placeholder data (analytics insights/campaign rules) even though core KPIs and campaign lists call the API; keep swapping mocks for live endpoints.
+- Campaign detail pages still hardcode workspace ID for fetches; needs auth-derived workspace.
 - No automated UI tests yet (Testing Library/Vitest scaffolded).
 - Toast theme currently global; could scope variants per page if needed.
 
 ## 9) Changelog
+- 2025-11-24T15:06:34Z — Removed all mock data files from `ui/data/*`; cleaned unused legacy components; updated gaps (workspace ID hardcode).
 - 2025-11-24T14:05:00Z — Initial UI living doc created; documented routes/components/data/feedback patterns; noted removal of unused `company` mock + `CompanyCard`.

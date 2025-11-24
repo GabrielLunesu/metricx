@@ -6,7 +6,6 @@ import { useEffect, useState, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DetailHeader from '../../../../components/campaigns/DetailHeader';
 import EntityTable from '../../../../components/campaigns/EntityTable';
-import RulesPanel from '../../../../components/campaigns/RulesPanel';
 import { campaignsApiClient, campaignsAdapter } from '../../../../lib';
 
 export default function CampaignDetailPage() {
@@ -89,7 +88,6 @@ export default function CampaignDetailPage() {
         error={error}
         onRowClick={handleAdSetClick}
       />
-      {/* <RulesPanel /> */}
     </div>
   );
 }
