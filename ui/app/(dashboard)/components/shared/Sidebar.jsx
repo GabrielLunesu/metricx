@@ -22,23 +22,37 @@ export default function Sidebar() {
     useEffect(() => {
         let mounted = true;
 
-        // Fetch current user
-        currentUser().then((u) => {
-            if (!mounted) return;
-            setUser(u);
+        const init = async () => {
+            try {
+                const u = await currentUser();
+                if (!mounted) return;
+                setUser(u);
 
-            // Fetch workspace info if user has workspace_id
-            if (u?.workspace_id) {
-                fetchWorkspaceInfo(u.workspace_id)
-                    .then((ws) => mounted && setWorkspace(ws))
-                    .catch((err) => console.error("Failed to fetch workspace info:", err));
+                const wsData = await fetchWorkspaces();
+                if (!mounted) return;
+
+                const list = wsData.workspaces || [];
+                setWorkspaces(list);
+
+                // Derive current workspace from list
+                if (u?.workspace_id) {
+                    const current = list.find(w => w.id === u.workspace_id);
+                    if (current) {
+                        setWorkspace(current);
+                    } else if (list.length > 0) {
+                        // Fallback: if active workspace not in list (shouldn't happen), use first
+                        setWorkspace(list[0]);
+                    }
+                } else if (list.length > 0) {
+                    // Fallback: if no active workspace set, use first
+                    setWorkspace(list[0]);
+                }
+            } catch (err) {
+                console.error("Sidebar init failed:", err);
             }
+        };
 
-            // Fetch all workspaces
-            fetchWorkspaces()
-                .then((data) => mounted && setWorkspaces(data.workspaces || []))
-                .catch((err) => console.error("Failed to fetch workspaces:", err));
-        });
+        init();
 
         return () => {
             mounted = false;
@@ -128,10 +142,13 @@ export default function Sidebar() {
                         </div>
 
                         <div className="mt-2 pt-2 border-t border-slate-50">
-                            <button className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2">
-                                <span className="text-lg leading-none">+</span>
-                                Create Workspace
-                            </button>
+                            <Link
+                                href="/settings?tab=workspaces"
+                                className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                            >
+                                <Settings className="w-4 h-4" />
+                                Workspace Settings
+                            </Link>
                         </div>
                     </div>
                 </div>

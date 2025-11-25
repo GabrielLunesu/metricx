@@ -132,7 +132,19 @@ def create_workspace(
     db.add(workspace)
     db.flush()
 
-    # Enforce single owner: creator becomes the sole owner
+    # Enforce single owner: creator becomes the sole owner if none exists yet
+    existing_owner = (
+        db.query(WorkspaceMember)
+        .filter(
+            WorkspaceMember.workspace_id == workspace.id,
+            WorkspaceMember.role == RoleEnum.owner,
+            WorkspaceMember.status == "active",
+        )
+        .first()
+    )
+    if existing_owner:
+        raise HTTPException(status_code=400, detail="Workspace already has an owner")
+
     membership = WorkspaceMember(
         workspace_id=workspace.id,
         user_id=current_user.id,
@@ -745,3 +757,157 @@ def get_workspace_campaigns(
             for c in campaigns
         ]
     }
+
+@router.delete(
+    "/{workspace_id}",
+    response_model=schemas.SuccessResponse,
+    summary="Delete workspace",
+    description="""
+    Permanently delete a workspace and all its data.
+    
+    Requirements:
+    - User must be the Owner of the workspace.
+    
+    Behavior:
+    - Deletes all entities, metrics, connections, and logs associated with the workspace.
+    - For all members (including the owner), if this was their active workspace:
+        - Switches them to another workspace if available.
+        - If no other workspace exists, creates a new default workspace for them.
+    """
+)
+def delete_workspace(
+    workspace_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # 1. Check permissions
+    _require_membership(db, current_user, workspace_id, roles=[RoleEnum.owner])
+    
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    # 2. Handle members (ensure no one is left stranded)
+    # Get all members of this workspace
+    members = (
+        db.query(WorkspaceMember)
+        .options(joinedload(WorkspaceMember.user))
+        .filter(WorkspaceMember.workspace_id == workspace_id)
+        .all()
+    )
+    
+    for member in members:
+        user = member.user
+        if not user:
+            continue
+            
+        # If this is their active workspace, we must move them
+        if user.workspace_id == workspace_id:
+            # Find another workspace
+            other_membership = (
+                db.query(WorkspaceMember)
+                .filter(
+                    WorkspaceMember.user_id == user.id,
+                    WorkspaceMember.workspace_id != workspace_id,
+                    WorkspaceMember.status == "active"
+                )
+                .first()
+            )
+            
+            if other_membership:
+                user.workspace_id = other_membership.workspace_id
+                user.role = other_membership.role
+            else:
+                # Create a new default workspace for them
+                first_name = (user.name.split(" ")[0] or "My").strip().title()
+                new_ws = Workspace(name=f"{first_name}'s Workspace")
+                db.add(new_ws)
+                db.flush()
+                
+                new_member = WorkspaceMember(
+                    workspace_id=new_ws.id,
+                    user_id=user.id,
+                    role=RoleEnum.owner,
+                    status="active"
+                )
+                db.add(new_member)
+                
+                user.workspace_id = new_ws.id
+                user.role = RoleEnum.owner
+                
+                db.add(user)
+
+    # 3. Delete all workspace data (Cascade logic)
+    # Import models locally to avoid circular imports if any, though they are available at module level
+    from ..models import (
+        MetricFact, Entity, ManualCost, Connection, Token, QaQueryLog, ComputeRun, Pnl
+    )
+    
+    # Delete metric facts
+    db.query(MetricFact).filter(
+        MetricFact.entity_id.in_(
+            db.query(Entity.id).filter(Entity.workspace_id == workspace_id)
+        )
+    ).delete(synchronize_session=False)
+    
+    # Delete PnLs (via ComputeRuns or Entities)
+    # PnLs are linked to ComputeRuns and Entities. 
+    # Deleting Entities will cascade to PnLs if configured, but let's be explicit.
+    db.query(Pnl).filter(
+        Pnl.run_id.in_(
+            db.query(ComputeRun.id).filter(ComputeRun.workspace_id == workspace_id)
+        )
+    ).delete(synchronize_session=False)
+    
+    # Delete ComputeRuns
+    db.query(ComputeRun).filter(ComputeRun.workspace_id == workspace_id).delete(synchronize_session=False)
+
+    # Delete entities
+    db.query(Entity).filter(Entity.workspace_id == workspace_id).delete(synchronize_session=False)
+    
+    # Delete manual costs
+    db.query(ManualCost).filter(ManualCost.workspace_id == workspace_id).delete(synchronize_session=False)
+    
+    # Delete connections and orphaned tokens
+    connection_ids = [c.id for c in db.query(Connection.id).filter(
+        Connection.workspace_id == workspace_id
+    ).all()]
+    
+    if connection_ids:
+        token_ids = [t[0] for t in db.query(Connection.token_id).filter(
+            Connection.id.in_(connection_ids),
+            Connection.token_id.isnot(None)
+        ).all()]
+        
+        db.query(Connection).filter(Connection.workspace_id == workspace_id).delete(synchronize_session=False)
+        
+        if token_ids:
+            # Only delete tokens if they are not used by other connections (though tokens are usually 1:1)
+            # For safety, check if token is used elsewhere? 
+            # Our model implies 1:N but usually 1:1. Let's assume safe to delete if we are deleting the connection.
+            # Actually, let's check if any other connection uses these tokens
+            used_tokens = db.query(Connection.token_id).filter(
+                Connection.token_id.in_(token_ids),
+                Connection.workspace_id != workspace_id
+            ).all()
+            used_token_ids = {t[0] for t in used_tokens}
+            tokens_to_delete = set(token_ids) - used_token_ids
+            
+            if tokens_to_delete:
+                db.query(Token).filter(Token.id.in_(tokens_to_delete)).delete(synchronize_session=False)
+
+    # Delete query logs
+    db.query(QaQueryLog).filter(QaQueryLog.workspace_id == workspace_id).delete(synchronize_session=False)
+    
+    # Delete invites
+    db.query(WorkspaceInvite).filter(WorkspaceInvite.workspace_id == workspace_id).delete(synchronize_session=False)
+    
+    # Delete members
+    db.query(WorkspaceMember).filter(WorkspaceMember.workspace_id == workspace_id).delete(synchronize_session=False)
+
+    # Delete workspace
+    db.delete(workspace)
+    
+    db.commit()
+    
+    return schemas.SuccessResponse(detail="Workspace deleted successfully")

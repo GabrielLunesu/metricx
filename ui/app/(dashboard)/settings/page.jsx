@@ -1,18 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Settings, Loader2 } from 'lucide-react';
 import { currentUser } from '@/lib/auth';
 import SettingsTabs from './components/SettingsTabs';
 import ConnectionsTab from './components/ConnectionsTab';
 import ProfileTab from './components/ProfileTab';
 import UsersTab from './components/UsersTab';
+import WorkspacesTab from './components/WorkspacesTab';
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('connections');
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['connections', 'profile', 'users', 'invites', 'workspaces'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -45,6 +55,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'connections', label: 'Connections' },
     { id: 'profile', label: 'Profile' },
+    { id: 'workspaces', label: 'Workspaces' },
     { id: 'users', label: 'Members' },
     { id: 'invites', label: 'Invites' }
   ];
@@ -94,6 +105,7 @@ export default function SettingsPage() {
       <div className="mt-8">
         {activeTab === 'connections' && <ConnectionsTab user={user} />}
         {activeTab === 'profile' && <ProfileTab user={user} />}
+        {activeTab === 'workspaces' && <WorkspacesTab user={user} />}
         {activeTab === 'users' && <UsersTab user={user} />}
         {activeTab === 'invites' && <UsersTab user={user} view="invites" />}
       </div>

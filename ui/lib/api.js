@@ -167,6 +167,46 @@ export async function switchWorkspace(workspaceId) {
   return res.json();
 }
 
+export async function createWorkspace({ name }) {
+  const res = await fetch(`${BASE}/workspaces`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to create workspace: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function deleteWorkspace(workspaceId) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to delete workspace: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+export async function renameWorkspace({ workspaceId, name }) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to rename workspace: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
 export async function fetchQaLog(workspaceId) {
   const res = await fetch(`${BASE}/qa-log/${workspaceId}`, {
     method: "GET",

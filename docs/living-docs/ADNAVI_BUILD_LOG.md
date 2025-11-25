@@ -338,6 +338,9 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 ### 2025-11-24T18:10:00Z — **MIGRATION FIX**: UUID defaults for workspace members/invites
 - Updated migration `20251124_000001_add_workspace_members_invites.py` to set `server_default=gen_random_uuid()` on `workspace_members.id` and `workspace_invites.id` to prevent insert failures outside ORM defaults.
 
+### 2025-11-24T18:30:00Z — **FRONTEND**: Workspace CRUD controls in sidebar
+- Sidebar workspace menu now supports creating a workspace and renaming the current one (calls backend `/workspaces` create/PUT); existing workspaces listed for switching remain intact.
+
 ### 2025-11-24T14:05:00Z — **DOCS/CLEANUP**: UI living doc added; removed unused company mock/card and stale mock data
 - Added `docs/living-docs/ui/living-ui-doc.md` as the single source for UI routes/components/data/patterns with maintenance guidance for non-technical readers.
 - Removed unused `ui/components/CompanyCard.jsx`, `ui/data/company.js`, `ui/data/kpis.js`, `ui/data/finance/kpis.js`, `ui/data/finance/timeRanges.js` (legacy mocks); updated inventories/mock lists accordingly.
