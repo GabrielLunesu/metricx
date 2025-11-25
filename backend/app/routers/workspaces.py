@@ -819,7 +819,7 @@ def delete_workspace(
                 user.role = other_membership.role
             else:
                 # Create a new default workspace for them
-                first_name = (user.name.split(" ")[0] or "My").strip().title()
+                first_name = ((user.name or "").split(" ")[0] or "My").strip().title()
                 new_ws = Workspace(name=f"{first_name}'s Workspace")
                 db.add(new_ws)
                 db.flush()
