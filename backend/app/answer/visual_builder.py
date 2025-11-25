@@ -390,27 +390,6 @@ def _build_comparison_specs(result_data: Dict[str, Any]) -> Dict[str, List[Dict[
             "valueFormat": "mixed",
         })
 
-    # If the comparison key is time-like, add a multi-line chart for clarity.
-    if first_key in ["period", "date", "day", "week", "month"]:
-        line_series = []
-        for metric in metrics:
-            line_series.append(
-                {
-                    "name": _metric_display_name(metric),
-                    "dataKey": metric,
-                    "data": [{"x": row.get(first_key), "y": row.get(metric)} for row in comparison],
-                }
-            )
-        payload["viz_specs"].append({
-            "id": "comparison-lines",
-            "type": "line",
-            "title": "Comparison over time",
-            "series": line_series,
-            "xKey": "x",
-            "yKey": "y",
-            "valueFormat": "mixed",
-        })
-
     payload["viz_specs"].append({
         "id": "comparison",
         "type": "grouped_bar",
