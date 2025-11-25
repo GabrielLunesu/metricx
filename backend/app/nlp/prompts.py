@@ -70,6 +70,55 @@ FEW_SHOT_EXAMPLES = [
             "filters": {}
         }
     },
+    # NEW v2.1: Explicit time comparison examples (critical for dual-line charts)
+    {
+        "question": "Spend vs last week",
+        "dsl": {
+            "metric": "spend",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": True,  # CRITICAL: Must be True for "vs" queries
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
+    {
+        "question": "Compare revenue to last week",
+        "dsl": {
+            "metric": "revenue",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": True,  # CRITICAL: Must be True for comparison
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
+    {
+        "question": "ROAS this week vs last week",
+        "dsl": {
+            "metric": "roas",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": True,  # CRITICAL: Must be True for "vs" queries
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
+    {
+        "question": "How does my spend compare to the previous period?",
+        "dsl": {
+            "metric": "spend",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": True,  # CRITICAL for period comparisons
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
     {
         "question": "Which campaigns drove the most revenue last week?",
         "dsl": {
@@ -809,6 +858,20 @@ CRITICAL - Date Range Rules:
 
 4. NEVER use both formats in the same query!
 5. Default to {"last_n_days": 7} if timeframe is unclear.
+
+COMPARE_TO_PREVIOUS (v2.1 - CRITICAL for comparison charts):
+Set "compare_to_previous": true when user wants time period comparison:
+- "vs last week" → compare_to_previous: true
+- "compared to yesterday" → compare_to_previous: true
+- "vs previous period" → compare_to_previous: true
+- "how did X change" → compare_to_previous: true
+- "X this week vs last week" → compare_to_previous: true
+- Any question with "vs", "compared to", "change", "difference" → compare_to_previous: true
+
+Examples:
+- "Spend vs last week" → compare_to_previous: true (enables dual-line chart)
+- "What's my ROAS?" → compare_to_previous: false (simple metric query)
+- "Revenue compared to last month" → compare_to_previous: true
 """
 
     # Define the conversation context rules section

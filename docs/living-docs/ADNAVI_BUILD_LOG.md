@@ -1,6 +1,6 @@
 # AdNavi — Living Build Log
 
-_Last updated: 2025-10-28T18:00:00Z_
+_Last updated: 2025-11-25T13:05:00Z_
 
 ## 0) Monorepo Map (Current & Planned)
 - **Frontend (current):** `ui/` — Next.js 15.5.4 (App Router), **JSX only**
@@ -42,11 +42,16 @@ _Last updated: 2025-10-28T18:00:00Z_
   - `app/answer/formatters.py`: Single source of truth for display formatting (currency, ratios, percentages, counts)
   - Used by: AnswerBuilder (GPT prompts), QAService fallback (templates)
   - Benefits: Prevents "$0" bugs, ensures consistency, stops GPT from inventing formatting
-- QA System (DSL v2.4.3):
+- QA System (DSL v2.4.4 - Async Worker Queue):
   - `app/dsl/`: Domain-Specific Language for queries (schema, canonicalize, validate, planner, executor)
   - `app/nlp/`: Natural language translation via OpenAI (translator, prompts)
   - `app/telemetry/`: Structured logging and observability
+  - `app/workers/qa_worker.py`: Async job worker for question processing (Redis/RQ)
   - `app/tests/`: Unit tests for DSL validation, executor, translator, v2.4.3 extensions
+  - **Async Architecture**: POST /qa enqueues job (returns job_id), GET /qa/jobs/{job_id} polls for results
+  - **Worker Processing**: Background job processing prevents HTTP timeouts during LLM/DB operations
+  - **Frontend Polling**: Transparent polling in fetchQA() - no component changes required
+  - **Infrastructure**: qa_worker service in compose.yaml, SimpleWorker for macOS, default worker for Linux
   - **Phase 6 Follow-up**: Comparison queries, entity provider filtering, list intent, goal-aware metric selection
   - **Phase 6-2 Fixes**: Translation retry logic, empty DSL validation, multi-metric answer enhancement, latency logging standardization
 
@@ -313,6 +318,110 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 
 ## 11) Changelog
 
+### 2025-11-25T12:41:00Z — **ARCHITECTURE**: QA System Async Worker Queue ✅ — Migrated QA system to async job processing for production reliability.
+
+**Summary**: Completed migration of QA (Question-Answering) system from synchronous HTTP to async worker queue using Redis/RQ. Prevents HTTP timeouts during long LLM/DB operations and enables production-ready deployment.
+
+**Phase Completed**: Async Worker Queue Migration
+
+**Time Spent**: 1 hour
+
+**Files Created (1)**:
+- `backend/app/workers/qa_worker.py`: RQ worker for async question processing (89 lines)
+  - `process_qa_job()`: Background job handler calling QAService
+  - Handles dict result formatting from QAService
+  - Comprehensive error handling and logging
+  - Uses get_current_job() for RQ integration
+
+**Files Modified (4)**:
+- `backend/app/routers/qa.py`: Async endpoints for job enqueue and status polling
+  - `POST /qa`: Enqueues job to Redis, returns job_id immediately (<100ms)
+  - `GET /qa/jobs/{job_id}`: Polls for job status/results
+  - Uses RQ Queue and Job.fetch for status tracking
+- `backend/app/schemas.py`: Added QAJobResponse and QAJobStatusResponse schemas
+  - QAJobResponse: job_id, status (for enqueue)
+  - QAJobStatusResponse: job_id, status, answer, executed_dsl, data, context_used, error
+- `ui/lib/api.js`: Updated fetchQA() for automatic polling
+  - Enqueues job via POST /qa
+  - Polls GET /qa/jobs/{job_id} every 2 seconds (configurable)
+  - Returns same shape as before (transparent to components)
+  - Max 30 retries (60 seconds timeout)
+- `compose.yaml`: Added qa_worker service
+  - Command: `python -m rq worker qa_jobs`
+  - Memory: 256MB
+  - Required env: DATABASE_URL, REDIS_URL, OPENAI_API_KEY
+
+**Architecture**:
+```
+User asks question → POST /qa (enqueue) → Returns job_id (<100ms)
+                          ↓
+                    RQ Worker picks up job
+                          ↓
+                    Processes question (5-30s)
+                          ↓
+Frontend polls /qa/jobs/{job_id} → Returns result when ready
+```
+
+**Key Features**:
+- ✅ **Non-blocking**: API responses <100ms (enqueue only)
+- ✅ **Reliable**: No HTTP timeouts during long operations
+- ✅ **Transparent**: Frontend polling handled in fetchQA(), no component changes
+- ✅ **Production-ready**: SimpleWorker for macOS, default worker for Linux
+- ✅ **Error handling**: Graceful failures, retry support, helpful error messages
+- ✅ **Infrastructure**: Integrated with existing Redis/RQ setup (same as sync jobs)
+
+**Testing**:
+- ✅ All Python imports verified
+- ✅ Local testing successful with SimpleWorker (macOS)
+- ✅ Job enqueue/poll cycle working end-to-end
+- ✅ Questions answered successfully in ~8 seconds
+- ✅ Frontend polling transparent to Copilot UI
+
+**Production Notes**:
+- **macOS**: Use `--worker-class rq.SimpleWorker` (fork issues)
+- **Linux**: Use default worker (supports forking)
+- **compose.yaml**: Already configured for production deployment
+
+**Benefits**:
+- **Zero HTTP Timeouts**: Long LLM/DB operations don't block HTTP responses
+- **Better UX**: Instant feedback that question is being processed
+- **Scalable**: Can run multiple workers for parallel processing
+- **Consistent**: Uses same Redis/RQ infrastructure as sync jobs
+
+**Files Updated (docs)**:
+- `docs/living-docs/QA_SYSTEM_ARCHITECTURE.md`: Added Async Worker Queue phase
+- `docs/living-docs/ADNAVI_BUILD_LOG.md`: This changelog entry
+
+**Impact**: Production-ready QA system with reliable async processing and zero HTTP timeouts.
+
+### 2025-11-25T13:05:00Z — **COPILOT VISUALS**: Rich QA payload + streaming translator ✅ — Cards/charts/tables payload with shadcn + Recharts UI and streaming GPT-4o DSL.
+
+**Summary**: QA responses now ship a `visuals` payload (cards, viz specs, tables) alongside the textual answer. Backend templates sparklines, timeseries, breakdown bars, and comparison grouped bars; translator now uses streaming GPT-4o (override via `OPENAI_MODEL`) for JSON-mode DSL generation. Copilot renders visuals with shadcn cards + Recharts without bespoke engines.
+
+**Phase Completed**: Visual payload v1 for QA
+
+**Files Created (2)**:
+- `backend/app/answer/visual_builder.py`: Maps DSL results to cards, viz specs (Recharts/Vega-Lite friendly), and tables with denominators.
+- `ui/app/(dashboard)/copilot/components/AnswerVisuals.jsx`: Renders cards, charts, and tables under Copilot AI answers using shadcn + Recharts.
+
+**Files Modified (9)**:
+- `backend/app/nlp/translator.py`: Switched to streaming GPT-4o JSON mode; model override via `OPENAI_MODEL`.
+- `backend/app/services/qa_service.py`: Attaches `visuals` payload to QA responses.
+- `backend/app/schemas.py`: QAResult/QAJobStatusResponse now include `visuals`.
+- `backend/app/routers/qa.py`: Returns visuals in job status responses.
+- `backend/app/workers/qa_worker.py`: Persists visuals in worker results.
+- `ui/lib/api.js`: fetchQA exposes visuals to the UI.
+- `ui/app/(dashboard)/copilot/page.jsx`: Stores visuals per AI message.
+- `ui/app/(dashboard)/copilot/components/ConversationThread.jsx`: Renders visuals beneath AI answers.
+- `docs/living-docs/QA_SYSTEM_ARCHITECTURE.md`: Documented visuals payload and streaming translator.
+
+**Notes**:
+- Payload shape: `visuals = { cards: [...], viz_specs: [...], tables: [...] }` derived from DSL results (metrics, multi-metrics, comparisons).
+- Charts: timeseries area, breakdown bars, grouped bars for comparisons; cards include sparklines, deltas, top contributor metadata.
+- Translator remains deterministic (temp=0) but streams for SSE compatibility.
+
+---
+
 ### 2025-11-24T15:06:34Z — **CLEANUP**: Removed all UI mock data and legacy components
 - Deleted remaining `ui/data/*` mock modules (analytics, campaigns, copilot, finance, notifications, visitors, useCases, kpis/timeRanges) and unused legacy UI components (finance, analytics, notifications, visitors, use cases, campaign rules/sort dropdown).
 - Campaign detail pages now exclude the legacy RulesPanel import; remaining components rely on live API data and inline copy only.
@@ -337,6 +446,9 @@ psql $DATABASE_URL -c "SELECT level, COUNT(*) FROM entities WHERE connection_id 
 
 ### 2025-11-24T18:10:00Z — **MIGRATION FIX**: UUID defaults for workspace members/invites
 - Updated migration `20251124_000001_add_workspace_members_invites.py` to set `server_default=gen_random_uuid()` on `workspace_members.id` and `workspace_invites.id` to prevent insert failures outside ORM defaults.
+
+### 2025-11-24T18:30:00Z — **FRONTEND**: Workspace CRUD controls in sidebar
+- Sidebar workspace menu now supports creating a workspace and renaming the current one (calls backend `/workspaces` create/PUT); existing workspaces listed for switching remain intact.
 
 ### 2025-11-24T14:05:00Z — **DOCS/CLEANUP**: UI living doc added; removed unused company mock/card and stale mock data
 - Added `docs/living-docs/ui/living-ui-doc.md` as the single source for UI routes/components/data/patterns with maintenance guidance for non-technical readers.

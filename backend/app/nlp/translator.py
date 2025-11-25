@@ -22,10 +22,14 @@ Design:
 from __future__ import annotations
 
 import json
+import logging
 import time
 from typing import Optional, List, Dict, Any
+import os
 
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 from app.dsl.schema import MetricQuery
 from app.dsl.canonicalize import canonicalize_question
@@ -89,8 +93,13 @@ class Translator:
                     "Set it in your .env file or environment."
                 )
             self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            # Allow swapping models via env; default stays on GPT-4o but uses streaming by default for SSE clients.
+            self.model = getattr(settings, "OPENAI_MODEL", None) or os.getenv("OPENAI_MODEL") or "gpt-4o"
         else:
             self.client = client
+            self.model = "gpt-4o"
+        # Streaming can be toggled via env OPENAI_STREAMING=true|false; defaults to True.
+        self.use_streaming = os.getenv("OPENAI_STREAMING", "true").lower() == "true"
         
         self.date_parser = DateRangeParser()
 
@@ -189,22 +198,60 @@ class Translator:
         final_question = f"{entity_catalog_instruction}{date_instruction}Question: {canon_question}"
         messages.append({"role": "user", "content": final_question})
         
-        # Step 5: Call OpenAI API with JSON mode (fallback from structured outputs)
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                temperature=0,
-                response_format={"type": "json_object"},
-            )
-        except Exception as e:
-            raise TranslationError(
-                f"OpenAI API call failed: {e}",
-                question=question
-            ) from e
+        # Step 5: Call OpenAI API with JSON mode (streaming preferred, fallback to non-stream)
+        raw_response = ""
+        if self.use_streaming:
+            try:
+                stream = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0,
+                    response_format={"type": "json_object"},
+                    stream=True,
+                )
+                raw_chunks: List[str] = []
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content if chunk.choices and chunk.choices[0].delta else None
+                    if delta:
+                        raw_chunks.append(delta)
+                raw_response = "".join(raw_chunks).strip()
+            except Exception as e:
+                # Fallback to non-streaming if streaming fails
+                raw_response = ""
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        temperature=0,
+                        response_format={"type": "json_object"},
+                    )
+                    raw_response = response.choices[0].message.content
+                except Exception as inner:
+                    raise TranslationError(
+                        f"OpenAI API call failed (stream + fallback): {inner}",
+                        question=question
+                    ) from inner
+        else:
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0,
+                    response_format={"type": "json_object"},
+                )
+                raw_response = response.choices[0].message.content
+            except Exception as e:
+                raise TranslationError(
+                    f"OpenAI API call failed: {e}",
+                    question=question
+                ) from e
 
-        # Step 6: Parse and validate the response
-        raw_response = response.choices[0].message.content
+        if not raw_response:
+            raise TranslationError(
+                "LLM returned empty response",
+                question=question,
+                raw_response=""
+            )
         try:
             dsl_dict = json.loads(raw_response)
         except json.JSONDecodeError as e:
@@ -217,8 +264,27 @@ class Translator:
         # Add original question for context in answer generation
         dsl_dict['question'] = question
 
+        # POST-PROCESSING FIX (v2.5.1): Ensure comparison queries have compare_to_previous=True
+        # WHY: LLM sometimes misses setting this flag for "vs" queries
+        # This is a safety net to ensure comparison charts work correctly
+        question_lower = question.lower()
+        comparison_keywords = ['vs', 'versus', 'compared to', 'compare to', 'vs.', 'against last', 'vs last']
+        if any(kw in question_lower for kw in comparison_keywords):
+            if not dsl_dict.get('compare_to_previous'):
+                print(f"[TRANSLATOR] Forcing compare_to_previous=True for comparison query: {question}")
+                dsl_dict['compare_to_previous'] = True
+
+        # Always print the DSL for debugging
+        print(f"[TRANSLATOR] DSL: compare_to_previous={dsl_dict.get('compare_to_previous')}, breakdown={dsl_dict.get('breakdown')}, metric_filters={dsl_dict.get('filters', {}).get('metric_filters')}", flush=True)
+
         try:
             validated_dsl = validate_dsl(dsl_dict)
+
+            # Log the DSL for debugging
+            logger.info(f"[TRANSLATOR] Generated DSL: metric={validated_dsl.metric}, "
+                       f"compare_to_previous={validated_dsl.compare_to_previous}, "
+                       f"time_range={validated_dsl.time_range}")
+
             latency = int((time.time() - start_time) * 1000) if start_time else None
             return validated_dsl, latency
         except DSLValidationError as e:

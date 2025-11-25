@@ -81,12 +81,18 @@ export async function fetchWorkspaceKpis({
   return res.json();
 }
 
-// Call backend QA endpoint (DSL v1.1).
-// WHY: isolate fetch logic, keeps components testable and clean.
+// Call backend QA endpoint (DSL v1.1) - Async Job Queue Version.
+// WHY: LLM/DB operations can take 5-30 seconds, causing HTTP timeouts.
+//      Using async job queue prevents timeouts and enables production reliability.
+//
+// Flow:
+// 1. POST /qa → Returns { job_id, status: "queued" }
+// 2. Poll GET /qa/jobs/{job_id} → { status, answer, executed_dsl, data }
+// 3. Repeat polling until status is "completed" or "failed"
 //
 // Returns:
 // {
-//   answer: "Your ROAS for the selected period is 2.45. That's a +19.0% change vs the previous period.",
+//   answer: "Your ROAS for the selected period is 2.45...",
 //   executed_dsl: { metric: "roas", time_range: {...}, ... },
 //   data: { summary: 2.45, previous: 2.06, delta_pct: 0.189, timeseries: [...], breakdown: [...] }
 // }
@@ -99,8 +105,7 @@ export async function fetchWorkspaceKpis({
 // 5. Execute via SQLAlchemy (workspace-scoped, safe math)
 // 6. Build human-readable answer (template-based)
 // 7. Log to telemetry (success/failure tracking)
-// 7. Log to telemetry (success/failure tracking)
-export async function fetchQA({ workspaceId, question, context = {} }) {
+export async function fetchQA({ workspaceId, question, context = {}, maxRetries = 30, pollInterval = 2000 }) {
   // Append context to question if provided
   let finalQuestion = question;
   if (context && Object.keys(context).length > 0) {
@@ -110,7 +115,8 @@ export async function fetchQA({ workspaceId, question, context = {} }) {
     finalQuestion = `${question} (Context: ${contextStr})`;
   }
 
-  const res = await fetch(
+  // Step 1: Enqueue the job
+  const enqueueRes = await fetch(
     `${BASE}/qa/?workspace_id=${workspaceId}`,
     {
       method: "POST",
@@ -119,11 +125,157 @@ export async function fetchQA({ workspaceId, question, context = {} }) {
       body: JSON.stringify({ question: finalQuestion })
     }
   );
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`QA failed: ${res.status} ${msg}`);
+  if (!enqueueRes.ok) {
+    const msg = await enqueueRes.text();
+    throw new Error(`QA enqueue failed: ${enqueueRes.status} ${msg}`);
   }
-  return res.json();
+  const { job_id } = await enqueueRes.json();
+
+  // Step 2: Poll for results
+  for (let i = 0; i < maxRetries; i++) {
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+    const statusRes = await fetch(
+      `${BASE}/qa/jobs/${job_id}`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+
+    if (!statusRes.ok) {
+      const msg = await statusRes.text();
+      throw new Error(`QA status poll failed: ${statusRes.status} ${msg}`);
+    }
+
+    const status = await statusRes.json();
+
+    if (status.status === "completed") {
+      return {
+        answer: status.answer,
+        executed_dsl: status.executed_dsl,
+        data: status.data,
+        context_used: status.context_used,
+        visuals: status.visuals
+      };
+    } else if (status.status === "failed") {
+      throw new Error(status.error || "QA job failed");
+    }
+
+    // If queued or processing, continue polling
+  }
+
+  throw new Error("QA job polling timeout - job took too long to complete");
+}
+
+// SSE Streaming version of QA endpoint (v2.1).
+// WHAT: Uses Server-Sent Events for real-time progress updates instead of polling.
+// WHY: Better UX with live stage updates ("Understanding...", "Fetching...", "Preparing...")
+//      and eliminates polling overhead.
+//
+// Flow:
+// 1. POST /qa/stream → Starts streaming SSE events
+// 2. Receive stage updates: queued → translating → executing → formatting → complete
+// 3. Call onStage callback for each stage change (UI updates)
+// 4. Resolve with final result when complete
+//
+// REFERENCES:
+// - backend/app/routers/qa.py (SSE endpoint)
+// - backend/app/workers/qa_worker.py (stage metadata)
+// - docs/living-docs/QA_SYSTEM_ARCHITECTURE.md
+export async function fetchQAStream({ workspaceId, question, context = {}, onStage }) {
+  // Append context to question if provided (same as fetchQA)
+  let finalQuestion = question;
+  if (context && Object.keys(context).length > 0) {
+    const contextStr = Object.entries(context)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+    finalQuestion = `${question} (Context: ${contextStr})`;
+  }
+
+  return new Promise((resolve, reject) => {
+    // POST to SSE endpoint
+    fetch(`${BASE}/qa/stream?workspace_id=${workspaceId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ question: finalQuestion })
+    })
+      .then(response => {
+        // Check for non-2xx response
+        if (!response.ok) {
+          return response.text().then(msg => {
+            throw new Error(`QA stream failed: ${response.status} ${msg}`);
+          });
+        }
+
+        // Get reader for streaming response body
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = ''; // Buffer for incomplete chunks
+
+        // Recursive read function for streaming
+        function read() {
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              // Stream ended without complete event (shouldn't happen)
+              reject(new Error('Stream ended unexpectedly'));
+              return;
+            }
+
+            // Decode chunk and add to buffer
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete lines (SSE format: "data: {...}\n\n")
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || ''; // Keep incomplete chunk in buffer
+
+            for (const line of lines) {
+              // Parse SSE data lines
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+
+                  // Handle different stages
+                  if (data.stage === 'complete') {
+                    // Job finished successfully - resolve with result
+                    resolve({
+                      answer: data.answer,
+                      executed_dsl: data.executed_dsl,
+                      data: data.data,
+                      context_used: data.context_used,
+                      visuals: data.visuals
+                    });
+                    return; // Stop reading
+                  } else if (data.stage === 'error') {
+                    // Job failed - reject with error
+                    reject(new Error(data.error || 'QA job failed'));
+                    return; // Stop reading
+                  } else {
+                    // Stage update - call callback if provided
+                    // Stages: queued, translating, executing, formatting
+                    console.log('[fetchQAStream] Stage update:', data.stage);
+                    onStage?.(data.stage, data.job_id);
+                  }
+                } catch (parseError) {
+                  console.warn('[fetchQAStream] Failed to parse SSE data:', line, parseError);
+                }
+              }
+            }
+
+            // Continue reading
+            read();
+          }).catch(error => {
+            reject(new Error(`Stream read error: ${error.message}`));
+          });
+        }
+
+        // Start reading stream
+        read();
+      })
+      .catch(reject);
+  });
 }
 
 // Fetch workspace summary for sidebar.
@@ -163,6 +315,46 @@ export async function switchWorkspace(workspaceId) {
   if (!res.ok) {
     const msg = await res.text();
     throw new Error(`Failed to switch workspace: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function createWorkspace({ name }) {
+  const res = await fetch(`${BASE}/workspaces`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to create workspace: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+export async function deleteWorkspace(workspaceId) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to delete workspace: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+export async function renameWorkspace({ workspaceId, name }) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to rename workspace: ${res.status} ${msg}`);
   }
   return res.json();
 }
