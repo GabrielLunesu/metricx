@@ -156,7 +156,8 @@ export async function fetchQA({ workspaceId, question, context = {}, maxRetries 
         answer: status.answer,
         executed_dsl: status.executed_dsl,
         data: status.data,
-        context_used: status.context_used
+        context_used: status.context_used,
+        visuals: status.visuals
       };
     } else if (status.status === "failed") {
       throw new Error(status.error || "QA job failed");
@@ -166,6 +167,115 @@ export async function fetchQA({ workspaceId, question, context = {}, maxRetries 
   }
 
   throw new Error("QA job polling timeout - job took too long to complete");
+}
+
+// SSE Streaming version of QA endpoint (v2.1).
+// WHAT: Uses Server-Sent Events for real-time progress updates instead of polling.
+// WHY: Better UX with live stage updates ("Understanding...", "Fetching...", "Preparing...")
+//      and eliminates polling overhead.
+//
+// Flow:
+// 1. POST /qa/stream → Starts streaming SSE events
+// 2. Receive stage updates: queued → translating → executing → formatting → complete
+// 3. Call onStage callback for each stage change (UI updates)
+// 4. Resolve with final result when complete
+//
+// REFERENCES:
+// - backend/app/routers/qa.py (SSE endpoint)
+// - backend/app/workers/qa_worker.py (stage metadata)
+// - docs/living-docs/QA_SYSTEM_ARCHITECTURE.md
+export async function fetchQAStream({ workspaceId, question, context = {}, onStage }) {
+  // Append context to question if provided (same as fetchQA)
+  let finalQuestion = question;
+  if (context && Object.keys(context).length > 0) {
+    const contextStr = Object.entries(context)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+    finalQuestion = `${question} (Context: ${contextStr})`;
+  }
+
+  return new Promise((resolve, reject) => {
+    // POST to SSE endpoint
+    fetch(`${BASE}/qa/stream?workspace_id=${workspaceId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ question: finalQuestion })
+    })
+      .then(response => {
+        // Check for non-2xx response
+        if (!response.ok) {
+          return response.text().then(msg => {
+            throw new Error(`QA stream failed: ${response.status} ${msg}`);
+          });
+        }
+
+        // Get reader for streaming response body
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = ''; // Buffer for incomplete chunks
+
+        // Recursive read function for streaming
+        function read() {
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              // Stream ended without complete event (shouldn't happen)
+              reject(new Error('Stream ended unexpectedly'));
+              return;
+            }
+
+            // Decode chunk and add to buffer
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete lines (SSE format: "data: {...}\n\n")
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || ''; // Keep incomplete chunk in buffer
+
+            for (const line of lines) {
+              // Parse SSE data lines
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+
+                  // Handle different stages
+                  if (data.stage === 'complete') {
+                    // Job finished successfully - resolve with result
+                    resolve({
+                      answer: data.answer,
+                      executed_dsl: data.executed_dsl,
+                      data: data.data,
+                      context_used: data.context_used,
+                      visuals: data.visuals
+                    });
+                    return; // Stop reading
+                  } else if (data.stage === 'error') {
+                    // Job failed - reject with error
+                    reject(new Error(data.error || 'QA job failed'));
+                    return; // Stop reading
+                  } else {
+                    // Stage update - call callback if provided
+                    // Stages: queued, translating, executing, formatting
+                    console.log('[fetchQAStream] Stage update:', data.stage);
+                    onStage?.(data.stage, data.job_id);
+                  }
+                } catch (parseError) {
+                  console.warn('[fetchQAStream] Failed to parse SSE data:', line, parseError);
+                }
+              }
+            }
+
+            // Continue reading
+            read();
+          }).catch(error => {
+            reject(new Error(`Stream read error: ${error.message}`));
+          });
+        }
+
+        // Start reading stream
+        read();
+      })
+      .catch(reject);
+  });
 }
 
 // Fetch workspace summary for sidebar.

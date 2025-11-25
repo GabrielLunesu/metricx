@@ -38,6 +38,7 @@ from app.dsl.validate import DSLValidationError
 from app.telemetry.logging import log_qa_run
 from app.answer.answer_builder import AnswerBuilder, AnswerBuilderError
 from app.answer.formatters import format_metric_value, format_delta_pct, fmt_currency, fmt_count
+from app.answer.visual_builder import build_visual_payload
 from app import state  # Import shared application state
 
 logger = logging.getLogger(__name__)
@@ -283,7 +284,8 @@ class QAService:
                             "answer": helpful_answer,
                             "executed_dsl": dsl.model_dump(),
                             "data": {},  # Fixed: schema requires dict, not None
-                            "context_used": self._build_context_summary_for_response(context)
+                            "context_used": self._build_context_summary_for_response(context),
+                            "visuals": None
                         }
             except Exception as e:
                 # If validation fails, log but continue with normal execution
@@ -345,6 +347,20 @@ class QAService:
             
             # Convert Decimal values to floats for JSON serialization
             result_data = convert_decimals_to_floats(result_data)
+
+            # Debug: Log result_data before building visuals
+            print(f"[QA_SERVICE] Building visuals with result_data keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'not a dict'}")
+            if isinstance(result_data, dict):
+                ts_prev = result_data.get('timeseries_previous')
+                print(f"[QA_SERVICE] timeseries_previous in result_data: {len(ts_prev) if ts_prev else 'None/empty'} points")
+
+            visuals = build_visual_payload(dsl, result_data, window)
+
+            # Debug: Log what visuals were built
+            if visuals:
+                print(f"[QA_SERVICE] Visuals built - viz_specs count: {len(visuals.get('viz_specs', []))}")
+                for i, spec in enumerate(visuals.get('viz_specs', [])):
+                    print(f"[QA_SERVICE] viz_spec[{i}]: type={spec.get('type')}, series_count={len(spec.get('series', []))}")
             
             # Store context for future follow-up questions (if Redis is available)
             if self.context_manager:
@@ -386,7 +402,8 @@ class QAService:
                 "answer": answer_text,
                 "executed_dsl": dsl.model_dump(),  # Convert Pydantic model to dict
                 "data": result_data,
-                "context_used": context_summary  # NEW: Show what context was available
+                "context_used": context_summary,  # NEW: Show what context was available
+                "visuals": visuals
             }
             
         except TranslationError as e:
@@ -411,7 +428,8 @@ class QAService:
                 "answer": "I couldn't understand your question. Please try rephrasing it. For example:\n- 'What's my ROAS this week?'\n- 'Compare Google vs Meta campaigns'\n- 'Show me campaigns with ROAS above 4'\n- 'What's my spend and revenue last month?'",
                 "executed_dsl": {},
                 "data": None,
-                "error": error_message
+                "error": error_message,
+                "visuals": None
             }
             
         except DSLValidationError as e:
@@ -436,7 +454,8 @@ class QAService:
                 "answer": "I couldn't understand your question. Please try rephrasing it. For example:\n- 'What's my ROAS this week?'\n- 'Compare Google vs Meta campaigns'\n- 'Show me campaigns with ROAS above 4'\n- 'What's my spend and revenue last month?'",
                 "executed_dsl": {},
                 "data": None,
-                "error": error_message
+                "error": error_message,
+                "visuals": None
             }
             
         except Exception as e:

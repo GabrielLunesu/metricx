@@ -1,8 +1,69 @@
 # QA System Architecture & DSL Specification
 
-**Version**: DSL v2.4.3 (Phase 6-2 Critical Fixes)  
-**Last Updated**: 2025-10-28  
-**Status**: Production Ready - Critical Bugs Fixed
+**Version**: DSL v2.5.2 (Worker Infrastructure + Debug Tooling)
+**Last Updated**: 2025-11-25
+**Status**: Production Ready - Real-time Streaming + Worker Documentation
+
+✅ **Worker Infrastructure Documentation v2.5.2 Complete** (2025-11-25):
+- **Comprehensive Worker Docs**: Full documentation of RQ worker setup, Redis configuration, and job processing
+- **Data Flow Diagrams**: ASCII diagrams showing SSE streaming flow, visual builder pipeline, worker architecture
+- **Troubleshooting Guide**: Common issues and fixes (macOS fork crash, Redis URL loading, debug logging)
+- **Debug Logging**: Standardized log markers (`[QA_WORKER]`, `[TRANSLATOR]`, etc.) with `flush=True` for immediate output
+- **Frontend Fixes**: Fixed `formatValue()` to handle string labels (was showing "NaN" for campaign names)
+- **Redis Configuration Fix**: Changed from `os.getenv()` to `get_settings().REDIS_URL` for proper .env loading
+- **SimpleWorker**: Switched from `Worker` to `SimpleWorker` to avoid macOS fork() issues
+
+✅ **SSE Streaming + Apple Design v2.1.1 Complete** (2025-11-25):
+- **Server-Sent Events (SSE)**: New `/qa/stream` endpoint for real-time progress updates
+  - Stages: `queued` → `translating` → `executing` → `formatting` → `complete`
+  - Eliminates polling overhead, provides better UX
+  - Backend: `qa.py` (SSE endpoint), `qa_worker.py` (stage metadata)
+  - Frontend: `fetchQAStream()` in `api.js` with fallback to polling
+- **Apple-Inspired UI Redesign**:
+  - Subtle glass-morphism: Lighter blur (backdrop-blur-sm), cleaner borders (border-slate-200/50)
+  - Muted color palette: Primary blue (#3b82f6), slate for secondary
+  - Smooth animations: Replaced bouncy cubic-bezier with ease-out (0.16, 0.8, 0.3, 1)
+  - Clean card styling: `bg-white/90`, hover states with `hover:bg-slate-50/80`
+- **Stage Indicator**: Shows real-time progress ("Understanding...", "Fetching...", "Preparing...")
+- **Data Flow (SSE)**:
+```
+┌──────────┐     ┌──────────────┐     ┌───────────────┐     ┌──────────────┐
+│  Client  │────►│  POST        │────►│  RQ Worker    │────►│   SSE        │
+│ (React)  │     │  /qa/stream  │     │  (stages)     │     │   Events     │
+└──────────┘     └──────────────┘     └───────────────┘     └──────────────┘
+      ▲                                      │                      │
+      │                                      ▼                      │
+      │                              job.meta['stage']              │
+      │                                                             │
+      └─────────────────────────────────────────────────────────────┘
+                              onStage callback
+```
+- **Impact**: Faster perceived performance, cleaner UI, professional Apple-like aesthetic
+
+✅ **Visual Intelligence v2.1 Complete** (2025-11-25):
+- **Visual Intent Classifier**: New module (`app/answer/visual_intent.py`) that classifies queries into 7 intent types:
+  - `SINGLE_METRIC`: Simple card + sparkline (e.g., "What's my ROAS?")
+  - `COMPARISON`: Dual-line chart (e.g., "spend vs last week")
+  - `RANKING`: Bar chart + table (e.g., "top 5 campaigns")
+  - `FILTERING`: Table ONLY (e.g., "campaigns with no revenue")
+  - `TREND`: Area chart (e.g., "how is spend trending?")
+  - `BREAKDOWN`: Distribution chart (e.g., "spend by platform")
+  - `MULTI_METRIC`: Multiple cards (e.g., "show spend and revenue")
+- **Comparison Chart Fix**: "vs last week" queries now correctly show dual-line charts with both periods
+- **Visual Noise Reduction**: Filtering queries (e.g., "campaigns with no revenue") only show table, not irrelevant charts
+- **Prompt Engineering**: Added few-shot examples and explicit rules for `compare_to_previous=True`
+- **Data Flow**:
+```
+┌─────────────┐     ┌────────────────┐     ┌─────────────────┐     ┌────────────┐
+│   DSL +     │────►│    Intent      │────►│  Build Raw      │────►│   Filter   │
+│   Result    │     │   Classifier   │     │   Visuals       │     │  by Intent │
+└─────────────┘     └────────────────┘     └─────────────────┘     └────────────┘
+                           │                                              │
+                           ▼                                              ▼
+                    VisualIntent                                   Filtered
+                    (enum)                                         Payload
+```
+- **Impact**: Eliminates visual noise, correct chart types per query, production-ready visualization
 
 ✅ **Phase 1 Complete**: Intent-based answer depth implemented. Simple questions now get simple answers (1 sentence), comparative questions get comparisons (2-3 sentences), analytical questions get full context (3-4 sentences).
 
@@ -74,8 +135,23 @@
 - **Retry Logic**: Added automatic retry (up to 2 attempts) for translation failures with exponential backoff
 - **Empty DSL Validation**: Early detection of empty DSL responses with helpful error messages
 - **Multi-Metric Answer Enhancement**: Fixed truncated answers by including breakdown data in both LLM and template paths
-- **Latency Logging Standardization**: All answer generation methods now return numeric latency values (never None)
+- **Latency Logging Standardization**: All answer generation methods return numeric latency values (never None)
 - **Impact**: Critical bugs fixed, improved reliability and user experience
+
+✅ **Async Worker Queue Complete** (2025-11-25):
+- **Architecture Migration**: Moved from synchronous HTTP to async job queue using Redis/RQ
+- **Endpoint Changes**: POST /qa now enqueues job (returns job_id), GET /qa/jobs/{job_id} polls for results
+- **Worker Processing**: Background processing prevents HTTP timeouts during long LLM/DB operations (5-30 seconds)
+- **Frontend Polling**: Transparent polling in fetchQA() - no component changes required
+- **Production Reliability**: Non-blocking API responses (<100ms), graceful error handling, retry support
+- **Infrastructure**: Added qa_worker service to compose.yaml, uses SimpleWorker for macOS compatibility
+- **Impact**: Production-ready QA system with zero HTTP timeouts, improved user experience
+
+✅ **Rich Visual Payloads + Streaming DSL Translation** (2025-11-25):
+- **Visual Builder**: Backend now emits `visuals` with `cards`, `viz_specs` (Recharts/Vega-Lite friendly), and `tables` for comparisons/breakdowns.
+- **Templates**: Summary cards with sparklines, timeseries area charts, breakdown bar charts, comparison grouped bars, and tables with denominators.
+- **Streaming Model**: Translator uses streaming-compatible GPT-4o (override via `OPENAI_MODEL`) with JSON mode to stay compatible with SSE clients.
+- **Front-End Ready**: Payload is drop-in for shadcn + Recharts; no custom chart engines required.
 
 ✅ **Unified Metrics Refactor Complete (2025-10-14)**: Major architectural improvement:
 - **Single Source of Truth**: All endpoints now use `UnifiedMetricService` for consistent calculations
@@ -101,6 +177,12 @@
 10. [File Reference](#file-reference)
 11. [Testing](#testing)
 12. [Future Enhancements](#future-enhancements)
+13. [Worker Infrastructure](#worker-infrastructure-2025-11-25) ⭐ NEW
+14. [SSE Streaming Data Flow](#sse-streaming-data-flow-2025-11-25) ⭐ NEW
+15. [Visual Builder Pipeline](#visual-builder-pipeline-2025-11-25) ⭐ NEW
+16. [Debug Logging](#debug-logging-2025-11-25) ⭐ NEW
+17. [Troubleshooting Guide](#troubleshooting-guide-2025-11-25) ⭐ NEW
+18. [Known Issues & Improvements](#known-issues--improvements-2025-11-25) ⭐ NEW
 
 ---
 
@@ -142,7 +224,7 @@ graph TD
     
     Context --> Canon["Canonicalize<br/>app/dsl/canonicalize.py<br/><br/>Map synonyms:<br/>'return on ad spend' → 'roas'<br/>'this week' → 'last 7 days'"]
     
-    Canon --> Translate["Translator<br/>app/nlp/translator.py<br/><br/>LLM: OpenAI GPT-4-turbo<br/>Temperature: 0<br/>Mode: JSON<br/>Context-aware"]
+    Canon --> Translate["Translator<br/>app/nlp/translator.py<br/><br/>LLM: OpenAI GPT-4o (streaming JSON)<br/>Temperature: 0<br/>Mode: JSON<br/>Context-aware"]
     
     Translate --> Prompt["Build Prompt<br/>app/nlp/prompts.py<br/><br/>System prompt +<br/>Conversation history +<br/>22 few-shot examples +<br/>User question"]
     
@@ -204,7 +286,7 @@ flowchart TD
     Context --> Canon["🔄 Canonicalization<br/>Synonym mapping<br/>Time phrase normalization<br/>Entity name preservation"]
     
     %% LLM Translation Layer
-    Canon --> LLM["🤖 LLM Translation<br/>GPT-4-turbo (temp=0)<br/>22 few-shot examples<br/>Context-aware prompts"]
+    Canon --> LLM["🤖 LLM Translation<br/>GPT-4o streaming (temp=0)<br/>22 few-shot examples<br/>Context-aware prompts"]
     
     %% DSL Generation
     LLM --> DSL["📋 DSL Generation<br/>JSON structure<br/>Query type classification<br/>Metric/time range resolution"]
@@ -327,8 +409,8 @@ flowchart TD
   - `"yesterday"` → `"last 1 day"`
 
 ### 5️⃣ **Translation** (`app/nlp/translator.py`) + **Retry Logic** (`app/services/qa_service.py`)
-- **LLM**: OpenAI GPT-4-turbo (upgraded in Phase 4.5 for better accuracy)
-- **Settings**: Temperature=0 (deterministic), JSON mode
+- **LLM**: OpenAI GPT-4o (streaming JSON mode, override via `OPENAI_MODEL`)
+- **Settings**: Temperature=0 (deterministic), JSON mode with streaming assembly for SSE compatibility
 - **Input**: Canonicalized question + conversation context
 - **Output**: Raw JSON DSL (validated in next step)
 - **Context handling**: Includes last 1-2 queries for follow-up resolution
@@ -1126,7 +1208,7 @@ All queries scoped at SQL level:
 |-------|---------|-------|
 | Context Retrieval | <1ms | In-memory lookup |
 | Canonicalization | <1ms | String + regex replacements |
-| **LLM Translation** | **500-1000ms** | **GPT-4-turbo (upgraded v2.1.4)** |
+| **LLM Translation** | **500-1000ms** | **GPT-4o streaming JSON (override via OPENAI_MODEL)** |
 | Validation | 1-5ms | Pydantic validation |
 | Planning | <1ms | Pure Python logic |
 | Database Query | 10-50ms | Depends on data volume |
@@ -2049,10 +2131,434 @@ Try the `/qa` endpoint with:
 
 ---
 
-_This is the single source of truth for QA system documentation._  
+## Worker Infrastructure (2025-11-25)
+
+### Overview
+
+The QA system uses **Redis Queue (RQ)** for async job processing, enabling long-running LLM and database operations (5-30 seconds) without HTTP timeouts.
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              QA WORKER INFRASTRUCTURE                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────────────────┐
+│  Client  │────►│   FastAPI    │────►│    Redis    │────►│      RQ Worker       │
+│ (React)  │     │  /qa/stream  │     │   Queue     │     │  (SimpleWorker)      │
+└──────────┘     └──────────────┘     └─────────────┘     └──────────────────────┘
+     │                  │                    │                       │
+     │                  │                    │                       │
+     │           ┌──────▼──────┐      ┌──────▼──────┐         ┌──────▼──────┐
+     │           │  Enqueue    │      │  qa_jobs    │         │  Process    │
+     │           │  Job        │      │  Queue      │         │  Job        │
+     │           └─────────────┘      └─────────────┘         └──────┬──────┘
+     │                                                                │
+     │                  ┌─────────────────────────────────────────────┘
+     │                  │
+     │           ┌──────▼──────────────────────────────────────────────────┐
+     │           │                    QA PIPELINE                          │
+     │           │  ┌────────────┐  ┌────────────┐  ┌────────────────────┐ │
+     │           │  │ Translator │─►│  Executor  │─►│   Visual Builder   │ │
+     │           │  │ (LLM→DSL)  │  │ (DB Query) │  │   + Answer Builder │ │
+     │           │  └────────────┘  └────────────┘  └────────────────────┘ │
+     │           └─────────────────────────────────────────────────────────┘
+     │                                                        │
+     │                                                        │
+     │           ┌────────────────────────────────────────────▼───────────┐
+     │           │                   JOB RESULT                           │
+     │           │  {                                                     │
+     │           │    "success": true,                                    │
+     │           │    "answer": "You spent $28,809.81 last week...",     │
+     │           │    "executed_dsl": {...},                              │
+     │           │    "data": {...},                                      │
+     │           │    "visuals": {cards: [], viz_specs: [], tables: []}  │
+     │           │  }                                                     │
+     │           └────────────────────────────────────────────────────────┘
+     │                                         │
+     │                                         │
+     │◄──────────────────SSE Events────────────┘
+     │    data: {"stage": "translating"}
+     │    data: {"stage": "executing"}
+     │    data: {"stage": "complete", ...}
+```
+
+### Files & Locations
+
+| File | Purpose |
+|------|---------|
+| `backend/app/workers/start_worker.py` | Worker entry point - starts RQ SimpleWorker |
+| `backend/app/workers/qa_worker.py` | Job handler - processes QA questions |
+| `backend/app/routers/qa.py` | SSE endpoint - `/qa/stream` |
+| `backend/app/services/qa_service.py` | Core QA logic - orchestrates pipeline |
+| `backend/app/deps.py` | Settings - `REDIS_URL` configuration |
+
+### Running the Worker
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Start the worker (loads .env automatically)
+python -u -m app.workers.start_worker
+
+# Expected output:
+# [WORKER] Starting SimpleWorker (queues=qa_jobs,sync_jobs, redis=redis://...)
+# 17:00:00 Worker rq:worker:xxx started with PID xxx
+# 17:00:00 *** Listening on qa_jobs, sync_jobs...
+```
+
+**Important flags:**
+- `-u`: Unbuffered output (shows print statements immediately)
+- Uses `SimpleWorker` to avoid macOS fork() issues
+
+### Redis Configuration
+
+The system uses Pydantic Settings for configuration:
+
+```python
+# backend/app/deps.py
+class Settings(BaseSettings):
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    model_config = SettingsConfigDict(env_file=".env", ...)
+```
+
+**Critical**: All code should use `get_settings().REDIS_URL` instead of `os.getenv("REDIS_URL")`:
+
+```python
+# ✅ Correct - uses settings (loads from .env)
+from app.deps import get_settings
+redis_url = get_settings().REDIS_URL
+
+# ❌ Wrong - doesn't load .env automatically
+redis_url = os.getenv("REDIS_URL")  # Falls back to localhost!
+```
+
+### Queue Names
+
+| Queue | Purpose |
+|-------|---------|
+| `qa_jobs` | QA question processing |
+| `sync_jobs` | Data sync operations |
+
+Both queues use the same Redis instance and worker.
+
+---
+
+## SSE Streaming Data Flow (2025-11-25)
+
+### Complete Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           SSE STREAMING FLOW                                     │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  FRONTEND                    BACKEND                         WORKER
+  ────────                    ───────                         ──────
+     │                           │                               │
+     │  POST /qa/stream          │                               │
+     │  {question: "..."}        │                               │
+     │──────────────────────────►│                               │
+     │                           │                               │
+     │                           │  queue.enqueue(               │
+     │                           │    process_qa_job,            │
+     │                           │    question=...               │
+     │                           │  )                            │
+     │                           │──────────────────────────────►│
+     │                           │                               │
+     │  SSE: {"stage":"queued"}  │                               │
+     │◄──────────────────────────│                               │
+     │                           │                               │
+     │                           │         job.meta['stage']     │
+     │                           │◄─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│
+     │                           │                               │
+     │                           │  Poll job.meta (300ms)        │
+     │                           │─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─►│
+     │                           │                               │
+     │  SSE: {"stage":"translating"}                             │  _update_stage("translating")
+     │◄──────────────────────────│◄─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│  Translator.to_dsl()
+     │                           │                               │
+     │  SSE: {"stage":"executing"}                               │  _update_stage("executing")
+     │◄──────────────────────────│◄─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│  execute_plan()
+     │                           │                               │
+     │  SSE: {"stage":"formatting"}                              │  _update_stage("formatting")
+     │◄──────────────────────────│◄─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│  build_visual_payload()
+     │                           │                               │
+     │  SSE: {"stage":"complete",│                               │  job.result = {...}
+     │        "answer":"...",    │                               │
+     │        "visuals":{...}}   │                               │
+     │◄──────────────────────────│◄─────────────────────────────│
+     │                           │                               │
+```
+
+### Stage Progression
+
+| Stage | Description | Location |
+|-------|-------------|----------|
+| `queued` | Job added to Redis queue | `qa.py:262` |
+| `translating` | LLM converting question → DSL | `qa_worker.py:93` |
+| `executing` | Database queries running | `qa_worker.py:101` |
+| `formatting` | Building answer + visuals | `qa_worker.py:113` |
+| `complete` | Job finished with results | `qa.py:290` |
+| `error` | Job failed | `qa.py:294` |
+
+---
+
+## Visual Builder Pipeline (2025-11-25)
+
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         VISUAL BUILDER PIPELINE                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  DSL + Result                Intent Classifier              Visual Builder
+  ──────────────              ────────────────               ──────────────
+       │                            │                              │
+       │  {                         │                              │
+       │    metric: "spend",        │                              │
+       │    compare_to_previous:    │                              │
+       │      true,                 │                              │
+       │    ...                     │                              │
+       │  }                         │                              │
+       │──────────────────────────►│                              │
+       │                            │                              │
+       │                    classify_visual_intent()               │
+       │                            │                              │
+       │                            │  VisualIntent.COMPARISON     │
+       │                            │──────────────────────────────►
+       │                            │                              │
+       │                            │                   _build_timeseries_spec()
+       │                            │                   with 2 series:
+       │                            │                   - "This Period"
+       │                            │                   - "Previous Period"
+       │                            │                              │
+       │                            │                              ▼
+       │                            │                   ┌──────────────────┐
+       │                            │                   │  viz_specs: [    │
+       │                            │                   │    {             │
+       │                            │                   │      type: "line"│
+       │                            │                   │      series: [   │
+       │                            │                   │        {...},    │
+       │                            │                   │        {...}     │
+       │                            │                   │      ]           │
+       │                            │                   │    }             │
+       │                            │                   │  ]               │
+       │                            │                   └──────────────────┘
+```
+
+### Visual Intent Types
+
+| Intent | Trigger | Output |
+|--------|---------|--------|
+| `SINGLE_METRIC` | Simple queries ("What's my ROAS?") | Card + sparkline |
+| `COMPARISON` | "vs last week", compare_to_previous=True | Dual-line chart |
+| `RANKING` | "top 5 campaigns" | Bar chart + table |
+| `FILTERING` | "campaigns with no revenue" | Table only |
+| `TREND` | "how is spend trending?" | Area chart |
+| `BREAKDOWN` | "spend by platform" | Distribution chart |
+| `MULTI_METRIC` | "show spend and revenue" | Multiple cards |
+
+---
+
+## Debug Logging (2025-11-25)
+
+### Key Debug Points
+
+Add `flush=True` to all print statements in worker code for immediate output:
+
+```python
+print(f"[COMPONENT] Message", flush=True)
+```
+
+### Log Markers
+
+| Marker | Location | Purpose |
+|--------|----------|---------|
+| `[QA_WORKER]` | `qa_worker.py` | Job lifecycle |
+| `[QA_ROUTER]` | `qa.py` | Job enqueue |
+| `[TRANSLATOR]` | `translator.py` | DSL generation |
+| `[PLANNER]` | `planner.py` | Plan building |
+| `[EXECUTOR]` | `executor.py` | Query execution |
+| `[QA_SERVICE]` | `qa_service.py` | Orchestration |
+| `[VISUAL_BUILDER]` | `visual_builder.py` | Chart/table building |
+
+### Example Debug Output
+
+```
+[QA_WORKER] Processing job abc-123 for user xxx (workspace=yyy)
+[QA_WORKER] Question: Spend vs last week
+[QA_WORKER] Stage: translating - Understanding question
+[TRANSLATOR] Forcing compare_to_previous=True for comparison query: Spend vs last week
+[TRANSLATOR] DSL: compare_to_previous=True, breakdown=None, metric_filters=None
+[PLANNER] compare_to_previous=True, need_timeseries=True, breakdown=None
+[QA_WORKER] Stage: executing - Fetching data
+[EXECUTOR] Timeseries decision: need_timeseries=True, need_previous=True, breakdown=None
+[EXECUTOR] Looking for previous timeseries with key: spend_previous
+[EXECUTOR] Available keys in timeseries_dict: ['spend', 'spend_previous']
+[EXECUTOR] Found previous_timeseries with 7 points
+[EXECUTOR] Building MetricResult: summary=28809.81, timeseries=7 points, timeseries_previous=7 points
+[QA_SERVICE] Building visuals with result_data keys: ['summary', 'timeseries', 'timeseries_previous', ...]
+[QA_SERVICE] timeseries_previous in result_data: 7 points
+[VISUAL_BUILDER] Timeseries data: current=7 points, previous=7 points, is_comparison=True
+[VISUAL_BUILDER] Timeseries chart decision: is_comparison=True, has_real_previous_data=True, should_overlay=True
+[QA_SERVICE] viz_spec[0]: type=line, series_count=2
+[QA_WORKER] Stage: formatting - Preparing answer
+[QA_WORKER] Job abc-123 completed successfully
+```
+
+---
+
+## Troubleshooting Guide (2025-11-25)
+
+### Common Issues & Fixes
+
+#### 1. Worker Not Picking Up Jobs
+
+**Symptoms:**
+- Backend shows `[QA_ROUTER] Enqueued job...`
+- Worker shows `*** Listening on qa_jobs...` but no job processing
+
+**Causes & Fixes:**
+
+| Cause | Fix |
+|-------|-----|
+| Another worker running | `ps aux \| grep worker` then `kill <PID>` |
+| Wrong Redis URL | Ensure both backend and worker use same `REDIS_URL` |
+| Queue name mismatch | Worker must listen on `qa_jobs` queue |
+
+**Check for other workers:**
+```bash
+ps aux | grep worker
+# Look for: ./bin/rq worker qa_jobs ...
+# Kill with: kill <PID>
+```
+
+#### 2. macOS Fork Crash
+
+**Symptoms:**
+```
+objc[xxx]: +[NSMutableString initialize] may have been in progress in another thread when fork() was called.
+Moving job to FailedJobRegistry (Work-horse terminated unexpectedly)
+```
+
+**Fix:** Use `SimpleWorker` instead of default `Worker`:
+
+```python
+# backend/app/workers/start_worker.py
+from rq.worker import SimpleWorker
+
+worker = SimpleWorker([qa_queue, sync_queue], connection=redis)
+```
+
+#### 3. Redis URL Not Loading from .env
+
+**Symptoms:**
+- Worker connects to `redis://localhost:6379/0` instead of production Redis
+- Backend enqueues to different Redis than worker listens on
+
+**Fix:** Use `get_settings().REDIS_URL` everywhere:
+
+```python
+# ✅ Correct
+from app.deps import get_settings
+redis_url = get_settings().REDIS_URL
+
+# ❌ Wrong
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+```
+
+#### 4. Print Statements Not Showing in Worker
+
+**Symptoms:**
+- Worker processes jobs but no debug output appears
+
+**Fixes:**
+1. Run with unbuffered output: `python -u -m app.workers.start_worker`
+2. Add `flush=True` to all print statements:
+   ```python
+   print(f"[COMPONENT] Message", flush=True)
+   ```
+
+#### 5. Comparison Charts Showing Only 1 Line
+
+**Symptoms:**
+- "Spend vs last week" shows single line instead of dual-line comparison
+
+**Root Cause:** LLM not setting `compare_to_previous=True`
+
+**Fix (translator.py):**
+```python
+# POST-PROCESSING FIX: Force compare_to_previous for comparison keywords
+comparison_keywords = ['vs', 'versus', 'compared to', 'compare to', 'vs.']
+if any(kw in question_lower for kw in comparison_keywords):
+    if not dsl_dict.get('compare_to_previous'):
+        dsl_dict['compare_to_previous'] = True
+```
+
+#### 6. Table Labels Showing "NaN"
+
+**Symptoms:**
+- Breakdown table shows "NaN" instead of campaign names
+
+**Root Cause:** Frontend `formatValue()` treating text as numbers
+
+**Fix (AnswerVisuals.jsx):**
+```javascript
+function formatValue(value, format) {
+  if (value === null || value === undefined) return "—";
+  // If value is a string (like labels/names), return as-is
+  if (typeof value === "string") return value;
+  // ... rest of formatting
+}
+```
+
+---
+
+## Known Issues & Improvements (2025-11-25)
+
+### Current Issues
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| SSE stages sometimes skip | Low Priority | Stages update too fast, some skipped in UI |
+| Comparison keywords hardcoded | Low Priority | LLM should handle this, but post-processing catches misses |
+
+### Potential Improvements
+
+#### 1. Worker Health Monitoring
+- Add heartbeat checks
+- Auto-restart on failure
+- Metrics for job latency and queue depth
+
+#### 2. Enhanced Caching
+- Cache LLM translations for identical questions
+- Redis-based result caching for repeated queries
+- Cache invalidation on data refresh
+
+#### 3. Multi-Worker Support
+- Load balancing across workers
+- Worker pool management
+- Graceful shutdown handling
+
+#### 4. Better Error Recovery
+- Automatic retry with exponential backoff
+- Dead letter queue for failed jobs
+- Error categorization and reporting
+
+#### 5. Real-time Updates
+- WebSocket support for bidirectional communication
+- Progress percentage instead of just stages
+- Cancelable queries
+
+---
+
+_This is the single source of truth for QA system documentation._
 _For build history and project-wide changes, see: `docs/ADNAVI_BUILD_LOG.md`_
-
-
 
 ---
 

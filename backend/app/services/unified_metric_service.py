@@ -222,7 +222,8 @@ class UnifiedMetricService:
         metrics: List[str],
         time_range: TimeRange,
         filters: MetricFilters,
-        granularity: str = "day"
+        granularity: str = "day",
+        include_previous: bool = False
     ) -> Dict[str, List[MetricTimePoint]]:
         """
         Get timeseries data for metrics.
@@ -233,6 +234,7 @@ class UnifiedMetricService:
             time_range: Time range for calculation
             filters: Filtering criteria
             granularity: 'day' or 'hour'
+            include_previous: When True, also returns previous-period timeseries keyed as "<metric>_previous"
             
         Returns:
             Dictionary mapping metric name to list of time points
@@ -330,7 +332,72 @@ class UnifiedMetricService:
                     date=date_str,
                     value=value
                 ))
-        
+        # Previous-period window
+        if include_previous:
+            days = (end_date - start_date).days + 1
+            prev_end_date = start_date - timedelta(days=1)
+            prev_start_date = prev_end_date - timedelta(days=days - 1)
+
+            if granularity == "hour":
+                from datetime import datetime as dt, time
+                prev_start_datetime = dt.combine(prev_start_date, time.min)
+                prev_end_datetime = dt.combine(prev_end_date, time.max)
+                prev_query = (
+                    self.db.query(
+                        self.MF.event_date.label("date"),
+                        func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
+                        func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
+                        func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
+                        func.coalesce(func.sum(self.MF.impressions), 0).label("impressions"),
+                        func.coalesce(func.sum(self.MF.conversions), 0).label("conversions"),
+                        func.coalesce(func.sum(self.MF.leads), 0).label("leads"),
+                        func.coalesce(func.sum(self.MF.installs), 0).label("installs"),
+                        func.coalesce(func.sum(self.MF.purchases), 0).label("purchases"),
+                        func.coalesce(func.sum(self.MF.visitors), 0).label("visitors"),
+                        func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
+                    )
+                    .join(self.E, self.E.id == self.MF.entity_id)
+                    .filter(self.E.workspace_id == workspace_id)
+                    .filter(self.MF.event_date.between(prev_start_datetime, prev_end_datetime))
+                    .group_by(self.MF.event_date)
+                    .order_by(self.MF.event_date)
+                )
+            else:
+                prev_query = (
+                    self.db.query(
+                        cast(self.MF.event_date, Date).label("date"),
+                        func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
+                        func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
+                        func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
+                        func.coalesce(func.sum(self.MF.impressions), 0).label("impressions"),
+                        func.coalesce(func.sum(self.MF.conversions), 0).label("conversions"),
+                        func.coalesce(func.sum(self.MF.leads), 0).label("leads"),
+                        func.coalesce(func.sum(self.MF.installs), 0).label("installs"),
+                        func.coalesce(func.sum(self.MF.purchases), 0).label("purchases"),
+                        func.coalesce(func.sum(self.MF.visitors), 0).label("visitors"),
+                        func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
+                    )
+                    .join(self.E, self.E.id == self.MF.entity_id)
+                    .filter(self.E.workspace_id == workspace_id)
+                    .filter(cast(self.MF.event_date, Date).between(prev_start_date, prev_end_date))
+                    .group_by(cast(self.MF.event_date, Date))
+                    .order_by(cast(self.MF.event_date, Date))
+                )
+
+            prev_query = self._apply_filters(prev_query, filters, workspace_id)
+            prev_rows = prev_query.all()
+
+            for metric in metrics:
+                prev_points: List[MetricTimePoint] = []
+                for row in prev_rows:
+                    totals = row._asdict()
+                    value = compute_metric(metric, totals)
+                    date_str = str(row.date)
+                    if granularity == "hour" and isinstance(row.date, datetime):
+                        date_str = row.date.isoformat()
+                    prev_points.append(MetricTimePoint(date=date_str, value=value))
+                results[f"{metric}_previous"] = prev_points
+
         return results
     
     def get_breakdown(

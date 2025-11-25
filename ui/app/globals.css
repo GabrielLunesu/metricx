@@ -14,39 +14,38 @@
   --shadow-halo: 0 0 20px rgba(45, 212, 191, 0.3);
   --shadow-glow-sm: 0 0 10px rgba(56, 189, 248, 0.2);
 
+  /* Animation Variables (v2.1 - Apple-like smooth ease) */
+  /* WHY: Replaced bouncy animations with subtle, smooth transitions */
   --animate-breathe: breathe 12s ease-in-out infinite;
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-slide-in: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-float: none; /* Disabled - too decorative */
+  --animate-slide-in: slideIn 0.4s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
 
   @keyframes breathe {
-
+    /* Subtle breathing - barely noticeable */
     0%,
     100% {
       transform: scale(1);
-      opacity: 0.5;
+      opacity: 0.3;
     }
 
     50% {
-      transform: scale(1.1);
-      opacity: 0.7;
+      transform: scale(1.02);
+      opacity: 0.4;
     }
   }
 
   @keyframes float {
-
+    /* Disabled - set to no movement */
     0%,
     100% {
       transform: translateY(0);
     }
-
-    50% {
-      transform: translateY(-6px);
-    }
   }
 
   @keyframes slideIn {
+    /* Smooth slide - Apple-like ease */
     0% {
-      transform: translateX(20px);
+      transform: translateX(12px);
       opacity: 0;
     }
 
@@ -209,10 +208,12 @@ body {
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
 }
 
+/* Fade In Up Animation (v2.1 - Apple-like smooth ease) */
+/* WHY: Subtle, smooth entry animation for chat messages */
 @keyframes fadeInUp {
   0% {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
 
   100% {
@@ -222,7 +223,7 @@ body {
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
 }
 
 /* Analytics Redesign Styles */
@@ -351,10 +352,11 @@ body {
   animation: pulse-glow 3s infinite;
 }
 
-/* Slide In Animation */
+/* Slide In Animation (v2.1 - Apple-like smooth ease) */
+/* WHY: Removed bouncy easing for cleaner, professional feel */
 @keyframes slide-in-right {
   0% {
-    transform: translateX(50px);
+    transform: translateX(20px);
     opacity: 0;
   }
 
@@ -365,5 +367,5 @@ body {
 }
 
 .animate-slide-in {
-  animation: slide-in-right 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: slide-in-right 0.4s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
 }

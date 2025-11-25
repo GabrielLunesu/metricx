@@ -318,21 +318,23 @@ def _execute_metrics_plan(
     
     # --- TIMESERIES (daily values) ---
     timeseries = None
-    
+    previous_timeseries = None
+
+    # Debug: Log timeseries fetching decision
+    print(f"[EXECUTOR] Timeseries decision: need_timeseries={plan.need_timeseries}, need_previous={plan.need_previous}, breakdown={plan.breakdown}", flush=True)
+
     if plan.need_timeseries:
-        # Use UnifiedMetricService for consistent timeseries
+        # Use UnifiedMetricService for consistent timeseries (with optional previous period overlay)
         timeseries_dict = service.get_timeseries(
             workspace_id=workspace_id,
             metrics=metrics,
             time_range=time_range,
-            filters=filters
+            filters=filters,
+            include_previous=plan.need_previous
         )
-        
+
         # Extract timeseries for the primary metric
-        # get_timeseries now returns Dict[str, List[MetricTimePoint]]
         timeseries_points = timeseries_dict.get(metric_name, [])
-        
-        # Convert to expected format
         timeseries = [
             {
                 "date": point.date,
@@ -340,6 +342,21 @@ def _execute_metrics_plan(
             }
             for point in timeseries_points
         ]
+
+        # Previous-period timeseries if present
+        prev_key = f"{metric_name}_previous"
+        print(f"[EXECUTOR] Looking for previous timeseries with key: {prev_key}")
+        print(f"[EXECUTOR] Available keys in timeseries_dict: {list(timeseries_dict.keys())}")
+        if prev_key in timeseries_dict:
+            prev_points = timeseries_dict.get(prev_key, [])
+            previous_timeseries = [
+                {
+                    "date": point.date,
+                    "value": point.value
+                }
+                for point in prev_points
+            ]
+            print(f"[EXECUTOR] Found previous_timeseries with {len(previous_timeseries)} points")
     
     # --- BREAKDOWN (top entities by dimension) ---
     breakdown = None
@@ -394,11 +411,17 @@ def _execute_metrics_plan(
         )
     
     # --- BUILD RESULT ---
+    print(f"[EXECUTOR] Building MetricResult: "
+          f"summary={summary_value}, "
+          f"timeseries={len(timeseries) if timeseries else 0} points, "
+          f"timeseries_previous={len(previous_timeseries) if previous_timeseries else 0} points")
+
     return MetricResult(
         summary=summary_value,
         previous=previous_value,
         delta_pct=delta_pct,
         timeseries=timeseries,
+        timeseries_previous=previous_timeseries,
         breakdown=breakdown,
         workspace_avg=workspace_avg
     )

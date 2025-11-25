@@ -499,6 +499,10 @@ class MetricResult(BaseModel):
         default=None,
         description="Daily values: [{date: 'YYYY-MM-DD', value: 123.4}, ...]"
     )
+    timeseries_previous: Optional[List[Dict[str, Union[str, float, None]]]] = Field(
+        default=None,
+        description="Previous period daily values for comparison overlays"
+    )
     
     breakdown: Optional[List[Dict[str, Union[str, float, int, None]]]] = Field(
         default=None,
