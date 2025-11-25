@@ -4,25 +4,28 @@ QA Router
 
 HTTP endpoint for natural language question answering using the DSL v1.1 pipeline.
 
+UPDATED: Now uses async job queue for production reliability.
+
 Related files:
 - app/services/qa_service.py: Service layer
+- app/workers/qa_worker.py: Async job worker
 - app/schemas.py: Request/response models
 - app/dsl/schema.py: DSL structure
 
 Architecture:
-- Uses new DSL pipeline (dsl/, nlp/, telemetry/)
-- Better error handling with specific error types
-- Structured telemetry logging
-- Workspace scoping enforced
+- POST /qa: Enqueues job and returns job_id
+- GET /qa/jobs/{job_id}: Polls for job status/result
+- Uses Redis/RQ for job queue (same as sync jobs)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from redis import Redis
+from rq import Queue
+from rq.job import Job
+import os
 
-from app.schemas import QARequest, QAResult
-from app.services.qa_service import QAService
-from app.nlp.translator import TranslationError
-from app.dsl.validate import DSLValidationError
+from app.schemas import QARequest, QAJobResponse, QAJobStatusResponse
 from app.database import get_db
 from app.deps import get_current_user
 
@@ -30,7 +33,7 @@ from app.deps import get_current_user
 router = APIRouter(prefix="/qa", tags=["qa"])
 
 
-@router.post("", response_model=QAResult)
+@router.post("", response_model=QAJobResponse)
 def ask_question(
     req: QARequest,
     workspace_id: str = Query(..., description="Workspace context for scoping queries"),
@@ -40,80 +43,134 @@ def ask_question(
     """
     POST /qa
     
-    Translate a natural language question into a metrics query and execute it.
+    Enqueues a natural language question for async processing.
     
     Input:  { "question": "What's my ROAS this week?" }
-    Output: { "answer": "...", "executed_dsl": {...}, "data": {...} }
+    Output: { "job_id": "...", "status": "queued" }
     
     Process:
-    1. Translate question → DSL (via LLM)
-    2. Validate DSL structure
-    3. Plan query execution
-    4. Execute against database
-    5. Build human-readable answer
-    6. Log for telemetry
-    
-    Error handling:
-    - 400: Translation error (LLM failed or returned invalid JSON)
-    - 400: Validation error (DSL doesn't match schema)
-    - 400: Execution error (database query failed)
-    - 401: Authentication error (no valid token)
+    1. Validates authentication and workspace access
+    2. Enqueues job to Redis queue
+    3. Returns job_id immediately (non-blocking)
+    4. Worker processes job asynchronously
+    5. Poll GET /qa/jobs/{job_id} for results
     
     Security:
     - Requires authentication (current_user dependency)
-    - Workspace scoping enforced (all queries filter by workspace_id)
-    - No SQL injection possible (DSL → validated → ORM)
+    - Workspace scoping enforced in worker
     
     Examples:
-        curl -X POST "http://localhost:8000/qa?workspace_id=123..." \\
-             -H "Cookie: access_token=Bearer..." \\
-             -H "Content-Type: application/json" \\
-             -d '{"question": "Show me revenue from active campaigns this month"}'
-    
-    Related:
-    - Service: app/services/qa_service.py
-    - DSL: app/dsl/schema.py
-    - Logging: app/telemetry/logging.py
+        # Enqueue job
+        POST /qa?workspace_id=123...
+        { "question": "Show me revenue from active campaigns this month" }
+        
+        # Poll for result
+        GET /qa/jobs/{job_id}
     """
     try:
-        # Initialize service (can fail if OPENAI_API_KEY not set)
-        service = QAService(db)
+        # Connect to Redis queue
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        queue = Queue("qa_jobs", connection=Redis.from_url(redis_url))
         
-        # Execute the QA pipeline
-        result = service.answer(
+        # Enqueue job
+        job = queue.enqueue(
+            "app.workers.qa_worker.process_qa_job",
             question=req.question,
             workspace_id=workspace_id,
-            user_id=str(current_user.id)
-        )
-        return result
-        
-    except ValueError as e:
-        # Configuration error (e.g., OPENAI_API_KEY not set)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Service configuration error: {str(e)}"
+            user_id=str(current_user.id),
         )
         
-    except TranslationError as e:
-        # LLM failed to translate or returned invalid JSON
-        raise HTTPException(
-            status_code=400,
-            detail=f"Could not translate your question: {e.message}"
-        )
-        
-    except DSLValidationError as e:
-        # LLM output didn't match DSL schema
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid query structure: {e.message}"
+        return QAJobResponse(
+            job_id=job.id,
+            status="queued"
         )
         
     except Exception as e:
-        # Catch-all for unexpected errors (with logging for debugging)
-        import traceback
-        print(f"QA Error: {str(e)}")
-        print(traceback.format_exc())
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Failed to enqueue QA job: {str(e)}"
+        )
+
+
+@router.get("/jobs/{job_id}", response_model=QAJobStatusResponse)
+def get_job_status(
+    job_id: str,
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/jobs/{job_id}
+    
+    Poll for QA job status and results.
+    
+    Returns:
+    - status: "queued" | "processing" | "completed" | "failed"
+    - When completed: answer, executed_dsl, data, context_used
+    - When failed: error message
+    
+    Frontend should poll this endpoint every 1-2 seconds until
+    status is "completed" or "failed".
+    
+    Examples:
+        GET /qa/jobs/abc-123-def
+        
+        # Queued response:
+        { "job_id": "abc-123-def", "status": "queued" }
+        
+        # Completed response:
+        {
+          "job_id": "abc-123-def",
+          "status": "completed",
+          "answer": "Your ROAS this week is 2.45×",
+          "executed_dsl": {...},
+          "data": {...}
+        }
+    """
+    try:
+        # Connect to Redis
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        redis_conn = Redis.from_url(redis_url)
+        
+        # Fetch job
+        job = Job.fetch(job_id, connection=redis_conn)
+        
+        # Map RQ status to our status
+        if job.is_queued:
+            status = "queued"
+        elif job.is_started:
+            status = "processing"
+        elif job.is_finished:
+            status = "completed"
+        elif job.is_failed:
+            status = "failed"
+        else:
+            status = "unknown"
+        
+        # Build response
+        response = QAJobStatusResponse(
+            job_id=job_id,
+            status=status
+        )
+        
+        # Add result data if completed
+        if job.is_finished and job.result:
+            result = job.result
+            if result.get("success"):
+                response.answer = result.get("answer")
+                response.executed_dsl = result.get("executed_dsl")
+                response.data = result.get("data")
+                response.context_used = result.get("context_used")
+            else:
+                response.error = result.get("error", "Unknown error occurred")
+                response.status = "failed"
+        
+        # Add error if failed
+        elif job.is_failed:
+            response.error = str(job.exc_info) if job.exc_info else "Job failed"
+        
+        return response
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Job not found or error fetching status: {str(e)}"
         )

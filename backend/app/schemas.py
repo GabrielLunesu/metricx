@@ -421,6 +421,25 @@ class SyncJobResponse(BaseModel):
     status: str = Field(description="State after enqueue (queued)")
 
 
+class QAJobResponse(BaseModel):
+    """Response when enqueuing a QA job."""
+
+    job_id: str = Field(description="RQ job identifier")
+    status: str = Field(description="Job status: queued, processing, completed, failed")
+
+
+class QAJobStatusResponse(BaseModel):
+    """Status response for a QA job."""
+
+    job_id: str = Field(description="RQ job identifier")
+    status: str = Field(description="Job status: queued, processing, completed, failed")
+    answer: Optional[str] = Field(None, description="Answer (when completed)")
+    executed_dsl: Optional[dict] = Field(None, description="Executed DSL (when completed)")
+    data: Optional[dict] = Field(None, description="Result data (when completed)")
+    context_used: Optional[List[dict]] = Field(None, description="Context used (when completed)")
+    error: Optional[str] = Field(None, description="Error message (when failed)")
+
+
 # Entity Schemas
 class EntityCreate(BaseModel):
     """Schema for creating a new entity (campaign, ad set, ad, etc.)."""

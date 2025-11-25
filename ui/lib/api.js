@@ -81,12 +81,18 @@ export async function fetchWorkspaceKpis({
   return res.json();
 }
 
-// Call backend QA endpoint (DSL v1.1).
-// WHY: isolate fetch logic, keeps components testable and clean.
+// Call backend QA endpoint (DSL v1.1) - Async Job Queue Version.
+// WHY: LLM/DB operations can take 5-30 seconds, causing HTTP timeouts.
+//      Using async job queue prevents timeouts and enables production reliability.
+//
+// Flow:
+// 1. POST /qa → Returns { job_id, status: "queued" }
+// 2. Poll GET /qa/jobs/{job_id} → { status, answer, executed_dsl, data }
+// 3. Repeat polling until status is "completed" or "failed"
 //
 // Returns:
 // {
-//   answer: "Your ROAS for the selected period is 2.45. That's a +19.0% change vs the previous period.",
+//   answer: "Your ROAS for the selected period is 2.45...",
 //   executed_dsl: { metric: "roas", time_range: {...}, ... },
 //   data: { summary: 2.45, previous: 2.06, delta_pct: 0.189, timeseries: [...], breakdown: [...] }
 // }
@@ -99,8 +105,7 @@ export async function fetchWorkspaceKpis({
 // 5. Execute via SQLAlchemy (workspace-scoped, safe math)
 // 6. Build human-readable answer (template-based)
 // 7. Log to telemetry (success/failure tracking)
-// 7. Log to telemetry (success/failure tracking)
-export async function fetchQA({ workspaceId, question, context = {} }) {
+export async function fetchQA({ workspaceId, question, context = {}, maxRetries = 30, pollInterval = 2000 }) {
   // Append context to question if provided
   let finalQuestion = question;
   if (context && Object.keys(context).length > 0) {
@@ -110,7 +115,8 @@ export async function fetchQA({ workspaceId, question, context = {} }) {
     finalQuestion = `${question} (Context: ${contextStr})`;
   }
 
-  const res = await fetch(
+  // Step 1: Enqueue the job
+  const enqueueRes = await fetch(
     `${BASE}/qa/?workspace_id=${workspaceId}`,
     {
       method: "POST",
@@ -119,11 +125,47 @@ export async function fetchQA({ workspaceId, question, context = {} }) {
       body: JSON.stringify({ question: finalQuestion })
     }
   );
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`QA failed: ${res.status} ${msg}`);
+  if (!enqueueRes.ok) {
+    const msg = await enqueueRes.text();
+    throw new Error(`QA enqueue failed: ${enqueueRes.status} ${msg}`);
   }
-  return res.json();
+  const { job_id } = await enqueueRes.json();
+
+  // Step 2: Poll for results
+  for (let i = 0; i < maxRetries; i++) {
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+    const statusRes = await fetch(
+      `${BASE}/qa/jobs/${job_id}`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+
+    if (!statusRes.ok) {
+      const msg = await statusRes.text();
+      throw new Error(`QA status poll failed: ${statusRes.status} ${msg}`);
+    }
+
+    const status = await statusRes.json();
+
+    if (status.status === "completed") {
+      return {
+        answer: status.answer,
+        executed_dsl: status.executed_dsl,
+        data: status.data,
+        context_used: status.context_used
+      };
+    } else if (status.status === "failed") {
+      throw new Error(status.error || "QA job failed");
+    }
+
+    // If queued or processing, continue polling
+  }
+
+  throw new Error("QA job polling timeout - job took too long to complete");
 }
 
 // Fetch workspace summary for sidebar.
