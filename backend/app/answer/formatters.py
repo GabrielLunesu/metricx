@@ -259,7 +259,12 @@ def format_metric_value(
     - app/services/qa_service.py: Uses this for fallback answers
     """
     # Normalize metric name (case-insensitive)
-    m = (metric or "").lower()
+    if isinstance(metric, list):
+        # For multi-metric queries, use the first metric for formatting rules
+        # (This is a simplified assumption, but better than crashing)
+        m = (metric[0] if metric else "").lower()
+    else:
+        m = (metric or "").lower()
     
     # Route to appropriate formatter
     if m in CURRENCY:

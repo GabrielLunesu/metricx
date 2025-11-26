@@ -370,9 +370,22 @@ class MetricQuery(BaseModel):
     # NEW in Phase 1.1
     question: Optional[str] = Field(None, description="Original user question for tense/context")
     timeframe_description: Optional[str] = Field(None, description="Natural language timeframe like 'last week', 'today'")
-    
+
     # NEW: For context-aware empty result handling
     workspace_id: Optional[str] = Field(None, description="Workspace ID for enhanced context (e.g., entity counts)")
+
+    # NEW: Output format preference (user can request table, chart, or text)
+    output_format: Optional[Literal["auto", "table", "chart", "text"]] = Field(
+        default="auto",
+        description="User's preferred output format. 'auto' lets the system decide, 'table' forces tabular output, 'chart' forces visualization, 'text' forces prose-only response."
+    )
+
+    # NEW v2.4: Track when metric was auto-inferred (not explicitly specified by user)
+    metric_inferred: bool = Field(
+        default=False,
+        description="True when the metric was auto-selected (e.g., defaulting to 'spend' for 'top 5 ads' queries). "
+                    "When True, the answer should clarify what metric was used for sorting."
+    )
     
     @model_validator(mode='after')
     def set_timeframe_description(self):
@@ -512,4 +525,10 @@ class MetricResult(BaseModel):
     workspace_avg: Optional[float] = Field(
         default=None,
         description="Workspace-wide average for this metric over the same time range (NEW in v2.0.1)"
+    )
+
+    entity_timeseries: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Per-entity timeseries for multi-line charts (NEW in v2.3). "
+                    "Structure: [{entity_id: 'uuid', entity_name: 'Ad Name', timeseries: [{date, value}, ...]}, ...]"
     )

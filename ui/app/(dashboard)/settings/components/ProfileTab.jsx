@@ -20,7 +20,6 @@ export default function ProfileTab({ user: initialUser }) {
     defaultValues: {
       name: initialUser?.name || '',
       email: initialUser?.email || '',
-      avatar_url: initialUser?.avatar_url || '',
     },
   });
 
@@ -39,7 +38,6 @@ export default function ProfileTab({ user: initialUser }) {
       profileForm.reset({
         name: initialUser.name || '',
         email: initialUser.email || '',
-        avatar_url: initialUser.avatar_url || '',
       });
     }
   }, [initialUser, profileForm]);
@@ -134,16 +132,7 @@ export default function ProfileTab({ user: initialUser }) {
               <p className="text-xs text-neutral-500 mt-1">Changing email will require re-verification.</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Avatar URL</label>
-              <input
-                type="url"
-                {...profileForm.register('avatar_url')}
-                placeholder="https://example.com/avatar.png"
-                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-neutral-900 outline-none transition-all"
-              />
-              {profileErrors.avatar_url && <p className="text-xs text-red-600 mt-1">{profileErrors.avatar_url.message}</p>}
-            </div>
+
 
             <button
               type="submit"

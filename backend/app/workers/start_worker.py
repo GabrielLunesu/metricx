@@ -7,12 +7,23 @@ Usage:
 from __future__ import annotations
 
 import os
+import logging
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 from redis import Redis
 from rq import Queue
 from rq.worker import SimpleWorker
+
+# Configure logging BEFORE importing app modules
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s [%(name)s] %(message)s',
+    datefmt='%H:%M:%S',
+    stream=sys.stdout,
+    force=True  # Override any existing config
+)
 
 # Load .env file from backend directory
 env_path = Path(__file__).resolve().parents[2] / ".env"

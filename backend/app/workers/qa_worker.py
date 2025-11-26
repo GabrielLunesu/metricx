@@ -85,13 +85,13 @@ def process_qa_job(
 
     db: Session = SessionLocal()
     try:
-        print(f"[QA_WORKER] Processing job {job_id} for user {user_id} (workspace={workspace_id})", flush=True)
-        print(f"[QA_WORKER] Question: {question}", flush=True)
+        logger.info(f"[QA_WORKER] Processing job {job_id} for user {user_id} (workspace={workspace_id})")
+        logger.info(f"[QA_WORKER] Question: {question}")
 
         # Stage 1: Translating (LLM converts question → DSL)
         # NOTE: Set stage immediately so SSE endpoint can pick it up
         _update_stage(job, "translating")
-        print("[QA_WORKER] Stage: translating - Understanding question", flush=True)
+        logger.info("[QA_WORKER] Stage: translating - Understanding question")
 
         # Initialize QA service
         service = QAService(db)
@@ -99,30 +99,45 @@ def process_qa_job(
         # Stage 2: Executing (after translation completes, we're executing)
         # Set this BEFORE calling service.answer() since that's where the work happens
         _update_stage(job, "executing")
-        print("[QA_WORKER] Stage: executing - Fetching data", flush=True)
+        logger.info("[QA_WORKER] Stage: executing - Fetching data")
 
         # Process the question (this can take 5-30 seconds)
         # NOTE: service.answer() handles translate → execute → format internally
+        logger.info(f"[QA_WORKER] Calling service.answer()...")
         result = service.answer(
             question=question,
             workspace_id=workspace_id,
             user_id=user_id
         )
+        logger.info(f"[QA_WORKER] service.answer() returned")
 
         # Stage 3: Formatting (building response)
         _update_stage(job, "formatting")
-        print("[QA_WORKER] Stage: formatting - Preparing answer", flush=True)
+        logger.info("[QA_WORKER] Stage: formatting - Preparing answer")
 
-        print(f"[QA_WORKER] Job {job_id} completed successfully", flush=True)
+        logger.info(f"[QA_WORKER] Job {job_id} completed successfully")
+
+        # DEBUG: Log the full result for debugging
+        executed_dsl = result["executed_dsl"] if isinstance(result, dict) else result.executed_dsl
+        answer = result["answer"] if isinstance(result, dict) else result.answer
+        data = result["data"] if isinstance(result, dict) else result.data
+        visuals = result.get("visuals") if isinstance(result, dict) else getattr(result, "visuals", None)
+
+        logger.info(f"[QA_WORKER] DSL: {executed_dsl}")
+        logger.info(f"[QA_WORKER] Answer: {answer}")
+        logger.info(f"[QA_WORKER] Data summary: {data.get('summary') if data else 'None'}")
+        breakdown_data = data.get('breakdown') if data else None
+        logger.info(f"[QA_WORKER] Breakdown count: {len(breakdown_data) if breakdown_data else 0}")
+        logger.info(f"[QA_WORKER] Visuals: {list(visuals.keys()) if visuals else 'None'}")
 
         # Result is already a dict (QAResult model is serialized)
         return {
             "success": True,
-            "answer": result["answer"] if isinstance(result, dict) else result.answer,
-            "executed_dsl": result["executed_dsl"] if isinstance(result, dict) else result.executed_dsl,
-            "data": result["data"] if isinstance(result, dict) else result.data,
+            "answer": answer,
+            "executed_dsl": executed_dsl,
+            "data": data,
             "context_used": result.get("context_used") if isinstance(result, dict) else result.context_used,
-            "visuals": result.get("visuals") if isinstance(result, dict) else getattr(result, "visuals", None),
+            "visuals": visuals,
         }
 
     except Exception as exc:

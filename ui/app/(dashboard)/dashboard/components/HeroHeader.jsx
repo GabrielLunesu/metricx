@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function HeroHeader({ user, actions }) {
-    const name = user?.email?.split('@')[0] || "there";
+    const name = user?.name || "there";
     const displayName = name.charAt(0).toUpperCase() + name.slice(1);
     const router = useRouter();
     const [question, setQuestion] = useState("");
@@ -26,7 +26,7 @@ export default function HeroHeader({ user, actions }) {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-slide-in">
             <div>
                 <h1 className="text-3xl pb-2 md:text-5xl font-semibold tracking-tight text-slate-900 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">
-                    Good morning, {displayName}.
+                    Hello, {displayName}.
                 </h1>
                 <p className="text-slate-900 text-xl mt-2 font-normal">
                     Here's what's happening with your business today.

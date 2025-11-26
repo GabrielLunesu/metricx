@@ -199,6 +199,8 @@ class Translator:
         messages.append({"role": "user", "content": final_question})
         
         # Step 5: Call OpenAI API with JSON mode (streaming preferred, fallback to non-stream)
+        # Timeout: 30 seconds to prevent hanging on slow LLM responses
+        LLM_TIMEOUT_SECONDS = 30
         raw_response = ""
         if self.use_streaming:
             try:
@@ -208,6 +210,7 @@ class Translator:
                     temperature=0,
                     response_format={"type": "json_object"},
                     stream=True,
+                    timeout=LLM_TIMEOUT_SECONDS,
                 )
                 raw_chunks: List[str] = []
                 for chunk in stream:
@@ -217,6 +220,7 @@ class Translator:
                 raw_response = "".join(raw_chunks).strip()
             except Exception as e:
                 # Fallback to non-streaming if streaming fails
+                logger.warning(f"[TRANSLATOR] Streaming failed, falling back to non-streaming: {e}")
                 raw_response = ""
                 try:
                     response = self.client.chat.completions.create(
@@ -224,6 +228,7 @@ class Translator:
                         messages=messages,
                         temperature=0,
                         response_format={"type": "json_object"},
+                        timeout=LLM_TIMEOUT_SECONDS,
                     )
                     raw_response = response.choices[0].message.content
                 except Exception as inner:
@@ -238,6 +243,7 @@ class Translator:
                     messages=messages,
                     temperature=0,
                     response_format={"type": "json_object"},
+                    timeout=LLM_TIMEOUT_SECONDS,
                 )
                 raw_response = response.choices[0].message.content
             except Exception as e:
@@ -271,11 +277,11 @@ class Translator:
         comparison_keywords = ['vs', 'versus', 'compared to', 'compare to', 'vs.', 'against last', 'vs last']
         if any(kw in question_lower for kw in comparison_keywords):
             if not dsl_dict.get('compare_to_previous'):
-                print(f"[TRANSLATOR] Forcing compare_to_previous=True for comparison query: {question}")
+                logger.info(f"[TRANSLATOR] Forcing compare_to_previous=True for comparison query: {question}")
                 dsl_dict['compare_to_previous'] = True
 
-        # Always print the DSL for debugging
-        print(f"[TRANSLATOR] DSL: compare_to_previous={dsl_dict.get('compare_to_previous')}, breakdown={dsl_dict.get('breakdown')}, metric_filters={dsl_dict.get('filters', {}).get('metric_filters')}", flush=True)
+        # Log the DSL for debugging
+        logger.debug(f"[TRANSLATOR] DSL: compare_to_previous={dsl_dict.get('compare_to_previous')}, breakdown={dsl_dict.get('breakdown')}, metric_filters={dsl_dict.get('filters', {}).get('metric_filters')}")
 
         try:
             validated_dsl = validate_dsl(dsl_dict)

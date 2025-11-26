@@ -54,6 +54,10 @@ from app.nlp.prompts import (
 
 logger = logging.getLogger(__name__)
 
+# Timeout for LLM calls in answer generation (seconds)
+# Shorter than translator (30s) since answers should be quick
+LLM_ANSWER_TIMEOUT_SECONDS = 15
+
 
 def _format_date_range(start: date, end: date) -> str:
     """
@@ -391,13 +395,25 @@ class AnswerBuilder:
             # Step 1: Classify intent (NEW in Phase 1)
             question = getattr(dsl, 'question', None) or f"What is my {dsl.metric}?"
             intent = classify_intent(question, dsl)
-            
+
             # Step 1.5: Detect tense and get timeframe
             timeframe_desc = getattr(dsl, 'timeframe_description', None) or ""
             tense = detect_tense(question, timeframe_desc)
-            
+
             # Step 1.7: Build human-friendly timeframe display
             timeframe_display = _format_timeframe_display(timeframe_desc, window)
+
+            # ==================================================================
+            # OUTPUT FORMAT HANDLING (NEW v2.2)
+            # If user explicitly requested table format, generate a short intro
+            # ==================================================================
+            output_format = getattr(dsl, 'output_format', 'auto')
+            if output_format == "table":
+                # User wants table - give a short intro, let the table do the talking
+                answer_text = self._build_table_intro_answer(dsl, result, timeframe_display)
+                latency_ms = int((time.time() - start_time) * 1000) if log_latency and start_time else 0
+                logger.info(f"[ANSWER] Table format requested, returning short intro. Latency: {latency_ms}ms")
+                return answer_text, latency_ms
             
             # Step 1.6: Detect performer intent for breakdown queries (NEW in Phase 4)
             performer_intent = detect_performer_intent(question, dsl)
@@ -527,7 +543,8 @@ class AnswerBuilder:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=200  # Increased from 150 to allow for richer answers (2-4 sentences)
+                max_tokens=200,  # Increased from 150 to allow for richer answers (2-4 sentences)
+                timeout=LLM_ANSWER_TIMEOUT_SECONDS,
             )
             
             answer_text = response.choices[0].message.content.strip()
@@ -1066,21 +1083,76 @@ Remember: Include comparison, keep it conversational, 2-3 sentences max."""
             
             # Build context for LLM (include breakdown if available)
             breakdown = result.get("breakdown")
+
+            # Helper to convert Decimal to float for JSON serialization
+            def convert_decimals(obj):
+                if isinstance(obj, dict):
+                    return {k: convert_decimals(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_decimals(item) for item in obj]
+                elif hasattr(obj, '__class__') and obj.__class__.__name__ == 'Decimal':
+                    return float(obj)
+                else:
+                    return obj
+
             context = {
                 "metrics": formatted_metrics,
                 "timeframe_display": timeframe_display,
                 "question": question,
                 "metric_count": len(formatted_metrics)
             }
-            
-            # Add breakdown data if available
+
+            # Add breakdown data if available (convert Decimals for JSON serialization)
             if breakdown and len(breakdown) > 0:
-                context["breakdown"] = breakdown
+                context["breakdown"] = convert_decimals(breakdown)
                 context["breakdown_dimension"] = dsl.breakdown if dsl.breakdown else None
             
+            # Determine if this is a breakdown-focused query (e.g., "top 5 ads")
+            is_breakdown_focused = breakdown and len(breakdown) > 0 and dsl.breakdown
+            output_format = getattr(dsl, 'output_format', 'auto')
+
             # Use analytical prompt for multi-metric answers
             system_prompt = ANALYTICAL_ANSWER_PROMPT
-            user_prompt = f"""
+
+            # Different instructions based on query type
+            # Check if metric was auto-inferred (user didn't specify)
+            metric_inferred = getattr(dsl, 'metric_inferred', False)
+            first_metric = list(metrics_data.keys())[0] if metrics_data else "spend"
+
+            if is_breakdown_focused and output_format in ['chart', 'table']:
+                # User wants to see breakdown items (e.g., "graph of top 5 ads")
+                # Focus on the breakdown, not workspace totals
+
+                # Build metric clarification instruction
+                metric_clarification_instruction = ""
+                if metric_inferred:
+                    metric_clarification_instruction = f"""
+7. IMPORTANT: The metric "{first_metric}" was automatically selected for sorting since the user didn't specify one.
+   You MUST clarify this in your answer! Example: "sorted by {first_metric}" or "ranked by {first_metric} (since no specific metric was requested)"
+"""
+
+                user_prompt = f"""
+Generate a natural, conversational answer for a breakdown query.
+
+QUESTION: {question}
+
+DATA:
+{json.dumps(context, indent=2)}
+
+CRITICAL INSTRUCTIONS:
+1. The user asked for a breakdown by {context.get('breakdown_dimension', 'items')} - focus on THOSE items
+2. List the top {len(breakdown)} items from the breakdown with their values
+3. Do NOT prominently show workspace totals (metrics.summary values) - the breakdown IS the answer
+4. Use the timeframe_display for timeframe context
+5. Be conversational and brief - the visual (chart/table) will show the details
+6. Keep metric_inferred in mind: {metric_inferred}
+{metric_clarification_instruction}
+Example good answer: "Here are your top {len(breakdown)} {context.get('breakdown_dimension', 'items')} by {first_metric} {timeframe_display}."
+
+Answer:"""
+            else:
+                # Standard multi-metric query
+                user_prompt = f"""
 Generate a natural, conversational answer for a multi-metric query.
 
 QUESTION: {question}
@@ -1108,11 +1180,12 @@ Answer:"""
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.1,
-                max_tokens=500
+                max_tokens=500,
+                timeout=LLM_ANSWER_TIMEOUT_SECONDS,
             )
-            
+
             answer = response.choices[0].message.content.strip()
-            
+
             # Calculate latency if requested
             latency_ms = 0  # Always return numeric (0 for LLM success)
             if log_latency and start_time:
@@ -1139,30 +1212,33 @@ Answer:"""
     ) -> tuple[str, Optional[int]]:
         """
         Deterministic template-based answer for large lists (>10 items).
-        
+
         PERFORMANCE: This is INSTANT (0ms) vs 15-20 seconds for LLM formatting.
-        
+
         WHY: When users ask "show me all ads with CPC below $1", they want a list, not prose.
         A simple numbered list is clearer and 1000x faster than LLM-generated paragraphs.
-        
+
+        UPDATED v2.4: Include metric clarification when metric was auto-inferred.
+
         Args:
             dsl: The MetricQuery
             breakdown: List of breakdown items
             timeframe_display: Human-friendly timeframe
             log_latency: Whether to track latency
             start_time: Start time for latency calculation
-            
+
         Returns:
             tuple: (answer_text, latency_ms)
         """
         metric_name = dsl.metric
         breakdown_dimension = dsl.breakdown
-        
+        metric_inferred = getattr(dsl, 'metric_inferred', False)
+
         # Build header
-        has_metric_filter = (dsl.filters and 
-                            hasattr(dsl.filters, 'metric_filters') and 
+        has_metric_filter = (dsl.filters and
+                            hasattr(dsl.filters, 'metric_filters') and
                             dsl.filters.metric_filters)
-        
+
         if has_metric_filter:
             filter_desc = dsl.filters.metric_filters[0]
             operator_text = {
@@ -1189,7 +1265,11 @@ Answer:"""
             
             header = f"Here are the {breakdown_dimension}s {timeframe_display} with {filter_metric.upper()} {operator_text} {filter_value_str}:"
         else:
-            header = f"Here are the top {len(breakdown)} {breakdown_dimension}s by {metric_name.upper()} {timeframe_display}:"
+            # Add clarification if metric was inferred
+            metric_note = ""
+            if metric_inferred:
+                metric_note = " (sorted by this metric since no specific metric was requested)"
+            header = f"Here are the top {len(breakdown)} {breakdown_dimension}s by {metric_name.upper()} {timeframe_display}{metric_note}:"
         
         # Build numbered list
         lines = [header, ""]
@@ -1220,15 +1300,55 @@ Answer:"""
     ) -> str:
         """
         Fallback template-based answer for multi-metric queries.
-        
+
         This provides a simple, deterministic answer when LLM fails.
-        Ensures ALL metrics are included with their values.
+
+        UPDATED v2.3: For breakdown-focused queries (e.g., "graph of top 5 ads"),
+        focus on the breakdown items, not workspace totals.
+
+        UPDATED v2.4: Include metric clarification when metric was auto-inferred.
         """
         metrics_data = result.get("metrics", {})
-        
+        breakdown = result.get("breakdown")
+        output_format = getattr(dsl, 'output_format', 'auto')
+        breakdown_dimension = dsl.breakdown if dsl.breakdown else "items"
+        metric_inferred = getattr(dsl, 'metric_inferred', False)
+
+        # Determine if this is a breakdown-focused query
+        is_breakdown_focused = breakdown and len(breakdown) > 0 and output_format in ['chart', 'table']
+
+        if is_breakdown_focused:
+            # User asked for a chart/table of breakdown items - focus on those
+            # Determine which metric to use for display
+            first_metric = list(metrics_data.keys())[0] if metrics_data else "value"
+
+            # Build breakdown list
+            breakdown_lines = []
+            for item in breakdown:
+                label = item.get("label", "Unknown")
+                value = item.get("value")
+                if value is not None:
+                    formatted_value = format_metric_value(first_metric, value)
+                    breakdown_lines.append(f"  - {label}: {formatted_value}")
+
+            if not breakdown_lines:
+                return f"No data available for {timeframe_display if timeframe_display else 'the selected period'}."
+
+            timeframe_text = f" {timeframe_display}" if timeframe_display else ""
+
+            # Add clarification if metric was inferred
+            metric_note = ""
+            if metric_inferred:
+                metric_note = f" (sorted by {first_metric} since no specific metric was requested)"
+
+            header = f"Here are your top {len(breakdown)} {breakdown_dimension}s by {first_metric}{timeframe_text}{metric_note}:"
+
+            return header + "\n" + "\n".join(breakdown_lines)
+
+        # Standard multi-metric answer (show workspace totals + optional breakdown)
         if not metrics_data:
             return f"No data available for {timeframe_display if timeframe_display else 'the selected period'}."
-        
+
         # Build simple list of metrics with values
         metric_lines = []
         for metric_name, metric_data in metrics_data.items():
@@ -1237,23 +1357,21 @@ Answer:"""
                 formatted_value = format_metric_value(metric_name, summary_value)
                 previous_value = metric_data.get("previous")
                 delta_pct = metric_data.get("delta_pct")
-                
+
                 # Include comparison if available
                 if previous_value is not None and delta_pct is not None:
                     change_text = f" ({delta_pct:+.1f}% vs previous period)"
                     metric_lines.append(f"• {metric_name.upper()}: {formatted_value}{change_text}")
                 else:
                     metric_lines.append(f"• {metric_name.upper()}: {formatted_value}")
-        
+
         if not metric_lines:
             return f"No data available for {timeframe_display if timeframe_display else 'the selected period'}."
-        
-        # Add breakdown if available
-        breakdown = result.get("breakdown")
+
+        # Add breakdown if available (but not as the main focus)
         breakdown_text = ""
         if breakdown and len(breakdown) > 0:
             breakdown_lines = []
-            breakdown_dimension = dsl.breakdown if dsl.breakdown else "items"
             for item in breakdown[:5]:  # Top 5 items
                 label = item.get("label", "Unknown")
                 value = item.get("value")
@@ -1265,14 +1383,14 @@ Answer:"""
                     else:
                         formatted_value = f"{value:,.2f}"
                     breakdown_lines.append(f"  - {label}: {formatted_value}")
-            
+
             if breakdown_lines:
                 breakdown_text = f"\n\nTop {breakdown_dimension.upper()}:\n" + "\n".join(breakdown_lines)
-        
+
         # Combine into answer
         metrics_text = "\n".join(metric_lines)
         timeframe_text = f" {timeframe_display}" if timeframe_display else ""
-        
+
         return f"Here are your metrics{timeframe_text}:\n\n{metrics_text}{breakdown_text}"
 
     def _build_comparison_answer(
@@ -1353,11 +1471,12 @@ Answer:"""
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=300
+                max_tokens=300,
+                timeout=LLM_ANSWER_TIMEOUT_SECONDS,
             )
-            
+
             answer = response.choices[0].message.content.strip()
-            
+
             if log_latency:
                 latency_ms = int((time.time() - start_time) * 1000)
                 return answer, latency_ms
@@ -1367,6 +1486,69 @@ Answer:"""
         except Exception as e:
             logger.error(f"[COMPARISON_ANSWER] Failed to build comparison answer: {e}")
             raise AnswerBuilderError(f"Failed to build comparison answer: {e}")
+
+    def _build_table_intro_answer(
+        self,
+        dsl: MetricQuery,
+        result: Union[MetricResult, Dict[str, Any]],
+        timeframe_display: str
+    ) -> str:
+        """
+        Build a short intro answer when user explicitly requested table format.
+
+        NEW in v2.2: When output_format="table", we generate a brief intro
+        and let the table visual do the heavy lifting.
+
+        Args:
+            dsl: The MetricQuery with metric and breakdown info
+            result: Metric results
+            timeframe_display: Human-friendly timeframe
+
+        Returns:
+            Short intro text that complements the table
+
+        Examples:
+            "Here's a breakdown of your campaigns by ROAS for last week:"
+            "Here's your campaign performance in table format:"
+        """
+        metric = dsl.metric if isinstance(dsl.metric, str) else (dsl.metric[0] if dsl.metric else "metrics")
+        breakdown = dsl.breakdown or "campaign"
+
+        # Get count of items - check both breakdown AND comparison data
+        # WHY: Regular metrics queries use "breakdown", comparison queries use "comparison"
+        if isinstance(result, dict):
+            breakdown_data = result.get("breakdown", [])
+            # Also check for comparison data (entity_vs_entity queries)
+            if not breakdown_data:
+                breakdown_data = result.get("comparison", [])
+        elif isinstance(result, MetricResult):
+            breakdown_data = result.breakdown or []
+        else:
+            breakdown_data = []
+
+        count = len(breakdown_data)
+
+        # Build metric display name
+        metric_names = {
+            "roas": "ROAS", "cpa": "CPA", "cpc": "CPC", "cpm": "CPM",
+            "cpl": "CPL", "ctr": "CTR", "cvr": "CVR", "spend": "spend",
+            "revenue": "revenue", "clicks": "clicks", "conversions": "conversions"
+        }
+        metric_display = metric_names.get(metric.lower(), metric) if metric else "performance"
+
+        # Build breakdown display name
+        breakdown_names = {
+            "campaign": "campaigns", "adset": "ad sets", "ad": "ads",
+            "provider": "platforms", "day": "days", "week": "weeks", "month": "months"
+        }
+        breakdown_display = breakdown_names.get(breakdown, f"{breakdown}s")
+
+        # Build the intro
+        if count > 0:
+            timeframe_part = f" {timeframe_display}" if timeframe_display else ""
+            return f"Here's a breakdown of your {count} {breakdown_display} by {metric_display}{timeframe_part}:"
+        else:
+            return f"I couldn't find any {breakdown_display} to display in a table{' ' + timeframe_display if timeframe_display else ''}."
 
     def _build_list_answer(
         self,
@@ -1479,7 +1661,8 @@ Answer:"""
                                     {"role": "user", "content": prompt}
                                 ],
                                 temperature=0.3,
-                                max_tokens=150
+                                max_tokens=150,
+                                timeout=LLM_ANSWER_TIMEOUT_SECONDS,
                             )
                             
                             answer = response.choices[0].message.content.strip()
@@ -1508,15 +1691,27 @@ Answer:"""
                 else:
                     return obj
             
+            # Check if metric was auto-inferred
+            metric_inferred = getattr(dsl, 'metric_inferred', False)
+
             # Build context for GPT
             context = {
                 "metric_name": metric_name,
                 "timeframe": timeframe_display,
                 "top_n": top_n,
                 "breakdown": convert_decimals(breakdown),
-                "total_items": len(breakdown)
+                "total_items": len(breakdown),
+                "metric_inferred": metric_inferred
             }
-            
+
+            # Build metric clarification instruction
+            metric_clarification_instruction = ""
+            if metric_inferred:
+                metric_clarification_instruction = f"""
+8. IMPORTANT: The metric "{metric_name}" was automatically selected for sorting since the user didn't specify one.
+   You MUST clarify this in your answer! Example: "sorted by {metric_name}" or "ranked by {metric_name} (since no specific metric was requested)"
+"""
+
             # Build prompt
             prompt = f"""The user asked: "{question}"
 
@@ -1532,8 +1727,8 @@ INSTRUCTIONS:
 4. Format numbers appropriately (currency, percentages, etc.)
 5. Include the metric value for each item
 6. Mention the total count if relevant
-7. Keep the answer concise but comprehensive
-
+7. Keep the answer concise but comprehensive - focus on the key metrics, not every detail
+{metric_clarification_instruction}
 Answer:"""
             
             # Call GPT
@@ -1545,11 +1740,12 @@ Answer:"""
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=500
+                max_tokens=500,
+                timeout=LLM_ANSWER_TIMEOUT_SECONDS,
             )
-            
+
             answer = response.choices[0].message.content.strip()
-            
+
             if log_latency:
                 latency_ms = int((time.time() - start_time) * 1000)
                 return answer, latency_ms

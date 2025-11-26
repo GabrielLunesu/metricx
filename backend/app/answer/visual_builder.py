@@ -209,10 +209,10 @@ def _build_timeseries_spec(
     # This is the key fix - instead of different actual dates, we use Day 1, Day 2, etc.
     should_overlay = (is_comparison or has_real_previous_data) and previous_timeseries and len(previous_timeseries) > 0
 
-    print(f"[VISUAL_BUILDER] Timeseries chart decision: "
-          f"is_comparison={is_comparison}, "
-          f"has_real_previous_data={has_real_previous_data}, "
-          f"should_overlay={should_overlay}")
+    logger.debug(f"[VISUAL_BUILDER] Timeseries chart decision: "
+                 f"is_comparison={is_comparison}, "
+                 f"has_real_previous_data={has_real_previous_data}, "
+                 f"should_overlay={should_overlay}")
 
     if should_overlay:
         logger.info(f"[VISUAL_BUILDER] Building OVERLAY comparison chart for {metric}")
@@ -291,13 +291,85 @@ def _build_timeseries_spec(
     }
 
 
-def _build_breakdown_spec(metric: str, breakdown: List[Dict[str, Any]], label_key: str = "label") -> Dict[str, Any]:
-    """Create a bar chart spec for breakdowns (campaign/ad/provider)."""
+def _build_entity_timeseries_spec(
+    metric: str,
+    entity_timeseries: List[Dict[str, Any]],
+    breakdown_type: str = None,
+    timeframe: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Create a multi-line chart spec for entity timeseries (one line per entity).
+
+    WHY: When user asks "graph of top 5 ads", we show 5 lines - one per ad,
+    showing how each performed over time.
+
+    Args:
+        metric: Metric key for labeling and formatting
+        entity_timeseries: List of entity data from executor, each with:
+            {
+                "entity_id": "uuid-1",
+                "entity_name": "Summer Sale",
+                "timeseries": [{"date": "2025-11-20", "value": 123.45}, ...]
+            }
+        breakdown_type: Type of entity (campaign/adset/ad) for better title
+        timeframe: Human-readable timeframe for description
+
+    Returns:
+        Multi-line chart specification for frontend rendering
+    """
+    if not entity_timeseries:
+        return None
+
+    logger.info(f"[VISUAL_BUILDER] Building multi-line entity chart for {len(entity_timeseries)} entities")
+
+    # Build one series per entity
+    series = []
+    colors = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"]
+
+    for idx, entity_data in enumerate(entity_timeseries):
+        entity_name = entity_data.get("entity_name", f"Entity {idx+1}")
+        ts_data = entity_data.get("timeseries", [])
+
+        series.append({
+            "name": entity_name,
+            "dataKey": f"entity_{idx}",
+            "data": [{"x": pt.get("date"), "y": pt.get("value")} for pt in ts_data],
+            "color": colors[idx % len(colors)]  # Cycle through colors
+        })
+
+    entity_label = breakdown_type.title() if breakdown_type else "Entity"
+
+    return {
+        "id": f"entity-ts-{metric}",
+        "type": "line",
+        "title": f"{entity_label} {_metric_display_name(metric)} over time",
+        "description": timeframe,
+        "series": series,
+        "xKey": "x",
+        "yKey": "y",
+        "valueFormat": metric,
+        "isMultiEntity": True,  # Flag for frontend to render legend properly
+    }
+
+
+def _build_breakdown_spec(metric: str, breakdown: List[Dict[str, Any]], label_key: str = "label", breakdown_type: str = None) -> Dict[str, Any]:
+    """Create a bar chart spec for breakdowns (campaign/ad/provider).
+
+    Args:
+        metric: Metric key for labeling
+        breakdown: List of breakdown data [{label, value, ...}, ...]
+        label_key: Key to use for x-axis labels (default: "label")
+        breakdown_type: Type of breakdown (campaign/adset/ad/provider) for better titles
+    """
     series_data = [{"x": item.get(label_key), "y": item.get("value")} for item in breakdown]
+
+    # Use breakdown_type for better chart title if provided
+    entity_name = breakdown_type.title() if breakdown_type else label_key.title()
+
     return {
         "id": f"bd-{metric}",
         "type": "bar",
-        "title": f"Top {label_key.title()} by {_metric_display_name(metric)}",
+        "title": f"{entity_name}s by {_metric_display_name(metric)}",
         "series": [{"name": _metric_display_name(metric), "data": series_data}],
         "xKey": "x",
         "yKey": "y",
@@ -305,10 +377,20 @@ def _build_breakdown_spec(metric: str, breakdown: List[Dict[str, Any]], label_ke
     }
 
 
-def _build_breakdown_table(metric: str, breakdown: List[Dict[str, Any]], label_key: str = "label") -> Dict[str, Any]:
-    """Create a table definition for breakdown rows."""
+def _build_breakdown_table(metric: str, breakdown: List[Dict[str, Any]], label_key: str = "label", breakdown_type: str = None) -> Dict[str, Any]:
+    """Create a table definition for breakdown rows.
+
+    Args:
+        metric: Metric key for labeling
+        breakdown: List of breakdown data [{label, value, ...}, ...]
+        label_key: Key to use for x-axis labels (default: "label")
+        breakdown_type: Type of breakdown (campaign/adset/ad/provider) for better titles
+    """
+    # Use breakdown_type for better column and title names
+    entity_label = breakdown_type.title() if breakdown_type else label_key.title()
+
     columns = [
-        {"key": label_key, "label": label_key.title()},
+        {"key": label_key, "label": entity_label},
         {"key": "value", "label": _metric_display_name(metric), "format": metric},
     ]
 
@@ -329,9 +411,13 @@ def _build_breakdown_table(metric: str, breakdown: List[Dict[str, Any]], label_k
             "impressions": row.get("impressions"),
         })
 
+    # Better table title
+    entity_name_plural = f"{entity_label}s" if entity_label else "Entities"
+    table_title = f"{entity_name_plural} by {_metric_display_name(metric)}"
+
     return {
         "id": f"table-{metric}",
-        "title": f"{label_key.title()} breakdown",
+        "title": table_title,
         "columns": columns,
         "rows": rows,
     }
@@ -366,7 +452,10 @@ def _build_comparison_specs(result_data: Dict[str, Any]) -> Dict[str, List[Dict[
 
     chart_data = []
     for row in comparison:
-        entry = {"x": row.get(first_key)}
+        entry = {
+            "x": row.get(first_key),  # For charts (uses "x" as xKey)
+            first_key: row.get(first_key),  # For tables (uses actual key like "entity")
+        }
         for metric in metrics:
             entry[metric] = row.get(metric)
         chart_data.append(entry)
@@ -388,6 +477,36 @@ def _build_comparison_specs(result_data: Dict[str, Any]) -> Dict[str, List[Dict[
             "xKey": "x",
             "yKey": "y",
             "valueFormat": "mixed",
+        })
+    
+    # NEW: Check for timeseries data in comparison results (for entity comparison over time)
+    has_timeseries = any("timeseries" in row for row in comparison)
+    
+    if has_timeseries:
+        # Build multi-line chart: One line per entity
+        line_series = []
+        # Use first metric for the chart (multi-metric comparison charts are complex)
+        metric = metrics[0] if metrics else "value"
+        
+        for row in comparison:
+            entity_name = row.get(first_key) or "Unknown"
+            ts_data = row.get("timeseries", [])
+            
+            line_series.append({
+                "name": entity_name,
+                "dataKey": entity_name, # Unique key for Recharts
+                "data": [{"x": p["date"], "y": p["value"]} for p in ts_data],
+                "color": None # Let frontend assign colors
+            })
+            
+        payload["viz_specs"].append({
+            "id": "comparison-lines-entity",
+            "type": "line",
+            "title": f"Comparison of {_metric_display_name(metric)} over time",
+            "series": line_series,
+            "xKey": "x",
+            "yKey": "y",
+            "valueFormat": metric,
         })
 
     payload["viz_specs"].append({
@@ -431,16 +550,68 @@ def _build_multi_metric_cards(result_data: Dict[str, Any], timeframe: Optional[s
     return cards
 
 
+def _apply_output_format_override(
+    payload: Dict[str, List[Dict[str, Any]]],
+    output_format: str,
+    breakdown: Optional[List[Dict[str, Any]]] = None,
+    metric: Optional[str] = None,
+    breakdown_type: Optional[str] = None
+) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Apply user's explicit output_format preference to the visual payload.
+
+    WHY: Users may explicitly request "chart", "table", or "text" format.
+    This override ensures we respect their preference over the auto-selected visuals.
+
+    Args:
+        payload: The visual payload with cards, viz_specs, tables
+        output_format: User's preference ("auto", "table", "chart", "text")
+        breakdown: Optional breakdown data (for building table if needed)
+        metric: Metric name (for building table if needed)
+        breakdown_type: Type of breakdown (campaign/adset/ad)
+
+    Returns:
+        Modified payload respecting output_format preference
+    """
+    if output_format == "auto":
+        # No override needed
+        return payload
+
+    if output_format == "text":
+        # Shouldn't reach here (handled earlier), but just in case
+        return {"cards": [], "viz_specs": [], "tables": []}
+
+    if output_format == "table":
+        # User explicitly wants table - remove charts, keep tables
+        logger.info("[VISUAL_BUILDER] output_format='table' - keeping only tables")
+        # If no table exists but we have breakdown data, build one
+        if not payload["tables"] and breakdown and metric:
+            payload["tables"].append(_build_breakdown_table(metric, breakdown, breakdown_type=breakdown_type))
+        payload["viz_specs"] = []  # Remove all charts
+        payload["cards"] = []  # Remove cards too - table is the focus
+
+    elif output_format == "chart":
+        # User explicitly wants chart - remove tables, keep charts
+        logger.info("[VISUAL_BUILDER] output_format='chart' - keeping only charts")
+        payload["tables"] = []  # Remove tables
+        payload["cards"] = []   # Remove cards
+
+    return payload
+
+
 def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, List[Dict[str, Any]]]]:
     """
     Build a structured visual payload (cards, charts, tables) from DSL + results.
 
     UPDATED v2.1: Now uses Visual Intent Classifier for smarter visual selection.
+    UPDATED v2.2: Respects user's output_format preference (table/chart/text).
 
     DATA FLOW:
-    1. Classify query intent (COMPARISON, FILTERING, RANKING, etc.)
-    2. Build raw visuals (all possible visualizations)
-    3. Apply strategy filter (remove irrelevant visuals based on intent)
+    1. Check output_format preference (NEW)
+    2. Classify query intent (COMPARISON, FILTERING, RANKING, etc.)
+    3. Build raw visuals (all possible visualizations)
+    4. Apply strategy filter (remove irrelevant visuals based on intent)
+    5. Apply output_format override if specified (NEW)
 
     Args:
         dsl: MetricQuery DSL object with query parameters
@@ -459,9 +630,39 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
         0
         >>> len(payload['tables'])  # Just the table
         1
+
+        >>> # User explicitly wants table format
+        >>> dsl.output_format = "table"
+        >>> payload = build_visual_payload(dsl, result_data, window)
+        >>> len(payload['tables'])  # Table is present
+        1
+        >>> len(payload['viz_specs'])  # No charts (user wanted table)
+        0
     """
     query_type = getattr(dsl, "query_type", "metrics")
     timeframe = getattr(dsl, "timeframe_description", None) or _format_date_window(window)
+    output_format = getattr(dsl, "output_format", "auto")
+
+    # ==================================================================
+    # OUTPUT FORMAT OVERRIDE (NEW v2.2)
+    # If user explicitly requested a format, respect it
+    # ==================================================================
+    if output_format == "text":
+        # User wants text-only response, no visuals
+        logger.info("[VISUAL_BUILDER] output_format='text' - returning no visuals")
+        return None
+
+    # SPECIAL CASE: Comparison query with table format requested
+    # When user asks "compare all campaigns in a table", we get:
+    # - query_type = "comparison"
+    # - result_data has "comparison" key (not "breakdown")
+    # - output_format = "table"
+    # We need to build a table from the comparison data directly
+    if output_format == "table" and result_data.get("comparison"):
+        logger.info("[VISUAL_BUILDER] Comparison query with table format - building comparison table")
+        comparison_payload = _build_comparison_specs(result_data)
+        # Return only the tables (not the charts)
+        return {"cards": [], "viz_specs": [], "tables": comparison_payload["tables"]}
 
     # Non-metric listings (providers/entities) do not need visuals.
     if query_type in ("providers", "entities"):
@@ -487,33 +688,67 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
     # Multi-metric: card per metric, optional timeseries and breakdown handled from primary metric.
     if query_type == "multi_metrics" or result_data.get("query_type") == "multi_metrics":
         payload["cards"].extend(_build_multi_metric_cards(result_data, timeframe))
-        if result_data.get("timeseries"):
-            first_metric = next(iter(result_data.get("metrics", {}).keys()), None)
-            if first_metric:
-                payload["viz_specs"].append(_build_timeseries_spec(
-                    first_metric,
-                    result_data["timeseries"],
-                    timeframe,
-                    is_comparison=is_comparison
-                ))
-        if result_data.get("breakdown"):
-            primary_metric = next(iter(result_data.get("metrics", {}).keys()), None)
-            if primary_metric:
-                payload["viz_specs"].append(_build_breakdown_spec(primary_metric, result_data["breakdown"]))
-                payload["tables"].append(_build_breakdown_table(primary_metric, result_data["breakdown"]))
+
+        # ==================================================================
+        # ENTITY TIMESERIES (NEW - for multi-line charts)
+        # When output_format='chart' and executor fetched per-entity timeseries,
+        # build a multi-line chart showing each entity's trend over time.
+        # This is for queries like "graph of top 5 ads"
+        # ==================================================================
+        entity_timeseries = result_data.get("entity_timeseries")
+        primary_metric = next(iter(result_data.get("metrics", {}).keys()), None)
+        breakdown_type = getattr(dsl, 'breakdown', None)
+
+        if entity_timeseries and output_format == "chart":
+            # Build multi-line chart showing each entity's timeseries
+            logger.info(f"[VISUAL_BUILDER] Building multi-line entity chart (output_format=chart, {len(entity_timeseries)} entities)")
+            entity_chart = _build_entity_timeseries_spec(
+                primary_metric or "spend",
+                entity_timeseries,
+                breakdown_type=breakdown_type,
+                timeframe=timeframe
+            )
+            if entity_chart:
+                payload["viz_specs"].append(entity_chart)
+        else:
+            # Standard behavior: aggregate timeseries + breakdown bar chart
+            if result_data.get("timeseries"):
+                first_metric = next(iter(result_data.get("metrics", {}).keys()), None)
+                if first_metric:
+                    payload["viz_specs"].append(_build_timeseries_spec(
+                        first_metric,
+                        result_data["timeseries"],
+                        timeframe,
+                        is_comparison=is_comparison
+                    ))
+
+            if result_data.get("breakdown"):
+                if primary_metric:
+                    payload["viz_specs"].append(_build_breakdown_spec(primary_metric, result_data["breakdown"], breakdown_type=breakdown_type))
+                    payload["tables"].append(_build_breakdown_table(primary_metric, result_data["breakdown"], breakdown_type=breakdown_type))
 
         # Apply strategy filter
         payload = filter_visuals_by_strategy(payload, strategy)
+
+        # Apply output_format override (CRITICAL: must happen AFTER strategy filter)
+        payload = _apply_output_format_override(payload, output_format, result_data.get("breakdown"), primary_metric, breakdown_type)
+
         return payload if any(payload.values()) else None
 
     # Comparison queries.
-    if query_type == "comparison" or result_data.get("comparison"):
+    # IMPORTANT: Only go to comparison flow if intent is COMPARISON
+    # "Compare all campaigns" should use RANKING intent, not comparison flow
+    if (query_type == "comparison" or result_data.get("comparison")) and intent == VisualIntent.COMPARISON:
         comparison_payload = _build_comparison_specs(result_data)
         payload["viz_specs"].extend(comparison_payload["viz_specs"])
         payload["tables"].extend(comparison_payload["tables"])
 
         # Apply strategy filter
         payload = filter_visuals_by_strategy(payload, strategy)
+
+        # Apply output_format override
+        payload = _apply_output_format_override(payload, output_format)
+
         return payload if any(payload.values()) else None
 
     # ==================================================================
@@ -526,11 +761,11 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
     previous_timeseries = result_data.get("previous_timeseries") or result_data.get("timeseries_previous")
 
     # Log what timeseries data we have for debugging
-    print(f"[VISUAL_BUILDER] Timeseries data: "
-          f"current={len(timeseries)} points, "
-          f"previous={'None' if previous_timeseries is None else len(previous_timeseries)} points, "
-          f"is_comparison={is_comparison}, "
-          f"compare_to_previous={getattr(dsl, 'compare_to_previous', 'N/A')}")
+    logger.debug(f"[VISUAL_BUILDER] Timeseries data: "
+                 f"current={len(timeseries)} points, "
+                 f"previous={'None' if previous_timeseries is None else len(previous_timeseries)} points, "
+                 f"is_comparison={is_comparison}, "
+                 f"compare_to_previous={getattr(dsl, 'compare_to_previous', 'N/A')}")
 
     # Fallback: if no explicit previous timeseries but we have a previous summary,
     # build a flat reference line at the previous value so charts can show
@@ -550,7 +785,7 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
 
     # Debug: Log breakdown data
     if breakdown:
-        print(f"[VISUAL_BUILDER] Breakdown data (first 2): {breakdown[:2]}", flush=True)
+        logger.debug(f"[VISUAL_BUILDER] Breakdown data (first 2): {breakdown[:2]}")
 
     top_contributor = breakdown[0]["label"] if breakdown else None
 
@@ -565,25 +800,53 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
         )
     )
 
-    # Build timeseries chart
-    if timeseries:
-        payload["viz_specs"].append(_build_timeseries_spec(
-            metric,
-            timeseries,
-            timeframe,
-            previous_timeseries=previous_timeseries,
-            is_comparison=is_comparison  # Pass comparison flag for proper chart type
-        ))
+    # ==================================================================
+    # ENTITY TIMESERIES (for multi-line charts)
+    # When output_format='chart' and we have entity_timeseries, build multi-line chart
+    # This is for queries like "graph of top 5 ads"
+    # ==================================================================
+    entity_timeseries = result_data.get("entity_timeseries")
+    breakdown_type = getattr(dsl, 'breakdown', None)
 
-    # Build breakdown chart and table
-    if breakdown:
-        payload["viz_specs"].append(_build_breakdown_spec(metric, breakdown))
-        payload["tables"].append(_build_breakdown_table(metric, breakdown))
+    if entity_timeseries and output_format == "chart":
+        # Build multi-line chart showing each entity's timeseries
+        logger.info(f"[VISUAL_BUILDER] Building multi-line entity chart (output_format=chart, {len(entity_timeseries)} entities)")
+        entity_chart = _build_entity_timeseries_spec(
+            metric,
+            entity_timeseries,
+            breakdown_type=breakdown_type,
+            timeframe=timeframe
+        )
+        if entity_chart:
+            payload["viz_specs"].append(entity_chart)
+        # Don't build breakdown bar chart or table - the multi-line chart is the visual
+    else:
+        # Standard behavior: aggregate timeseries + breakdown bar chart + table
+        # Build timeseries chart
+        if timeseries:
+            payload["viz_specs"].append(_build_timeseries_spec(
+                metric,
+                timeseries,
+                timeframe,
+                previous_timeseries=previous_timeseries,
+                is_comparison=is_comparison  # Pass comparison flag for proper chart type
+            ))
+
+        # Build breakdown chart and table
+        if breakdown:
+            payload["viz_specs"].append(_build_breakdown_spec(metric, breakdown, breakdown_type=breakdown_type))
+            payload["tables"].append(_build_breakdown_table(metric, breakdown, breakdown_type=breakdown_type))
 
     # ==================================================================
     # STEP 3: APPLY STRATEGY FILTER
     # Remove irrelevant visuals based on classified intent
     # ==================================================================
     payload = filter_visuals_by_strategy(payload, strategy)
+
+    # ==================================================================
+    # STEP 4: APPLY OUTPUT FORMAT OVERRIDE (NEW v2.2)
+    # If user explicitly requested table/chart, enforce it
+    # ==================================================================
+    payload = _apply_output_format_override(payload, output_format, breakdown, metric, breakdown_type)
 
     return payload if any(payload.values()) else None

@@ -24,20 +24,23 @@ SSE Streaming (NEW v2.1):
 - Eliminates polling overhead, provides better UX
 """
 
+import asyncio
+import json
+import logging
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
 from rq.job import Job
-import asyncio
-import json
-import os
 
 from app.schemas import QARequest, QAJobResponse, QAJobStatusResponse
 from app.database import get_db
 from app.deps import get_current_user, get_settings
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/qa", tags=["qa"])
 
@@ -258,9 +261,9 @@ async def ask_question_stream(
                 user_id=str(current_user.id),
             )
 
-            # Debug: Log that job was enqueued
-            print(f"[QA_ROUTER] Enqueued job {job.id} to qa_jobs queue (redis={redis_url})")
-            print(f"[QA_ROUTER] Question: {req.question}")
+            # Log that job was enqueued
+            logger.info(f"[QA_ROUTER] Enqueued job {job.id} to qa_jobs queue (redis={redis_url})")
+            logger.debug(f"[QA_ROUTER] Question: {req.question}")
 
             # Yield queued event
             yield f"data: {json.dumps({'stage': 'queued', 'job_id': job.id})}\n\n"
@@ -320,3 +323,229 @@ async def ask_question_stream(
             "X-Accel-Buffering": "no",  # Disable nginx buffering
         }
     )
+
+
+# =============================================================================
+# FEEDBACK ENDPOINTS (Self-Learning System)
+# =============================================================================
+
+from app.schemas import QaFeedbackCreate, QaFeedbackResponse, QaFeedbackStats
+from app.models import QaQueryLog, QaFeedback, FeedbackTypeEnum
+from sqlalchemy import func
+from uuid import UUID
+
+
+@router.post("/feedback", response_model=QaFeedbackResponse)
+def submit_feedback(
+    feedback: QaFeedbackCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/feedback
+
+    Submit feedback on a QA answer for self-learning.
+
+    Input:
+        {
+            "query_log_id": "uuid-of-query",
+            "rating": 5,  # 1-5 scale
+            "feedback_type": "accuracy",  # optional
+            "comment": "Great answer!",  # optional
+            "corrected_answer": null  # optional - what it should have said
+        }
+
+    Returns: The created feedback record
+
+    Notes:
+        - Highly-rated answers (4-5) can be marked as few-shot examples
+        - Low-rated answers (1-2) are flagged for review
+        - Feedback is linked to the original query for context
+    """
+    # Verify query exists and user has access
+    query_log = db.query(QaQueryLog).filter(
+        QaQueryLog.id == UUID(feedback.query_log_id)
+    ).first()
+
+    if not query_log:
+        raise HTTPException(status_code=404, detail="Query log not found")
+
+    # Check if feedback already exists
+    existing = db.query(QaFeedback).filter(
+        QaFeedback.query_log_id == UUID(feedback.query_log_id),
+        QaFeedback.user_id == current_user.id,
+    ).first()
+
+    if existing:
+        # Update existing feedback
+        existing.rating = feedback.rating
+        existing.feedback_type = FeedbackTypeEnum(feedback.feedback_type.value) if feedback.feedback_type else None
+        existing.comment = feedback.comment
+        existing.corrected_answer = feedback.corrected_answer
+        db.commit()
+        db.refresh(existing)
+
+        return QaFeedbackResponse(
+            id=str(existing.id),
+            query_log_id=str(existing.query_log_id),
+            user_id=str(existing.user_id),
+            rating=existing.rating,
+            feedback_type=existing.feedback_type.value if existing.feedback_type else None,
+            comment=existing.comment,
+            corrected_answer=existing.corrected_answer,
+            is_few_shot_example=existing.is_few_shot_example,
+            created_at=existing.created_at,
+        )
+
+    # Create new feedback
+    new_feedback = QaFeedback(
+        query_log_id=UUID(feedback.query_log_id),
+        user_id=current_user.id,
+        rating=feedback.rating,
+        feedback_type=FeedbackTypeEnum(feedback.feedback_type.value) if feedback.feedback_type else None,
+        comment=feedback.comment,
+        corrected_answer=feedback.corrected_answer,
+        # Auto-mark excellent answers as potential few-shot examples
+        is_few_shot_example=feedback.rating >= 5,
+    )
+
+    db.add(new_feedback)
+    db.commit()
+    db.refresh(new_feedback)
+
+    logger.info(f"Feedback submitted: rating={feedback.rating} for query={feedback.query_log_id}")
+
+    return QaFeedbackResponse(
+        id=str(new_feedback.id),
+        query_log_id=str(new_feedback.query_log_id),
+        user_id=str(new_feedback.user_id),
+        rating=new_feedback.rating,
+        feedback_type=new_feedback.feedback_type.value if new_feedback.feedback_type else None,
+        comment=new_feedback.comment,
+        corrected_answer=new_feedback.corrected_answer,
+        is_few_shot_example=new_feedback.is_few_shot_example,
+        created_at=new_feedback.created_at,
+    )
+
+
+@router.get("/feedback/{query_log_id}", response_model=QaFeedbackResponse)
+def get_feedback(
+    query_log_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/feedback/{query_log_id}
+
+    Get feedback for a specific query.
+    """
+    feedback = db.query(QaFeedback).filter(
+        QaFeedback.query_log_id == UUID(query_log_id)
+    ).first()
+
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+
+    return QaFeedbackResponse(
+        id=str(feedback.id),
+        query_log_id=str(feedback.query_log_id),
+        user_id=str(feedback.user_id),
+        rating=feedback.rating,
+        feedback_type=feedback.feedback_type.value if feedback.feedback_type else None,
+        comment=feedback.comment,
+        corrected_answer=feedback.corrected_answer,
+        is_few_shot_example=feedback.is_few_shot_example,
+        created_at=feedback.created_at,
+    )
+
+
+@router.get("/feedback/stats", response_model=QaFeedbackStats)
+def get_feedback_stats(
+    workspace_id: str = Query(..., description="Workspace to get stats for"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/feedback/stats?workspace_id=...
+
+    Get aggregated feedback statistics for monitoring QA performance.
+    """
+    # Get all feedback for queries in this workspace
+    feedback_query = (
+        db.query(QaFeedback)
+        .join(QaQueryLog)
+        .filter(QaQueryLog.workspace_id == UUID(workspace_id))
+    )
+
+    all_feedback = feedback_query.all()
+
+    if not all_feedback:
+        return QaFeedbackStats(
+            total_feedback=0,
+            average_rating=0.0,
+            rating_distribution={1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+            feedback_by_type={},
+            few_shot_examples_count=0,
+        )
+
+    # Calculate stats
+    total = len(all_feedback)
+    avg_rating = sum(f.rating for f in all_feedback) / total
+
+    rating_dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    type_counts = {}
+    few_shot_count = 0
+
+    for f in all_feedback:
+        rating_dist[f.rating] = rating_dist.get(f.rating, 0) + 1
+        if f.feedback_type:
+            type_counts[f.feedback_type.value] = type_counts.get(f.feedback_type.value, 0) + 1
+        if f.is_few_shot_example:
+            few_shot_count += 1
+
+    return QaFeedbackStats(
+        total_feedback=total,
+        average_rating=round(avg_rating, 2),
+        rating_distribution=rating_dist,
+        feedback_by_type=type_counts,
+        few_shot_examples_count=few_shot_count,
+    )
+
+
+@router.get("/examples", response_model=list[dict])
+def get_few_shot_examples(
+    workspace_id: str = Query(..., description="Workspace to get examples from"),
+    limit: int = Query(10, ge=1, le=50, description="Max examples to return"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/examples?workspace_id=...&limit=10
+
+    Get highly-rated Q&A pairs for use as few-shot examples.
+
+    Returns questions with 5-star ratings that can be used
+    to improve future answer generation.
+    """
+    examples = (
+        db.query(QaQueryLog)
+        .join(QaFeedback)
+        .filter(
+            QaQueryLog.workspace_id == UUID(workspace_id),
+            QaFeedback.is_few_shot_example == True,
+            QaQueryLog.answer_text.isnot(None),
+        )
+        .order_by(QaFeedback.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "question": ex.question_text,
+            "answer": ex.answer_text,
+            "dsl": ex.dsl_json,
+            "rating": ex.feedback.rating if ex.feedback else None,
+        }
+        for ex in examples
+    ]

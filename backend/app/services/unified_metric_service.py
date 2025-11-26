@@ -112,6 +112,9 @@ class MetricBreakdownItem:
     conversions: Optional[float] = None
     revenue: Optional[float] = None
     impressions: Optional[float] = None
+    entity_id: Optional[str] = None  # For entity timeseries lookup (multi-line charts)
+
+
 
 
 class UnifiedMetricService:
@@ -399,7 +402,102 @@ class UnifiedMetricService:
                 results[f"{metric}_previous"] = prev_points
 
         return results
-    
+
+    def get_entity_timeseries(
+        self,
+        workspace_id: str,
+        metric: str,
+        time_range: TimeRange,
+        entity_ids: List[str],
+        entity_labels: Dict[str, str],
+        granularity: str = "day"
+    ) -> List[Dict[str, Any]]:
+        """
+        Get timeseries data for multiple entities (for multi-line charts).
+
+        WHY: When user asks "graph of top 5 ads", we need one line per entity
+        showing how each performed over time.
+
+        Args:
+            workspace_id: Workspace UUID for scoping
+            metric: Metric name to calculate
+            time_range: Time range for calculation
+            entity_ids: List of entity UUIDs to fetch timeseries for
+            entity_labels: Mapping of entity_id -> display label (name)
+            granularity: 'day' or 'hour'
+
+        Returns:
+            List of dicts with structure:
+            [
+                {
+                    "entity_id": "uuid-1",
+                    "entity_name": "Summer Sale",
+                    "timeseries": [{"date": "2025-11-20", "value": 123.45}, ...]
+                },
+                ...
+            ]
+        """
+        logger.info(f"[UNIFIED_METRICS] Getting entity timeseries for {len(entity_ids)} entities")
+
+        # Resolve time range
+        start_date, end_date = self._resolve_time_range(time_range)
+
+        # Determine time bucket expression
+        time_bucket = cast(self.MF.event_date, Date) if granularity == "day" else self.MF.event_date
+
+        # Build query that groups by BOTH entity_id AND date
+        query = (
+            self.db.query(
+                self.MF.entity_id.label("entity_id"),
+                time_bucket.label("date"),
+                func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
+                func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
+                func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
+                func.coalesce(func.sum(self.MF.impressions), 0).label("impressions"),
+                func.coalesce(func.sum(self.MF.conversions), 0).label("conversions"),
+                func.coalesce(func.sum(self.MF.leads), 0).label("leads"),
+                func.coalesce(func.sum(self.MF.installs), 0).label("installs"),
+                func.coalesce(func.sum(self.MF.purchases), 0).label("purchases"),
+                func.coalesce(func.sum(self.MF.visitors), 0).label("visitors"),
+                func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
+            )
+            .join(self.E, self.E.id == self.MF.entity_id)
+            .filter(self.E.workspace_id == workspace_id)
+            .filter(self.MF.entity_id.in_(entity_ids))
+            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+            .group_by(self.MF.entity_id, time_bucket)
+            .order_by(self.MF.entity_id, time_bucket)
+        )
+
+        rows = query.all()
+
+        # Group results by entity
+        entity_data: Dict[str, List[Dict[str, Any]]] = {eid: [] for eid in entity_ids}
+
+        for row in rows:
+            totals = row._asdict()
+            entity_id = str(totals.pop("entity_id"))
+            value = compute_metric(metric, totals)
+            date_str = str(totals.get("date"))
+
+            if entity_id in entity_data:
+                entity_data[entity_id].append({
+                    "date": date_str,
+                    "value": float(value) if value is not None else 0
+                })
+
+        # Build final result with labels
+        results = []
+        for entity_id in entity_ids:
+            results.append({
+                "entity_id": entity_id,
+                "entity_name": entity_labels.get(entity_id, "Unknown"),
+                "timeseries": entity_data.get(entity_id, [])
+            })
+
+        logger.info(f"[UNIFIED_METRICS] Built entity timeseries for {len(results)} entities")
+        return results
+
     def get_breakdown(
         self,
         workspace_id: str,
@@ -505,7 +603,8 @@ class UnifiedMetricService:
                 clicks=totals.get("clicks"),
                 conversions=totals.get("conversions"),
                 revenue=totals.get("revenue"),
-                impressions=totals.get("impressions")
+                impressions=totals.get("impressions"),
+                entity_id=str(totals.get("entity_id")) if totals.get("entity_id") else None
             ))
         
         # Apply top_n limit after filtering
@@ -925,6 +1024,7 @@ class UnifiedMetricService:
         # TODO: Add hierarchy support for campaign/adset rollups
         query = (
             self.db.query(
+                self.E.id.label("entity_id"),  # Include entity_id for timeseries lookup
                 self.E.name.label("group_name"),
                 func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
                 func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
@@ -941,9 +1041,9 @@ class UnifiedMetricService:
             .filter(self.E.workspace_id == workspace_id)
             .filter(self.E.level == level)
             .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
-            .group_by(self.E.name)
+            .group_by(self.E.id, self.E.name)  # Group by both id and name
         )
-        
+
         return self._apply_filters(query, filters, workspace_id)
     
     def _get_order_expression(self, metric: str):
@@ -1185,7 +1285,8 @@ class UnifiedMetricService:
                 clicks=totals.get("clicks"),
                 conversions=totals.get("conversions"),
                 revenue=totals.get("revenue"),
-                impressions=totals.get("impressions")
+                impressions=totals.get("impressions"),
+                entity_id=str(totals.get("entity_id")) if totals.get("entity_id") else None
             ))
         
         # Apply top_n limit after filtering

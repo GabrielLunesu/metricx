@@ -173,6 +173,9 @@ alembic upgrade head
 python -m app.seed_mock
 python start_api.py
 
+# to start worker
+python -u -m app.workers.start_worker
+
 # Frontend  
 cd ui
 npm install && npm run dev
