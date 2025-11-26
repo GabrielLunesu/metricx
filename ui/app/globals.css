@@ -369,3 +369,17 @@ body {
 .animate-slide-in {
   animation: slide-in-right 0.4s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
 }
+
+/* Spin Slow Animation */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}

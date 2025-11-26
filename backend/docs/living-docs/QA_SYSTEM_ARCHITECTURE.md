@@ -412,15 +412,191 @@ The DSL now includes a `metric_inferred` boolean field to track when the metric 
 - [ ] Interactive legend to show/hide individual entity lines
 - [x] ~~Metric selection in graph queries (currently defaults to spend)~~ - Now clarifies when metric is auto-selected
 
+## Creative Support (v2.5)
+
+### Overview
+
+The QA system now supports **creative queries** - questions about ad creatives with thumbnail images and performance metrics. This feature displays actual creative images alongside performance data.
+
+**Important Limitation**: Creative images are **only available for Meta (Facebook/Instagram) ads**. Google Ads and TikTok do not provide creative image URLs via their APIs. The system acknowledges this limitation in answers.
+
+### Example Query
+
+**User**: "Show my best creatives"
+
+**DSL Generated**:
+```json
+{
+    "metric": "roas",
+    "breakdown": "ad",
+    "top_n": 5,
+    "sort_order": "desc"
+}
+```
+
+**Answer**: "Here are your top 5 creatives by ROAS over the last 7 days. 3 have preview images available (Meta ads only)."
+
+### Creative Data Flow
+
+```
+User Query: "Show best creatives"
+         ↓
+DSL Translator
+    - breakdown: "ad" (creatives = ads)
+    - top_n: 5 (default for creative queries, not 1)
+    - metric: "roas" or "spend" (default)
+         ↓
+Executor → UnifiedMetricService.get_breakdown()
+    - Returns MetricBreakdownItem with creative fields:
+      - thumbnail_url (small preview)
+      - image_url (full size)
+      - media_type (image/video/carousel/unknown)
+         ↓
+Visual Builder (_build_creative_cards)
+    - Creates creative_cards array
+    - Each card has: name, thumbnail, metrics, has_image flag
+         ↓
+Answer Builder (_build_creative_intro)
+    - Detects creative query
+    - Generates answer with Meta-only acknowledgment
+         ↓
+Response includes:
+{
+    "answer": "Here are your top 5 creatives...",
+    "visuals": {
+        "creative_cards": [...],
+        "tables": [...],
+        "cards": [],
+        "viz_specs": []
+    }
+}
+```
+
+### Database Schema
+
+**Entity model** (`app/models.py`):
+```python
+class MediaTypeEnum(str, enum.Enum):
+    image = "image"
+    video = "video"
+    carousel = "carousel"
+    unknown = "unknown"
+
+class Entity(Base):
+    # ... existing fields ...
+    thumbnail_url = Column(String, nullable=True)  # Small preview
+    image_url = Column(String, nullable=True)      # Full-size image
+    media_type = Column(Enum(MediaTypeEnum), nullable=True)
+```
+
+**Migration**: `alembic/versions/20251126_000001_add_entity_creative_fields.py`
+
+### Creative Card Structure
+
+Each creative card in the `creative_cards` array:
+
+```json
+{
+    "id": "creative-0",
+    "type": "creative",
+    "name": "Summer Sale Ad",
+    "entity_id": 12345,
+    "thumbnail_url": "https://...",
+    "image_url": "https://...",
+    "media_type": "image",
+    "has_image": true,
+    "metric": "roas",
+    "metric_value": 4.2,
+    "formatted_value": "4.20×",
+    "spend": 150.0,
+    "formatted_spend": "$150.00",
+    "clicks": 500,
+    "conversions": 25,
+    "impressions": 10000,
+    "revenue": 630.0,
+    "timeframe": "last 7 days"
+}
+```
+
+### Key Components
+
+**Meta Sync Service** (`app/services/meta_sync_service.py`):
+- Fetches creative details from Meta Graph API during ad sync
+- Extracts thumbnail_url, image_url, media_type
+- Stores in Entity model
+
+**Meta Ads Client** (`app/services/meta_ads_client.py`):
+- `get_creative_details(creative_id)` - Fetches AdCreative from Meta
+- `_determine_media_type()` - Detects image/video/carousel
+
+**Unified Metric Service** (`app/services/unified_metric_service.py`):
+- `MetricBreakdownItem` includes creative fields
+- `_build_entity_breakdown_query()` selects creative columns
+
+**Visual Builder** (`app/answer/visual_builder.py`):
+- `_build_creative_cards()` - Creates card payloads
+- `_has_creative_data()` - Checks if breakdown has images
+
+**Answer Builder** (`app/answer/answer_builder.py`):
+- `_is_creative_query()` - Detects creative queries
+- `_build_creative_intro()` - Generates Meta-aware answer text
+
+**Prompts** (`app/nlp/prompts.py`):
+- `CREATIVE_QUERIES_SECTION` - Rules for creative translation
+- Few-shot examples for "show creatives" queries
+
+### DSL Translation Rules
+
+1. **"creatives" = ads**: Queries about "creatives" translate to `breakdown: "ad"`
+2. **Default top_n: 5**: Creative queries default to showing 5 results, not 1
+3. **Default metric: roas**: If no metric specified, sort by ROAS (or spend)
+4. **Meta acknowledgment**: LLM knows to mention Meta-only image availability
+
+### Answer Text Examples
+
+**With images (Meta ads present)**:
+> "Here are your top 5 creatives by ROAS over the last 7 days. 3 have preview images available (Meta ads only)."
+
+**Without images (no Meta ads)**:
+> "Here are your top 5 ads by ROAS over the last 7 days. Note: Creative preview images are currently only available for Meta (Facebook/Instagram) ads."
+
+### Syncing Creative Images
+
+To populate creative images, run a Meta ads sync:
+
+```python
+from app.services.meta_sync_service import MetaSyncService
+from app.database import SessionLocal
+
+db = SessionLocal()
+service = MetaSyncService(db)
+await service.sync_ads(workspace_id=1, account_id="act_123")
+```
+
+The sync fetches `AdCreative` objects and extracts:
+- `thumbnail_url` from creative data
+- `image_url` from `object_story_spec.link_data.image_hash` or similar
+- `media_type` from creative structure (video_data, carousel, etc.)
+
+### Future Improvements
+
+- [ ] Support Google Ads creative previews (if API allows)
+- [ ] Video thumbnail extraction for video creatives
+- [ ] Creative A/B comparison visualization
+- [ ] Carousel creative multi-image display
+
 ## Related Files
 
 - `app/answer/visual_intent.py` - Visual intent classification
-- `app/answer/visual_builder.py` - Visual payload generation
-- `app/services/unified_metric_service.py` - Entity timeseries and breakdown data
+- `app/answer/visual_builder.py` - Visual payload generation + creative cards (v2.5)
+- `app/answer/answer_builder.py` - Answer generation + creative query handling (v2.5)
+- `app/services/unified_metric_service.py` - Entity timeseries and breakdown data + creative fields (v2.5)
+- `app/services/meta_sync_service.py` - Meta ads sync + creative image fetching (v2.5)
+- `app/services/meta_ads_client.py` - Meta Graph API client + AdCreative fetching (v2.5)
 - `app/dsl/executor.py` - DSL execution with entity timeseries fetching
 - `app/dsl/schema.py` - MetricResult schema with entity_timeseries field
-- `app/nlp/prompts.py` - Graph/chart examples and output format rules
+- `app/nlp/prompts.py` - Graph/chart examples, output format rules, creative queries (v2.5)
 - `app/services/dsl_translator.py` - DSL translation
 - `app/services/qa_service.py` - Main QA service
 - `app/routers/qa.py` - API endpoints including feedback
-- `app/models.py` - QaFeedback model
+- `app/models.py` - Entity model with creative fields, MediaTypeEnum (v2.5)

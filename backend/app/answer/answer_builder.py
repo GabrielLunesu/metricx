@@ -414,7 +414,24 @@ class AnswerBuilder:
                 latency_ms = int((time.time() - start_time) * 1000) if log_latency and start_time else 0
                 logger.info(f"[ANSWER] Table format requested, returning short intro. Latency: {latency_ms}ms")
                 return answer_text, latency_ms
-            
+
+            # ==================================================================
+            # CREATIVE QUERY HANDLING (NEW v2.5)
+            # For queries asking about "creatives", generate intro with Meta-only acknowledgment
+            # ==================================================================
+            if self._is_creative_query(dsl, result, question):
+                # Check if any creatives have images
+                if isinstance(result, dict):
+                    breakdown = result.get("breakdown", [])
+                else:
+                    breakdown = result.breakdown or []
+                has_images = any(item.get("thumbnail_url") or item.get("image_url") for item in breakdown)
+
+                answer_text = self._build_creative_intro(dsl, result, timeframe_display, has_images)
+                latency_ms = int((time.time() - start_time) * 1000) if log_latency and start_time else 0
+                logger.info(f"[ANSWER] Creative query detected, returning intro with Meta acknowledgment. Latency: {latency_ms}ms")
+                return answer_text, latency_ms
+
             # Step 1.6: Detect performer intent for breakdown queries (NEW in Phase 4)
             performer_intent = detect_performer_intent(question, dsl)
             
@@ -1755,4 +1772,81 @@ Answer:"""
         except Exception as e:
             logger.error(f"[LIST_ANSWER] Failed to build list answer: {e}")
             raise AnswerBuilderError(f"Failed to build list answer: {e}")
+
+    def _is_creative_query(self, dsl: MetricQuery, result: Union[MetricResult, Dict[str, Any]], question: str) -> bool:
+        """
+        Detect if this is a creative query (asking for ad creatives).
+
+        Returns True if:
+        - Breakdown is at "ad" level, AND
+        - Question mentions "creative(s)" or explicitly asks for ad images
+
+        This triggers special handling with Meta-only acknowledgment.
+        """
+        # Check breakdown type
+        breakdown_type = getattr(dsl, 'breakdown', None)
+        if breakdown_type != "ad":
+            return False
+
+        # Check if question mentions creatives
+        question_lower = question.lower()
+        creative_keywords = ["creative", "creatives", "ad image", "ad images", "thumbnail", "visual"]
+        return any(kw in question_lower for kw in creative_keywords)
+
+    def _build_creative_intro(
+        self,
+        dsl: MetricQuery,
+        result: Union[MetricResult, Dict[str, Any]],
+        timeframe_display: str,
+        has_images: bool
+    ) -> str:
+        """
+        Build introduction text for creative query answers.
+
+        IMPORTANT: Acknowledges that creative images are only available for Meta ads.
+
+        Args:
+            dsl: The MetricQuery
+            result: Metric results with breakdown
+            timeframe_display: Human-readable timeframe
+            has_images: Whether any creatives have image URLs
+
+        Returns:
+            Intro text acknowledging Meta-only limitation if relevant
+        """
+        # Get breakdown data
+        if isinstance(result, dict):
+            breakdown = result.get("breakdown", [])
+        else:
+            breakdown = result.breakdown or []
+
+        count = len(breakdown)
+        metric = dsl.metric or "spend"
+        metric_name = metric.upper() if metric in ["roas", "cpc", "cpm", "ctr", "cpa", "cpl"] else metric.title()
+
+        # Check if metric was inferred
+        metric_inferred = getattr(dsl, 'metric_inferred', False)
+        metric_clarification = ""
+        if metric_inferred:
+            metric_clarification = f" (sorted by {metric_name} since no specific metric was requested)"
+
+        # Build intro based on whether we have images
+        if has_images:
+            # Some creatives have images (Meta ads)
+            meta_count = sum(1 for item in breakdown if item.get("thumbnail_url") or item.get("image_url"))
+            if meta_count == count:
+                intro = f"Here are your top {count} creatives by {metric_name}{metric_clarification} {timeframe_display}."
+            else:
+                intro = (
+                    f"Here are your top {count} creatives by {metric_name}{metric_clarification} {timeframe_display}. "
+                    f"{meta_count} have preview images available (Meta ads only)."
+                )
+        else:
+            # No images available
+            intro = (
+                f"Here are your top {count} ads by {metric_name}{metric_clarification} {timeframe_display}. "
+                f"Note: Creative preview images are currently only available for Meta (Facebook/Instagram) ads."
+            )
+
+        return intro
 

@@ -40,6 +40,7 @@ from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.adobjects.campaign import Campaign
 from facebook_business.adobjects.adset import AdSet
 from facebook_business.adobjects.ad import Ad
+from facebook_business.adobjects.adcreative import AdCreative
 from facebook_business.adobjects.adsinsights import AdsInsights
 from facebook_business.exceptions import FacebookRequestError
 
@@ -267,18 +268,18 @@ class MetaAdsClient:
     @rate_limit(calls_per_hour=200)
     def get_ads(self, adset_id: str) -> List[Dict[str, Any]]:
         """Fetch all ads for an adset.
-        
+
         WHAT:
             Retrieves all ads belonging to an adset.
             Returns ad metadata (id, name, status, creative, etc.)
-        
+
         WHY:
             Third level of entity hierarchy - ads belong to adsets.
             Ad-level metrics are most granular and avoid double-counting.
-        
+
         Args:
             adset_id: Meta adset ID
-            
+
         Returns:
             List of ad dictionaries with fields:
                 - id: Ad ID
@@ -286,7 +287,7 @@ class MetaAdsClient:
                 - status: ACTIVE, PAUSED, DELETED, ARCHIVED
                 - adset_id: Parent adset ID
                 - creative: Creative configuration
-                
+
         Raises:
             MetaAdsAuthenticationError: Invalid or expired token
             MetaAdsPermissionError: Insufficient permissions
@@ -295,7 +296,7 @@ class MetaAdsClient:
         """
         try:
             logger.info(f"[META_CLIENT] Fetching ads for adset: {adset_id}")
-            
+
             adset = AdSet(adset_id)
             ads = adset.get_ads(fields=[
                 Ad.Field.id,
@@ -304,16 +305,124 @@ class MetaAdsClient:
                 Ad.Field.adset_id,
                 Ad.Field.creative,
             ])
-            
+
             result = []
             for ad in ads:
                 result.append(dict(ad))
-            
+
             logger.info(f"[META_CLIENT] Fetched {len(result)} ads")
             return result
-            
+
         except FacebookRequestError as e:
             return self._handle_api_error(e, f"fetching ads for adset {adset_id}")
+
+    @rate_limit(calls_per_hour=200)
+    def get_creative_details(self, creative_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch creative details including thumbnail URL.
+
+        WHAT:
+            Retrieves creative asset details from Meta for displaying ad previews.
+            Returns thumbnail URL, image URL, and media type information.
+
+        WHY:
+            Enables showing actual creative images in the QA system when users
+            ask "show me my best creatives" or similar queries.
+
+        Args:
+            creative_id: Meta creative ID (from Ad.creative.id)
+
+        Returns:
+            Dictionary with creative details:
+                - id: Creative ID
+                - thumbnail_url: URL to thumbnail image
+                - image_url: URL to full-size image (if available)
+                - media_type: "image", "video", or "carousel"
+            Returns None if creative cannot be fetched.
+
+        Raises:
+            MetaAdsAuthenticationError: Invalid or expired token
+            MetaAdsPermissionError: Insufficient permissions
+            MetaAdsClientError: Other API errors
+        """
+        try:
+            logger.info(f"[META_CLIENT] Fetching creative details for: {creative_id}")
+
+            creative = AdCreative(creative_id)
+            creative_data = creative.api_get(fields=[
+                AdCreative.Field.id,
+                AdCreative.Field.thumbnail_url,
+                AdCreative.Field.image_url,
+                AdCreative.Field.object_type,
+                AdCreative.Field.object_story_spec,
+            ])
+
+            result = {
+                "id": creative_data.get("id"),
+                "thumbnail_url": creative_data.get("thumbnail_url"),
+                "image_url": creative_data.get("image_url"),
+                "media_type": self._determine_media_type(creative_data),
+            }
+
+            # Try to extract image from object_story_spec if not directly available
+            if not result["image_url"]:
+                object_story_spec = creative_data.get("object_story_spec", {})
+                # Check for link_data image
+                link_data = object_story_spec.get("link_data", {})
+                if link_data.get("image_hash") or link_data.get("picture"):
+                    result["image_url"] = link_data.get("picture")
+                # Check for video_data thumbnail
+                video_data = object_story_spec.get("video_data", {})
+                if video_data.get("image_url"):
+                    result["image_url"] = video_data.get("image_url")
+
+            logger.info(
+                f"[META_CLIENT] Creative {creative_id}: "
+                f"thumbnail={bool(result['thumbnail_url'])}, "
+                f"image={bool(result['image_url'])}, "
+                f"type={result['media_type']}"
+            )
+            return result
+
+        except FacebookRequestError as e:
+            # Don't fail the whole sync for creative fetch errors
+            logger.warning(
+                f"[META_CLIENT] Could not fetch creative {creative_id}: {e}"
+            )
+            return None
+        except Exception as e:
+            logger.warning(
+                f"[META_CLIENT] Unexpected error fetching creative {creative_id}: {e}"
+            )
+            return None
+
+    def _determine_media_type(self, creative_data: Dict[str, Any]) -> str:
+        """Determine media type from creative data.
+
+        Args:
+            creative_data: Creative response from Meta API
+
+        Returns:
+            One of: "image", "video", "carousel", "unknown"
+        """
+        object_type = creative_data.get("object_type", "").upper()
+
+        if "VIDEO" in object_type:
+            return "video"
+        elif "CAROUSEL" in object_type:
+            return "carousel"
+        elif object_type in ["SHARE", "PHOTO", "STATUS"]:
+            return "image"
+
+        # Check object_story_spec for more clues
+        object_story_spec = creative_data.get("object_story_spec", {})
+        if object_story_spec.get("video_data"):
+            return "video"
+        if object_story_spec.get("link_data", {}).get("child_attachments"):
+            return "carousel"
+        if object_story_spec.get("link_data") or object_story_spec.get("photo_data"):
+            return "image"
+
+        return "unknown"
     
     @rate_limit(calls_per_hour=200)
     def get_insights(

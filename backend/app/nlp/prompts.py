@@ -973,6 +973,101 @@ FEW_SHOT_EXAMPLES = [
             "filters": {}
         }
     },
+
+    # ===============================================================================
+    # CREATIVE QUERIES - v2.5
+    # "creatives" = ads with visual assets (thumbnail images)
+    # IMPORTANT: Creative images are ONLY available for Meta (Facebook/Instagram) ads.
+    # For Google/TikTok ads, we can show performance data but NOT creative images.
+    # Default top_n: 5 for creative queries (user expects multiple creatives)
+    # ===============================================================================
+    {
+        "question": "Show best creatives",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "roas",  # "best" = highest ROAS
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",  # Creatives = ads
+            "top_n": 5,  # Multiple creatives expected
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show me my top 5 creatives",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "spend",  # Default to spend for "top" without metric
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "desc",
+            "filters": {},
+            "metric_inferred": True  # No metric specified, defaulted to spend
+        }
+    },
+    {
+        "question": "Which creatives have the best ROAS?",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "roas",
+            "time_range": {"last_n_days": 14},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show me the worst performing creatives",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "roas",  # "worst performing" = lowest ROAS
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "asc",  # Ascending for worst
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show me Meta creatives by CTR",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "ctr",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "desc",
+            "filters": {
+                "provider": "meta"  # Only Meta ads have creative images
+            }
+        }
+    },
+    {
+        "question": "Top 10 ad creatives by spend this month",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "spend",
+            "time_range": {"last_n_days": 30},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 10,
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
 ]
 
 # Follow-up examples (demonstrating context usage)
@@ -1440,6 +1535,29 @@ OUTPUT FORMAT EXAMPLES:
 - "what's my ROAS?" → output_format: "auto"
 """
 
+    # Define the creative queries section
+    CREATIVE_QUERIES_SECTION = """
+CREATIVE QUERIES (NEW v2.5):
+"creatives" = ads with visual assets (thumbnail images, videos).
+
+IMPORTANT LIMITATION:
+- Creative images are ONLY available for Meta (Facebook/Instagram) ads
+- Google Ads and TikTok ads do NOT have creative image URLs stored
+- For non-Meta queries about creatives, show performance data but acknowledge no images
+
+TRANSLATION RULES FOR CREATIVE QUERIES:
+- "creatives" = breakdown: "ad" (creatives are ads)
+- "best creatives" = breakdown: "ad", sort_order: "desc", metric: "roas"
+- "top N creatives" = breakdown: "ad", top_n: N
+- DEFAULT: top_n: 5 for creative queries (user expects multiple, not just 1)
+
+EXAMPLES:
+- "Show best creatives" → breakdown: "ad", top_n: 5, metric: "roas", sort_order: "desc"
+- "Show me my top 5 creatives" → breakdown: "ad", top_n: 5, metric: "spend", metric_inferred: true
+- "Show me Meta creatives by CTR" → breakdown: "ad", filters: {provider: "meta"}, metric: "ctr"
+- "Which creatives have the best ROAS?" → breakdown: "ad", top_n: 5, metric: "roas", sort_order: "desc"
+"""
+
     # Define the JSON schema section
     JSON_SCHEMA_SECTION = """
 {
@@ -1488,6 +1606,8 @@ OUTPUT FORMAT EXAMPLES:
     {SORT_ORDER_RULES}
 
     {OUTPUT_FORMAT_RULES}
+
+    {CREATIVE_QUERIES_SECTION}
 
     JSON SCHEMA:
     {JSON_SCHEMA_SECTION}

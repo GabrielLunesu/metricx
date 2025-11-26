@@ -104,7 +104,10 @@ class MetricTimePoint:
 
 @dataclass
 class MetricBreakdownItem:
-    """Single item in a breakdown result."""
+    """Single item in a breakdown result.
+
+    Includes optional creative fields for ad-level breakdowns (Meta only).
+    """
     label: str
     value: Optional[float]
     spend: Optional[float] = None
@@ -113,6 +116,10 @@ class MetricBreakdownItem:
     revenue: Optional[float] = None
     impressions: Optional[float] = None
     entity_id: Optional[str] = None  # For entity timeseries lookup (multi-line charts)
+    # Creative fields (ad-level only, Meta only for now)
+    thumbnail_url: Optional[str] = None
+    image_url: Optional[str] = None
+    media_type: Optional[str] = None  # "image", "video", "carousel", "unknown"
 
 
 
@@ -596,6 +603,13 @@ class UnifiedMetricService:
                 if not self._passes_metric_filters(metric, value, filters.metric_filters):
                     continue
             
+            # Extract creative fields if available (ad-level only, Meta only)
+            thumbnail_url = totals.get("thumbnail_url")
+            image_url = totals.get("image_url")
+            media_type_val = totals.get("media_type")
+            # Convert enum to string if needed
+            media_type = media_type_val.value if hasattr(media_type_val, 'value') else (str(media_type_val) if media_type_val else None)
+
             breakdown.append(MetricBreakdownItem(
                 label=str(row.group_name),
                 value=value,
@@ -604,7 +618,10 @@ class UnifiedMetricService:
                 conversions=totals.get("conversions"),
                 revenue=totals.get("revenue"),
                 impressions=totals.get("impressions"),
-                entity_id=str(totals.get("entity_id")) if totals.get("entity_id") else None
+                entity_id=str(totals.get("entity_id")) if totals.get("entity_id") else None,
+                thumbnail_url=thumbnail_url,
+                image_url=image_url,
+                media_type=media_type,
             ))
         
         # Apply top_n limit after filtering
@@ -1019,7 +1036,12 @@ class UnifiedMetricService:
         return self._apply_filters(query, filters, workspace_id)
     
     def _build_entity_breakdown_query(self, workspace_id: str, start_date: date, end_date: date, filters: MetricFilters, level: str):
-        """Build query for entity breakdown (campaign/adset/ad)."""
+        """Build query for entity breakdown (campaign/adset/ad).
+
+        Includes creative fields (thumbnail_url, image_url, media_type) for ad-level
+        breakdowns to support creative card displays. These fields are only populated
+        for Meta ads currently.
+        """
         # For now, implement simple ad-level breakdown
         # TODO: Add hierarchy support for campaign/adset rollups
         query = (
@@ -1036,12 +1058,19 @@ class UnifiedMetricService:
                 func.coalesce(func.sum(self.MF.purchases), 0).label("purchases"),
                 func.coalesce(func.sum(self.MF.visitors), 0).label("visitors"),
                 func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
+                # Creative fields for ad-level breakdowns (Meta only for now)
+                self.E.thumbnail_url.label("thumbnail_url"),
+                self.E.image_url.label("image_url"),
+                self.E.media_type.label("media_type"),
             )
             .join(self.E, self.E.id == self.MF.entity_id)
             .filter(self.E.workspace_id == workspace_id)
             .filter(self.E.level == level)
             .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
-            .group_by(self.E.id, self.E.name)  # Group by both id and name
+            .group_by(
+                self.E.id, self.E.name,
+                self.E.thumbnail_url, self.E.image_url, self.E.media_type
+            )
         )
 
         return self._apply_filters(query, filters, workspace_id)
@@ -1278,6 +1307,13 @@ class UnifiedMetricService:
                 if not self._passes_metric_filters(metric, value, filters.metric_filters):
                     continue
             
+            # Extract creative fields if available (ad-level only, Meta only)
+            thumbnail_url = totals.get("thumbnail_url")
+            image_url = totals.get("image_url")
+            media_type_val = totals.get("media_type")
+            # Convert enum to string if needed
+            media_type = media_type_val.value if hasattr(media_type_val, 'value') else (str(media_type_val) if media_type_val else None)
+
             breakdown.append(MetricBreakdownItem(
                 label=str(row.group_name),
                 value=value,
@@ -1286,7 +1322,10 @@ class UnifiedMetricService:
                 conversions=totals.get("conversions"),
                 revenue=totals.get("revenue"),
                 impressions=totals.get("impressions"),
-                entity_id=str(totals.get("entity_id")) if totals.get("entity_id") else None
+                entity_id=str(totals.get("entity_id")) if totals.get("entity_id") else None,
+                thumbnail_url=thumbnail_url,
+                image_url=image_url,
+                media_type=media_type,
             ))
         
         # Apply top_n limit after filtering

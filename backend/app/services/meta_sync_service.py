@@ -32,6 +32,7 @@ from app.models import (
     LevelEnum,
     GoalEnum,
     ProviderEnum,
+    MediaTypeEnum,
 )
 from app.schemas import (
     EntitySyncResponse,
@@ -177,6 +178,26 @@ def sync_meta_entities(
                 )
 
                 for ad_data in ads:
+                    # Extract creative details if available (Meta only)
+                    thumbnail_url = None
+                    image_url = None
+                    media_type = None
+
+                    creative_ref = ad_data.get("creative")
+                    if creative_ref and isinstance(creative_ref, dict):
+                        creative_id = creative_ref.get("id")
+                        if creative_id:
+                            creative_details = client.get_creative_details(creative_id)
+                            if creative_details:
+                                thumbnail_url = creative_details.get("thumbnail_url")
+                                image_url = creative_details.get("image_url")
+                                media_type_str = creative_details.get("media_type")
+                                if media_type_str:
+                                    try:
+                                        media_type = MediaTypeEnum(media_type_str)
+                                    except ValueError:
+                                        media_type = MediaTypeEnum.unknown
+
                     _, ad_created = _upsert_entity(
                         db=db,
                         connection=connection,
@@ -185,6 +206,9 @@ def sync_meta_entities(
                         name=ad_data.get("name", "Unnamed Ad"),
                         status=ad_data.get("status", "unknown"),
                         parent_id=adset_entity.id,
+                        thumbnail_url=thumbnail_url,
+                        image_url=image_url,
+                        media_type=media_type,
                     )
 
                     if ad_created:
@@ -577,8 +601,28 @@ def _upsert_entity(
     status: str,
     parent_id: Optional[UUID] = None,
     goal: Optional[GoalEnum] = None,
+    thumbnail_url: Optional[str] = None,
+    image_url: Optional[str] = None,
+    media_type: Optional[MediaTypeEnum] = None,
 ) -> Tuple[Entity, bool]:
-    """UPSERT entity by external_id + connection_id (idempotent)."""
+    """UPSERT entity by external_id + connection_id (idempotent).
+
+    Args:
+        db: Database session
+        connection: Parent connection
+        external_id: External platform ID
+        level: Entity level (campaign, adset, ad)
+        name: Entity name
+        status: Entity status
+        parent_id: Optional parent entity ID
+        goal: Optional campaign goal
+        thumbnail_url: Optional creative thumbnail URL (ad-level only, Meta only)
+        image_url: Optional creative full-size image URL (ad-level only, Meta only)
+        media_type: Optional media type (image, video, carousel)
+
+    Returns:
+        Tuple of (entity, was_created)
+    """
     entity = (
         db.query(Entity)
         .filter(
@@ -595,6 +639,13 @@ def _upsert_entity(
         entity.status = status
         entity.parent_id = parent_id
         entity.goal = goal
+        # Update creative fields if provided (only for ads)
+        if thumbnail_url is not None:
+            entity.thumbnail_url = thumbnail_url
+        if image_url is not None:
+            entity.image_url = image_url
+        if media_type is not None:
+            entity.media_type = media_type
         entity.updated_at = datetime.utcnow()
         logger.debug(
             "[META_SYNC] Updated entity: %s (%s)", external_id, level.value
@@ -610,6 +661,9 @@ def _upsert_entity(
             status=status,
             parent_id=parent_id,
             goal=goal,
+            thumbnail_url=thumbnail_url,
+            image_url=image_url,
+            media_type=media_type,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )

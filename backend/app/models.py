@@ -317,12 +317,27 @@ class Import(Base):
         return f"Import as of {self.as_of.strftime('%Y-%m-%d')}{' - ' + self.note if self.note else ''}"
 
 
+class MediaTypeEnum(str, enum.Enum):
+    """Type of creative media asset."""
+    image = "image"
+    video = "video"
+    carousel = "carousel"
+    unknown = "unknown"
+
+
 class Entity(Base):
     """Entity represents a marketing entity (campaign, ad set, ad, etc.).
-    
+
     Derived Metrics v1 addition:
     - goal: Campaign objective (awareness, traffic, leads, app_installs, purchases, conversions, other)
-    
+
+    Creative Support (v2.5):
+    - thumbnail_url: URL to creative thumbnail image (for ad-level entities)
+    - image_url: URL to full creative image (for ad-level entities)
+    - media_type: Type of creative (image, video, carousel)
+
+    Note: Creative images currently only supported for Meta ads.
+
     WHY goal matters:
     - Helps determine which metrics are most relevant to the user
     - CPL makes sense for leads campaigns, CPI for app_installs, CPP for purchases
@@ -337,16 +352,21 @@ class Entity(Base):
     name = Column(String, nullable=False)
     status = Column(String, nullable=False)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
-    
+
     # Derived Metrics v1: Campaign objective
     goal = Column(Enum(GoalEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=True)
+
+    # Creative Support v2.5: Image URLs for ad creatives (Meta only for now)
+    thumbnail_url = Column(String, nullable=True)  # Small preview image
+    image_url = Column(String, nullable=True)  # Full-size creative image
+    media_type = Column(Enum(MediaTypeEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=True)
 
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
     workspace = relationship("Workspace", back_populates="entities")
 
     connection_id = Column(UUID(as_uuid=True), ForeignKey("connections.id"), nullable=True)
     connection = relationship("Connection", back_populates="entities")
-    
+
     # Timestamps for tracking entity lifecycle
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

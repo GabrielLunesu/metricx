@@ -25,9 +25,11 @@ SSE Streaming (NEW v2.1):
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -43,6 +45,50 @@ from app.deps import get_current_user, get_settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/qa", tags=["qa"])
+
+# Job configuration constants
+JOB_TTL_SECONDS = 300  # Jobs expire after 5 minutes (result retention)
+JOB_TIMEOUT_SECONDS = 120  # Job must complete within 2 minutes
+DEDUP_WINDOW_SECONDS = 30  # Deduplication window for identical questions
+
+
+def _generate_dedup_key(user_id: str, workspace_id: str, question: str) -> str:
+    """
+    Generate a unique deduplication key for a QA job.
+
+    Same user asking the same question in the same workspace within
+    DEDUP_WINDOW_SECONDS will get the same job instead of creating a new one.
+    """
+    # Normalize question (lowercase, strip whitespace)
+    normalized_q = question.lower().strip()
+    raw = f"{user_id}:{workspace_id}:{normalized_q}"
+    return f"qa_dedup:{hashlib.md5(raw.encode()).hexdigest()}"
+
+
+def _find_existing_job(redis_conn: Redis, queue: Queue, dedup_key: str) -> Job | None:
+    """
+    Check if a job with this dedup key already exists and is still valid.
+
+    Returns the existing job if found and not failed/finished, else None.
+    """
+    # Check if we have a recent job ID stored for this dedup key
+    existing_job_id = redis_conn.get(dedup_key)
+    if not existing_job_id:
+        return None
+
+    existing_job_id = existing_job_id.decode() if isinstance(existing_job_id, bytes) else existing_job_id
+
+    try:
+        job = Job.fetch(existing_job_id, connection=redis_conn)
+        # Return job only if it's still pending or running
+        if job.is_queued or job.is_started:
+            logger.info(f"[QA_ROUTER] Found existing job {existing_job_id} for dedup key")
+            return job
+    except Exception:
+        # Job doesn't exist or expired
+        pass
+
+    return None
 
 
 @router.post("", response_model=QAJobResponse)
@@ -82,21 +128,44 @@ def ask_question(
     try:
         # Connect to Redis queue
         redis_url = get_settings().REDIS_URL
-        queue = Queue("qa_jobs", connection=Redis.from_url(redis_url))
-        
-        # Enqueue job
+        redis_conn = Redis.from_url(redis_url)
+        queue = Queue("qa_jobs", connection=redis_conn)
+
+        user_id = str(current_user.id)
+
+        # Check for duplicate job (same user, workspace, question)
+        dedup_key = _generate_dedup_key(user_id, workspace_id, req.question)
+        existing_job = _find_existing_job(redis_conn, queue, dedup_key)
+
+        if existing_job:
+            # Return existing job instead of creating duplicate
+            logger.info(f"[QA_ROUTER] Returning existing job {existing_job.id} (dedup)")
+            return QAJobResponse(
+                job_id=existing_job.id,
+                status="queued" if existing_job.is_queued else "processing"
+            )
+
+        # Enqueue new job with TTL and timeout
         job = queue.enqueue(
             "app.workers.qa_worker.process_qa_job",
             question=req.question,
             workspace_id=workspace_id,
-            user_id=str(current_user.id),
+            user_id=user_id,
+            job_timeout=JOB_TIMEOUT_SECONDS,  # Job must complete in 2 min
+            result_ttl=JOB_TTL_SECONDS,  # Result kept for 5 min
+            ttl=JOB_TTL_SECONDS,  # Job expires if not started in 5 min
         )
-        
+
+        # Store dedup key → job_id mapping (expires after dedup window)
+        redis_conn.setex(dedup_key, DEDUP_WINDOW_SECONDS, job.id)
+
+        logger.info(f"[QA_ROUTER] Enqueued new job {job.id}")
+
         return QAJobResponse(
             job_id=job.id,
             status="queued"
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -241,11 +310,12 @@ async def ask_question_stream(
         Async generator that yields SSE events as job progresses.
 
         Flow:
-        1. Enqueue job to Redis queue
-        2. Yield queued event with job_id
-        3. Poll job status every 300ms
-        4. Yield stage changes as they occur
-        5. Yield complete/error event when done
+        1. Check for existing duplicate job (dedup)
+        2. Enqueue job to Redis queue (with TTL)
+        3. Yield queued event with job_id
+        4. Poll job status every 300ms
+        5. Yield stage changes as they occur
+        6. Yield complete/error event when done
         """
         try:
             # Connect to Redis queue
@@ -253,16 +323,32 @@ async def ask_question_stream(
             redis_conn = Redis.from_url(redis_url)
             queue = Queue("qa_jobs", connection=redis_conn)
 
-            # Enqueue job
-            job = queue.enqueue(
-                "app.workers.qa_worker.process_qa_job",
-                question=req.question,
-                workspace_id=workspace_id,
-                user_id=str(current_user.id),
-            )
+            user_id = str(current_user.id)
 
-            # Log that job was enqueued
-            logger.info(f"[QA_ROUTER] Enqueued job {job.id} to qa_jobs queue (redis={redis_url})")
+            # Check for duplicate job (same user, workspace, question)
+            dedup_key = _generate_dedup_key(user_id, workspace_id, req.question)
+            existing_job = _find_existing_job(redis_conn, queue, dedup_key)
+
+            if existing_job:
+                # Reuse existing job instead of creating duplicate
+                job = existing_job
+                logger.info(f"[QA_ROUTER] Reusing existing job {job.id} for SSE stream (dedup)")
+            else:
+                # Enqueue new job with TTL and timeout
+                job = queue.enqueue(
+                    "app.workers.qa_worker.process_qa_job",
+                    question=req.question,
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    job_timeout=JOB_TIMEOUT_SECONDS,
+                    result_ttl=JOB_TTL_SECONDS,
+                    ttl=JOB_TTL_SECONDS,
+                )
+
+                # Store dedup key → job_id mapping
+                redis_conn.setex(dedup_key, DEDUP_WINDOW_SECONDS, job.id)
+                logger.info(f"[QA_ROUTER] Enqueued new job {job.id} to qa_jobs queue")
+
             logger.debug(f"[QA_ROUTER] Question: {req.question}")
 
             # Yield queued event

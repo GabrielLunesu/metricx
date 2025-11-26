@@ -377,6 +377,102 @@ def _build_breakdown_spec(metric: str, breakdown: List[Dict[str, Any]], label_ke
     }
 
 
+def _build_creative_cards(
+    metric: str,
+    breakdown: List[Dict[str, Any]],
+    timeframe: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Build creative cards for ad-level breakdowns that have thumbnail images.
+
+    WHAT: Creates rich creative cards with thumbnail images and performance metrics.
+
+    WHY: Users asking "Show best creatives" expect to see actual creative images
+    alongside performance data, not just text names.
+
+    IMPORTANT: Creative images are only available for Meta (Facebook/Instagram) ads.
+    Google/TikTok ads will show performance data but no images.
+
+    Args:
+        metric: Primary metric for this query (e.g., "roas", "spend")
+        breakdown: List of breakdown items with creative fields
+        timeframe: Human-readable timeframe for display
+
+    Returns:
+        List of creative card objects for frontend rendering:
+        [
+            {
+                "id": "creative-...",
+                "type": "creative",
+                "name": "Ad Name",
+                "thumbnail_url": "https://...",
+                "image_url": "https://...",
+                "media_type": "image",
+                "metric": "roas",
+                "metric_value": 5.2,
+                "formatted_value": "5.20×",
+                "spend": 1234.56,
+                "clicks": 5000,
+                "conversions": 150,
+                "impressions": 50000,
+                "revenue": 6500.00,
+                "timeframe": "last 7 days",
+                "has_image": true
+            }
+        ]
+    """
+    cards = []
+
+    for i, item in enumerate(breakdown):
+        thumbnail_url = item.get("thumbnail_url")
+        image_url = item.get("image_url")
+        media_type = item.get("media_type")
+        has_image = bool(thumbnail_url or image_url)
+
+        card = {
+            "id": f"creative-{i}",
+            "type": "creative",
+            "name": item.get("label", f"Creative {i+1}"),
+            "entity_id": item.get("entity_id"),
+            "thumbnail_url": thumbnail_url,
+            "image_url": image_url,
+            "media_type": media_type,
+            "has_image": has_image,
+            # Performance metrics
+            "metric": metric,
+            "metric_value": item.get("value"),
+            "formatted_value": format_metric_value(metric, item.get("value")) if item.get("value") is not None else None,
+            "spend": item.get("spend"),
+            "formatted_spend": format_metric_value("spend", item.get("spend")) if item.get("spend") is not None else None,
+            "clicks": item.get("clicks"),
+            "conversions": item.get("conversions"),
+            "impressions": item.get("impressions"),
+            "revenue": item.get("revenue"),
+            "formatted_revenue": format_metric_value("revenue", item.get("revenue")) if item.get("revenue") is not None else None,
+            "timeframe": timeframe,
+        }
+        cards.append(card)
+
+    # Log summary
+    cards_with_images = sum(1 for c in cards if c["has_image"])
+    logger.info(
+        f"[VISUAL_BUILDER] Built {len(cards)} creative cards, "
+        f"{cards_with_images} with images (Meta only has images)"
+    )
+
+    return cards
+
+
+def _has_creative_data(breakdown: List[Dict[str, Any]]) -> bool:
+    """Check if breakdown items have creative image data (thumbnail_url or image_url)."""
+    if not breakdown:
+        return False
+    return any(
+        item.get("thumbnail_url") or item.get("image_url")
+        for item in breakdown
+    )
+
+
 def _build_breakdown_table(metric: str, breakdown: List[Dict[str, Any]], label_key: str = "label", breakdown_type: str = None) -> Dict[str, Any]:
     """Create a table definition for breakdown rows.
 
@@ -564,7 +660,7 @@ def _apply_output_format_override(
     This override ensures we respect their preference over the auto-selected visuals.
 
     Args:
-        payload: The visual payload with cards, viz_specs, tables
+        payload: The visual payload with cards, viz_specs, tables, creative_cards
         output_format: User's preference ("auto", "table", "chart", "text")
         breakdown: Optional breakdown data (for building table if needed)
         metric: Metric name (for building table if needed)
@@ -579,22 +675,24 @@ def _apply_output_format_override(
 
     if output_format == "text":
         # Shouldn't reach here (handled earlier), but just in case
-        return {"cards": [], "viz_specs": [], "tables": []}
+        return {"cards": [], "viz_specs": [], "tables": [], "creative_cards": []}
 
     if output_format == "table":
         # User explicitly wants table - remove charts, keep tables
         logger.info("[VISUAL_BUILDER] output_format='table' - keeping only tables")
         # If no table exists but we have breakdown data, build one
-        if not payload["tables"] and breakdown and metric:
-            payload["tables"].append(_build_breakdown_table(metric, breakdown, breakdown_type=breakdown_type))
+        if not payload.get("tables") and breakdown and metric:
+            payload["tables"] = [_build_breakdown_table(metric, breakdown, breakdown_type=breakdown_type)]
         payload["viz_specs"] = []  # Remove all charts
         payload["cards"] = []  # Remove cards too - table is the focus
+        payload["creative_cards"] = []  # Remove creative cards
 
     elif output_format == "chart":
         # User explicitly wants chart - remove tables, keep charts
         logger.info("[VISUAL_BUILDER] output_format='chart' - keeping only charts")
         payload["tables"] = []  # Remove tables
         payload["cards"] = []   # Remove cards
+        # Keep creative_cards - they can contain chart-like visuals
 
     return payload
 
@@ -683,7 +781,7 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
     # STEP 2: BUILD RAW VISUALS
     # Build all possible visualizations, then filter by strategy
     # ==================================================================
-    payload: Dict[str, List[Dict[str, Any]]] = {"cards": [], "viz_specs": [], "tables": []}
+    payload: Dict[str, List[Dict[str, Any]]] = {"cards": [], "viz_specs": [], "tables": [], "creative_cards": []}
 
     # Multi-metric: card per metric, optional timeseries and breakdown handled from primary metric.
     if query_type == "multi_metrics" or result_data.get("query_type") == "multi_metrics":
@@ -759,6 +857,7 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
 
     timeseries = result_data.get("timeseries") or []
     previous_timeseries = result_data.get("previous_timeseries") or result_data.get("timeseries_previous")
+    breakdown_type = getattr(dsl, 'breakdown', None)
 
     # Log what timeseries data we have for debugging
     logger.debug(f"[VISUAL_BUILDER] Timeseries data: "
@@ -789,16 +888,28 @@ def build_visual_payload(dsl: Any, result_data: Dict[str, Any], window: Optional
 
     top_contributor = breakdown[0]["label"] if breakdown else None
 
-    # Build summary card
-    payload["cards"].append(
-        _build_summary_card(
-            metric=metric,
-            result_data=result_data,
-            timeframe=timeframe,
-            sparkline=timeseries,
-            top_contributor=top_contributor,
+    # ==================================================================
+    # CREATIVE CARDS (NEW v2.5)
+    # For ad-level breakdowns with creative image data, build creative cards
+    # This enables rich visual display for "Show best creatives" queries
+    # ==================================================================
+    is_creative_query = breakdown_type == "ad" and _has_creative_data(breakdown)
+
+    if is_creative_query:
+        logger.info(f"[VISUAL_BUILDER] Detected creative query (breakdown=ad with image data)")
+        # Add creative_cards to payload
+        payload["creative_cards"] = _build_creative_cards(metric, breakdown, timeframe)
+    else:
+        # Standard summary card for non-creative queries
+        payload["cards"].append(
+            _build_summary_card(
+                metric=metric,
+                result_data=result_data,
+                timeframe=timeframe,
+                sparkline=timeseries,
+                top_contributor=top_contributor,
+            )
         )
-    )
 
     # ==================================================================
     # ENTITY TIMESERIES (for multi-line charts)

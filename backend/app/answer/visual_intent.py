@@ -412,7 +412,8 @@ def filter_visuals_by_strategy(
     filtered = {
         'cards': [],
         'viz_specs': [],
-        'tables': []
+        'tables': [],
+        'creative_cards': []  # NEW v2.5: Creative cards for ad creative queries
     }
 
     # Filter cards
@@ -421,6 +422,12 @@ def filter_visuals_by_strategy(
         logger.debug(f"[VISUAL_FILTER] Keeping {len(filtered['cards'])} cards")
     else:
         logger.debug(f"[VISUAL_FILTER] Removing all cards")
+
+    # Creative cards: Always pass through if present (they replace cards for creative queries)
+    creative_cards = payload.get('creative_cards', [])
+    if creative_cards:
+        filtered['creative_cards'] = creative_cards
+        logger.debug(f"[VISUAL_FILTER] Keeping {len(creative_cards)} creative cards")
 
     # Filter charts (viz_specs)
     if strategy.show_timeseries or strategy.show_breakdown_chart:
