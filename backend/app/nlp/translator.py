@@ -170,8 +170,29 @@ class Translator:
         # Add date parsing results to the prompt for the LLM
         date_instruction = ""
         if parsed_date_range:
-            date_instruction = f"IMPORTANT: A date range has been pre-parsed for this question. You MUST use the following time_range object in your response:\n"
-            date_instruction += f"```json\n{json.dumps(parsed_date_range, default=str)}\n```\n"
+            # Handle month-vs-month comparisons specially
+            if "comparison_ranges" in parsed_date_range:
+                ranges = parsed_date_range["comparison_ranges"]
+                if len(ranges) >= 2:
+                    # Use the later period as primary, earlier as "previous"
+                    # Sort by start date to determine order
+                    sorted_ranges = sorted(ranges, key=lambda r: r["start"])
+                    earlier = sorted_ranges[0]
+                    later = sorted_ranges[1]
+
+                    date_instruction = f"""IMPORTANT: This is a MONTH-VS-MONTH comparison query.
+The user wants to compare {earlier['label']} vs {later['label']}.
+
+You MUST use:
+- time_range: {{"start": "{later['start']}", "end": "{later['end']}"}} (the later month: {later['label']})
+- compare_to_previous: true (this will automatically compare to {earlier['label']})
+
+The executor will fetch both periods and show a comparison chart.
+Do NOT combine the months into a single range.
+"""
+            else:
+                date_instruction = f"IMPORTANT: A date range has been pre-parsed for this question. You MUST use the following time_range object in your response:\n"
+                date_instruction += f"```json\n{json.dumps(parsed_date_range, default=str)}\n```\n"
         
         # Add entity catalog for entity recognition and goal-aware metric selection
         entity_catalog_instruction = ""

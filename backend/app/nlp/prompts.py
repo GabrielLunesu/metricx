@@ -83,6 +83,45 @@ FEW_SHOT_EXAMPLES = [
             "filters": {}
         }
     },
+    # NEW v2.6: Month-vs-Month comparison examples (e.g., "September vs October")
+    # CRITICAL: When comparing specific months, use the LATER month as time_range
+    # and set compare_to_previous=True to compare against the earlier month
+    {
+        "question": "Spend September vs October",
+        "dsl": {
+            "metric": "spend",
+            "time_range": {"start": "2025-10-01", "end": "2025-10-31"},  # Later month
+            "compare_to_previous": True,  # Will compare to September
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
+    {
+        "question": "Compare ROAS in August vs September",
+        "dsl": {
+            "metric": "roas",
+            "time_range": {"start": "2025-09-01", "end": "2025-09-30"},  # Later month (September)
+            "compare_to_previous": True,  # Will compare to August
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
+    {
+        "question": "How did revenue compare October to November?",
+        "dsl": {
+            "metric": "revenue",
+            "time_range": {"start": "2025-11-01", "end": "2025-11-30"},  # Later month
+            "compare_to_previous": True,  # Will compare to October
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
     {
         "question": "Compare revenue to last week",
         "dsl": {
@@ -1275,7 +1314,25 @@ CRITICAL - Date Range Rules:
    - "last quarter", "last year" → {"last_n_days": 90}
    - "in September", "from Jan 1 to Jan 31", "2023-09-01 to 2023-09-30" → {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
 
-4. NEVER use both formats in the same query!
+2. YEAR INFERENCE (CRITICAL - v2.6):
+   When user mentions a month name WITHOUT a year:
+   - If the month is <= current month (today's month): use CURRENT year
+   - If the month is > current month: use PREVIOUS year
+   Example (if today is November 2025):
+     - "September" → 2025-09-01 to 2025-09-30 (September 2025)
+     - "December" → 2024-12-01 to 2024-12-31 (December 2024 - because Dec > Nov)
+   NEVER use old years like 2023 unless explicitly specified!
+
+3. MONTH VS MONTH COMPARISONS (CRITICAL - v2.6):
+   When user asks "X vs Y" where X and Y are month names:
+   - Use the LATER month as time_range (start/end dates)
+   - Set compare_to_previous: true to compare against the earlier month
+   Example: "September vs October"
+     - time_range: {"start": "2025-10-01", "end": "2025-10-31"} (October)
+     - compare_to_previous: true (will fetch September for comparison)
+   DO NOT combine both months into a single range!
+
+4. NEVER use both last_n_days and start/end formats in the same query!
 5. Default to {"last_n_days": 7} if timeframe is unclear.
 
 COMPARE_TO_PREVIOUS (v2.1 - CRITICAL for comparison charts):
@@ -1285,12 +1342,14 @@ Set "compare_to_previous": true when user wants time period comparison:
 - "vs previous period" → compare_to_previous: true
 - "how did X change" → compare_to_previous: true
 - "X this week vs last week" → compare_to_previous: true
+- "September vs October" → compare_to_previous: true (month vs month)
 - Any question with "vs", "compared to", "change", "difference" → compare_to_previous: true
 
 Examples:
 - "Spend vs last week" → compare_to_previous: true (enables dual-line chart)
 - "What's my ROAS?" → compare_to_previous: false (simple metric query)
 - "Revenue compared to last month" → compare_to_previous: true
+- "Spend September vs October" → time_range: October, compare_to_previous: true
 """
 
     # Define the conversation context rules section

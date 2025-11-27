@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Chart, registerables } from "chart.js";
 import { ArrowDownRight, ArrowUpRight, Maximize2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -265,11 +266,19 @@ function getChartOptions(spec, datasets, isFullscreen = false) {
 }
 
 // Fullscreen Chart Modal
-// WHAT: Full viewport chart display with backdrop
-// WHY: Better visualization of complex multi-series data
+// WHAT: Full viewport chart display with backdrop using Portal
+// WHY: Better visualization of complex multi-series data, escapes parent CSS constraints
 function FullscreenChart({ spec, onClose }) {
   const canvasRef = useRef(null);
   const chartInstance = useRef(null);
+  const containerRef = useRef(null);
+  const [isReady, setIsReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client-side mount (for portal)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Handle escape key to close
   useEffect(() => {
@@ -288,8 +297,15 @@ function FullscreenChart({ spec, onClose }) {
     };
   }, []);
 
+  // Wait for modal animation to complete before rendering chart
   useEffect(() => {
-    if (!canvasRef.current || !spec) return;
+    const timer = setTimeout(() => setIsReady(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Render chart after modal is ready
+  useEffect(() => {
+    if (!isReady || !canvasRef.current || !spec) return;
 
     const ctx = canvasRef.current.getContext("2d");
 
@@ -311,19 +327,35 @@ function FullscreenChart({ spec, onClose }) {
         chartInstance.current.destroy();
       }
     };
-  }, [spec]);
+  }, [spec, isReady]);
 
-  return (
+  // Handle window resize
+  useEffect(() => {
+    if (!chartInstance.current) return;
+
+    const handleResize = () => {
+      chartInstance.current?.resize();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isReady]);
+
+  // Don't render on server
+  if (!mounted) return null;
+
+  const modalContent = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8"
+      className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 md:p-8"
+      style={{ zIndex: 9999 }}
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" />
 
       {/* Modal Content */}
       <motion.div
@@ -351,12 +383,22 @@ function FullscreenChart({ spec, onClose }) {
         </div>
 
         {/* Chart Container */}
-        <div className="p-6 h-[calc(100%-72px)]">
-          <canvas ref={canvasRef} className="w-full h-full" />
+        <div ref={containerRef} className="p-6 h-[calc(100%-72px)] relative">
+          {!isReady && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          <div className={cn("w-full h-full", !isReady && "opacity-0")}>
+            <canvas ref={canvasRef} />
+          </div>
         </div>
       </motion.div>
     </motion.div>
   );
+
+  // Render modal in portal at document body level
+  return createPortal(modalContent, document.body);
 }
 
 function ChartCard({ spec }) {

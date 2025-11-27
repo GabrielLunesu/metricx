@@ -184,14 +184,24 @@ def _extract_comparison(metric: str, result: MetricResult) -> Dict[str, Any]:
     """
     # Higher is better metrics
     higher_is_better = [
-        "roas", "poas", "revenue", "profit", "clicks", 
-        "impressions", "conversions", "leads", "installs", 
+        "roas", "poas", "revenue", "profit", "clicks",
+        "impressions", "conversions", "leads", "installs",
         "purchases", "visitors", "ctr", "cvr", "aov", "arpv"
     ]
-    
+
     # Lower is better metrics
     lower_is_better = ["cpc", "cpm", "cpa", "cpl", "cpi", "cpp"]
-    
+
+    # Handle None delta_pct (e.g., 0 to 0 comparison)
+    if result.delta_pct is None:
+        return {
+            "previous": format_metric_value(metric, result.previous),
+            "previous_raw": result.previous,
+            "change": "N/A",
+            "change_raw": None,
+            "direction": "unchanged"
+        }
+
     # Determine direction
     if result.delta_pct > 0:
         if metric in higher_is_better:
