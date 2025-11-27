@@ -9,22 +9,21 @@ import { ShaderGradientCanvas, ShaderGradient } from "@shadergradient/react";
 function FeatureCard({ title, description, isActive, progress, onClick }) {
   return (
     <div
-      className={`w-full md:flex-1 self-stretch px-6 py-5 overflow-hidden flex flex-col justify-start items-start gap-2 cursor-pointer relative border-b md:border-b-0 last:border-b-0 transition-all duration-200 ${isActive
-        ? "bg-white shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)_inset]"
-        : "hover:bg-gray-50"
+      className={`w-full md:flex-1 self-stretch px-6 py-5 overflow-hidden flex flex-col justify-start items-start gap-2 cursor-pointer relative transition-all duration-300 rounded-xl mx-1 my-1 ${isActive
+        ? "bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg scale-[1.02] border border-blue-200"
+        : "bg-white hover:bg-gray-50 border border-transparent"
         }`}
       onClick={onClick}
     >
-      {isActive && (
-        <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-100">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-100 ease-linear"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )}
+      {/* Progress bar at top */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 rounded-t-xl overflow-hidden">
+        <div
+          className={`h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-100 ease-linear ${isActive ? "opacity-100" : "opacity-0"}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
 
-      <div className="self-stretch flex justify-center flex-col text-black text-sm font-bold leading-6">
+      <div className={`self-stretch flex justify-center flex-col text-sm font-bold leading-6 transition-colors ${isActive ? "text-blue-600" : "text-black"}`}>
         {title}
       </div>
       <div className="self-stretch text-gray-500 text-[13px] font-normal leading-[22px]">
@@ -327,26 +326,30 @@ export default function HeroSection() {
                     </div>
                   </div>
 
-                  {/* Right side - Globe */}
-                  <div className="p-6 sm:p-8 bg-gray-50/50 flex items-center justify-center min-h-[300px] md:min-h-[400px]">
+                  {/* Right side - Globe with glow effect */}
+                  <div className="p-6 sm:p-8 bg-white flex items-center justify-center min-h-[300px] md:min-h-[400px] relative overflow-hidden">
+                    {/* Subtle glow effects on white bg */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-cyan-400/30 rounded-full blur-2xl" />
+
                     <div className="relative z-10 h-[300px] w-full max-w-[300px] overflow-hidden rounded-lg">
                       <Cobe
                         variant="default"
                         phi={0}
                         theta={0.2}
                         mapSamples={16000}
-                        mapBrightness={1.8}
+                        mapBrightness={1.2}
                         mapBaseBrightness={0.05}
                         diffuse={3}
-                        dark={1.1}
+                        dark={0}
                         baseColor="#ffffff"
-                        markerColor="#3B82F6"
-                        markerSize={0.05}
-                        glowColor="#ffffff"
+                        markerColor="#3b82f6"
+                        markerSize={0.07}
+                        glowColor="#60a5fa"
                         scale={1.0}
                         offsetX={0.0}
                         offsetY={0.0}
-                        opacity={0.7}
+                        opacity={1}
                       />
                     </div>
                   </div>
@@ -359,9 +362,9 @@ export default function HeroSection() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="w-full max-w-[960px] mt-0 border-t border-gray-100 bg-white rounded-b-xl"
+              className="w-full max-w-[960px] mt-4 p-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg"
             >
-              <div className="flex flex-col md:flex-row">
+              <div className="flex flex-col md:flex-row gap-1">
                 {features.map((feature, index) => (
                   <FeatureCard
                     key={index}
