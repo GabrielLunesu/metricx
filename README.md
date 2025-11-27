@@ -1,4 +1,4 @@
-# AdNavi — AI-Powered Marketing Analytics
+# metricx — AI-Powered Marketing Analytics
 
 **Test Login Credentials**
 ```
