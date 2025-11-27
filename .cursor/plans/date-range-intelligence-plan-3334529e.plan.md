@@ -138,4 +138,4 @@ After implementation, test with:
 - [ ] Update LLM prompts in `backend/app/nlp/prompts.py` with explicit date handling rules.
 - [ ] Integrate the new date parser into the translation pipeline in `backend/app/nlp/translator.py`.
 - [ ] Update the `QA_SYSTEM_ARCHITECTURE.md` with the new date parsing stage and DSL changes.
-- [ ] Update `ADNAVI_BUILD_LOG.md` with a detailed changelog entry for this phase.
+- [ ] Update `metricx_BUILD_LOG.md` with a detailed changelog entry for this phase.

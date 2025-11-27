@@ -1,6 +1,6 @@
-# Hierarchy rollups in AdNavi (plain-English guide)
+# Hierarchy rollups in metricx (plain-English guide)
 
-This guide explains how AdNavi "rolls up" detailed ad data (ads and ad sets) into campaign-level insights using safe database helpers called CTEs. It also shows where this happens in the code and what to expect in answers and logs.
+This guide explains how metricx "rolls up" detailed ad data (ads and ad sets) into campaign-level insights using safe database helpers called CTEs. It also shows where this happens in the code and what to expect in answers and logs.
 
 ## What is a rollup?
 - Your ad data is recorded at detailed levels (often the ad level).
@@ -12,7 +12,7 @@ This guide explains how AdNavi "rolls up" detailed ad data (ads and ad sets) int
 - Consistency: One unified service performs calculations everywhere, so QA answers match dashboards.
 - Safety: The AI only outputs a safe JSON (DSL). The backend validates and executes; queries are workspace-scoped.
 
-## Where rollups happen in AdNavi
+## Where rollups happen in metricx
 
 ### 1) Resolving a named campaign/adset to its children
 When a question references an entity by name (e.g., "Holiday Sale - Purchases"), we first resolve it to all of its descendant leaf entities (ads/adsets). This is done in the unified metrics service:

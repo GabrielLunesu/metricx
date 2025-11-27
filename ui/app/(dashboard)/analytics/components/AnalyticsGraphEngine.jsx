@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { fetchWorkspaceKpis } from "@/lib/api";
-import { AdNaviChart } from "@/components/charts/AdNaviChart";
+import { metricxChart } from "@/components/charts/metricxChart";
 
 export default function AnalyticsGraphEngine({
     workspaceId,
@@ -78,7 +78,7 @@ export default function AnalyticsGraphEngine({
         // For now, we might exclude it or accept it shares the scale (which is bad for ROAS vs Revenue).
         // The user asked to "only show line" and "remove data points".
         // Let's stick to Revenue and Spend for the main visual as they are currency.
-        // If ROAS is needed, we'd need a composed chart with dual axis, but AdNaviChart is simple Area/Bar.
+        // If ROAS is needed, we'd need a composed chart with dual axis, but metricxChart is simple Area/Bar.
         // Let's hide ROAS for now to keep it clean as requested "readability... on mobile".
     };
 
@@ -124,7 +124,7 @@ export default function AnalyticsGraphEngine({
                         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 ) : (
-                    <AdNaviChart
+                    <metricxChart
                         data={chartData}
                         config={chartConfig}
                         type={viewMode === 'overview' ? 'area' : 'bar'}

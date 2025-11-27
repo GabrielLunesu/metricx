@@ -1,4 +1,4 @@
-# 100 Marketing Questions for AdNavi Copilot
+# 100 Marketing Questions for metricx Copilot
 
 ## Basic Performance (1-20)
 

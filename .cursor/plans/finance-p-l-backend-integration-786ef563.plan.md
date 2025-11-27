@@ -1846,7 +1846,7 @@ export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
 
 ## Phase 11: Documentation Updates
 
-### Update ADNAVI_BUILD_LOG.md
+### Update metricx_BUILD_LOG.md
 
 Add changelog entry at line 205:
 
@@ -2023,7 +2023,7 @@ Test checklist:
 
 ✅ **Documentation**:
 
-- ADNAVI_BUILD_LOG.md updated with changelog
+- metricx_BUILD_LOG.md updated with changelog
 - CLASS-DIAGRAM.MD includes ManualCost model
 - All code has WHAT/WHY/REFERENCES comments
 - Cross-references between modules documented
@@ -2046,5 +2046,5 @@ Test checklist:
 - [ ] Create pnlAdapter.js for view model mapping
 - [ ] Connect Finance page to real API with state management
 - [ ] Update Finance components to consume view model props
-- [ ] Update ADNAVI_BUILD_LOG.md and CLASS-DIAGRAM.MD
+- [ ] Update metricx_BUILD_LOG.md and CLASS-DIAGRAM.MD
 - [ ] Run migration on Railway, test end-to-end, verify all success criteria

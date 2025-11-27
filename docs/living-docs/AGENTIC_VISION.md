@@ -1,15 +1,15 @@
 # Agentic Marketing Copilot: Architectural Vision
 **Target**: Evolution of `QA_SYSTEM_ARCHITECTURE.md`
-**Goal**: Transform AdNavi from a "Passive QA Bot" into a "Proactive AI Marketing Employee"
+**Goal**: Transform metricx from a "Passive QA Bot" into a "Proactive AI Marketing Employee"
 **Status**: Vision / Proposal
 
 ---
 
 ## 1. Executive Summary
 
-Current State: AdNavi is a **deterministic, linear QA pipeline**. It translates questions to SQL-like DSL, executes them, and formats the result. It is safe, reliable, but passive. It waits for questions and has limited "thinking" capacity beyond immediate translation.
+Current State: metricx is a **deterministic, linear QA pipeline**. It translates questions to SQL-like DSL, executes them, and formats the result. It is safe, reliable, but passive. It waits for questions and has limited "thinking" capacity beyond immediate translation.
 
-**Future Vision**: AdNavi becomes a **Fully Agentic Copilot**. It doesn't just answer questions; it understands *intent*, *business context*, and *market dynamics*. It proactively monitors accounts, suggests actions, and executes them upon approval. It "self-heals" when data is messy and learns from every interaction.
+**Future Vision**: metricx becomes a **Fully Agentic Copilot**. It doesn't just answer questions; it understands *intent*, *business context*, and *market dynamics*. It proactively monitors accounts, suggests actions, and executes them upon approval. It "self-heals" when data is messy and learns from every interaction.
 
 ---
 
@@ -103,7 +103,7 @@ Instead of waiting for a user prompt, background agents run 24/7:
 
 **User**: "Why is my performance down today?"
 
-**AdNavi Agent**:
+**metricx Agent**:
 1.  **Check Data**: Queries DB. *Result: Spend is normal, but Conversions dropped 40%.*
 2.  **Check Tech**: Checks landing page uptime (Tool: Ping). *Result: Site is up.*
 3.  **Check Market**: Queries Perplexity. *Result: "Major Instagram outage reported in Europe."*

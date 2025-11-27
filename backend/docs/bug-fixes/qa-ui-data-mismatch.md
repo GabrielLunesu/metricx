@@ -90,7 +90,7 @@ After the fix:
 
 - `backend/app/dsl/executor.py` - Fixed level filter bug and added default active filter
 - `backend/app/routers/kpis.py` - Fixed level filter bug
-- `docs/ADNAVI_BUILD_LOG.md` - Documented the fix
+- `docs/metricx_BUILD_LOG.md` - Documented the fix
 - `backend/docs/QA_SYSTEM_ARCHITECTURE.md` - Updated architecture docs
 
 ## Prevention

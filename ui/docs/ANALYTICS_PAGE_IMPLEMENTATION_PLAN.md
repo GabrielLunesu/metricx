@@ -9,7 +9,7 @@
 
 ### Backend Endpoints Available
 
-Based on `ADNAVI_BUILD_LOG.md` and `QA_SYSTEM_ARCHITECTURE.md`:
+Based on `metricx_BUILD_LOG.md` and `QA_SYSTEM_ARCHITECTURE.md`:
 
 1. **`POST /workspaces/{workspace_id}/kpis`** ✅ EXISTS
    - **Purpose**: Aggregate KPI metrics with time ranges, sparklines, breakdowns
@@ -29,7 +29,7 @@ Based on `ADNAVI_BUILD_LOG.md` and `QA_SYSTEM_ARCHITECTURE.md`:
      - Query types: metrics, providers, entities
      - DSL v2.1.4 with provider breakdown support
      - Context-aware follow-ups
-   - **Use case**: AdNavi Insight widget
+   - **Use case**: metricx Insight widget
 
 3. **Providers Query via DSL** ✅ EXISTS (via /qa endpoint)
    - **Query type**: `"providers"`
@@ -76,7 +76,7 @@ Based on `ADNAVI_BUILD_LOG.md` and `QA_SYSTEM_ARCHITECTURE.md`:
 │ ADDITIONAL METRICS (CTR, CPC, CPA, Conversion Rate)         │
 │ - Same filtering as KPI cards                               │
 ├─────────────────────────────────────────────────────────────┤
-│ ADNAVI INSIGHT                                               │
+│ metricx INSIGHT                                               │
 │ - Uses /qa endpoint                                         │
 │ - Dynamic question based on selected filters                │
 │ - Example: "Give me a breakdown of Meta for the last 30d"  │
@@ -342,9 +342,9 @@ fetchWorkspaceKpis({
 });
 ```
 
-### Phase 9: AdNavi Insight Component (30 minutes)
+### Phase 9: metricx Insight Component (30 minutes)
 
-**File**: `ui/app/(dashboard)/analytics/components/AdNaviInsight.jsx`
+**File**: `ui/app/(dashboard)/analytics/components/metricxInsight.jsx`
 
 Features:
 - Dynamic question generation based on selected filters
@@ -390,7 +390,7 @@ ui/app/(dashboard)/analytics/
     ├── AnalyticsChart.jsx            # Chart with metric/grouping dropdowns
     ├── PlatformBreakdown.jsx         # Revenue by provider
     ├── AdditionalMetrics.jsx         # CTR, CPC, CPA, CVR cards
-    └── AdNaviInsight.jsx             # AI insight widget
+    └── metricxInsight.jsx             # AI insight widget
 ```
 
 ---
@@ -421,7 +421,7 @@ Each component fetches data with new filters
            ├─→ Chart: fetchWorkspaceKpis (provider=meta, lastNDays=30, sparkline=true)
            ├─→ Platform Breakdown: fetchWorkspaceKpis (breakdown=provider, provider=meta)
            ├─→ Additional Metrics: fetchWorkspaceKpis (provider=meta, metrics=[ctr,cpc,cpa,cvr])
-           └─→ AdNavi Insight: fetchQA (question="breakdown of meta for last 30 days")
+           └─→ metricx Insight: fetchQA (question="breakdown of meta for last 30 days")
            ↓
 Components re-render with new data
 ```
@@ -436,7 +436,7 @@ Components re-render with new data
 - [ ] Chart grouping switches between provider and campaign
 - [ ] Platform breakdown reflects selected filters
 - [ ] Additional metrics update with filters
-- [ ] AdNavi Insight generates contextual questions
+- [ ] metricx Insight generates contextual questions
 - [ ] All components have loading states
 - [ ] Smooth transitions between filter changes
 - [ ] Responsive layout
@@ -453,7 +453,7 @@ Components re-render with new data
 - **Phase 6** (Chart): 60 minutes
 - **Phase 7** (Platform Breakdown): 30 minutes
 - **Phase 8** (Additional Metrics): 30 minutes
-- **Phase 9** (AdNavi Insight): 30 minutes
+- **Phase 9** (metricx Insight): 30 minutes
 
 **Total**: ~4.5 hours
 
@@ -499,7 +499,7 @@ Components re-render with new data
 2. **Breakdown**: Use `breakdown: 'provider'` or `breakdown: 'campaign'`
 3. **Sparklines**: Set `sparkline: true` for chart data
 4. **Timeframe**: Use `lastNDays` or `start/end` dates
-5. **AdNavi Insight**: Generate question dynamically, don't hardcode
+5. **metricx Insight**: Generate question dynamically, don't hardcode
 6. **Loading states**: Show skeletons during initial load, spinners during filter changes
 7. **Error handling**: Display friendly error messages if API fails
 

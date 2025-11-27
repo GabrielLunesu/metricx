@@ -1,8 +1,8 @@
-# AdNavi Agentic Marketing Copilot - Evolution Plan
+# metricx Agentic Marketing Copilot - Evolution Plan
 
 ## Executive Summary
 
-Transform AdNavi from a **reactive Q&A tool** into a **proactive, intelligent marketing agent** that can explain, diagnose, recommend, and act.
+Transform metricx from a **reactive Q&A tool** into a **proactive, intelligent marketing agent** that can explain, diagnose, recommend, and act.
 
 **Immediate Priority**: Fix context/follow-up issues (system struggles with conversation context)
 

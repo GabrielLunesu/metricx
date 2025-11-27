@@ -220,7 +220,7 @@ if plan.filters.get("entity_name"):
 - [ ] Verify LLM correctly generates entity_name in DSL
 - [ ] Test with Swagger UI
 - [ ] Document in QA_SYSTEM_ARCHITECTURE.md
-- [ ] Update ADNAVI_BUILD_LOG.md
+- [ ] Update metricx_BUILD_LOG.md
 
 ---
 

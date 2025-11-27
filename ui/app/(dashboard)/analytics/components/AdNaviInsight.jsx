@@ -4,7 +4,7 @@ import { fetchQA } from "@/lib/api";
 import { renderMarkdownLite } from "@/lib/markdown";
 import { Sparkles } from "lucide-react";
 
-export default function AdNaviInsight({
+export default function metricxInsight({
   workspaceId,
   selectedProvider,
   selectedTimeframe,
@@ -18,10 +18,10 @@ export default function AdNaviInsight({
 
   // Generate dynamic question based on selected filters
   const generateQuestion = () => {
-    const providerText = selectedProvider === 'all' 
-      ? 'all platforms' 
+    const providerText = selectedProvider === 'all'
+      ? 'all platforms'
       : selectedProvider;
-    
+
     let timeframeText;
     if (selectedTimeframe === '7d') {
       timeframeText = 'last 7 days';
@@ -32,7 +32,7 @@ export default function AdNaviInsight({
     } else {
       timeframeText = `last ${rangeDays} days`;
     }
-    
+
     return `Give me a breakdown of ${providerText} for the ${timeframeText}`;
   };
 
@@ -67,13 +67,13 @@ export default function AdNaviInsight({
       <div className="glass-card rounded-3xl p-8 border border-neutral-200/60 shadow-lg relative overflow-hidden">
         {/* Glow effect */}
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-400 rounded-full blur-[100px] opacity-15 pulse-glow-aura"></div>
-        
+
         {/* Header */}
         <div className="flex items-center gap-3 mb-6 relative z-10">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900">AdNavi Insight</h3>
+          <h3 className="text-lg font-semibold text-neutral-900">metricx Insight</h3>
         </div>
 
         {/* Insight Content */}
@@ -93,7 +93,7 @@ export default function AdNaviInsight({
               <div className="bg-gradient-to-br from-cyan-50 to-white border border-cyan-200/60 rounded-2xl p-6">
                 <div className="text-neutral-800 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMarkdownLite(insight.answer) }} />
               </div>
-              
+
               {/* Metadata (optional, can be hidden) */}
               <div className="flex items-center gap-2 text-xs text-neutral-400">
                 <Sparkles className="w-3 h-3" />

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchWorkspaceKpis } from "@/lib/api";
-import { AdNaviChart } from "@/components/charts/AdNaviChart";
+import { metricxChart } from "@/components/charts/metricxChart";
 
 export default function MoneyPulseChart({ workspaceId, timeframe }) {
     const [loading, setLoading] = useState(true);
@@ -50,7 +50,7 @@ export default function MoneyPulseChart({ workspaceId, timeframe }) {
                     sparkline: true
                 });
 
-                // Transform data for AdNaviChart (Recharts format)
+                // Transform data for metricxChart (Recharts format)
                 const revenueData = res.find(d => d.key === 'revenue')?.sparkline || [];
                 const spendData = res.find(d => d.key === 'spend')?.sparkline || [];
 
@@ -115,7 +115,7 @@ export default function MoneyPulseChart({ workspaceId, timeframe }) {
                         <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 ) : (
-                    <AdNaviChart
+                    <metricxChart
                         data={chartData}
                         config={chartConfig}
                         type={viewMode === 'overview' ? 'area' : 'bar'}

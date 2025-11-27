@@ -13,7 +13,7 @@ export default function OrbHeader() {
         <span className="absolute inset-0 rounded-full border border-cyan-400/30 animate-ping" style={{ animationDelay: '1.5s' }} />
         <div className="absolute inset-2 rounded-full bg-gradient-to-br from-cyan-300/30 via-violet-300/20 to-teal-300/20 blur-md" />
       </div>
-      <div className="relative z-20 mt-2 text-center text-[14px] font-medium text-slate-400">AdNavi Copilot</div>
+      <div className="relative z-20 mt-2 text-center text-[14px] font-medium text-slate-400">metricx Copilot</div>
     </div>
   );
 }

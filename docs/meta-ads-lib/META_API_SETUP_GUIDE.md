@@ -1,6 +1,6 @@
 # Meta Ads API Setup Guide (2025)
 
-**Purpose**: Step-by-step guide to obtain Meta API credentials and set up test environment for AdNavi integration.
+**Purpose**: Step-by-step guide to obtain Meta API credentials and set up test environment for metricx integration.
 
 **Last Updated**: 2025-10-30  
 **API Version**: v19.0 (check [changelog](https://developers.facebook.com/docs/graph-api/changelog) quarterly)
@@ -42,7 +42,7 @@ This guide covers:
    - Choose **"Business"**
    - Click **"Next"**
 5. **App Details**:
-   - **App Name**: `AdNavi Testing` (or your preference)
+   - **App Name**: `metricx Testing` (or your preference)
    - **App Contact Email**: Your email
    - **Business Account**: Create new or select existing
    - Click **"Create App"**
@@ -128,7 +128,7 @@ If you don't want to use your personal ad account:
 1. **Go to**: [business.facebook.com/settings/ad-accounts](https://business.facebook.com/settings/ad-accounts)
 2. **Click**: "Add" → "Create a new ad account"
 3. **Enter**:
-   - **Ad Account Name**: `AdNavi Testing`
+   - **Ad Account Name**: `metricx Testing`
    - **Time Zone**: Your timezone
    - **Currency**: USD (or your preference)
 4. **Assign yourself** as account admin
@@ -146,7 +146,7 @@ Use this for **production** or if you need a permanent token.
    - If you don't have a Business Manager, create one first
 2. **Click**: "Add" → "Create a new system user"
 3. **Enter**:
-   - **Name**: `AdNavi API`
+   - **Name**: `metricx API`
    - **Role**: Admin or Employee
 4. **Click**: "Create System User"
 
@@ -154,7 +154,7 @@ Use this for **production** or if you need a permanent token.
 
 1. **Click on the system user** you just created
 2. **Click**: "Generate New Token"
-3. **Select your app**: `AdNavi Testing`
+3. **Select your app**: `metricx Testing`
 4. **Select permissions**:
    - ✅ `ads_management`
    - ✅ `ads_read`
@@ -225,7 +225,7 @@ curl -G \
 #     {
 #       "account_id": "1234567890",
 #       "id": "act_1234567890",
-#       "name": "AdNavi Testing"
+#       "name": "metricx Testing"
 #     }
 #   ]
 # }
@@ -289,7 +289,7 @@ curl -G \
 # }
 ```
 
-### Test 4: Hourly Insights (Critical for AdNavi)
+### Test 4: Hourly Insights (Critical for metricx)
 
 ```bash
 # Get hourly breakdown for today
@@ -330,10 +330,10 @@ curl -G \
 
 ### Step 1: Install Facebook Business SDK
 
-In your AdNavi backend directory:
+In your metricx backend directory:
 
 ```bash
-cd /Users/gabriellunesu/Git/AdNavi/backend
+cd /Users/gabriellunesu/Git/metricx/backend
 
 # Activate virtual environment
 source bin/activate
@@ -503,9 +503,9 @@ def test_insights():
     return True
 
 def test_hourly_insights():
-    """Test 4: Fetch hourly insights (critical for AdNavi)."""
+    """Test 4: Fetch hourly insights (critical for metricx)."""
     print("=" * 60)
-    print("Test 4: Hourly Insights (AdNavi Requirement)")
+    print("Test 4: Hourly Insights (metricx Requirement)")
     print("=" * 60)
     
     access_token = os.getenv('META_ACCESS_TOKEN')
@@ -612,7 +612,7 @@ Test 1: API Connection
 ============================================================
 ✅ Connected to Ad Account:
    ID: act_1234567890
-   Name: AdNavi Testing
+   Name: metricx Testing
    Currency: USD
    Timezone: America/Los_Angeles
    Status: 1
@@ -630,7 +630,7 @@ Test 3: Fetch Insights
    Insights require active campaigns with spend
 
 ============================================================
-Test 4: Hourly Insights (AdNavi Requirement)
+Test 4: Hourly Insights (metricx Requirement)
 ============================================================
 ⚠️  No hourly data for today (this is OK if no active campaigns)
    Hourly data requires campaigns currently running with spend
@@ -994,6 +994,6 @@ def refresh_long_lived_token(current_token, app_id, app_secret):
 
 **Document Version**: 1.0  
 **Last Updated**: 2025-10-30  
-**Author**: AdNavi Team  
+**Author**: metricx Team  
 **Next Review**: Quarterly (check API version updates)
 

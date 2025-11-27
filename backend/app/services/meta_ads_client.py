@@ -446,7 +446,7 @@ class MetaAdsClient:
         CRITICAL NOTES:
             - Maximum 93 days per request (Meta API limit)
             - Hourly breakdowns ONLY available for last 3 days
-            - For AdNavi Phase 2: Use daily breakdowns, chunk in 7-day windows
+            - For metricx Phase 2: Use daily breakdowns, chunk in 7-day windows
             - Actions array contains conversions/leads/purchases (complex parsing needed)
         
         Args:

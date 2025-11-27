@@ -20,7 +20,7 @@ import sys
 
 def main():
     print("=" * 60)
-    print("Confident AI Setup for AdNavi QA Evaluation")
+    print("Confident AI Setup for metricx QA Evaluation")
     print("=" * 60)
 
     # Check if API key is already set

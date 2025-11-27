@@ -1010,7 +1010,7 @@ class MetricFactCreate(BaseModel):
     # Pattern 1: Existing entity
     entity_id: Optional[UUID] = Field(
         None,
-        description="AdNavi entity UUID (if entity already synced)"
+        description="metricx entity UUID (if entity already synced)"
     )
     
     # Pattern 2: New entity (will be looked up or created)

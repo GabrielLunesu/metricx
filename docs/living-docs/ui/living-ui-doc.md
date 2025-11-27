@@ -1,4 +1,4 @@
-# AdNavi UI — Living Document
+# metricx UI — Living Document
 
 > How to use this doc  
 > - Keep this file current on every UI change (components, routes, API touchpoints, patterns, deps).  
@@ -72,7 +72,7 @@
 - Keep data fetching in libs (`ui/lib/*`) and container components; keep presentational components stateless.
 - Form validation lives in `ui/lib/validation.js`; reuse across pages.
 - Prefer toasts for user-facing feedback; reserve inline errors for form fields.
-- When adding routes/components, update this doc (routes, inventory, mock/real data) and `docs/living-docs/ADNAVI_BUILD_LOG.md`.
+- When adding routes/components, update this doc (routes, inventory, mock/real data) and `docs/living-docs/metricx_BUILD_LOG.md`.
 - Remove or archive mock data when replaced by real API responses; note that in section 5.
 
 ## 8) Known Gaps / Opportunities

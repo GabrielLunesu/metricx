@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This guide walks you through implementing Meta (Facebook) OAuth authentication for AdNavi, following the same pattern as our Google OAuth implementation. This allows users to connect their Meta ad accounts without manual token setup.
+This guide walks you through implementing Meta (Facebook) OAuth authentication for metricx, following the same pattern as our Google OAuth implementation. This allows users to connect their Meta ad accounts without manual token setup.
 
 **Estimated Time**: 12-18 hours total
 - Backend: 6-8 hours
@@ -31,7 +31,7 @@ Before starting, ensure you have:
 1. **If you don't have an app yet**:
    - Click "Create App"
    - Select **"Business"** as app type
-   - App Name: `AdNavi`
+   - App Name: `metricx`
    - App Contact Email: `[Your Support Email]`
    - Click "Create App"
 
@@ -48,18 +48,18 @@ Before starting, ensure you have:
 **Navigate to**: [developers.facebook.com/apps/YOUR_APP_ID/settings/basic](https://developers.facebook.com/apps)
 
 **App Domains**:
-- Add: `adnavi.app`
-- Add: `www.adnavi.app`
-- Add: `api.adnavi.app`
+- Add: `metricx.ai`
+- Add: `www.metricx.ai`
+- Add: `api.metricx.ai`
 
 **Privacy Policy URL**:
-- `https://www.adnavi.app/privacy`
+- `https://www.metricx.ai/privacy`
 
 **Terms of Service URL**:
-- `https://www.adnavi.app/terms`
+- `https://www.metricx.ai/terms`
 
 **App Icon**:
-- Upload: `ui/public/adnavi.png`
+- Upload: `ui/public/metricx.png`
 
 **Category**:
 - Select: "Business" or "Advertising"
@@ -342,16 +342,16 @@ psql $DATABASE_URL -c "SELECT provider, name, external_account_id FROM connectio
 ### 5.1 Required Information
 
 **App Details**:
-- App Name: `AdNavi`
+- App Name: `metricx`
 - Category: Business/Advertising
-- Privacy Policy: `https://www.adnavi.app/privacy`
-- Terms of Service: `https://www.adnavi.app/terms`
+- Privacy Policy: `https://www.metricx.ai/privacy`
+- Terms of Service: `https://www.metricx.ai/terms`
 
 **Permissions Justification**:
 
 **`ads_management`**:
 ```
-AdNavi is a marketing analytics platform that helps businesses manage and optimize their Meta ad campaigns.
+metricx is a marketing analytics platform that helps businesses manage and optimize their Meta ad campaigns.
 
 We require ads_management permission to:
 - Create and edit ad campaigns, ad sets, and ads
@@ -378,7 +378,7 @@ Users explicitly grant permission through OAuth and can select which ad accounts
 We require business_management permission to:
 - Access Business Manager accounts and ad accounts
 - List available ad accounts for user selection
-- Manage connections between AdNavi and Meta Business Manager
+- Manage connections between metricx and Meta Business Manager
 
 Users explicitly grant permission through OAuth and can disconnect accounts at any time.
 ```
@@ -399,7 +399,7 @@ Users explicitly grant permission through OAuth and can disconnect accounts at a
 **Create a 3-5 minute demo video** showing:
 
 **Part 1: Introduction (30 seconds)**
-- Show AdNavi homepage
+- Show metricx homepage
 - Show Privacy Policy and Terms links
 - Navigate to Settings page
 

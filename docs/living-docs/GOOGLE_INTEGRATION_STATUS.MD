@@ -12,7 +12,7 @@ Principles: Separation of concerns, single responsibility, modular and elegant c
   - Step 1 pulls your Google account structure (campaigns, ad groups, ads, and for Performance Max: asset groups and creative assets). We use UPSERT so re-running the sync simply refreshes names/status.
   - Step 2 ingests daily performance metrics only after the hierarchy exists. We ingest at the right level (ads for standard campaigns, asset groups and creatives for PMax) and skip unknown IDs to avoid placeholder/orphan rows.
 - Performance Max support:
-  - Asset groups are mapped to AdNavi’s `adset` level; asset group assets are mapped to `creative` level. This makes the UI and QA reflect what you see in Google Ads.
+  - Asset groups are mapped to metricx’s `adset` level; asset group assets are mapped to `creative` level. This makes the UI and QA reflect what you see in Google Ads.
 - Safe ingestion prevents bad data:
   - If the hierarchy isn’t present, metrics sync completes as a no‑op (0 ingested) instead of creating "unknown" entities. This mirrors Meta and avoids endless backfills.
 - Manual today, automation next:

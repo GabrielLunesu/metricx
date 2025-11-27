@@ -21,7 +21,7 @@
 
 ## Overview
 
-The AdNavi QA (Question-Answering) system translates natural language questions into validated database queries using a **DSL (Domain-Specific Language)**.
+The metricx QA (Question-Answering) system translates natural language questions into validated database queries using a **DSL (Domain-Specific Language)**.
 
 ### Why This Architecture?
 
@@ -1149,5 +1149,5 @@ This release significantly improved the QA system's visual output capabilities a
 - **Main Architecture**: `backend/docs/QA_SYSTEM_ARCHITECTURE.md` (this file)
 - **Module Guide**: `backend/app/dsl/README.md`
 - **Few-Shot Examples**: `backend/app/dsl/examples.md`
-- **Build Log**: `docs/ADNAVI_BUILD_LOG.md`
+- **Build Log**: `docs/metricx_BUILD_LOG.md`
 - **Class Diagram**: `backend/CLASS-DIAGRAM.MD`

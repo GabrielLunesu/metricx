@@ -1,4 +1,4 @@
-# AdNavi — Living Build Log
+# metricx — Living Build Log
 
 _Last updated: 2025-11-25T13:05:00Z_
 
@@ -17,7 +17,7 @@ _Last updated: 2025-11-25T13:05:00Z_
 - Framework: Next.js 15.5.4 (App Router, **JSX only**)
 - Backend: FastAPI + SQLAlchemy 2.x + Alembic, Postgres via Docker
 - Auth: Email/password, JWT (HTTP-only cookie), simple cookie session
-- Repo doc path: `docs/ADNAVI_BUILD_LOG.md` (this file). UI companion doc: `docs/living-docs/ui/living-ui-doc.md`. Workspace plan: `docs/living-docs/workspace-management.md`.
+- Repo doc path: `docs/metricx_BUILD_LOG.md` (this file). UI companion doc: `docs/living-docs/ui/living-ui-doc.md`. Workspace plan: `docs/living-docs/workspace-management.md`.
 
 ### 1.1 Frontend — `ui/`
 - Routing: `/` (Homepage), `/dashboard`, `/analytics`, `/copilot`, `/finance`, `/campaigns`, `/campaigns/[id]`
@@ -390,7 +390,7 @@ Frontend polls /qa/jobs/{job_id} → Returns result when ready
 
 **Files Updated (docs)**:
 - `docs/living-docs/QA_SYSTEM_ARCHITECTURE.md`: Added Async Worker Queue phase
-- `docs/living-docs/ADNAVI_BUILD_LOG.md`: This changelog entry
+- `docs/living-docs/metricx_BUILD_LOG.md`: This changelog entry
 
 **Impact**: Production-ready QA system with reliable async processing and zero HTTP timeouts.
 
@@ -497,7 +497,7 @@ Frontend polls /qa/jobs/{job_id} → Returns result when ready
 - ✅ Endpoint: `POST /workspaces/{id}/connections/{id}/sync-entities`
 - ✅ UPSERT pattern (idempotent, safe to re-run)
 - ✅ Hierarchy creation (campaigns → adsets → ads with parent_id linkage)
-- ✅ Goal inference (Meta objectives → AdNavi goals)
+- ✅ Goal inference (Meta objectives → metricx goals)
 - ✅ Workspace isolation (validates connection ownership)
 - ✅ Partial success on API failures (continues processing, returns errors)
 - ✅ Migration: Added created_at and updated_at to Entity model
@@ -508,7 +508,7 @@ Frontend polls /qa/jobs/{job_id} → Returns result when ready
 - ✅ Incremental sync (checks last ingested date, only fetches new data)
 - ✅ 7-day chunking (prevents timeout, respects rate limits)
 - ✅ Ad-level metrics (database rolls up to adset/campaign via UnifiedMetricService)
-- ✅ Actions parsing (Meta's nested structure → AdNavi flat fields)
+- ✅ Actions parsing (Meta's nested structure → metricx flat fields)
 - ✅ Deduplication (natural_key unique constraint)
 
 **Architecture**:
@@ -676,7 +676,7 @@ curl -X POST "http://localhost:8000/qa/?workspace_id={id}" \
 - `backend/docs/roadmap/meta-ads-roadmap.md`: Added Phase 0 (API setup) and Phase 7 (OAuth flow end goal)
 
 **Phase 0: Meta API Setup (Complete)**:
-- ✅ System user created: "AdNavi API" (permanent token, 201 chars)
+- ✅ System user created: "metricx API" (permanent token, 201 chars)
 - ✅ Ad account connected: `act_1205956121112122` (Gabriels portfolio)
 - ✅ Currency: USD, Timezone: Europe/Vienna
 - ✅ Python SDK installed: `facebook-business==19.0.0`
@@ -811,13 +811,13 @@ QA System & UI Dashboards (Already Working ✅)
 
 **Files Modified**:
 - `backend/docs/roadmap/meta-ads-roadmap.md`: Added Phase 0 as prerequisite, updated implementation timeline
-- `docs/ADNAVI_BUILD_LOG.md`: Added Meta Ads integration to "Plan / Next Steps"
+- `docs/metricx_BUILD_LOG.md`: Added Meta Ads integration to "Plan / Next Steps"
 
 **Key Features**:
 - ✅ **3 Token Generation Methods**: Personal account (fastest), system user (production), standard access (long-term)
 - ✅ **2025 Workarounds**: Test user creation disabled by Meta - documented alternative approaches
 - ✅ **Test Script**: Complete Python script to verify API connectivity (`backend/test_meta_api.py`)
-- ✅ **Hourly Data Testing**: Verifies AdNavi's critical hourly granularity requirement
+- ✅ **Hourly Data Testing**: Verifies metricx's critical hourly granularity requirement
 - ✅ **Security Patterns**: Environment variable management, token refresh logic, `.gitignore` checks
 - ✅ **JSON Schemas**: Example responses for campaigns, insights (daily/hourly), ad sets, ads
 
@@ -825,7 +825,7 @@ QA System & UI Dashboards (Already Working ✅)
 1. API connection verification
 2. Campaigns fetching
 3. Insights (metrics) fetching
-4. Hourly insights (AdNavi requirement)
+4. Hourly insights (metricx requirement)
 - Graceful handling of empty data (new accounts)
 - Environment variable validation
 - Clear error messages for common issues
@@ -1512,7 +1512,7 @@ QA System & UI Dashboards (Already Working ✅)
     - `backend/app/tests/test_context_manager.py`: Comprehensive tests (50+ test cases covering all scenarios)
   - Documentation files:
     - `backend/docs/QA_SYSTEM_ARCHITECTURE.md`: Updated flow diagram and architecture with context manager integration
-    - `docs/ADNAVI_BUILD_LOG.md`: Added changelog entry
+    - `docs/metricx_BUILD_LOG.md`: Added changelog entry
   - Features:
     - **Context Storage**: Stores last N queries (default 5) per user+workspace
       - WHY: Enables follow-up questions like "Which one performed best?" or "And yesterday?"
@@ -1756,8 +1756,8 @@ QA System & UI Dashboards (Already Working ✅)
    - Route: `/analytics`
    - Files: `ui/app/(dashboard)/analytics/page.jsx`, `ui/components/analytics/*`, `ui/components/PillButton.jsx`, `ui/components/TabPill.jsx`, `ui/components/Sidebar.jsx`, `ui/data/analytics/*`
    - Deps: (no new runtime beyond existing Recharts/lucide-react)
-- 2025-09-25T13:55:00Z — Initialize living docs and sync with current state; scaffold `docs/ADNAVI_BUILD_LOG.md`.
-  - Files: `docs/ADNAVI_BUILD_LOG.md`
+- 2025-09-25T13:55:00Z — Initialize living docs and sync with current state; scaffold `docs/metricx_BUILD_LOG.md`.
+  - Files: `docs/metricx_BUILD_LOG.md`
 - 2025-09-25T13:44:00Z — Frontend foundation: created `app/` router structure, global layout, homepage, and dashboard shell; installed UI deps.
   - Files: `ui/app/layout.jsx`, `ui/app/page.jsx`, `ui/app/(dashboard)/layout.jsx`, `ui/components/*`, `ui/data/*`, `ui/lib/cn.js`, `ui/postcss.config.mjs`, `ui/src/app/* (removed)`
   - Deps: `lucide-react`, `recharts`, `clsx`, `tailwind-merge` (reasons: icons, charts, class merging)
@@ -1941,7 +1941,7 @@ QA System & UI Dashboards (Already Working ✅)
 - `backend/app/dsl/planner.py`: Enhanced to handle multi-metric base measure collection
 - `backend/app/answer/answer_builder.py`: Added multi-metric answer generation with fallback templates
 - `backend/docs/QA_SYSTEM_ARCHITECTURE.md`: Updated to DSL v2.2.0 with Phase 7 features
-- `docs/ADNAVI_BUILD_LOG.md`: Added Phase 7 changelog entry
+- `docs/metricx_BUILD_LOG.md`: Added Phase 7 changelog entry
 
 **Features**:
 - ✅ **Multi-Metric Support**: `metric` field now accepts single string or list of strings
@@ -2157,7 +2157,7 @@ QA System & UI Dashboards (Already Working ✅)
 
 Update routine (repeat every change)
 
-READ docs/ADNAVI_BUILD_LOG.md.
+READ docs/metricx_BUILD_LOG.md.
 
 SYNC PLAN if your upcoming change differs from "Plan / Next Steps".
 
@@ -2173,7 +2173,7 @@ COMMIT with a message starting docs: or chore: docs mirroring the Changelog line
 
 Guardrails
 
-Do not move or rename docs/ADNAVI_BUILD_LOG.md.
+Do not move or rename docs/metricx_BUILD_LOG.md.
 
 Keep the Monorepo Map accurate as soon as new folders (like api/) appear.
 

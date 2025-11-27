@@ -1,11 +1,11 @@
-# AdNavi Architecture Documentation
+# metricx Architecture Documentation
 
 **Last Updated**: 2025-01-16  
 **Version**: 1.0
 
 ## Overview
 
-AdNavi is a comprehensive advertising analytics and optimization platform that aggregates data from multiple ad platforms (Meta Ads, Google Ads, TikTok) and provides AI-powered insights through natural language queries.
+metricx is a comprehensive advertising analytics and optimization platform that aggregates data from multiple ad platforms (Meta Ads, Google Ads, TikTok) and provides AI-powered insights through natural language queries.
 
 ### Core Capabilities
 
@@ -472,7 +472,7 @@ npm run dev  # Start Next.js dev server
 
 ## References
 
-- **Build Log**: `docs/living-docs/ADNAVI_BUILD_LOG.md`
+- **Build Log**: `docs/living-docs/metricx_BUILD_LOG.md`
 - **QA Architecture**: `docs/living-docs/QA_SYSTEM_ARCHITECTURE.md`
 - **Redis Context**: `backend/docs/REDIS_CONTEXT_MANAGER.md`
 - **Unified Metrics**: `backend/docs/architecture/unified-metrics.md`

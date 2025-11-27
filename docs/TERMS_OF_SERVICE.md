@@ -4,13 +4,13 @@
 
 ## 1. Agreement to Terms
 
-These Terms of Service ("Terms") constitute a legally binding agreement between you and AdNavi ("Company," "we," "us," or "our") concerning your access to and use of the AdNavi platform and services.
+These Terms of Service ("Terms") constitute a legally binding agreement between you and metricx ("Company," "we," "us," or "our") concerning your access to and use of the metricx platform and services.
 
 By accessing or using our services, you agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you may not access or use our services.
 
 ## 2. Description of Services
 
-AdNavi provides a software-as-a-service (SaaS) platform that enables users to:
+metricx provides a software-as-a-service (SaaS) platform that enables users to:
 - Connect and aggregate advertising data from multiple platforms (Google Ads, Meta Ads, etc.)
 - Visualize advertising campaign performance through dashboards and analytics
 - Query advertising data using natural language questions
@@ -25,7 +25,7 @@ We reserve the right to modify, suspend, or discontinue any aspect of the servic
 You must be at least 18 years old and have the legal capacity to enter into binding contracts. By using our services, you represent and warrant that you meet these requirements.
 
 ### 3.2 Account Registration
-To use AdNavi, you must create an account by providing accurate and complete information. You agree to:
+To use metricx, you must create an account by providing accurate and complete information. You agree to:
 - Provide accurate, current, and complete registration information
 - Maintain and update your information to keep it accurate and complete
 - Maintain the security of your account credentials
@@ -37,7 +37,7 @@ If you create an account on behalf of an organization, you represent that you ha
 
 ## 4. User Responsibilities and Conduct
 
-You agree to use AdNavi in compliance with all applicable laws and regulations. You agree NOT to:
+You agree to use metricx in compliance with all applicable laws and regulations. You agree NOT to:
 - Use the services for any illegal purpose or in violation of any laws
 - Attempt to gain unauthorized access to any part of the services or other users' accounts
 - Interfere with or disrupt the integrity or performance of the services
@@ -52,14 +52,14 @@ You agree to use AdNavi in compliance with all applicable laws and regulations. 
 ## 5. Third-Party Platform Integrations
 
 ### 5.1 Advertising Platform Connections
-AdNavi integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.) via OAuth authorization. When you connect these platforms:
-- You grant AdNavi permission to access data from those platforms as specified in OAuth consent screens
+metricx integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.) via OAuth authorization. When you connect these platforms:
+- You grant metricx permission to access data from those platforms as specified in OAuth consent screens
 - You remain subject to the terms of service and privacy policies of those platforms
 - You are responsible for maintaining valid authorization and compliance with platform policies
 - We are not responsible for changes to third-party APIs or terms that affect functionality
 
 ### 5.2 Data Accuracy
-While we strive for accuracy, AdNavi relies on data provided by third-party platforms. We do not guarantee that advertising metrics will exactly match platform native interfaces due to:
+While we strive for accuracy, metricx relies on data provided by third-party platforms. We do not guarantee that advertising metrics will exactly match platform native interfaces due to:
 - API limitations and data sampling
 - Timezone and currency conversion differences
 - Data processing delays
@@ -68,19 +68,19 @@ While we strive for accuracy, AdNavi relies on data provided by third-party plat
 You should use platform native interfaces as the source of truth for billing and official reporting.
 
 ### 5.3 Revocation of Access
-You may revoke AdNavi's access to your advertising platforms at any time through:
-- The AdNavi platform (Settings → Connections → Disconnect)
+You may revoke metricx's access to your advertising platforms at any time through:
+- The metricx platform (Settings → Connections → Disconnect)
 - The respective platform's authorization management interface
 
-Revoking access will prevent AdNavi from syncing new data but will not delete historical data unless you request deletion.
+Revoking access will prevent metricx from syncing new data but will not delete historical data unless you request deletion.
 
 ## 6. Intellectual Property Rights
 
-### 6.1 AdNavi Intellectual Property
-The AdNavi platform, including all software, designs, text, graphics, and other content, is owned by or licensed to AdNavi and is protected by intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the services in accordance with these Terms.
+### 6.1 metricx Intellectual Property
+The metricx platform, including all software, designs, text, graphics, and other content, is owned by or licensed to metricx and is protected by intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the services in accordance with these Terms.
 
 ### 6.2 Your Content and Data
-You retain all rights to your advertising data and content. By using AdNavi, you grant us a limited license to:
+You retain all rights to your advertising data and content. By using metricx, you grant us a limited license to:
 - Access, store, and process your advertising data to provide services
 - Use aggregated, anonymized data for service improvement and analytics
 - Display your data within the platform for your authorized users
@@ -88,12 +88,12 @@ You retain all rights to your advertising data and content. By using AdNavi, you
 We do not claim ownership of your data and will not use it for purposes other than providing and improving our services.
 
 ### 6.3 Feedback and Suggestions
-Any feedback, suggestions, or ideas you provide about AdNavi become our property, and we may use them without restriction or compensation.
+Any feedback, suggestions, or ideas you provide about metricx become our property, and we may use them without restriction or compensation.
 
 ## 7. Payment and Subscription Terms
 
 ### 7.1 Pricing
-Pricing for AdNavi services is available on our website. We reserve the right to change pricing with 30 days' notice to existing customers.
+Pricing for metricx services is available on our website. We reserve the right to change pricing with 30 days' notice to existing customers.
 
 ### 7.2 Billing
 Subscription fees are billed in advance on a monthly or annual basis. By providing payment information, you authorize us to charge the applicable fees automatically.
@@ -109,7 +109,7 @@ You may cancel your subscription at any time. Cancellation takes effect at the e
 
 ## 8. Data Privacy and Security
 
-Our collection and use of personal information is governed by our Privacy Policy, which is incorporated into these Terms by reference. By using AdNavi, you consent to our data practices as described in the Privacy Policy.
+Our collection and use of personal information is governed by our Privacy Policy, which is incorporated into these Terms by reference. By using metricx, you consent to our data practices as described in the Privacy Policy.
 
 We implement industry-standard security measures to protect your data, including:
 - Encryption of sensitive data at rest and in transit
@@ -130,22 +130,22 @@ THE SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY K
 - Security of data transmission or storage
 
 ### 9.2 Third-Party Services
-We are not responsible for the availability, accuracy, or reliability of third-party advertising platforms. Changes to third-party APIs or services may affect AdNavi functionality without notice.
+We are not responsible for the availability, accuracy, or reliability of third-party advertising platforms. Changes to third-party APIs or services may affect metricx functionality without notice.
 
 ### 9.3 No Financial or Legal Advice
-AdNavi provides data visualization and analytics tools. We do not provide financial, investment, legal, or tax advice. Consult qualified professionals for such advice.
+metricx provides data visualization and analytics tools. We do not provide financial, investment, legal, or tax advice. Consult qualified professionals for such advice.
 
 ## 10. Limitation of Liability
 
 TO THE MAXIMUM EXTENT PERMITTED BY LAW:
-- ADNAVI SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES
+- metricx SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES
 - THIS INCLUDES DAMAGES FOR LOSS OF PROFITS, REVENUE, DATA, OR USE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES
 - OUR TOTAL LIABILITY FOR ALL CLAIMS RELATED TO THE SERVICES SHALL NOT EXCEED THE AMOUNT YOU PAID US IN THE 12 MONTHS PRIOR TO THE CLAIM
 - SOME JURISDICTIONS DO NOT ALLOW LIMITATION OF LIABILITY, SO THESE LIMITATIONS MAY NOT APPLY TO YOU
 
 ## 11. Indemnification
 
-You agree to indemnify, defend, and hold harmless AdNavi and its officers, directors, employees, and agents from any claims, liabilities, damages, losses, and expenses (including legal fees) arising from:
+You agree to indemnify, defend, and hold harmless metricx and its officers, directors, employees, and agents from any claims, liabilities, damages, losses, and expenses (including legal fees) arising from:
 - Your use or misuse of the services
 - Your violation of these Terms
 - Your violation of any rights of another party
@@ -208,7 +208,7 @@ You may not assign or transfer your rights under these Terms without our written
 If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions will remain in full force and effect.
 
 ### 14.5 Entire Agreement
-These Terms, together with our Privacy Policy, constitute the entire agreement between you and AdNavi regarding the services.
+These Terms, together with our Privacy Policy, constitute the entire agreement between you and metricx regarding the services.
 
 ### 14.6 No Waiver
 Our failure to enforce any provision of these Terms does not constitute a waiver of that provision.
@@ -220,13 +220,13 @@ We are not liable for any failure or delay in performance due to circumstances b
 
 If you have questions about these Terms, please contact us:
 
-**AdNavi**  
-Website: www.adnavi.app  
+**metricx**  
+Website: www.metricx.ai  
 Legal Inquiries: Available through in-app support
 
 ---
 
-*By using AdNavi, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.*
+*By using metricx, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.*
 
 *Last Updated: November 7, 2025*
 

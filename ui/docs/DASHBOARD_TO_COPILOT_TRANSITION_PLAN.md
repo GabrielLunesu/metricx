@@ -20,7 +20,7 @@ When user types a question in the dashboard chat box and hits send:
 ### Dashboard (`dashboard/components/AssistantSection.jsx`)
 - Has greeting text
 - Has chat input box
-- Has "Ask AdNavi" button (or Enter key)
+- Has "Ask metricx" button (or Enter key)
 - Currently redirects to copilot with `router.push()`
 
 ### Copilot (`copilot/page.jsx`)

@@ -164,7 +164,7 @@ GET /{ad_account_id}/campaigns?fields=id,name,status,objective
 GET /{ad_account_id}/insights?fields=spend,impressions,clicks&level=campaign
 ```
 
-#### 3. Insights (Hourly) - **AdNavi Requirement**
+#### 3. Insights (Hourly) - **metricx Requirement**
 ```bash
 GET /{ad_account_id}/insights?time_increment=1&level=campaign
 ```
@@ -185,7 +185,7 @@ GET /{adset_id}/ads?fields=id,name,status,creative
 
 ### Setup Environment
 ```bash
-cd /Users/gabriellunesu/Git/AdNavi/backend
+cd /Users/gabriellunesu/Git/metricx/backend
 
 # Set credentials (use your actual values)
 export META_ACCESS_TOKEN="your_long_lived_token_here"
@@ -209,7 +209,7 @@ python test_meta_api.py
 ## 📁 File Structure
 
 ```
-AdNavi/
+metricx/
 ├── docs/
 │   └── meta-ads-lib/
 │       ├── README.md (this file)
@@ -252,7 +252,7 @@ AdNavi/
 ## 📞 Support
 
 ### Internal
-- **Build Log**: [ADNAVI_BUILD_LOG.md](../ADNAVI_BUILD_LOG.md)
+- **Build Log**: [metricx_BUILD_LOG.md](../metricx_BUILD_LOG.md)
 - **Architecture Docs**: `backend/docs/architecture/`
 - **QA System**: `backend/docs/QA_SYSTEM_ARCHITECTURE.md`
 
@@ -272,7 +272,7 @@ AdNavi/
 - ✅ SDK installed and verified
 
 ### Integration Complete When:
-- ✅ Meta campaigns sync to AdNavi
+- ✅ Meta campaigns sync to metricx
 - ✅ Hourly metrics ingestion working
 - ✅ QA system can query Meta data
 - ✅ Rate limiting implemented
@@ -282,6 +282,6 @@ AdNavi/
 ---
 
 **Last Updated**: 2025-10-30  
-**Maintainer**: AdNavi Team  
+**Maintainer**: metricx Team  
 **Next Review**: Quarterly (API version updates)
 

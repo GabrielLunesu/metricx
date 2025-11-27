@@ -178,7 +178,7 @@ export default function ConversationThread({ messages = [], isLoading, stage }) 
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-xl font-semibold text-slate-800 mb-2"
           >
-            Welcome to AdNavi Copilot
+            Welcome to metricx Copilot
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 10 }}

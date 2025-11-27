@@ -254,7 +254,7 @@ POST /workspaces/{workspace_id}/finance/insight
 **Modified (12 files)**:
 - Backend: main.py, seed_mock.py
 - Frontend: finance/page.jsx, FinancialSummaryCards.jsx, PLTable.jsx, AIFinancialSummary.jsx, TopBar.jsx, ChartsSection.jsx
-- Docs: ADNAVI_BUILD_LOG.md, CLASS-DIAGRAM.MD
+- Docs: metricx_BUILD_LOG.md, CLASS-DIAGRAM.MD
 
 **Total**: ~1,500 lines of new code
 

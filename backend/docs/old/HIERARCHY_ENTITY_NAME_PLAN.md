@@ -444,7 +444,7 @@ WHERE e.workspace_id = :workspace
 - [ ] **Step 10**: Run full QA test suite
 - [ ] **Step 11**: Verify 7 tests now return data instead of $0
 - [ ] **Step 12**: Document in QA_SYSTEM_ARCHITECTURE.md
-- [ ] **Step 13**: Update ADNAVI_BUILD_LOG.md
+- [ ] **Step 13**: Update metricx_BUILD_LOG.md
 
 ---
 

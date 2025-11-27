@@ -14,7 +14,7 @@ export default function HomePage() {
       threshold: 0.1,
       rootMargin: '0px 0px -100px 0px'
     };
-    
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry, index) => {
         if (entry.isIntersecting) {
@@ -24,7 +24,7 @@ export default function HomePage() {
         }
       });
     }, observerOptions);
-    
+
     document.querySelectorAll('.reveal').forEach((el) => {
       observer.observe(el);
     });
@@ -67,14 +67,14 @@ export default function HomePage() {
           <div className="space-y-8">
             <div className="space-y-6">
               <h1 className="text-6xl lg:text-7xl font-semibold tracking-tight leading-[1.1]">
-                <span className="text-black">The First</span><br/>
+                <span className="text-black">The First</span><br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-black to-cyan-600">Agentic CMO.</span>
               </h1>
               <p className="text-xl text-black leading-relaxed max-w-xl font-light">
                 Google & Meta, unified. Ask anything about your campaigns. See every dollar spent at granular level. Always know what's working — and what's not.
               </p>
             </div>
-            
+
             <div className="flex items-center gap-4 flex-wrap">
               <a href="/dashboard" className="px-8 py-4 rounded-full bg-black text-white text-base font-medium btn-primary inline-flex items-center gap-2">
                 Launch Dashboard
@@ -84,7 +84,7 @@ export default function HomePage() {
                 Explore Features
               </a>
             </div>
-            
+
             <div className="flex items-center gap-6 pt-4 flex-wrap">
               <div className="flex items-center gap-2 text-xs text-neutral-500">
                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
@@ -100,7 +100,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-          
+
           {/* Right Visual - Animated Dashboard Preview */}
           <div className="relative">
             <div className="glass-card rounded-3xl p-8 border border-neutral-200/60 shadow-2xl float-orb">
@@ -116,7 +116,7 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Mini KPI Cards */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="bg-white/60 rounded-2xl p-4 border border-neutral-200/40">
@@ -130,7 +130,7 @@ export default function HomePage() {
                     <span className="text-xs text-green-600 font-medium">+5.8%</span>
                   </div>
                 </div>
-                
+
                 {/* Mini Chart */}
                 <div className="bg-white/60 rounded-2xl p-4 border border-neutral-200/40">
                   <div className="h-20 flex items-end justify-between gap-1">
@@ -165,7 +165,7 @@ export default function HomePage() {
               <CanvasShowcase />
             </div>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             {/* AI Copilot Card */}
             <div className="glass-card rounded-3xl p-8 border border-neutral-200/60 shadow-xl card-hover reveal">
@@ -185,7 +185,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Analytics Card */}
             <div className="glass-card rounded-3xl p-8 border border-neutral-200/60 shadow-xl card-hover reveal" style={{ animationDelay: '0.2s' }}>
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-50 to-cyan-100 flex items-center justify-center mb-6 mx-auto">
@@ -203,7 +203,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Finance Card */}
             <div className="glass-card rounded-3xl p-8 border border-neutral-200/60 shadow-xl card-hover reveal" style={{ animationDelay: '0.3s' }}>
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-50 to-cyan-100 flex items-center justify-center mb-6 mx-auto">
@@ -241,11 +241,11 @@ export default function HomePage() {
             <h2 className="text-5xl font-semibold tracking-tight text-black mb-4">From data to clarity — in seconds.</h2>
             <p className="text-xl text-neutral-600 font-light">Three simple steps to transform your marketing workflow</p>
           </div>
-          
+
           <div className="relative">
             {/* Timeline Line */}
             <div className="absolute top-24 left-0 right-0 h-0.5 timeline-line hidden lg:block"></div>
-            
+
             <div className="grid md:grid-cols-3 gap-12">
               {/* Step 1 */}
               <div className="text-center reveal" style={{ animationDelay: '0.1s' }}>
@@ -257,7 +257,7 @@ export default function HomePage() {
                 <h3 className="text-2xl font-semibold text-black mb-3">Connect your accounts</h3>
                 <p className="text-base text-neutral-600 leading-relaxed">Securely sync Google Ads & Meta with one click.</p>
               </div>
-              
+
               {/* Step 2 */}
               <div className="text-center reveal" style={{ animationDelay: '0.2s' }}>
                 <div className="relative mb-8">
@@ -265,10 +265,10 @@ export default function HomePage() {
                     <Database className="w-10 h-10 text-white" strokeWidth={1.5} />
                   </div>
                 </div>
-                <h3 className="text-2xl font-semibold text-black mb-3">AdNavi unifies your data</h3>
+                <h3 className="text-2xl font-semibold text-black mb-3">metricx unifies your data</h3>
                 <p className="text-base text-neutral-600 leading-relaxed">Smart schema + AI reasoning turns raw metrics into human language.</p>
               </div>
-              
+
               {/* Step 3 */}
               <div className="text-center reveal" style={{ animationDelay: '0.3s' }}>
                 <div className="relative mb-8">
@@ -287,12 +287,12 @@ export default function HomePage() {
       {/* Showcase Section */}
       <section id="showcase" className="py-32 px-8 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-white via-cyan-50/30 to-white -z-10"></div>
-        
+
         <div className="max-w-6xl mx-auto text-center reveal">
           <h2 className="text-5xl font-semibold tracking-tight text-black mb-4">A single platform that understands your marketing.</h2>
           <p className="text-2xl text-neutral-600 font-light mb-3">Intuitive. Connected. Real-time.</p>
           <p className="text-lg text-neutral-500 mb-16">Built for agencies, growth marketers, and founders.</p>
-          
+
           <div className="glass-card rounded-3xl p-12 border border-neutral-200/60 shadow-2xl">
             <div className="space-y-6">
               {/* Dashboard Preview Grid */}
@@ -313,7 +313,7 @@ export default function HomePage() {
                   <span className="text-xs text-green-600 font-medium">+5.8%</span>
                 </div>
               </div>
-              
+
               {/* Chart Preview */}
               <div className="bg-white/80 rounded-2xl p-8 border border-neutral-200/40">
                 <div className="h-40 flex items-end justify-between gap-2">
@@ -322,7 +322,7 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
-              
+
               {/* Copilot Chat Preview */}
               <div className="bg-white/80 rounded-2xl p-6 border border-neutral-200/40 text-left">
                 <div className="flex items-start gap-3">
@@ -342,14 +342,14 @@ export default function HomePage() {
       {/* CTA Footer Section */}
       <section id="contact" className="py-32 px-8 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-cyan-50/40 to-white -z-10"></div>
-        
+
         <div className="max-w-4xl mx-auto text-center reveal">
           <h2 className="text-6xl font-semibold tracking-tight text-black mb-4">Meet your Copilot.</h2>
           <p className="text-2xl text-neutral-600 font-light mb-12">Start transforming your marketing workflow today.</p>
-          
+
           <div className="flex items-center justify-center gap-4 mb-16 flex-wrap">
             <a href="/dashboard" className="px-10 py-5 rounded-full bg-black text-white text-lg font-medium btn-primary inline-flex items-center gap-2">
-              Try AdNavi Free
+              Try metricx Free
               <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
             </a>
             <a href="#features" className="px-10 py-5 rounded-full border-2 border-cyan-400/60 text-cyan-700 text-lg font-medium btn-secondary inline-flex items-center gap-2">
@@ -365,7 +365,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between flex-wrap gap-8">
             <a href="/" className="flex items-center">
-              <img src="/adnavi-logo.png" alt="AdNavi" className="h-12" />
+              <img src="/metricx-logo.png" alt="metricx" className="h-12" />
             </a>
             <nav className="flex items-center gap-8 flex-wrap">
               <a href="#features" className="text-sm font-medium text-neutral-500 hover:text-cyan-600 transition-colors">Features</a>
@@ -375,7 +375,7 @@ export default function HomePage() {
             </nav>
           </div>
           <div className="mt-8 pt-8 border-t border-neutral-200/60 flex items-center justify-between flex-wrap gap-4">
-            <p className="text-sm text-neutral-500">© 2024 AdNavi. All rights reserved.</p>
+            <p className="text-sm text-neutral-500">© 2024 metricx. All rights reserved.</p>
             <div className="flex items-center gap-6">
               <a href="/privacy" className="text-sm text-neutral-500 hover:text-cyan-600 transition-colors">Privacy Policy</a>
               <a href="/terms" className="text-sm text-neutral-500 hover:text-cyan-600 transition-colors">Terms of Service</a>

@@ -4,11 +4,11 @@
 @theme inline {
   --font-sans: 'Inter', sans-serif;
 
-  --color-adnavi-teal: #ccfbf1;
-  --color-adnavi-blue: #e0f2fe;
-  --color-adnavi-glass: rgba(255, 255, 255, 0.65);
-  --color-adnavi-border: rgba(255, 255, 255, 0.8);
-  --color-adnavi-text: #0f172a;
+  --color-metricx-teal: #ccfbf1;
+  --color-metricx-blue: #e0f2fe;
+  --color-metricx-glass: rgba(255, 255, 255, 0.65);
+  --color-metricx-border: rgba(255, 255, 255, 0.8);
+  --color-metricx-text: #0f172a;
 
   --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.03);
   --shadow-halo: 0 0 20px rgba(45, 212, 191, 0.3);
@@ -17,10 +17,12 @@
   /* Animation Variables (v2.1 - Apple-like smooth ease) */
   /* WHY: Replaced bouncy animations with subtle, smooth transitions */
   --animate-breathe: breathe 12s ease-in-out infinite;
-  --animate-float: none; /* Disabled - too decorative */
+  --animate-float: none;
+  /* Disabled - too decorative */
   --animate-slide-in: slideIn 0.4s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
 
   @keyframes breathe {
+
     /* Subtle breathing - barely noticeable */
     0%,
     100% {
@@ -35,6 +37,7 @@
   }
 
   @keyframes float {
+
     /* Disabled - set to no movement */
     0%,
     100% {
@@ -43,6 +46,7 @@
   }
 
   @keyframes slideIn {
+
     /* Smooth slide - Apple-like ease */
     0% {
       transform: translateX(12px);
@@ -68,7 +72,7 @@ body {
 body {
   background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 50%, #eff6ff 100%);
   /* Aurora BG */
-  color: var(--color-adnavi-text);
+  color: var(--color-metricx-text);
   overflow-x: hidden;
 }
 
@@ -375,6 +379,7 @@ body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

@@ -2,7 +2,7 @@
 
 WHAT:
     REST endpoints for syncing Google entity hierarchy (campaigns/ad groups/ads)
-    and daily metrics (GAQL) from Google Ads API into AdNavi DB.
+    and daily metrics (GAQL) from Google Ads API into metricx DB.
 
 WHY:
     - User-initiated sync via UI button (manual trigger)

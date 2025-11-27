@@ -1,5 +1,5 @@
 ---
-title: AdNavi Canvas — Repo Findings
+title: metricx Canvas — Repo Findings
 status: research-only (no code changes)
 date: 2025-11-05
 ---

@@ -44,7 +44,7 @@ export default function HeroHeader({ user, actions }) {
                         value={question}
                         onChange={(e) => setQuestion(e.target.value)}
                         className="w-full pl-12 pr-12 py-3.5 rounded-full glass-input text-base text-slate-700 placeholder-slate-400 focus:ring-0"
-                        placeholder="Ask AdNavi about your performance..."
+                        placeholder="Ask metricx about your performance..."
                     />
                     <div className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer">
                         <div className="bg-gradient-to-tr from-cyan-500 to-blue-500 p-1.5 rounded-full shadow-lg shadow-cyan-500/30">

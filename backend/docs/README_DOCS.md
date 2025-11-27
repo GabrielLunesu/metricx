@@ -1,8 +1,8 @@
-# Documentation Index - AdNavi Backend
+# Documentation Index - metricx Backend
 
 **Last Updated**: 2025-10-08
 
-This folder contains all architectural documentation for the AdNavi backend QA system.
+This folder contains all architectural documentation for the metricx backend QA system.
 
 ---
 
@@ -232,7 +232,7 @@ This folder contains all architectural documentation for the AdNavi backend QA s
 **After implementing Phase 1**:
 1. ✅ Update `QA_SYSTEM_ARCHITECTURE.md` → Add Intent Classification section
 2. ✅ Update `ROADMAP_TO_NATURAL_COPILOT.md` → Mark Phase 1 complete
-3. ✅ Update `docs/ADNAVI_BUILD_LOG.md` → Add Phase 1 completion changelog entry
+3. ✅ Update `docs/metricx_BUILD_LOG.md` → Add Phase 1 completion changelog entry
 
 **After testing**:
 1. ✅ Document answer quality results

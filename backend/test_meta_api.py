@@ -235,9 +235,9 @@ def test_insights():
         return False
 
 def test_hourly():
-    """Test 4: Fetch hourly insights (critical for AdNavi)."""
+    """Test 4: Fetch hourly insights (critical for metricx)."""
     print("=" * 60)
-    print("Test 4: Hourly Insights (AdNavi Requirement)")
+    print("Test 4: Hourly Insights (metricx Requirement)")
     print("=" * 60)
     
     access_token = os.getenv('META_ACCESS_TOKEN')

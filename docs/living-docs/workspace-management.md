@@ -3,7 +3,7 @@
 > How to use this doc  
 > - Keep this file up-to-date while implementing multi-workspace, invites, roles, and switching.  
 > - Record decisions and testability notes as they happen; do not leave TODOs.  
-> - Mirror changes in `docs/living-docs/ADNAVI_BUILD_LOG.md` and relevant UI/Backend docs when finalized.
+> - Mirror changes in `docs/living-docs/metricx_BUILD_LOG.md` and relevant UI/Backend docs when finalized.
 
 ---
 

@@ -70,7 +70,7 @@ def sync_meta_entities(
     workspace_id: UUID,
     connection_id: UUID,
 ) -> EntitySyncResponse:
-    """Sync entity hierarchy from Meta to AdNavi."""
+    """Sync entity hierarchy from Meta to metricx."""
 
     start_time = datetime.utcnow()
     stats = EntitySyncStats(
@@ -326,7 +326,7 @@ def _chunk_date_range(start: date, end: date, chunk_days: int = 7) -> List[Tuple
 
 
 def _parse_actions(insight: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse Meta actions array into AdNavi metrics."""
+    """Parse Meta actions array into metricx metrics."""
     actions = insight.get("actions", [])
     action_values = insight.get("action_values", [])
     
@@ -365,7 +365,7 @@ def sync_meta_metrics(
     connection_id: UUID,
     request: MetricsSyncRequest,
 ) -> MetricsSyncResponse:
-    """Sync metrics from Meta to AdNavi (shared service function)."""
+    """Sync metrics from Meta to metricx (shared service function)."""
 
     from app.routers.ingest import ingest_metrics_internal
 
@@ -678,7 +678,7 @@ def _upsert_entity(
 
 
 def _map_objective_to_goal(objective: Optional[str]) -> Optional[GoalEnum]:
-    """Maps Meta objectives to AdNavi goal enums."""
+    """Maps Meta objectives to metricx goal enums."""
     if not objective:
         return None
 

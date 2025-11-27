@@ -12,7 +12,7 @@ WHY:
 REFERENCES:
     - app/routers/entity_performance.py
     - app/schemas.py::EntityPerformanceResponse
-    - docs/ADNAVI_BUILD_LOG.md (Campaigns integration entry)
+    - docs/metricx_BUILD_LOG.md (Campaigns integration entry)
 """
 
 from __future__ import annotations

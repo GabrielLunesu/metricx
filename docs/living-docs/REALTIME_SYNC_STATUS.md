@@ -482,7 +482,7 @@ defang compose up
 ## References
 
 - Plan: `/docs/ARCHITECTURE.md`
-- Build Log: `/docs/living-docs/ADNAVI_BUILD_LOG.md`
+- Build Log: `/docs/living-docs/metricx_BUILD_LOG.md`
 - Meta Integration: `/docs/living-docs/META_INTEGRATION_STATUS.md`
 - Google Integration: `/docs/living-docs/GOOGLE_INTEGRATION_STATUS.MD`
 - Current sync implementation: `backend/app/routers/meta_sync.py`, `backend/app/routers/google_sync.py`

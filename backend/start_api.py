@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-AdNavi API Startup Script
+metricx API Startup Script
 
-This script starts the AdNavi FastAPI server with the complete API documentation.
+This script starts the metricx FastAPI server with the complete API documentation.
 """
 
 import uvicorn
@@ -11,8 +11,8 @@ import sys
 from pathlib import Path
 
 def main():
-    """Start the AdNavi API server."""
-    print("🚀 Starting AdNavi API Server...")
+    """Start the metricx API server."""
+    print("🚀 Starting metricx API Server...")
     print("📊 Features:")
     print("   ✅ Complete Swagger Documentation")
     print("   ✅ Authentication Endpoints")
@@ -47,7 +47,7 @@ def main():
             log_level="info"
         )
     except KeyboardInterrupt:
-        print("\n👋 Shutting down AdNavi API server...")
+        print("\n👋 Shutting down metricx API server...")
     except Exception as e:
         print(f"❌ Error starting server: {e}")
         sys.exit(1)
