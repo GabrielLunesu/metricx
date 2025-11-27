@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchWorkspaceKpis } from "@/lib/api";
-import { metricxChart } from "@/components/charts/metricxChart";
+import { metricxChart } from "@/components/charts/MetricxChart";
 
 export default function MoneyPulseChart({ workspaceId, timeframe }) {
     const [loading, setLoading] = useState(true);
