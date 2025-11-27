@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { fetchWorkspaceKpis } from "@/lib/api";
-import { metricxChart } from "@/components/charts/metricxChart";
+import { metricxChart } from "@/components/charts/MetricxChart";
 
 export default function AnalyticsGraphEngine({
     workspaceId,
