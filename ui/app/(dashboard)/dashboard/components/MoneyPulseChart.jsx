@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchWorkspaceKpis } from "@/lib/api";
-import { metricxChart } from "@/components/charts/MetricxChart";
+import { MetricxChart } from "@/components/charts/MetricxChart";
 
 export default function MoneyPulseChart({ workspaceId, timeframe }) {
     const [loading, setLoading] = useState(true);
@@ -115,7 +115,7 @@ export default function MoneyPulseChart({ workspaceId, timeframe }) {
                         <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 ) : (
-                    <metricxChart
+                    <MetricxChart
                         data={chartData}
                         config={chartConfig}
                         type={viewMode === 'overview' ? 'area' : 'bar'}
