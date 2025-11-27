@@ -1,14 +1,37 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* SF Pro Display - System font stack for Apple-like appearance */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display'), local('SFProDisplay-Regular'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display Bold'), local('SFProDisplay-Bold'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 700;
+  font-style: normal;
+}
 
 @theme inline {
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  --color-metricx-teal: #ccfbf1;
-  --color-metricx-blue: #e0f2fe;
+  /* metricx Brand Colors - Black, White, Blue Gradient */
+  --color-metricx-black: #000000;
+  --color-metricx-white: #ffffff;
+  --color-metricx-blue: #3B82F6;
+  --color-metricx-cyan: #06B6D4;
+  --color-metricx-blue-light: #60A5FA;
+  --color-metricx-cyan-light: #22D3EE;
+
+  /* Semantic colors */
+  --color-metricx-text: #000000;
+  --color-metricx-text-secondary: #64748B;
   --color-metricx-glass: rgba(255, 255, 255, 0.65);
-  --color-metricx-border: rgba(255, 255, 255, 0.8);
-  --color-metricx-text: #0f172a;
+  --color-metricx-border: rgba(0, 0, 0, 0.08);
 
   --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.03);
   --shadow-halo: 0 0 20px rgba(45, 212, 191, 0.3);
@@ -61,6 +84,10 @@
 }
 
 /* Base element styles */
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   height: 100%;
@@ -70,10 +97,28 @@ body {
 }
 
 body {
-  background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 50%, #eff6ff 100%);
-  /* Aurora BG */
+  background: #ffffff;
   color: var(--color-metricx-text);
   overflow-x: hidden;
+}
+
+/* Fixed shader gradient container - prevents re-render on scroll */
+.shader-gradient-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Blue Gradient Text - matches logo X */
+.text-gradient-blue {
+  background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Custom Glass Scrollbar */

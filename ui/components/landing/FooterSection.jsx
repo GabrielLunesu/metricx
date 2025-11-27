@@ -1,150 +1,122 @@
 "use client";
 
 export default function FooterSection() {
+  const links = {
+    product: [
+      { label: "Features", href: "#features" },
+      { label: "Pricing", href: "#pricing" },
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "AI Copilot", href: "/copilot" },
+    ],
+    company: [
+      { label: "About", href: "/about" },
+      { label: "Contact", href: "mailto:hello@metricx.ai" },
+    ],
+    resources: [
+      { label: "FAQ", href: "#faq" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+    ],
+  };
+
   return (
-    <div className="w-full bg-white flex flex-col justify-center items-center">
-      <div className="w-full max-w-[1060px] pt-10 flex flex-col justify-start items-start relative">
-        {/* Left vertical line */}
-        <div className="w-[1px] h-full absolute left-0 top-0 bg-[rgba(55,50,47,0.12)] hidden lg:block"></div>
+    <footer className="w-full bg-white border-t border-gray-100">
+      <div className="w-full max-w-[1060px] mx-auto px-4 sm:px-6 lg:px-0 py-12 md:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1">
+            <a href="/" className="inline-block">
+              <img src="/logo.png" alt="metricx" className="h-8" />
+            </a>
+            <p className="mt-4 text-gray-500 text-sm">AI-powered marketing analytics</p>
 
-        {/* Right vertical line */}
-        <div className="w-[1px] h-full absolute right-0 top-0 bg-[rgba(55,50,47,0.12)] hidden lg:block"></div>
-
-        {/* Main Footer Content */}
-        <div className="self-stretch h-auto flex flex-col md:flex-row justify-between items-stretch pr-0 pb-8 pt-0">
-          <div className="h-auto p-4 md:p-8 flex flex-col justify-start items-start gap-6 md:gap-8">
-            {/* Brand Section */}
-            <div className="self-stretch flex justify-start items-center gap-3">
-              <a href="/" className="flex items-center">
-                <img src="/logo.png" alt="metricx" className="h-8 md:h-10" />
+            {/* Social Links */}
+            <div className="flex items-center gap-4 mt-6">
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
               </a>
-            </div>
-            <div className="text-[rgba(73,66,61,0.90)] text-sm font-medium leading-[18px] font-sans">
-              AI-powered marketing analytics
-            </div>
-
-            {/* Social Media Icons */}
-            <div className="flex justify-start items-start gap-4">
-              {/* Twitter/X Icon */}
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-6 h-6 relative overflow-hidden hover:opacity-70 transition-opacity">
-                <div className="w-6 h-6 left-0 top-0 absolute flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
-                      fill="#49423D"
-                    />
-                  </svg>
-                </div>
-              </a>
-
-              {/* LinkedIn Icon */}
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-6 h-6 relative overflow-hidden hover:opacity-70 transition-opacity">
-                <div className="w-6 h-6 left-0 top-0 absolute flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"
-                      fill="#49423D"
-                    />
-                  </svg>
-                </div>
-              </a>
-
-              {/* GitHub Icon */}
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="w-6 h-6 relative overflow-hidden hover:opacity-70 transition-opacity">
-                <div className="w-6 h-6 left-0 top-0 absolute flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.300 24 12c0-6.627-5.374-12-12-12z"
-                      fill="#49423D"
-                    />
-                  </svg>
-                </div>
+              <a
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z" />
+                </svg>
               </a>
             </div>
           </div>
 
-          {/* Navigation Links */}
-          <div className="self-stretch p-4 md:p-8 flex flex-col sm:flex-row flex-wrap justify-start sm:justify-between items-start gap-6 md:gap-8">
-            {/* Product Column */}
-            <div className="flex flex-col justify-start items-start gap-3 flex-1 min-w-[120px]">
-              <div className="self-stretch text-[rgba(73,66,61,0.50)] text-sm font-medium leading-5 font-sans">
-                Product
-              </div>
-              <div className="flex flex-col justify-end items-start gap-2">
-                <a href="#features" className="text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  Features
-                </a>
-                <a href="#pricing" className="text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  Pricing
-                </a>
-                <a href="/dashboard" className="text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  Dashboard
-                </a>
-                <a href="/copilot" className="text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  AI Copilot
-                </a>
-              </div>
-            </div>
+          {/* Product */}
+          <div>
+            <h4 className="text-black font-medium text-sm mb-4">Product</h4>
+            <ul className="space-y-3">
+              {links.product.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-gray-500 hover:text-black text-sm transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            {/* Company Column */}
-            <div className="flex flex-col justify-start items-start gap-3 flex-1 min-w-[120px]">
-              <div className="text-[rgba(73,66,61,0.50)] text-sm font-medium leading-5 font-sans">Company</div>
-              <div className="flex flex-col justify-center items-start gap-2">
-                <a href="/about" className="text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  About us
-                </a>
-                <a href="mailto:hello@metricx.ai" className="text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  Contact
-                </a>
-              </div>
-            </div>
+          {/* Company */}
+          <div>
+            <h4 className="text-black font-medium text-sm mb-4">Company</h4>
+            <ul className="space-y-3">
+              {links.company.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-gray-500 hover:text-black text-sm transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            {/* Resources Column */}
-            <div className="flex flex-col justify-start items-start gap-3 flex-1 min-w-[120px]">
-              <div className="text-[rgba(73,66,61,0.50)] text-sm font-medium leading-5 font-sans">Resources</div>
-              <div className="flex flex-col justify-center items-center gap-2">
-                <a href="#faq" className="self-stretch text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  FAQ
-                </a>
-                <a href="/privacy" className="self-stretch text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  Privacy Policy
-                </a>
-                <a href="/terms" className="self-stretch text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  Terms of Service
-                </a>
-                <a href="/settings" className="self-stretch text-[#49423D] text-sm font-normal leading-5 font-sans cursor-pointer hover:text-[#37322F] transition-colors">
-                  Delete My Data
-                </a>
-              </div>
-            </div>
+          {/* Resources */}
+          <div>
+            <h4 className="text-black font-medium text-sm mb-4">Resources</h4>
+            <ul className="space-y-3">
+              {links.resources.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-gray-500 hover:text-black text-sm transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
-        {/* Bottom Section with Pattern */}
-        <div className="self-stretch h-12 relative overflow-hidden border-t border-b border-[rgba(55,50,47,0.12)]">
-          <div className="absolute inset-0 w-full h-full overflow-hidden">
-            <div className="w-full h-full relative">
-              {Array.from({ length: 100 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-[300px] h-16 border border-[rgba(3,7,18,0.08)]"
-                  style={{
-                    left: `${i * 300 - 600}px`,
-                    top: "-120px",
-                    transform: "rotate(-45deg)",
-                    transformOrigin: "top left",
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[rgba(73,66,61,0.50)] text-xs font-medium">
-              © 2025 metricx. All rights reserved.
-            </span>
-          </div>
+        {/* Bottom */}
+        <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-gray-400 text-sm">
+            © 2025 metricx. All rights reserved.
+          </p>
+          <p className="text-gray-400 text-sm">
+            Built with AI-powered insights
+          </p>
         </div>
       </div>
-    </div>
+    </footer>
   );
 }

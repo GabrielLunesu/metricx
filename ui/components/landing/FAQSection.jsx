@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
 const faqData = [
@@ -40,71 +41,72 @@ export default function FAQSection() {
   const [openItems, setOpenItems] = useState([]);
 
   const toggleItem = (index) => {
-    setOpenItems((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
+    setOpenItems((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
   };
 
   return (
-    <div id="faq" className="w-full bg-white flex justify-center items-start">
-      <div className="w-full max-w-[1060px] flex flex-col justify-center items-center relative">
-        {/* Left vertical line */}
-        <div className="w-[1px] h-full absolute left-0 top-0 bg-[rgba(55,50,47,0.12)] hidden lg:block"></div>
-
-        {/* Right vertical line */}
-        <div className="w-[1px] h-full absolute right-0 top-0 bg-[rgba(55,50,47,0.12)] hidden lg:block"></div>
-
-        <div className="flex-1 px-4 md:px-12 py-12 md:py-16 flex flex-col lg:flex-row justify-start items-start gap-6 lg:gap-12 w-full">
+    <div id="faq" className="w-full bg-white py-16 md:py-24">
+      <div className="w-full max-w-[1060px] mx-auto px-4 sm:px-6 lg:px-0">
+        <div className="grid md:grid-cols-2 gap-12">
           {/* Left Column - Header */}
-          <div className="w-full lg:flex-1 flex flex-col justify-center items-start gap-4 lg:py-5">
-            <div className="w-full flex flex-col justify-center text-[#49423D] font-semibold leading-tight md:leading-[44px] font-sans text-2xl md:text-3xl lg:text-4xl tracking-tight">
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-black tracking-tight">
               Frequently Asked Questions
-            </div>
-            <div className="w-full text-[#605A57] text-sm md:text-base font-normal leading-6 md:leading-7 font-sans">
-              Everything you need to know about metricx.
-              <br className="hidden md:block" />
-              Can't find what you're looking for? Contact us.
-            </div>
-          </div>
+            </h2>
+            <p className="mt-4 text-gray-500 text-lg">
+              Everything you need to know about metricx. Can't find what you're looking for?{" "}
+              <a href="mailto:hello@metricx.ai" className="text-blue-500 hover:underline">
+                Contact us
+              </a>
+              .
+            </p>
+          </motion.div>
 
           {/* Right Column - FAQ Items */}
-          <div className="w-full lg:flex-1 flex flex-col justify-center items-center">
-            <div className="w-full flex flex-col">
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="divide-y divide-gray-100">
               {faqData.map((item, index) => {
                 const isOpen = openItems.includes(index);
 
                 return (
-                  <div key={index} className="w-full border-b border-[rgba(73,66,61,0.16)] overflow-hidden">
+                  <div key={index} className="py-4">
                     <button
                       onClick={() => toggleItem(index)}
-                      className="w-full px-4 md:px-5 py-[16px] md:py-[18px] flex justify-between items-center gap-4 md:gap-5 text-left hover:bg-[rgba(73,66,61,0.02)] transition-colors duration-200"
-                      aria-expanded={isOpen}
+                      className="w-full flex justify-between items-center gap-4 text-left group"
                     >
-                      <div className="flex-1 text-[#49423D] text-sm md:text-base font-medium leading-6 font-sans">
+                      <span className="text-black font-medium group-hover:text-gray-700 transition-colors">
                         {item.question}
-                      </div>
-                      <div className="flex justify-center items-center flex-shrink-0">
-                        <ChevronDown
-                          className={`w-5 h-5 md:w-6 md:h-6 text-[rgba(73,66,61,0.60)] transition-transform duration-300 ease-in-out ${
-                            isOpen ? "rotate-180" : "rotate-0"
-                          }`}
-                          strokeWidth={1.5}
-                        />
-                      </div>
+                      </span>
+                      <ChevronDown
+                        className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-300 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
-
                     <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                      className={`overflow-hidden transition-all duration-300 ${
+                        isOpen ? "max-h-96 opacity-100 mt-3" : "max-h-0 opacity-0"
                       }`}
                     >
-                      <div className="px-4 md:px-5 pb-[16px] md:pb-[18px] text-[#605A57] text-sm font-normal leading-6 font-sans">
-                        {item.answer}
-                      </div>
+                      <p className="text-gray-500 text-sm leading-relaxed">{item.answer}</p>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function TestimonialsSection() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -39,15 +41,19 @@ export default function TestimonialsSection() {
           setIsTransitioning(false);
         }, 100);
       }, 300);
-    }, 10000);
+    }, 8000);
 
     return () => clearInterval(interval);
   }, [testimonials.length]);
 
-  const handleNavigationClick = (index) => {
+  const handleNavigationClick = (direction) => {
     setIsTransitioning(true);
     setTimeout(() => {
-      setActiveTestimonial(index);
+      if (direction === "prev") {
+        setActiveTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+      } else {
+        setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
+      }
       setTimeout(() => {
         setIsTransitioning(false);
       }, 100);
@@ -55,94 +61,76 @@ export default function TestimonialsSection() {
   };
 
   return (
-    <div className="w-full bg-white border-b border-[rgba(55,50,47,0.12)] flex flex-col justify-center items-center">
-      <div className="w-full max-w-[1060px] flex flex-col justify-center items-center relative">
-        {/* Left vertical line */}
-        <div className="w-[1px] h-full absolute left-0 top-0 bg-[rgba(55,50,47,0.12)] hidden lg:block"></div>
+    <div className="w-full bg-gray-50 py-16 md:py-24">
+      <div className="w-full max-w-[1060px] mx-auto px-4 sm:px-6 lg:px-0">
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          whileInView={{ y: 0, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="flex flex-col md:flex-row items-center gap-8 md:gap-12"
+        >
+          {/* Avatar */}
+          <div
+            className="w-32 h-32 md:w-40 md:h-40 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 transition-all duration-500"
+            style={{
+              opacity: isTransitioning ? 0.7 : 1,
+              transform: isTransitioning ? "scale(0.95)" : "scale(1)",
+            }}
+          >
+            <span className="text-4xl md:text-5xl font-bold text-white">
+              {testimonials[activeTestimonial].initials}
+            </span>
+          </div>
 
-        {/* Right vertical line */}
-        <div className="w-[1px] h-full absolute right-0 top-0 bg-[rgba(55,50,47,0.12)] hidden lg:block"></div>
-
-        {/* Testimonial Content */}
-        <div className="self-stretch px-2 overflow-hidden flex justify-start items-center">
-          <div className="flex-1 py-12 md:py-16 flex flex-col md:flex-row justify-center items-end gap-6">
-            <div className="self-stretch px-3 md:px-12 justify-center items-start gap-4 flex flex-col md:flex-row">
-              {/* Avatar */}
-              <div
-                className="w-32 h-32 md:w-40 md:h-40 rounded-lg bg-gradient-to-br from-cyan-100 to-cyan-200 flex items-center justify-center transition-all duration-700 ease-in-out mx-auto md:mx-0"
-                style={{
-                  opacity: isTransitioning ? 0.6 : 1,
-                  transform: isTransitioning ? "scale(0.95)" : "scale(1)",
-                }}
-              >
-                <span className="text-3xl md:text-4xl font-bold text-cyan-600">
-                  {testimonials[activeTestimonial].initials}
-                </span>
-              </div>
-
-              {/* Quote */}
-              <div className="flex-1 px-4 md:px-6 py-6 flex flex-col justify-start items-start gap-6">
-                <div
-                  className="self-stretch justify-start flex flex-col text-[#49423D] text-xl md:text-2xl lg:text-[28px] font-medium leading-8 md:leading-10 font-sans min-h-[160px] md:min-h-[180px] transition-all duration-700 ease-in-out tracking-tight"
-                  style={{
-                    filter: isTransitioning ? "blur(4px)" : "blur(0px)",
-                  }}
-                >
-                  "{testimonials[activeTestimonial].quote}"
-                </div>
-                <div
-                  className="self-stretch flex flex-col justify-start items-start gap-1 transition-all duration-700 ease-in-out"
-                  style={{
-                    filter: isTransitioning ? "blur(4px)" : "blur(0px)",
-                  }}
-                >
-                  <div className="self-stretch justify-center flex flex-col text-[rgba(73,66,61,0.90)] text-base md:text-lg font-medium leading-[26px] font-sans">
-                    {testimonials[activeTestimonial].name}
-                  </div>
-                  <div className="self-stretch justify-center flex flex-col text-[rgba(73,66,61,0.70)] text-sm md:text-base font-medium leading-[26px] font-sans">
-                    {testimonials[activeTestimonial].company}
-                  </div>
-                </div>
-              </div>
+          {/* Quote */}
+          <div className="flex-1">
+            <blockquote
+              className="text-xl md:text-2xl font-medium text-black leading-relaxed transition-all duration-500"
+              style={{
+                opacity: isTransitioning ? 0 : 1,
+                filter: isTransitioning ? "blur(4px)" : "blur(0px)",
+              }}
+            >
+              "{testimonials[activeTestimonial].quote}"
+            </blockquote>
+            <div
+              className="mt-6 transition-all duration-500"
+              style={{
+                opacity: isTransitioning ? 0 : 1,
+              }}
+            >
+              <div className="font-bold text-black">{testimonials[activeTestimonial].name}</div>
+              <div className="text-gray-500">{testimonials[activeTestimonial].company}</div>
             </div>
 
-            {/* Navigation Arrows */}
-            <div className="pr-6 justify-center md:justify-start items-center md:items-start gap-[14px] flex">
+            {/* Navigation */}
+            <div className="flex items-center gap-3 mt-6">
               <button
-                onClick={() => handleNavigationClick((activeTestimonial - 1 + testimonials.length) % testimonials.length)}
-                className="w-9 h-9 shadow-[0px_1px_2px_rgba(0,0,0,0.08)] overflow-hidden rounded-full border border-[rgba(0,0,0,0.15)] justify-center items-center gap-2 flex hover:bg-gray-50 transition-colors"
+                onClick={() => handleNavigationClick("prev")}
+                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-white hover:border-gray-300 transition-colors"
               >
-                <div className="w-6 h-6 relative overflow-hidden">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M15 18L9 12L15 6"
-                      stroke="#46413E"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
               </button>
               <button
-                onClick={() => handleNavigationClick((activeTestimonial + 1) % testimonials.length)}
-                className="w-9 h-9 shadow-[0px_1px_2px_rgba(0,0,0,0.08)] overflow-hidden rounded-full border border-[rgba(0,0,0,0.15)] justify-center items-center gap-2 flex hover:bg-gray-50 transition-colors"
+                onClick={() => handleNavigationClick("next")}
+                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-white hover:border-gray-300 transition-colors"
               >
-                <div className="w-6 h-6 relative overflow-hidden">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M9 18L15 12L9 6"
-                      stroke="#46413E"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
+                <ChevronRight className="w-5 h-5 text-gray-600" />
               </button>
+              <div className="flex gap-1.5 ml-2">
+                {testimonials.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === activeTestimonial ? "bg-blue-500" : "bg-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
