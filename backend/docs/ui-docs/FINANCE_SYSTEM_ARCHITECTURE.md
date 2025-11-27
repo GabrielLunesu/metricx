@@ -540,7 +540,7 @@ npm run dev
 
 ## REFERENCES
 
-- **Main Build Log**: `docs/ADNAVI_BUILD_LOG.md`
+- **Main Build Log**: `docs/metricx_BUILD_LOG.md`
 - **Class Diagram**: `backend/CLASS-DIAGRAM.MD`
 - **QA System**: `backend/docs/QA_SYSTEM_ARCHITECTURE.md`
 - **Code**: `backend/app/routers/finance.py`, `backend/app/services/cost_allocation.py`

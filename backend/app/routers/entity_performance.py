@@ -13,7 +13,7 @@ WHY:
 REFERENCES:
     - app/schemas.py::EntityPerformanceResponse (response contract)
     - app/dsl/hierarchy.py (campaign/ad set ancestor CTE helpers)
-    - docs/ADNAVI_BUILD_LOG.md (Campaigns integration section)
+    - docs/metricx_BUILD_LOG.md (Campaigns integration section)
 """
 
 from __future__ import annotations

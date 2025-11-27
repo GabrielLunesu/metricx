@@ -304,7 +304,7 @@ curl -X POST "http://localhost:8000/qa/?workspace_id={workspace_id}" \
 ## Next Steps After Testing
 
 1. **UI Integration**: Add sync buttons to Dashboard/Campaigns/Settings pages
-2. **Data Validation**: Compare Meta UI numbers vs AdNavi QA system (±5%)
+2. **Data Validation**: Compare Meta UI numbers vs metricx QA system (±5%)
 3. **Automated Sync**: Implement scheduler for daily/hourly syncs (Phase 3)
 
 ---

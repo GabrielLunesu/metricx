@@ -9,12 +9,12 @@
 ## 🎯 How The Integration Works (Non-Technical Overview)
 
 ### What We're Building
-We're connecting AdNavi to Meta's advertising platform so users can see their campaign performance, spend, revenue, and other metrics all in one place. Instead of logging into Meta's interface, users can view everything in AdNavi's dashboard and ask questions using natural language.
+We're connecting metricx to Meta's advertising platform so users can see their campaign performance, spend, revenue, and other metrics all in one place. Instead of logging into Meta's interface, users can view everything in metricx's dashboard and ask questions using natural language.
 
 ### How Data Sync Works
 
 **Step 1: Syncing Campaign Structure (Entities)**
-When you click "Sync Meta Ads", AdNavi first fetches your campaign structure from Meta:
+When you click "Sync Meta Ads", metricx first fetches your campaign structure from Meta:
 - **Campaigns** (like "Summer Sale 2025")
 - **Ad Sets** (groups of ads within a campaign)
 - **Ads** (individual advertisements)
@@ -25,7 +25,7 @@ We store this hierarchy in our database so we know which ads belong to which cam
 - **Reliability**: If metric sync fails, we don't lose the campaign structure
 
 **Step 2: Syncing Performance Data (Metrics)**
-After syncing the structure, AdNavi fetches the actual performance numbers:
+After syncing the structure, metricx fetches the actual performance numbers:
 - How much you spent each day
 - How many clicks, impressions, and conversions
 - Revenue generated
@@ -56,7 +56,7 @@ This means syncing is **idempotent** - you can run it as many times as you want 
 
 ### Historical Data Backfill
 
-When you first connect a Meta account, AdNavi automatically fetches the last 90 days of data. This is done in small chunks (7 days at a time) to:
+When you first connect a Meta account, metricx automatically fetches the last 90 days of data. This is done in small chunks (7 days at a time) to:
 - **Respect Rate Limits**: Meta limits how many API calls we can make per hour
 - **Avoid Timeouts**: Large requests can fail; small chunks are more reliable
 - **Show Progress**: We can track progress and resume if interrupted
@@ -65,7 +65,7 @@ After the initial backfill, future syncs only fetch new data (incremental sync).
 
 ### Why New Campaigns Show Up Even Without Data
 
-When you create a new campaign in Meta, it might not have any performance data yet (no clicks, impressions, etc.). We still sync it and display it in AdNavi because:
+When you create a new campaign in Meta, it might not have any performance data yet (no clicks, impressions, etc.). We still sync it and display it in metricx because:
 - **Visibility**: You can see all your campaigns in one place, even if they're just starting
 - **Future Data**: Once Meta starts reporting data, future syncs will pick it up automatically
 - **Consistency**: The UI shows $0 values instead of hiding campaigns, which is more predictable
@@ -93,7 +93,7 @@ Step 2: Fetch Performance Metrics
     ↓
 [Store in Database with Deduplication]
     ↓
-[AdNavi Dashboard & QA System]
+[metricx Dashboard & QA System]
     ├─ Campaigns Page (shows all campaigns)
     ├─ Analytics Page (shows performance)
     └─ QA System (answers questions about campaigns)
@@ -136,7 +136,7 @@ Step 2: Fetch Performance Metrics
 **What Works**:
 - Meta Developer account created
 - App ID: `[STORED IN .env]`
-- System user created: "AdNavi API"
+- System user created: "metricx API"
 - Token generated (permanent, 201 chars)
 - Ad account connected: `act_1205956121112122`
 - Currency: USD, Timezone: Europe/Vienna
@@ -602,20 +602,20 @@ _No bugs reported yet_
 
 ### Start Development
 ```bash
-cd /Users/gabriellunesu/Git/AdNavi/backend
+cd /Users/gabriellunesu/Git/metricx/backend
 source bin/activate
 python start_api.py
 ```
 
 ### Test Meta API
 ```bash
-cd /Users/gabriellunesu/Git/AdNavi/backend
+cd /Users/gabriellunesu/Git/metricx/backend
 python test_meta_api.py
 ```
 
 ### Run Migrations
 ```bash
-cd /Users/gabriellunesu/Git/AdNavi/backend
+cd /Users/gabriellunesu/Git/metricx/backend
 ./bin/alembic upgrade head
 ```
 
@@ -624,7 +624,7 @@ cd /Users/gabriellunesu/Git/AdNavi/backend
 # Ensure TOKEN_ENCRYPTION_KEY is exported (see docs/meta-ads-lib/PHASE_2_1_TOKEN_ENCRYPTION.md)
 export TOKEN_ENCRYPTION_KEY=<your-fernet-key>
 
-cd /Users/gabriellunesu/Git/AdNavi/backend
+cd /Users/gabriellunesu/Git/metricx/backend
 pytest tests/services/test_token_service.py
 
 # Inspect encrypted payload (should be unreadable base64 text)
@@ -803,7 +803,7 @@ curl -X POST "http://localhost:8000/qa/?workspace_id=YOUR_WORKSPACE_ID" \
 - `backend/docs/META_SYNC_TESTING.md` - Testing guide
 - `docs/meta-ads-lib/META_API_SETUP_GUIDE.md` - Setup guide
 - `docs/meta-ads-lib/README.md` - Doc hub
-- `docs/living-docs/ADNAVI_BUILD_LOG.md` - Project changelog
+- `docs/living-docs/metricx_BUILD_LOG.md` - Project changelog
 
 ### Frontend
 - `ui/app/(dashboard)/settings/page.jsx` - Settings page (Phase 2.5)
@@ -819,7 +819,7 @@ curl -X POST "http://localhost:8000/qa/?workspace_id=YOUR_WORKSPACE_ID" \
 **Internal Resources**:
 - Roadmap: `backend/docs/roadmap/meta-ads-roadmap.md`
 - Setup Guide: `docs/meta-ads-lib/META_API_SETUP_GUIDE.md`
-- Build Log: `docs/ADNAVI_BUILD_LOG.md`
+- Build Log: `docs/metricx_BUILD_LOG.md`
 
 **External Resources**:
 - Meta Marketing API Docs: https://developers.facebook.com/docs/marketing-api

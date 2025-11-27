@@ -7,12 +7,7 @@ import { z } from "zod";
 export const profileSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
   email: z.string().trim().email("Enter a valid email"),
-  avatar_url: z
-    .string()
-    .trim()
-    .url("Must be a valid URL")
-    .or(z.literal(""))
-    .optional(),
+
 });
 
 export const passwordSchema = z

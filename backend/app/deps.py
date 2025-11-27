@@ -16,7 +16,7 @@ from .security import decode_token
 class Settings(BaseSettings):
     """Application settings loaded from environment or .env."""
 
-    BACKEND_CORS_ORIGINS: str = "https://www.adnavi.app,http://localhost:3000"
+    BACKEND_CORS_ORIGINS: str = "https://www.metricx.ai,http://localhost:3000"
     # Cookie domain must NOT include protocol (https://)
     # Set to None for same-origin cookies (works for both localhost and production)
     COOKIE_DOMAIN: Optional[str] = None

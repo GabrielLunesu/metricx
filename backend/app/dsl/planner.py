@@ -257,7 +257,7 @@ def build_plan(query: MetricQuery) -> Optional[Plan]:
     # - When explicitly requested
     # WHEN to skip:
     # - Simple metric queries with no breakdown (e.g., "what is my CPC this month?")
-    need_timeseries = query.breakdown is not None or query.compare_to_previous
+    need_timeseries = query.breakdown is not None or query.compare_to_previous or query.query_type == "comparison"
 
     # Debug: Print planning decision
     print(f"[PLANNER] compare_to_previous={query.compare_to_previous}, need_timeseries={need_timeseries}, breakdown={query.breakdown}", flush=True)

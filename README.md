@@ -8,7 +8,7 @@ password123
 
 ## 🌟 Vision
 
-AdNavi eliminates the gap between data and decision-making in marketing analytics. Instead of learning dashboards, memorizing metrics, or writing SQL, marketers ask questions in plain English and get instant, accurate answers from their data.
+metricx eliminates the gap between data and decision-making in marketing analytics. Instead of learning dashboards, memorizing metrics, or writing SQL, marketers ask questions in plain English and get instant, accurate answers from their data.
 
 **The North Star:** Natural language → Precise insights. No learning curve.
 
@@ -173,6 +173,9 @@ alembic upgrade head
 python -m app.seed_mock
 python start_api.py
 
+# to start worker
+python -u -m app.workers.start_worker
+
 # Frontend  
 cd ui
 npm install && npm run dev
@@ -182,7 +185,7 @@ Access: http://localhost:3000
 
 ## 📖 Learn More
 
-- **Build Log**: `docs/ADNAVI_BUILD_LOG.md` - Development history
+- **Build Log**: `docs/metricx_BUILD_LOG.md` - Development history
 - **Architecture**: `backend/docs/QA_SYSTEM_ARCHITECTURE.md` - DSL specification & AI pipeline
 - **Context**: `backend/docs/REDIS_CONTEXT_MANAGER.md` - Conversation history system
 

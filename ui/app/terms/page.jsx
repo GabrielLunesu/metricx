@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Terms of Service | AdNavi',
-  description: 'AdNavi Terms of Service - Terms and conditions for using our platform'
+  title: 'Terms of Service | metricx',
+  description: 'metricx Terms of Service - Terms and conditions for using our platform'
 };
 
 export default function TermsOfService() {
@@ -10,7 +10,7 @@ export default function TermsOfService() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-neutral-200/40 bg-white/80 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center">
-            <img src="/adnavi.png" alt="AdNavi" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
+            <img src="/metricx.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
           </a>
           <div className="flex items-center gap-8">
             <a href="/#features" className="text-sm font-medium text-neutral-600 hover:text-cyan-600 transition-colors">Features</a>
@@ -35,7 +35,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">1. Agreement to Terms</h2>
             <p className="mb-4">
-              These Terms of Service ("Terms") constitute a legally binding agreement between you and AdNavi ("Company," "we," "us," or "our") concerning your access to and use of the AdNavi platform and services.
+              These Terms of Service ("Terms") constitute a legally binding agreement between you and metricx ("Company," "we," "us," or "our") concerning your access to and use of the metricx platform and services.
             </p>
             <p className="mb-4">
               By accessing or using our services, you agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you may not access or use our services.
@@ -45,7 +45,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">2. Description of Services</h2>
             <p className="mb-4">
-              AdNavi provides a software-as-a-service (SaaS) platform that enables users to:
+              metricx provides a software-as-a-service (SaaS) platform that enables users to:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Connect and aggregate advertising data from multiple platforms (Google Ads, Meta Ads, etc.)</li>
@@ -61,7 +61,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">3. Eligibility and Account Registration</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">3.1 Eligibility</h3>
             <p className="mb-4">
               You must be at least 18 years old and have the legal capacity to enter into binding contracts. By using our services, you represent and warrant that you meet these requirements.
@@ -69,7 +69,7 @@ export default function TermsOfService() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">3.2 Account Registration</h3>
             <p className="mb-4">
-              To use AdNavi, you must create an account by providing accurate and complete information. You agree to:
+              To use metricx, you must create an account by providing accurate and complete information. You agree to:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Provide accurate, current, and complete registration information</li>
@@ -88,7 +88,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">4. User Responsibilities and Conduct</h2>
             <p className="mb-4">
-              You agree to use AdNavi in compliance with all applicable laws and regulations. You agree NOT to:
+              You agree to use metricx in compliance with all applicable laws and regulations. You agree NOT to:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Use the services for any illegal purpose or in violation of any laws</li>
@@ -106,13 +106,13 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">5. Third-Party Platform Integrations</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">5.1 Advertising Platform Connections</h3>
             <p className="mb-4">
-              AdNavi integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.) via OAuth authorization. When you connect these platforms:
+              metricx integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.) via OAuth authorization. When you connect these platforms:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
-              <li>You grant AdNavi permission to access data from those platforms as specified in OAuth consent screens</li>
+              <li>You grant metricx permission to access data from those platforms as specified in OAuth consent screens</li>
               <li>You remain subject to the terms of service and privacy policies of those platforms</li>
               <li>You are responsible for maintaining valid authorization and compliance with platform policies</li>
               <li>We are not responsible for changes to third-party APIs or terms that affect functionality</li>
@@ -120,7 +120,7 @@ export default function TermsOfService() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">5.2 Data Accuracy</h3>
             <p className="mb-4">
-              While we strive for accuracy, AdNavi relies on data provided by third-party platforms. We do not guarantee that advertising metrics will exactly match platform native interfaces due to:
+              While we strive for accuracy, metricx relies on data provided by third-party platforms. We do not guarantee that advertising metrics will exactly match platform native interfaces due to:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>API limitations and data sampling</li>
@@ -134,28 +134,28 @@ export default function TermsOfService() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">5.3 Revocation of Access</h3>
             <p className="mb-4">
-              You may revoke AdNavi's access to your advertising platforms at any time through:
+              You may revoke metricx's access to your advertising platforms at any time through:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
-              <li>The AdNavi platform (Settings → Connections → Disconnect)</li>
+              <li>The metricx platform (Settings → Connections → Disconnect)</li>
               <li>The respective platform's authorization management interface</li>
             </ul>
             <p className="mb-4">
-              Revoking access will prevent AdNavi from syncing new data but will not delete historical data unless you request deletion.
+              Revoking access will prevent metricx from syncing new data but will not delete historical data unless you request deletion.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">6. Intellectual Property Rights</h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">6.1 AdNavi Intellectual Property</h3>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">6.1 metricx Intellectual Property</h3>
             <p className="mb-4">
-              The AdNavi platform, including all software, designs, text, graphics, and other content, is owned by or licensed to AdNavi and is protected by intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the services in accordance with these Terms.
+              The metricx platform, including all software, designs, text, graphics, and other content, is owned by or licensed to metricx and is protected by intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the services in accordance with these Terms.
             </p>
 
             <h3 className="text-xl font-semibold mb-3 mt-6">6.2 Your Content and Data</h3>
             <p className="mb-4">
-              You retain all rights to your advertising data and content. By using AdNavi, you grant us a limited license to:
+              You retain all rights to your advertising data and content. By using metricx, you grant us a limited license to:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Access, store, and process your advertising data to provide services</li>
@@ -168,16 +168,16 @@ export default function TermsOfService() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">6.3 Feedback and Suggestions</h3>
             <p className="mb-4">
-              Any feedback, suggestions, or ideas you provide about AdNavi become our property, and we may use them without restriction or compensation.
+              Any feedback, suggestions, or ideas you provide about metricx become our property, and we may use them without restriction or compensation.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">7. Payment and Subscription Terms</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">7.1 Pricing</h3>
             <p className="mb-4">
-              Pricing for AdNavi services is available on our website. We reserve the right to change pricing with 30 days' notice to existing customers.
+              Pricing for metricx services is available on our website. We reserve the right to change pricing with 30 days' notice to existing customers.
             </p>
 
             <h3 className="text-xl font-semibold mb-3 mt-6">7.2 Billing</h3>
@@ -204,7 +204,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">8. Data Privacy and Security</h2>
             <p className="mb-4">
-              Our collection and use of personal information is governed by our Privacy Policy, which is incorporated into these Terms by reference. By using AdNavi, you consent to our data practices as described in the Privacy Policy.
+              Our collection and use of personal information is governed by our Privacy Policy, which is incorporated into these Terms by reference. By using metricx, you consent to our data practices as described in the Privacy Policy.
             </p>
             <p className="mb-4">
               We implement industry-standard security measures to protect your data, including:
@@ -222,7 +222,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">9. Disclaimers and Warranties</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">9.1 "As Is" Services</h3>
             <p className="mb-4">
               THE SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, INCLUDING:
@@ -237,12 +237,12 @@ export default function TermsOfService() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">9.2 Third-Party Services</h3>
             <p className="mb-4">
-              We are not responsible for the availability, accuracy, or reliability of third-party advertising platforms. Changes to third-party APIs or services may affect AdNavi functionality without notice.
+              We are not responsible for the availability, accuracy, or reliability of third-party advertising platforms. Changes to third-party APIs or services may affect metricx functionality without notice.
             </p>
 
             <h3 className="text-xl font-semibold mb-3 mt-6">9.3 No Financial or Legal Advice</h3>
             <p className="mb-4">
-              AdNavi provides data visualization and analytics tools. We do not provide financial, investment, legal, or tax advice. Consult qualified professionals for such advice.
+              metricx provides data visualization and analytics tools. We do not provide financial, investment, legal, or tax advice. Consult qualified professionals for such advice.
             </p>
           </section>
 
@@ -252,7 +252,7 @@ export default function TermsOfService() {
               TO THE MAXIMUM EXTENT PERMITTED BY LAW:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
-              <li>ADNAVI SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES</li>
+              <li>metricx SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES</li>
               <li>THIS INCLUDES DAMAGES FOR LOSS OF PROFITS, REVENUE, DATA, OR USE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES</li>
               <li>OUR TOTAL LIABILITY FOR ALL CLAIMS RELATED TO THE SERVICES SHALL NOT EXCEED THE AMOUNT YOU PAID US IN THE 12 MONTHS PRIOR TO THE CLAIM</li>
               <li>SOME JURISDICTIONS DO NOT ALLOW LIMITATION OF LIABILITY, SO THESE LIMITATIONS MAY NOT APPLY TO YOU</li>
@@ -262,7 +262,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">11. Indemnification</h2>
             <p className="mb-4">
-              You agree to indemnify, defend, and hold harmless AdNavi and its officers, directors, employees, and agents from any claims, liabilities, damages, losses, and expenses (including legal fees) arising from:
+              You agree to indemnify, defend, and hold harmless metricx and its officers, directors, employees, and agents from any claims, liabilities, damages, losses, and expenses (including legal fees) arising from:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Your use or misuse of the services</li>
@@ -275,7 +275,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">12. Term and Termination</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">12.1 Term</h3>
             <p className="mb-4">
               These Terms remain in effect while you use the services or maintain an account.
@@ -312,7 +312,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">13. Dispute Resolution</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">13.1 Informal Resolution</h3>
             <p className="mb-4">
               Before filing any formal claim, you agree to contact us to attempt informal resolution of disputes.
@@ -335,7 +335,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">14. General Provisions</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">14.1 Governing Law</h3>
             <p className="mb-4">
               These Terms are governed by and construed in accordance with applicable laws, without regard to conflict of law principles.
@@ -366,7 +366,7 @@ export default function TermsOfService() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">14.5 Entire Agreement</h3>
             <p className="mb-4">
-              These Terms, together with our Privacy Policy, constitute the entire agreement between you and AdNavi regarding the services.
+              These Terms, together with our Privacy Policy, constitute the entire agreement between you and metricx regarding the services.
             </p>
 
             <h3 className="text-xl font-semibold mb-3 mt-6">14.6 No Waiver</h3>
@@ -386,15 +386,15 @@ export default function TermsOfService() {
               If you have questions about these Terms, please contact us:
             </p>
             <div className="bg-muted p-4 rounded-lg">
-              <p className="mb-2"><strong>AdNavi</strong></p>
-              <p className="mb-2">Website: <a href="https://www.adnavi.app" className="text-primary hover:underline">www.adnavi.app</a></p>
+              <p className="mb-2"><strong>metricx</strong></p>
+              <p className="mb-2">Website: <a href="https://www.metricx.ai" className="text-primary hover:underline">www.metricx.ai</a></p>
               <p className="mb-2">Legal Inquiries: Available through in-app support</p>
             </div>
           </section>
 
           <section className="mt-12 pt-8 border-t">
             <p className="text-sm text-muted-foreground">
-              By using AdNavi, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+              By using metricx, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
             </p>
             <p className="text-sm text-muted-foreground mt-4">
               Last Updated: November 7, 2025
@@ -408,7 +408,7 @@ export default function TermsOfService() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between flex-wrap gap-8">
             <a href="/" className="flex items-center">
-              <img src="/adnavi.png" alt="AdNavi" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
+              <img src="/metricx.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
             </a>
             <nav className="flex items-center gap-8 flex-wrap">
               <a href="/#features" className="text-sm font-medium text-neutral-500 hover:text-cyan-600 transition-colors">Features</a>
@@ -418,7 +418,7 @@ export default function TermsOfService() {
             </nav>
           </div>
           <div className="mt-8 pt-8 border-t border-neutral-200/60 flex items-center justify-between flex-wrap gap-4">
-            <p className="text-sm text-neutral-500">© 2024 AdNavi. All rights reserved.</p>
+            <p className="text-sm text-neutral-500">© 2024 metricx. All rights reserved.</p>
             <div className="flex items-center gap-6">
               <a href="/privacy" className="text-sm text-neutral-500 hover:text-cyan-600 transition-colors">Privacy Policy</a>
               <a href="/terms" className="text-sm text-neutral-500 hover:text-cyan-600 transition-colors">Terms of Service</a>

@@ -1515,7 +1515,7 @@ Follow this exact order:
 2. ✅ Test 10 questions from `100-realistic-questions.md`
 3. ✅ Iterate on prompts based on results
 4. ✅ Document any issues found
-5. ✅ Update `ADNAVI_BUILD_LOG.md` with Phase 1 completion
+5. ✅ Update `metricx_BUILD_LOG.md` with Phase 1 completion
 
 ---
 
@@ -1558,7 +1558,7 @@ After Phase 1 completion:
    - Update Answer Generation flow
    - Add Phase 1 completion to changelog
 
-2. **Update `ADNAVI_BUILD_LOG.md`**:
+2. **Update `metricx_BUILD_LOG.md`**:
    - Add changelog entry for Phase 1
    - Include before/after examples
    - Note workspace avg bug fix

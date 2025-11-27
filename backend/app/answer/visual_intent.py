@@ -57,6 +57,7 @@ class VisualIntent(str, Enum):
     - SINGLE_METRIC: Simple card + small sparkline (e.g., "What's my ROAS?")
     - COMPARISON: Dual-line chart showing current vs previous (e.g., "spend vs last week")
     - RANKING: Bar chart + table for top performers (e.g., "top 5 campaigns by ROAS")
+    - ALL_ENTITIES: Table ONLY for "compare all X" queries (e.g., "compare all campaigns")
     - FILTERING: Table ONLY for filtered results (e.g., "campaigns with no revenue")
     - TREND: Area chart emphasizing trend direction (e.g., "how is spend trending?")
     - BREAKDOWN: Pie/bar chart for distribution (e.g., "spend by platform")
@@ -65,6 +66,7 @@ class VisualIntent(str, Enum):
     SINGLE_METRIC = "single_metric"
     COMPARISON = "comparison"
     RANKING = "ranking"
+    ALL_ENTITIES = "all_entities"  # NEW: Table-only for "compare all X" queries
     FILTERING = "filtering"
     TREND = "trend"
     BREAKDOWN = "breakdown"
@@ -154,6 +156,33 @@ def classify_visual_intent(dsl: Any, result_data: Dict[str, Any]) -> VisualInten
                 logger.info(f"[VISUAL_INTENT] Classified as FILTERING (threshold filter)")
                 return VisualIntent.FILTERING
 
+    # EARLY ENTITY CHECK: "Compare ALL X" or "Show ALL X" with breakdown
+    # WHY: Must check BEFORE generic comparison check, because "compare all campaigns"
+    #      needs a TABLE, not a comparison chart or ranking bar chart
+    breakdown = getattr(dsl, 'breakdown', None)
+    question = getattr(dsl, 'question', '') or ''
+    question_lower = question.lower()
+
+    if breakdown and breakdown in ['campaign', 'adset', 'ad', 'provider']:
+        # "all" keywords → TABLE ONLY (no charts, cleaner output)
+        all_keywords = ['all', 'compare all', 'show all', 'list all', 'give me all']
+
+        if any(kw in question_lower for kw in all_keywords):
+            logger.info(f"[VISUAL_INTENT] Classified as ALL_ENTITIES (breakdown + 'all' keywords, breakdown={breakdown})")
+            return VisualIntent.ALL_ENTITIES
+
+        # Ranking keywords → bar chart + table
+        ranking_keywords = ['top', 'best', 'worst', 'highest', 'lowest', 'most', 'least']
+        if any(kw in question_lower for kw in ranking_keywords):
+            logger.info(f"[VISUAL_INTENT] Classified as RANKING (breakdown + ranking keywords)")
+            return VisualIntent.RANKING
+
+        # "compare" without "all" → could be entity comparison, check for specific patterns
+        compare_keywords = ['compare', 'show me', 'give me', 'list']
+        if any(kw in question_lower for kw in compare_keywords):
+            logger.info(f"[VISUAL_INTENT] Classified as RANKING (breakdown + compare keywords, breakdown={breakdown})")
+            return VisualIntent.RANKING
+
     # 2. COMPARISON: Time-based comparison queries
     # WHY: "vs last week", "compared to last month" need overlay charts
     # WHAT TO SHOW: Dual-line chart with current + previous periods
@@ -162,9 +191,11 @@ def classify_visual_intent(dsl: Any, result_data: Dict[str, Any]) -> VisualInten
     comparison_type = getattr(dsl, 'comparison_type', None)
     timeframe_desc = getattr(dsl, 'timeframe_description', '') or ''
 
-    # Check for explicit comparison
-    if query_type == 'comparison' or comparison_type == 'time_vs_time':
-        logger.info(f"[VISUAL_INTENT] Classified as COMPARISON (query_type/comparison_type)")
+    # Check for explicit time-based comparison (not entity comparison)
+    # IMPORTANT: query_type='comparison' without time indicators should fall through
+    # to RANKING if there's a breakdown (handled above)
+    if comparison_type == 'time_vs_time':
+        logger.info(f"[VISUAL_INTENT] Classified as COMPARISON (comparison_type=time_vs_time)")
         return VisualIntent.COMPARISON
 
     # Check for implicit comparison via timeframe
@@ -172,9 +203,15 @@ def classify_visual_intent(dsl: Any, result_data: Dict[str, Any]) -> VisualInten
         logger.info(f"[VISUAL_INTENT] Classified as COMPARISON (compare_to_previous=True)")
         return VisualIntent.COMPARISON
 
-    # Check for "vs" language in timeframe
+    # Check for "vs" language in timeframe (time comparisons, not entity comparisons)
     if 'vs' in timeframe_desc.lower() or 'compared' in timeframe_desc.lower():
         logger.info(f"[VISUAL_INTENT] Classified as COMPARISON (timeframe contains 'vs')")
+        return VisualIntent.COMPARISON
+
+    # Entity vs entity comparison without breakdown goes to COMPARISON
+    # (e.g., "compare Campaign A vs Campaign B" - specific entities, not "all")
+    if query_type == 'comparison' and not breakdown:
+        logger.info(f"[VISUAL_INTENT] Classified as COMPARISON (query_type=comparison, no breakdown)")
         return VisualIntent.COMPARISON
 
     # 3. MULTI-METRIC: Queries for multiple metrics at once
@@ -191,26 +228,18 @@ def classify_visual_intent(dsl: Any, result_data: Dict[str, Any]) -> VisualInten
             logger.info(f"[VISUAL_INTENT] Classified as MULTI_METRIC (result has multiple metrics)")
             return VisualIntent.MULTI_METRIC
 
-    # 4. RANKING: Top-N queries with breakdown
-    # WHY: "top 5 campaigns", "best performers" need ranked bar chart
+    # 4. RANKING: Top-N queries with breakdown (fallback)
+    # NOTE: Most ranking queries are caught by the EARLY RANKING CHECK above
+    # This is a fallback for breakdown queries that didn't match keywords
+    # WHY: Breakdown with reasonable top_n is almost always a ranking query
     # WHAT TO SHOW: Bar chart + table with rankings
     top_n = getattr(dsl, 'top_n', 5)
-    breakdown = getattr(dsl, 'breakdown', None)
 
-    if breakdown and top_n and top_n > 0:
-        # Check if question implies ranking
-        question = getattr(dsl, 'question', '') or ''
-        ranking_keywords = ['top', 'best', 'worst', 'highest', 'lowest', 'most', 'least']
-        if any(kw in question.lower() for kw in ranking_keywords):
-            logger.info(f"[VISUAL_INTENT] Classified as RANKING (breakdown + ranking keywords)")
-            return VisualIntent.RANKING
+    if breakdown and top_n and top_n > 0 and top_n <= 50:
+        logger.info(f"[VISUAL_INTENT] Classified as RANKING (breakdown with top_n={top_n}, fallback)")
+        return VisualIntent.RANKING
 
-        # Even without keywords, breakdown queries are rankings
-        if top_n <= 10:  # Reasonable number for a ranking
-            logger.info(f"[VISUAL_INTENT] Classified as RANKING (breakdown with top_n={top_n})")
-            return VisualIntent.RANKING
-
-    # 5. BREAKDOWN: Distribution queries
+    # 5. BREAKDOWN: Distribution queries (provider breakdown, etc.)
     # WHY: "spend by platform", "revenue breakdown" need distribution chart
     # WHAT TO SHOW: Bar/pie chart for distribution
     if breakdown:
@@ -284,6 +313,17 @@ def get_visual_strategy(intent: VisualIntent) -> VisualStrategy:
             show_table=True,  # Detailed table
             max_charts=1,
             rationale="Ranking query: bar chart + table shows top performers"
+        ),
+
+        VisualIntent.ALL_ENTITIES: VisualStrategy(
+            intent=VisualIntent.ALL_ENTITIES,
+            show_card=False,  # No summary card for "all" queries
+            show_timeseries=False,  # No charts
+            show_comparison_overlay=False,
+            show_breakdown_chart=False,  # No bar chart
+            show_table=True,  # TABLE ONLY - clean list of all entities
+            max_charts=0,
+            rationale="All entities query: clean table showing all campaigns/adsets/ads"
         ),
 
         VisualIntent.FILTERING: VisualStrategy(
@@ -372,7 +412,8 @@ def filter_visuals_by_strategy(
     filtered = {
         'cards': [],
         'viz_specs': [],
-        'tables': []
+        'tables': [],
+        'creative_cards': []  # NEW v2.5: Creative cards for ad creative queries
     }
 
     # Filter cards
@@ -381,6 +422,12 @@ def filter_visuals_by_strategy(
         logger.debug(f"[VISUAL_FILTER] Keeping {len(filtered['cards'])} cards")
     else:
         logger.debug(f"[VISUAL_FILTER] Removing all cards")
+
+    # Creative cards: Always pass through if present (they replace cards for creative queries)
+    creative_cards = payload.get('creative_cards', [])
+    if creative_cards:
+        filtered['creative_cards'] = creative_cards
+        logger.debug(f"[VISUAL_FILTER] Keeping {len(creative_cards)} creative cards")
 
     # Filter charts (viz_specs)
     if strategy.show_timeseries or strategy.show_breakdown_chart:

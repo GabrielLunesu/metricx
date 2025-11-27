@@ -152,7 +152,7 @@ export default function GoogleAccountSelectionModal({
           <div>
             <h3 className="text-lg font-semibold text-black">Select Google Ads Accounts</h3>
             <p className="text-sm text-neutral-500 mt-1">
-              Choose which accounts you want to connect to AdNavi
+              Choose which accounts you want to connect to metricx
             </p>
           </div>
           <button

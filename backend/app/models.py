@@ -150,7 +150,10 @@ class User(Base):
 
     # All queries made by this user
     queries = relationship("QaQueryLog", back_populates="user")
-    
+
+    # All feedback provided by this user
+    qa_feedback = relationship("QaFeedback", back_populates="user")
+
     # This is used to display the model in the admin interface.
     def __str__(self):
         return f"{self.name} ({self.email})"
@@ -314,12 +317,27 @@ class Import(Base):
         return f"Import as of {self.as_of.strftime('%Y-%m-%d')}{' - ' + self.note if self.note else ''}"
 
 
+class MediaTypeEnum(str, enum.Enum):
+    """Type of creative media asset."""
+    image = "image"
+    video = "video"
+    carousel = "carousel"
+    unknown = "unknown"
+
+
 class Entity(Base):
     """Entity represents a marketing entity (campaign, ad set, ad, etc.).
-    
+
     Derived Metrics v1 addition:
     - goal: Campaign objective (awareness, traffic, leads, app_installs, purchases, conversions, other)
-    
+
+    Creative Support (v2.5):
+    - thumbnail_url: URL to creative thumbnail image (for ad-level entities)
+    - image_url: URL to full creative image (for ad-level entities)
+    - media_type: Type of creative (image, video, carousel)
+
+    Note: Creative images currently only supported for Meta ads.
+
     WHY goal matters:
     - Helps determine which metrics are most relevant to the user
     - CPL makes sense for leads campaigns, CPI for app_installs, CPP for purchases
@@ -334,16 +352,21 @@ class Entity(Base):
     name = Column(String, nullable=False)
     status = Column(String, nullable=False)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
-    
+
     # Derived Metrics v1: Campaign objective
     goal = Column(Enum(GoalEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=True)
+
+    # Creative Support v2.5: Image URLs for ad creatives (Meta only for now)
+    thumbnail_url = Column(String, nullable=True)  # Small preview image
+    image_url = Column(String, nullable=True)  # Full-size creative image
+    media_type = Column(Enum(MediaTypeEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=True)
 
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
     workspace = relationship("Workspace", back_populates="entities")
 
     connection_id = Column(UUID(as_uuid=True), ForeignKey("connections.id"), nullable=True)
     connection = relationship("Connection", back_populates="entities")
-    
+
     # Timestamps for tracking entity lifecycle
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -566,32 +589,82 @@ class ManualCost(Base):
 
 class QaQueryLog(Base):
     """QaQueryLog tracks all natural language queries made by users.
-    
+
     When creating a query log in the admin panel:
     1. You MUST select a workspace_id - which workspace was this query made in?
     2. You MUST select a user_id - which user made this query?
-    
+
     This creates an audit trail of who asked what questions and when.
     """
     __tablename__ = "qa_query_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # Foreign keys - BOTH are required to track query context
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
+
     question_text = Column(String, nullable=False)  # The natural language question
     dsl_json = Column(JSON, nullable=False)  # The parsed query structure
+    answer_text = Column(Text, nullable=True)  # The generated answer (for feedback tracking)
     created_at = Column(DateTime, default=datetime.utcnow)
     duration_ms = Column(Integer, nullable=True)  # How long the query took to execute
 
     # Relationships for easy access to related objects
     workspace = relationship("Workspace", back_populates="queries")
     user = relationship("User", back_populates="queries")
-    
+    feedback = relationship("QaFeedback", back_populates="query_log", uselist=False)
+
     def __str__(self):
         return f"{self.question_text[:50]}... - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+class FeedbackTypeEnum(str, enum.Enum):
+    """Type of feedback provided on a QA answer."""
+    accuracy = "accuracy"        # Was the data/answer correct?
+    relevance = "relevance"      # Did it answer the question asked?
+    visualization = "visualization"  # Was the chart/table appropriate?
+    completeness = "completeness"    # Was the answer complete enough?
+    other = "other"
+
+
+class QaFeedback(Base):
+    """QaFeedback stores user feedback on QA answers for self-learning.
+
+    This enables:
+    1. Tracking answer quality over time
+    2. Identifying common failure patterns
+    3. Building few-shot examples from highly-rated answers
+    4. Continuous improvement of the QA system
+    """
+    __tablename__ = "qa_feedback"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Link to the original query
+    query_log_id = Column(UUID(as_uuid=True), ForeignKey("qa_query_logs.id"), nullable=False)
+
+    # Who provided the feedback
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    # Feedback data
+    rating = Column(Integer, nullable=False)  # 1-5 scale (1=bad, 5=excellent)
+    feedback_type = Column(Enum(FeedbackTypeEnum), nullable=True)  # What aspect is feedback about
+    comment = Column(Text, nullable=True)  # Optional free-text comment
+    corrected_answer = Column(Text, nullable=True)  # What should the answer have been
+
+    # Self-learning flags
+    is_few_shot_example = Column(Boolean, default=False)  # Mark as training example
+    reviewed_at = Column(DateTime, nullable=True)  # When admin reviewed this feedback
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    query_log = relationship("QaQueryLog", back_populates="feedback")
+    user = relationship("User", back_populates="qa_feedback")
+
+    def __str__(self):
+        return f"Feedback {self.rating}/5 for query {self.query_log_id}"
 
 
 # Local auth credential (password hash stored separately) ----------

@@ -279,12 +279,15 @@ def _execute_metrics_plan(
     3. Convert service results back to MetricResult format
     4. Maintain backward compatibility with existing QA system
     """
+    print(f"[EXECUTOR] Starting _execute_metrics_plan for plan: breakdown={plan.breakdown}", flush=True)
+    logger.info(f"[EXECUTOR] Starting _execute_metrics_plan for plan: breakdown={plan.breakdown}")
+
     # Import UnifiedMetricService
     from app.services.unified_metric_service import UnifiedMetricService, MetricFilters
-    
+
     # Initialize service
     service = UnifiedMetricService(db)
-    
+
     # Convert plan to service inputs
     time_range = TimeRange(start=plan.start, end=plan.end)
     filters = MetricFilters(
@@ -315,7 +318,9 @@ def _execute_metrics_plan(
     summary_value = metric_value.value
     previous_value = metric_value.previous
     delta_pct = metric_value.delta_pct
-    
+
+    print(f"[EXECUTOR] Summary complete: {metric_name}={summary_value}", flush=True)
+
     # --- TIMESERIES (daily values) ---
     timeseries = None
     previous_timeseries = None
@@ -362,6 +367,7 @@ def _execute_metrics_plan(
     breakdown = None
     
     if plan.breakdown:
+        print(f"[EXECUTOR] Fetching breakdown: dimension={plan.breakdown}, top_n={plan.top_n}", flush=True)
         # Use UnifiedMetricService for consistent breakdown
         # Check if it's a temporal breakdown (day, week, month)
         if plan.breakdown in ["day", "week", "month"]:
@@ -385,8 +391,9 @@ def _execute_metrics_plan(
                 top_n=plan.top_n,
                 sort_order=plan.sort_order
             )
-        
-        # Convert to expected format
+        print(f"[EXECUTOR] Breakdown result: {len(breakdown_items) if breakdown_items else 0} items", flush=True)
+
+        # Convert to expected format (include entity_id for timeseries lookup)
         breakdown = [
             {
                 "label": item.label,
@@ -395,26 +402,55 @@ def _execute_metrics_plan(
                 "clicks": item.clicks,
                 "conversions": item.conversions,
                 "revenue": item.revenue,
-                "impressions": item.impressions
+                "impressions": item.impressions,
+                "entity_id": item.entity_id  # For entity timeseries lookup
             }
             for item in breakdown_items
         ]
-    
+
     # --- WORKSPACE AVERAGE CALCULATION ---
     # Use UnifiedMetricService for consistent workspace average
     workspace_avg = summary_result.workspace_avg
-    
+
     # Log workspace average if available
     if workspace_avg is not None:
         logger.info(
             f"Calculated workspace average for {metric_name}: {workspace_avg} (query value: {summary_value})"
         )
-    
+
+    # ==================================================================
+    # ENTITY TIMESERIES (NEW - for multi-line charts)
+    # When output_format='chart' and we have breakdown, fetch per-entity timeseries
+    # This enables "graph of top 5 ads" → 5 lines showing each ad's trend
+    # ==================================================================
+    entity_timeseries = None
+    output_format = getattr(plan.query, 'output_format', 'auto') if plan.query else 'auto'
+
+    if output_format == 'chart' and breakdown and plan.breakdown in ['campaign', 'adset', 'ad']:
+        # Get entity IDs and labels from breakdown
+        entity_ids = [item.get("entity_id") for item in breakdown if item.get("entity_id")]
+        entity_labels = {item.get("entity_id"): item.get("label") for item in breakdown if item.get("entity_id")}
+
+        if entity_ids:
+            logger.info(f"[EXECUTOR] Fetching entity timeseries for {len(entity_ids)} entities (output_format=chart)")
+            print(f"[EXECUTOR] Fetching entity timeseries for {len(entity_ids)} entities", flush=True)
+            entity_timeseries = service.get_entity_timeseries(
+                workspace_id=workspace_id,
+                metric=metric_name,
+                time_range=time_range,
+                entity_ids=entity_ids,
+                entity_labels=entity_labels,
+                granularity="day"
+            )
+            logger.info(f"[EXECUTOR] Got entity timeseries for {len(entity_timeseries)} entities")
+            print(f"[EXECUTOR] Got entity timeseries for {len(entity_timeseries)} entities", flush=True)
+
     # --- BUILD RESULT ---
     print(f"[EXECUTOR] Building MetricResult: "
           f"summary={summary_value}, "
           f"timeseries={len(timeseries) if timeseries else 0} points, "
-          f"timeseries_previous={len(previous_timeseries) if previous_timeseries else 0} points")
+          f"timeseries_previous={len(previous_timeseries) if previous_timeseries else 0} points, "
+          f"entity_timeseries={len(entity_timeseries) if entity_timeseries else 0} entities")
 
     return MetricResult(
         summary=summary_value,
@@ -423,7 +459,8 @@ def _execute_metrics_plan(
         timeseries=timeseries,
         timeseries_previous=previous_timeseries,
         breakdown=breakdown,
-        workspace_avg=workspace_avg
+        workspace_avg=workspace_avg,
+        entity_timeseries=entity_timeseries
     )
 
 
@@ -559,7 +596,7 @@ def _execute_multi_metric_plan(
                 sort_order=plan.sort_order
             )
         
-        # Convert to expected format
+        # Convert to expected format (include entity_id for timeseries lookup)
         breakdown = [
             {
                 "label": item.label,
@@ -568,18 +605,50 @@ def _execute_multi_metric_plan(
                 "clicks": item.clicks,
                 "conversions": item.conversions,
                 "revenue": item.revenue,
-                "impressions": item.impressions
+                "impressions": item.impressions,
+                "entity_id": getattr(item, 'entity_id', None)  # For entity timeseries
             }
             for item in breakdown_items
         ]
-    
+
+    # ==================================================================
+    # ENTITY TIMESERIES (NEW - for multi-line charts)
+    # When output_format='chart' and we have breakdown, fetch per-entity timeseries
+    # This enables "graph of top 5 ads" → 5 lines showing each ad's trend
+    # ==================================================================
+    entity_timeseries = None
+    output_format = getattr(query, 'output_format', 'auto')
+
+    if output_format == 'chart' and breakdown and plan.breakdown in ['campaign', 'adset', 'ad']:
+        # Get entity IDs and labels from breakdown
+        entity_ids = [item.get("entity_id") for item in breakdown if item.get("entity_id")]
+        entity_labels = {item.get("entity_id"): item.get("label") for item in breakdown if item.get("entity_id")}
+
+        if entity_ids:
+            logger.info(f"[MULTI_METRIC] Fetching entity timeseries for {len(entity_ids)} entities (output_format=chart)")
+            entity_timeseries = service.get_entity_timeseries(
+                workspace_id=workspace_id,
+                metric=metrics[0],  # Use first metric for timeseries
+                time_range=time_range,
+                entity_ids=entity_ids,
+                entity_labels=entity_labels,
+                granularity="day"
+            )
+            logger.info(f"[MULTI_METRIC] Got entity timeseries for {len(entity_timeseries)} entities")
+
     logger.info(f"[MULTI_METRIC] Completed execution for {len(query.metric)} metrics")
-    return {
+    result = {
         "metrics": metrics_result,
         "timeseries": timeseries,
         "breakdown": breakdown,
         "query_type": "multi_metrics"
     }
+
+    # Include entity_timeseries if we fetched it
+    if entity_timeseries:
+        result["entity_timeseries"] = entity_timeseries
+
+    return result
 
 
 def _execute_comparison_plan(
@@ -643,6 +712,58 @@ def _execute_comparison_plan(
         # Compare specific entities
         entities = query.comparison_entities or []
         
+        # Heuristic: If user asked for "Top N" but translator gave fewer entities (or none),
+        # fetch them dynamically to ensure we show the correct number.
+        is_top_n_request = (
+            query.top_n 
+            and query.top_n > 0 
+            and "top" in (query.question or "").lower()
+        )
+        
+        if is_top_n_request and len(entities) < query.top_n:
+            logger.info(f"[EXECUTOR] Detected Top {query.top_n} request with insufficient entities ({len(entities)}). Fetching top entities dynamically.")
+            
+            # Use get_breakdown to find top entities by the primary metric
+            # Default to 'campaign' if no level specified, but usually level is implicit in entity names
+            # For simplicity, we'll try to guess the entity level or default to campaign
+            # Actually, get_breakdown requires a dimension.
+            # If we don't know the dimension, we might be stuck.
+            # But usually "Top 5 ads" implies breakdown="ad".
+            # The translator might NOT have set breakdown for COMPARISON query.
+            # We can try to infer from the first entity if present, or fallback to 'campaign'.
+            
+            # Better approach: Check if breakdown is set in plan (it might be None for comparison)
+            # If not, try to infer from question or default to campaign.
+            
+            breakdown_dim = plan.breakdown
+            if not breakdown_dim:
+                q_lower = query.question.lower()
+                if "ad" in q_lower and "adset" not in q_lower:
+                    breakdown_dim = "ad"
+                elif "adset" in q_lower:
+                    breakdown_dim = "adset"
+                elif "campaign" in q_lower:
+                    breakdown_dim = "campaign"
+                elif "platform" in q_lower or "provider" in q_lower:
+                    breakdown_dim = "provider"
+                else:
+                    breakdown_dim = "campaign" # Default
+            
+            # Fetch top entities
+            breakdown_items = service.get_breakdown(
+                workspace_id=workspace_id,
+                metric=metrics[0],
+                time_range=time_range,
+                filters=filters,
+                breakdown_dimension=breakdown_dim,
+                top_n=query.top_n,
+                sort_order="desc"
+            )
+            
+            # Replace entities list with the dynamically fetched ones
+            entities = [item.label for item in breakdown_items]
+            logger.info(f"[EXECUTOR] Resolved top {len(entities)} entities: {entities}")
+        
         for entity_name in entities:
             # Create entity-specific filters
             entity_filters = MetricFilters(
@@ -668,6 +789,22 @@ def _execute_comparison_plan(
             for metric_name in metrics:
                 metric_data = summary_result.metrics[metric_name]
                 entity_result[metric_name] = metric_data.value
+            
+            # Fetch timeseries if requested (for multi-line charts)
+            if plan.need_timeseries:
+                timeseries_dict = service.get_timeseries(
+                    workspace_id=workspace_id,
+                    metrics=metrics,
+                    time_range=time_range,
+                    filters=entity_filters
+                )
+                # Use the first metric's timeseries for the line chart
+                # (Future: support multiple metrics per entity if needed)
+                primary_metric = metrics[0]
+                ts_points = timeseries_dict.get(primary_metric, [])
+                entity_result["timeseries"] = [
+                    {"date": p.date, "value": p.value} for p in ts_points
+                ]
             
             comparison_results.append(entity_result)
     

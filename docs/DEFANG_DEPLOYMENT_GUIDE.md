@@ -1,6 +1,6 @@
 # Defang Deployment Guide
 
-**Quick Reference for AdNavi Production Deployment**
+**Quick Reference for metricx Production Deployment**
 
 ---
 

@@ -393,7 +393,7 @@ class GAdsClient:
 # --- Campaign channel → Goal mapping -----------------------------------
 
 def map_channel_to_goal(channel_type: Optional[object]) -> GoalEnum:
-    """Map Google Ads advertising_channel_type to AdNavi GoalEnum.
+    """Map Google Ads advertising_channel_type to metricx GoalEnum.
 
     Extended to cover all common channel types; refined in future with
     subtypes/strategies if needed.

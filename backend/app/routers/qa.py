@@ -24,22 +24,71 @@ SSE Streaming (NEW v2.1):
 - Eliminates polling overhead, provides better UX
 """
 
+import asyncio
+import hashlib
+import json
+import logging
+import os
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
 from rq.job import Job
-import asyncio
-import json
-import os
 
 from app.schemas import QARequest, QAJobResponse, QAJobStatusResponse
 from app.database import get_db
 from app.deps import get_current_user, get_settings
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/qa", tags=["qa"])
+
+# Job configuration constants
+JOB_TTL_SECONDS = 300  # Jobs expire after 5 minutes (result retention)
+JOB_TIMEOUT_SECONDS = 120  # Job must complete within 2 minutes
+DEDUP_WINDOW_SECONDS = 30  # Deduplication window for identical questions
+
+
+def _generate_dedup_key(user_id: str, workspace_id: str, question: str) -> str:
+    """
+    Generate a unique deduplication key for a QA job.
+
+    Same user asking the same question in the same workspace within
+    DEDUP_WINDOW_SECONDS will get the same job instead of creating a new one.
+    """
+    # Normalize question (lowercase, strip whitespace)
+    normalized_q = question.lower().strip()
+    raw = f"{user_id}:{workspace_id}:{normalized_q}"
+    return f"qa_dedup:{hashlib.md5(raw.encode()).hexdigest()}"
+
+
+def _find_existing_job(redis_conn: Redis, queue: Queue, dedup_key: str) -> Job | None:
+    """
+    Check if a job with this dedup key already exists and is still valid.
+
+    Returns the existing job if found and not failed/finished, else None.
+    """
+    # Check if we have a recent job ID stored for this dedup key
+    existing_job_id = redis_conn.get(dedup_key)
+    if not existing_job_id:
+        return None
+
+    existing_job_id = existing_job_id.decode() if isinstance(existing_job_id, bytes) else existing_job_id
+
+    try:
+        job = Job.fetch(existing_job_id, connection=redis_conn)
+        # Return job only if it's still pending or running
+        if job.is_queued or job.is_started:
+            logger.info(f"[QA_ROUTER] Found existing job {existing_job_id} for dedup key")
+            return job
+    except Exception:
+        # Job doesn't exist or expired
+        pass
+
+    return None
 
 
 @router.post("", response_model=QAJobResponse)
@@ -79,21 +128,44 @@ def ask_question(
     try:
         # Connect to Redis queue
         redis_url = get_settings().REDIS_URL
-        queue = Queue("qa_jobs", connection=Redis.from_url(redis_url))
-        
-        # Enqueue job
+        redis_conn = Redis.from_url(redis_url)
+        queue = Queue("qa_jobs", connection=redis_conn)
+
+        user_id = str(current_user.id)
+
+        # Check for duplicate job (same user, workspace, question)
+        dedup_key = _generate_dedup_key(user_id, workspace_id, req.question)
+        existing_job = _find_existing_job(redis_conn, queue, dedup_key)
+
+        if existing_job:
+            # Return existing job instead of creating duplicate
+            logger.info(f"[QA_ROUTER] Returning existing job {existing_job.id} (dedup)")
+            return QAJobResponse(
+                job_id=existing_job.id,
+                status="queued" if existing_job.is_queued else "processing"
+            )
+
+        # Enqueue new job with TTL and timeout
         job = queue.enqueue(
             "app.workers.qa_worker.process_qa_job",
             question=req.question,
             workspace_id=workspace_id,
-            user_id=str(current_user.id),
+            user_id=user_id,
+            job_timeout=JOB_TIMEOUT_SECONDS,  # Job must complete in 2 min
+            result_ttl=JOB_TTL_SECONDS,  # Result kept for 5 min
+            ttl=JOB_TTL_SECONDS,  # Job expires if not started in 5 min
         )
-        
+
+        # Store dedup key → job_id mapping (expires after dedup window)
+        redis_conn.setex(dedup_key, DEDUP_WINDOW_SECONDS, job.id)
+
+        logger.info(f"[QA_ROUTER] Enqueued new job {job.id}")
+
         return QAJobResponse(
             job_id=job.id,
             status="queued"
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -238,11 +310,12 @@ async def ask_question_stream(
         Async generator that yields SSE events as job progresses.
 
         Flow:
-        1. Enqueue job to Redis queue
-        2. Yield queued event with job_id
-        3. Poll job status every 300ms
-        4. Yield stage changes as they occur
-        5. Yield complete/error event when done
+        1. Check for existing duplicate job (dedup)
+        2. Enqueue job to Redis queue (with TTL)
+        3. Yield queued event with job_id
+        4. Poll job status every 300ms
+        5. Yield stage changes as they occur
+        6. Yield complete/error event when done
         """
         try:
             # Connect to Redis queue
@@ -250,17 +323,33 @@ async def ask_question_stream(
             redis_conn = Redis.from_url(redis_url)
             queue = Queue("qa_jobs", connection=redis_conn)
 
-            # Enqueue job
-            job = queue.enqueue(
-                "app.workers.qa_worker.process_qa_job",
-                question=req.question,
-                workspace_id=workspace_id,
-                user_id=str(current_user.id),
-            )
+            user_id = str(current_user.id)
 
-            # Debug: Log that job was enqueued
-            print(f"[QA_ROUTER] Enqueued job {job.id} to qa_jobs queue (redis={redis_url})")
-            print(f"[QA_ROUTER] Question: {req.question}")
+            # Check for duplicate job (same user, workspace, question)
+            dedup_key = _generate_dedup_key(user_id, workspace_id, req.question)
+            existing_job = _find_existing_job(redis_conn, queue, dedup_key)
+
+            if existing_job:
+                # Reuse existing job instead of creating duplicate
+                job = existing_job
+                logger.info(f"[QA_ROUTER] Reusing existing job {job.id} for SSE stream (dedup)")
+            else:
+                # Enqueue new job with TTL and timeout
+                job = queue.enqueue(
+                    "app.workers.qa_worker.process_qa_job",
+                    question=req.question,
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    job_timeout=JOB_TIMEOUT_SECONDS,
+                    result_ttl=JOB_TTL_SECONDS,
+                    ttl=JOB_TTL_SECONDS,
+                )
+
+                # Store dedup key → job_id mapping
+                redis_conn.setex(dedup_key, DEDUP_WINDOW_SECONDS, job.id)
+                logger.info(f"[QA_ROUTER] Enqueued new job {job.id} to qa_jobs queue")
+
+            logger.debug(f"[QA_ROUTER] Question: {req.question}")
 
             # Yield queued event
             yield f"data: {json.dumps({'stage': 'queued', 'job_id': job.id})}\n\n"
@@ -320,3 +409,229 @@ async def ask_question_stream(
             "X-Accel-Buffering": "no",  # Disable nginx buffering
         }
     )
+
+
+# =============================================================================
+# FEEDBACK ENDPOINTS (Self-Learning System)
+# =============================================================================
+
+from app.schemas import QaFeedbackCreate, QaFeedbackResponse, QaFeedbackStats
+from app.models import QaQueryLog, QaFeedback, FeedbackTypeEnum
+from sqlalchemy import func
+from uuid import UUID
+
+
+@router.post("/feedback", response_model=QaFeedbackResponse)
+def submit_feedback(
+    feedback: QaFeedbackCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/feedback
+
+    Submit feedback on a QA answer for self-learning.
+
+    Input:
+        {
+            "query_log_id": "uuid-of-query",
+            "rating": 5,  # 1-5 scale
+            "feedback_type": "accuracy",  # optional
+            "comment": "Great answer!",  # optional
+            "corrected_answer": null  # optional - what it should have said
+        }
+
+    Returns: The created feedback record
+
+    Notes:
+        - Highly-rated answers (4-5) can be marked as few-shot examples
+        - Low-rated answers (1-2) are flagged for review
+        - Feedback is linked to the original query for context
+    """
+    # Verify query exists and user has access
+    query_log = db.query(QaQueryLog).filter(
+        QaQueryLog.id == UUID(feedback.query_log_id)
+    ).first()
+
+    if not query_log:
+        raise HTTPException(status_code=404, detail="Query log not found")
+
+    # Check if feedback already exists
+    existing = db.query(QaFeedback).filter(
+        QaFeedback.query_log_id == UUID(feedback.query_log_id),
+        QaFeedback.user_id == current_user.id,
+    ).first()
+
+    if existing:
+        # Update existing feedback
+        existing.rating = feedback.rating
+        existing.feedback_type = FeedbackTypeEnum(feedback.feedback_type.value) if feedback.feedback_type else None
+        existing.comment = feedback.comment
+        existing.corrected_answer = feedback.corrected_answer
+        db.commit()
+        db.refresh(existing)
+
+        return QaFeedbackResponse(
+            id=str(existing.id),
+            query_log_id=str(existing.query_log_id),
+            user_id=str(existing.user_id),
+            rating=existing.rating,
+            feedback_type=existing.feedback_type.value if existing.feedback_type else None,
+            comment=existing.comment,
+            corrected_answer=existing.corrected_answer,
+            is_few_shot_example=existing.is_few_shot_example,
+            created_at=existing.created_at,
+        )
+
+    # Create new feedback
+    new_feedback = QaFeedback(
+        query_log_id=UUID(feedback.query_log_id),
+        user_id=current_user.id,
+        rating=feedback.rating,
+        feedback_type=FeedbackTypeEnum(feedback.feedback_type.value) if feedback.feedback_type else None,
+        comment=feedback.comment,
+        corrected_answer=feedback.corrected_answer,
+        # Auto-mark excellent answers as potential few-shot examples
+        is_few_shot_example=feedback.rating >= 5,
+    )
+
+    db.add(new_feedback)
+    db.commit()
+    db.refresh(new_feedback)
+
+    logger.info(f"Feedback submitted: rating={feedback.rating} for query={feedback.query_log_id}")
+
+    return QaFeedbackResponse(
+        id=str(new_feedback.id),
+        query_log_id=str(new_feedback.query_log_id),
+        user_id=str(new_feedback.user_id),
+        rating=new_feedback.rating,
+        feedback_type=new_feedback.feedback_type.value if new_feedback.feedback_type else None,
+        comment=new_feedback.comment,
+        corrected_answer=new_feedback.corrected_answer,
+        is_few_shot_example=new_feedback.is_few_shot_example,
+        created_at=new_feedback.created_at,
+    )
+
+
+@router.get("/feedback/{query_log_id}", response_model=QaFeedbackResponse)
+def get_feedback(
+    query_log_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/feedback/{query_log_id}
+
+    Get feedback for a specific query.
+    """
+    feedback = db.query(QaFeedback).filter(
+        QaFeedback.query_log_id == UUID(query_log_id)
+    ).first()
+
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+
+    return QaFeedbackResponse(
+        id=str(feedback.id),
+        query_log_id=str(feedback.query_log_id),
+        user_id=str(feedback.user_id),
+        rating=feedback.rating,
+        feedback_type=feedback.feedback_type.value if feedback.feedback_type else None,
+        comment=feedback.comment,
+        corrected_answer=feedback.corrected_answer,
+        is_few_shot_example=feedback.is_few_shot_example,
+        created_at=feedback.created_at,
+    )
+
+
+@router.get("/feedback/stats", response_model=QaFeedbackStats)
+def get_feedback_stats(
+    workspace_id: str = Query(..., description="Workspace to get stats for"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/feedback/stats?workspace_id=...
+
+    Get aggregated feedback statistics for monitoring QA performance.
+    """
+    # Get all feedback for queries in this workspace
+    feedback_query = (
+        db.query(QaFeedback)
+        .join(QaQueryLog)
+        .filter(QaQueryLog.workspace_id == UUID(workspace_id))
+    )
+
+    all_feedback = feedback_query.all()
+
+    if not all_feedback:
+        return QaFeedbackStats(
+            total_feedback=0,
+            average_rating=0.0,
+            rating_distribution={1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+            feedback_by_type={},
+            few_shot_examples_count=0,
+        )
+
+    # Calculate stats
+    total = len(all_feedback)
+    avg_rating = sum(f.rating for f in all_feedback) / total
+
+    rating_dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    type_counts = {}
+    few_shot_count = 0
+
+    for f in all_feedback:
+        rating_dist[f.rating] = rating_dist.get(f.rating, 0) + 1
+        if f.feedback_type:
+            type_counts[f.feedback_type.value] = type_counts.get(f.feedback_type.value, 0) + 1
+        if f.is_few_shot_example:
+            few_shot_count += 1
+
+    return QaFeedbackStats(
+        total_feedback=total,
+        average_rating=round(avg_rating, 2),
+        rating_distribution=rating_dist,
+        feedback_by_type=type_counts,
+        few_shot_examples_count=few_shot_count,
+    )
+
+
+@router.get("/examples", response_model=list[dict])
+def get_few_shot_examples(
+    workspace_id: str = Query(..., description="Workspace to get examples from"),
+    limit: int = Query(10, ge=1, le=50, description="Max examples to return"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/examples?workspace_id=...&limit=10
+
+    Get highly-rated Q&A pairs for use as few-shot examples.
+
+    Returns questions with 5-star ratings that can be used
+    to improve future answer generation.
+    """
+    examples = (
+        db.query(QaQueryLog)
+        .join(QaFeedback)
+        .filter(
+            QaQueryLog.workspace_id == UUID(workspace_id),
+            QaFeedback.is_few_shot_example == True,
+            QaQueryLog.answer_text.isnot(None),
+        )
+        .order_by(QaFeedback.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "question": ex.question_text,
+            "answer": ex.answer_text,
+            "dsl": ex.dsl_json,
+            "rating": ex.feedback.rating if ex.feedback else None,
+        }
+        for ex in examples
+    ]

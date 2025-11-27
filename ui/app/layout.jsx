@@ -4,8 +4,8 @@ import "./globals.css";
 import AppProviders from "./providers";
 
 export const metadata = {
-  title: "AdNavi",
-  description: "AdNavi - AI Marketing Assistant",
+  title: "metricx",
+  description: "metricx - AI Marketing Assistant",
 };
 
 export default function RootLayout({ children }) {

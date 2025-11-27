@@ -43,7 +43,7 @@ export default function LoginPage() {
 
         {/* App title */}
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight gradient-text mb-8">
-          AdNavi
+          metricx
         </h1>
 
         {/* Auth card */}

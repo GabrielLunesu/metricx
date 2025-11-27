@@ -349,18 +349,18 @@ class QAService:
             result_data = convert_decimals_to_floats(result_data)
 
             # Debug: Log result_data before building visuals
-            print(f"[QA_SERVICE] Building visuals with result_data keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'not a dict'}")
+            logger.debug(f"[QA_SERVICE] Building visuals with result_data keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'not a dict'}")
             if isinstance(result_data, dict):
                 ts_prev = result_data.get('timeseries_previous')
-                print(f"[QA_SERVICE] timeseries_previous in result_data: {len(ts_prev) if ts_prev else 'None/empty'} points")
+                logger.debug(f"[QA_SERVICE] timeseries_previous in result_data: {len(ts_prev) if ts_prev else 'None/empty'} points")
 
             visuals = build_visual_payload(dsl, result_data, window)
 
             # Debug: Log what visuals were built
             if visuals:
-                print(f"[QA_SERVICE] Visuals built - viz_specs count: {len(visuals.get('viz_specs', []))}")
+                logger.debug(f"[QA_SERVICE] Visuals built - viz_specs count: {len(visuals.get('viz_specs', []))}")
                 for i, spec in enumerate(visuals.get('viz_specs', [])):
-                    print(f"[QA_SERVICE] viz_spec[{i}]: type={spec.get('type')}, series_count={len(spec.get('series', []))}")
+                    logger.debug(f"[QA_SERVICE] viz_spec[{i}]: type={spec.get('type')}, series_count={len(spec.get('series', []))}")
             
             # Store context for future follow-up questions (if Redis is available)
             if self.context_manager:

@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Privacy Policy | AdNavi',
-  description: 'AdNavi Privacy Policy - How we collect, use, and protect your data'
+  title: 'Privacy Policy | metricx',
+  description: 'metricx Privacy Policy - How we collect, use, and protect your data'
 };
 
 export default function PrivacyPolicy() {
@@ -10,7 +10,7 @@ export default function PrivacyPolicy() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-neutral-200/40 bg-white/80 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center">
-            <img src="/adnavi.png" alt="AdNavi" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
+            <img src="/metricx.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
           </a>
           <div className="flex items-center gap-8">
             <a href="/#features" className="text-sm font-medium text-neutral-600 hover:text-cyan-600 transition-colors">Features</a>
@@ -35,16 +35,16 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
             <p className="mb-4">
-              AdNavi ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our advertising analytics platform and services.
+              metricx ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our advertising analytics platform and services.
             </p>
             <p className="mb-4">
-              By using AdNavi, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our services.
+              By using metricx, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our services.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">2. Information We Collect</h2>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">2.1 Information You Provide</h3>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li><strong>Account Information:</strong> Name, email address, and password when you create an account</li>
@@ -80,7 +80,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">3. How We Use Your Information</h2>
             <p className="mb-4">We use the collected information for the following purposes:</p>
-            
+
             <h3 className="text-xl font-semibold mb-3 mt-6">3.1 Core Service Delivery</h3>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Display your advertising campaign performance in unified dashboards</li>
@@ -109,7 +109,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>Detect and prevent fraud or unauthorized access</li>
               <li>Comply with legal obligations and enforce our terms</li>
-              <li>Protect the rights and safety of AdNavi and our users</li>
+              <li>Protect the rights and safety of metricx and our users</li>
             </ul>
           </section>
 
@@ -150,7 +150,7 @@ export default function PrivacyPolicy() {
 
             <h3 className="text-xl font-semibold mb-3 mt-6">4.4 Business Transfers</h3>
             <p className="mb-4">
-              If AdNavi is involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you via email and/or prominent notice on our platform of any such change.
+              If metricx is involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you via email and/or prominent notice on our platform of any such change.
             </p>
           </section>
 
@@ -221,7 +221,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">8. Third-Party Services</h2>
             <p className="mb-4">
-              AdNavi integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.). When you connect these accounts:
+              metricx integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.). When you connect these accounts:
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>You are subject to the privacy policies and terms of those platforms</li>
@@ -241,7 +241,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">9. International Data Transfers</h2>
             <p className="mb-4">
-              Your information may be transferred to and processed in countries other than your country of residence. These countries may have different data protection laws. By using AdNavi, you consent to the transfer of your information to our facilities and service providers globally.
+              Your information may be transferred to and processed in countries other than your country of residence. These countries may have different data protection laws. By using metricx, you consent to the transfer of your information to our facilities and service providers globally.
             </p>
             <p className="mb-4">
               We take steps to ensure that your data receives adequate protection wherever it is processed, including through standard contractual clauses and other appropriate safeguards.
@@ -251,7 +251,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">10. Children's Privacy</h2>
             <p className="mb-4">
-              AdNavi is not intended for use by individuals under the age of 18. We do not knowingly collect personal information from children. If we learn that we have collected information from a child under 18, we will delete it immediately.
+              metricx is not intended for use by individuals under the age of 18. We do not knowingly collect personal information from children. If we learn that we have collected information from a child under 18, we will delete it immediately.
             </p>
           </section>
 
@@ -298,7 +298,7 @@ export default function PrivacyPolicy() {
               <li>Display a prominent notice in the platform</li>
             </ul>
             <p className="mb-4">
-              Your continued use of AdNavi after changes constitutes acceptance of the updated policy.
+              Your continued use of metricx after changes constitutes acceptance of the updated policy.
             </p>
           </section>
 
@@ -308,8 +308,8 @@ export default function PrivacyPolicy() {
               If you have questions about this Privacy Policy or our data practices, you can contact us at:
             </p>
             <div className="bg-muted p-4 rounded-lg">
-              <p className="mb-2"><strong>AdNavi</strong></p>
-              <p className="mb-2">Website: <a href="https://www.adnavi.app" className="text-primary hover:underline">www.adnavi.app</a></p>
+              <p className="mb-2"><strong>metricx</strong></p>
+              <p className="mb-2">Website: <a href="https://www.metricx.ai" className="text-primary hover:underline">www.metricx.ai</a></p>
               <p className="mb-2">Privacy Inquiries: Available through in-app support</p>
             </div>
           </section>
@@ -327,7 +327,7 @@ export default function PrivacyPolicy() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between flex-wrap gap-8">
             <a href="/" className="flex items-center">
-              <img src="/adnavi.png" alt="AdNavi" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
+              <img src="/metricx.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
             </a>
             <nav className="flex items-center gap-8 flex-wrap">
               <a href="/#features" className="text-sm font-medium text-neutral-500 hover:text-cyan-600 transition-colors">Features</a>
@@ -337,7 +337,7 @@ export default function PrivacyPolicy() {
             </nav>
           </div>
           <div className="mt-8 pt-8 border-t border-neutral-200/60 flex items-center justify-between flex-wrap gap-4">
-            <p className="text-sm text-neutral-500">© 2024 AdNavi. All rights reserved.</p>
+            <p className="text-sm text-neutral-500">© 2024 metricx. All rights reserved.</p>
             <div className="flex items-center gap-6">
               <a href="/privacy" className="text-sm text-neutral-500 hover:text-cyan-600 transition-colors">Privacy Policy</a>
               <a href="/terms" className="text-sm text-neutral-500 hover:text-cyan-600 transition-colors">Terms of Service</a>

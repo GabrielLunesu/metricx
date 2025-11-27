@@ -218,10 +218,10 @@ export default function ConnectionsTab({ user }) {
                                                     {connection.name || getProviderLabel(connection.provider)}
                                                 </h3>
                                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${connection.status === 'active'
-                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                        : connection.status === 'inactive'
-                                                            ? 'bg-neutral-100 text-neutral-700'
-                                                            : 'bg-red-100 text-red-700'
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : connection.status === 'inactive'
+                                                        ? 'bg-neutral-100 text-neutral-700'
+                                                        : 'bg-red-100 text-red-700'
                                                     }`}>
                                                     {connection.status || 'unknown'}
                                                 </span>
@@ -260,7 +260,7 @@ export default function ConnectionsTab({ user }) {
                                             <div className="flex-1">
                                                 <p className="text-sm font-medium text-neutral-900">Sync Frequency</p>
                                                 <p className="text-xs text-neutral-500">
-                                                    Choose how often AdNavi automatically syncs this account.
+                                                    Choose how often metricx automatically syncs this account.
                                                 </p>
                                             </div>
                                             <select

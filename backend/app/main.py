@@ -299,9 +299,9 @@ class AuthCredentialAdmin(ModelView, model=models.AuthCredential):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="AdNavi API",
+        title="metricx API",
         description="""
-        AdNavi is a comprehensive advertising analytics and optimization platform.
+        metricx is a comprehensive advertising analytics and optimization platform.
         
         This API provides endpoints for:
         - User authentication and workspace management
@@ -327,8 +327,8 @@ def create_app() -> FastAPI:
         """,
         version="1.0.0",
         contact={
-            "name": "AdNavi Support",
-            "email": "support@adnavi.com",
+            "name": "metricx Support",
+            "email": "support@metricx.com",
         },
         license_info={
             "name": "Proprietary",
@@ -362,7 +362,7 @@ def create_app() -> FastAPI:
     )
     
     # CORS configuration - support multiple origins from environment variable
-    # BACKEND_CORS_ORIGINS can be a comma-separated list: "https://www.adnavi.app,http://localhost:3000"
+    # BACKEND_CORS_ORIGINS can be a comma-separated list: "https://www.metricx.ai,http://localhost:3000"
     cors_origins_str = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000")
     ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
     
@@ -371,8 +371,8 @@ def create_app() -> FastAPI:
         ALLOWED_ORIGINS.append("http://localhost:3000")
     
     # Always include production domain
-    if "https://www.adnavi.app" not in ALLOWED_ORIGINS:
-        ALLOWED_ORIGINS.append("https://www.adnavi.app")
+    if "https://www.metricx.ai" not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append("https://www.metricx.ai")
     
     # Get backend URL from environment (for Swagger UI same-origin requests)
     backend_url = os.getenv("BACKEND_URL") or os.getenv("DEFANG_SERVICE_URL")
@@ -446,7 +446,7 @@ def create_app() -> FastAPI:
     admin = Admin(
         app, 
         engine, 
-        title="AdNavi Admin",
+        title="metricx Admin",
         authentication_backend=authentication_backend
     )
     

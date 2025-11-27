@@ -12,7 +12,7 @@ export default function CopilotHeader() {
                 </div>
 
                 <div className="flex flex-col">
-                    <h1 className="text-sm font-bold tracking-tight text-slate-800">AdNavi Copilot</h1>
+                    <h1 className="text-sm font-bold tracking-tight text-slate-800">metricx Copilot</h1>
                     <span className="text-[11px] text-slate-500 font-medium">Ask anything about your campaigns, ad sets and ads.</span>
                 </div>
             </div>

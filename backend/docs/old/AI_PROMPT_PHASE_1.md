@@ -6,7 +6,7 @@
 
 ## Context
 
-We're building AdNavi, a marketing analytics copilot. The QA system currently gives overly verbose, robotic answers. We need to fix critical bugs and make answers natural and context-appropriate.
+We're building metricx, a marketing analytics copilot. The QA system currently gives overly verbose, robotic answers. We need to fix critical bugs and make answers natural and context-appropriate.
 
 **Current Problem**:
 ```
@@ -32,9 +32,9 @@ Implement Phase 1 of the Natural Copilot roadmap:
 **Timeline**: 5 days
 
 **Reference Docs**:
-- `/Users/gabriellunesu/Git/AdNavi/backend/docs/PHASE_1_IMPLEMENTATION_SPEC.md` - Full detailed spec
-- `/Users/gabriellunesu/Git/AdNavi/backend/docs/ROADMAP_TO_NATURAL_COPILOT.md` - Overall strategy
-- `/Users/gabriellunesu/Git/AdNavi/backend/docs/100-realistic-questions.md` - Test questions
+- `/Users/gabriellunesu/Git/metricx/backend/docs/PHASE_1_IMPLEMENTATION_SPEC.md` - Full detailed spec
+- `/Users/gabriellunesu/Git/metricx/backend/docs/ROADMAP_TO_NATURAL_COPILOT.md` - Overall strategy
+- `/Users/gabriellunesu/Git/metricx/backend/docs/100-realistic-questions.md` - Test questions
 
 ---
 
@@ -317,7 +317,7 @@ backend/app/answer/
 4. **Documentation**:
    - Update docs after each step
    - Log everything for observability
-   - Keep ADNAVI_BUILD_LOG.md current
+   - Keep metricx_BUILD_LOG.md current
 
 ---
 

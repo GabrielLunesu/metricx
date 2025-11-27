@@ -833,7 +833,7 @@ const { workspaceId } = useAuth(); // From context
 - **Campaigns Page**: `ui/app/(dashboard)/campaigns/page.jsx`
 - **Campaign Detail**: `ui/app/(dashboard)/campaigns/[id]/page.jsx`
 - **Ad Set Detail**: `ui/app/(dashboard)/campaigns/[id]/[adsetId]/page.jsx`
-- **Build Log**: `docs/ADNAVI_BUILD_LOG.md`
+- **Build Log**: `docs/metricx_BUILD_LOG.md`
 
 ---
 

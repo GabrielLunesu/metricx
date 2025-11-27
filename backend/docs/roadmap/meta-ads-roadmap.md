@@ -135,7 +135,7 @@ Tasks:
 - Avoid duplicates
 - Reflect status changes (active/paused/deleted)
 
-Deliverable: Ad structure in AdNavi
+Deliverable: Ad structure in metricx
 
 ---
 

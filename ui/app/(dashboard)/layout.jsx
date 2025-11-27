@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen w-full aurora-bg relative overflow-hidden text-slate-800 font-sans antialiased selection:bg-cyan-100 selection:text-cyan-900">
 
-      {/* AdNavi Aurora Layer™ */}
+      {/* metricx Aurora Layer™ */}
       <AuroraBackground />
 
       {/* Dashboard Shell */}

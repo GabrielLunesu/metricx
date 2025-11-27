@@ -1,7 +1,7 @@
 # User Profile & Authentication Implementation
 
 ## Overview
-This document details the implementation of User Profile management and Authentication features in AdNavi. The system uses JWT-based authentication with HTTP-only cookies for security, and includes flows for registration, login, profile updates, password management, and email verification.
+This document details the implementation of User Profile management and Authentication features in metricx. The system uses JWT-based authentication with HTTP-only cookies for security, and includes flows for registration, login, profile updates, password management, and email verification.
 
 ## Features Implemented
 

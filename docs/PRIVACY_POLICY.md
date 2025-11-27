@@ -4,9 +4,9 @@
 
 ## 1. Introduction
 
-AdNavi ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our advertising analytics platform and services.
+metricx ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our advertising analytics platform and services.
 
-By using AdNavi, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our services.
+By using metricx, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our services.
 
 ## 2. Information We Collect
 
@@ -54,7 +54,7 @@ We use cookies and similar tracking technologies to maintain your session, remem
 ### 3.4 Security and Compliance
 - Detect and prevent fraud or unauthorized access
 - Comply with legal obligations and enforce our terms
-- Protect the rights and safety of AdNavi and our users
+- Protect the rights and safety of metricx and our users
 
 ## 4. How We Share Your Information
 
@@ -79,7 +79,7 @@ We may disclose information if required by law, court order, or governmental reg
 - Protect the safety of users or the public
 
 ### 4.4 Business Transfers
-If AdNavi is involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you via email and/or prominent notice on our platform of any such change.
+If metricx is involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you via email and/or prominent notice on our platform of any such change.
 
 ## 5. Data Security
 
@@ -120,7 +120,7 @@ You can opt out of non-essential communications by adjusting your notification p
 
 ## 8. Third-Party Services
 
-AdNavi integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.). When you connect these accounts:
+metricx integrates with third-party advertising platforms (Google Ads, Meta Ads, etc.). When you connect these accounts:
 - You are subject to the privacy policies and terms of those platforms
 - We only access data you authorize through OAuth consent screens
 - We do not control how those platforms collect or use your information
@@ -132,13 +132,13 @@ Links to third-party privacy policies:
 
 ## 9. International Data Transfers
 
-Your information may be transferred to and processed in countries other than your country of residence. These countries may have different data protection laws. By using AdNavi, you consent to the transfer of your information to our facilities and service providers globally.
+Your information may be transferred to and processed in countries other than your country of residence. These countries may have different data protection laws. By using metricx, you consent to the transfer of your information to our facilities and service providers globally.
 
 We take steps to ensure that your data receives adequate protection wherever it is processed, including through standard contractual clauses and other appropriate safeguards.
 
 ## 10. Children's Privacy
 
-AdNavi is not intended for use by individuals under the age of 18. We do not knowingly collect personal information from children. If we learn that we have collected information from a child under 18, we will delete it immediately.
+metricx is not intended for use by individuals under the age of 18. We do not knowingly collect personal information from children. If we learn that we have collected information from a child under 18, we will delete it immediately.
 
 ## 11. California Privacy Rights (CCPA)
 
@@ -168,14 +168,14 @@ We may update this Privacy Policy from time to time. When we make changes, we wi
 - Notify you via email for material changes
 - Display a prominent notice in the platform
 
-Your continued use of AdNavi after changes constitutes acceptance of the updated policy.
+Your continued use of metricx after changes constitutes acceptance of the updated policy.
 
 ## 14. Contact Us
 
 If you have questions about this Privacy Policy or our data practices, you can contact us at:
 
-**AdNavi**  
-Website: www.adnavi.app  
+**metricx**  
+Website: www.metricx.ai  
 Privacy Inquiries: Available through in-app support
 
 ---

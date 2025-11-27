@@ -11,7 +11,7 @@ import {
     ChartLegendContent
 } from "@/components/ui/chart"
 
-export function AdNaviChart({
+export function metricxChart({
     data,
     config,
     type = 'area', // 'area' | 'bar'

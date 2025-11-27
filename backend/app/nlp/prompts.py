@@ -83,6 +83,45 @@ FEW_SHOT_EXAMPLES = [
             "filters": {}
         }
     },
+    # NEW v2.6: Month-vs-Month comparison examples (e.g., "September vs October")
+    # CRITICAL: When comparing specific months, use the LATER month as time_range
+    # and set compare_to_previous=True to compare against the earlier month
+    {
+        "question": "Spend September vs October",
+        "dsl": {
+            "metric": "spend",
+            "time_range": {"start": "2025-10-01", "end": "2025-10-31"},  # Later month
+            "compare_to_previous": True,  # Will compare to September
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
+    {
+        "question": "Compare ROAS in August vs September",
+        "dsl": {
+            "metric": "roas",
+            "time_range": {"start": "2025-09-01", "end": "2025-09-30"},  # Later month (September)
+            "compare_to_previous": True,  # Will compare to August
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
+    {
+        "question": "How did revenue compare October to November?",
+        "dsl": {
+            "metric": "revenue",
+            "time_range": {"start": "2025-11-01", "end": "2025-11-30"},  # Later month
+            "compare_to_previous": True,  # Will compare to October
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {}
+        }
+    },
     {
         "question": "Compare revenue to last week",
         "dsl": {
@@ -565,6 +604,218 @@ FEW_SHOT_EXAMPLES = [
         }
     },
     
+    # "ALL" queries - CRITICAL: Use top_n: 50 (maximum) when user says "all"
+    # These queries want to see ALL entities, not just top 5
+    {
+        "question": "Compare all campaigns",
+        "dsl": {
+            "metric": "roas",  # Default to ROAS for performance comparison
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 50,  # CRITICAL: "all" = maximum (50)
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show all campaigns by ROAS",
+        "dsl": {
+            "metric": "roas",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 50,  # "all" = 50
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Give me all campaigns performance",
+        "dsl": {
+            "metric": "revenue",  # "performance" defaults to revenue
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 50,  # "all" = 50
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show me all adsets",
+        "dsl": {
+            "metric": "revenue",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "adset",
+            "breakdown": "adset",
+            "top_n": 50,  # "all" = 50
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Compare all my ads by CPC",
+        "dsl": {
+            "metric": "cpc",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 50,  # "all" = 50
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+
+    # Output format examples (NEW - table/chart/text preferences)
+    # IMPORTANT: "compare all campaigns" uses METRICS query with breakdown (NOT comparison).
+    # This ensures ALL campaigns are included, not just specific named ones.
+
+    # ===============================================================================
+    # GRAPH/CHART EXAMPLES - CRITICAL DISTINCTION:
+    # - "graph" = multi-line LINE chart showing trends over time (one line per entity)
+    # - "chart" = same as graph (line chart with multiple lines)
+    # - For "top N" queries without metric: default to "spend" (SINGLE metric for sorting)
+    # - output_format: "chart" triggers the executor to fetch per-entity timeseries
+    # - ALWAYS use SINGLE metric for graph queries (not arrays like ["spend", "revenue"])
+    # ===============================================================================
+    {
+        "question": "make a graph of the top 5 ads last week",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "spend",  # SINGLE metric - will show each ad's spend trend as a line
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "chart",  # Triggers multi-line LINE chart (one line per ad)
+            "metric_inferred": True  # User didn't specify metric, defaulted to spend
+        }
+    },
+    {
+        "question": "show me a chart of campaign spend",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "spend",  # Single metric - will show each campaign's spend trend
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 10,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "chart"  # Multi-line chart
+        }
+    },
+    {
+        "question": "graph my top 10 campaigns by revenue",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "revenue",  # User specified "by revenue" - shows revenue trend per campaign
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 10,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "chart"
+        }
+    },
+    {
+        "question": "line chart of my top 3 adsets",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "spend",  # Default to spend for sorting
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "adset",
+            "breakdown": "adset",
+            "top_n": 3,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "chart",
+            "metric_inferred": True  # User didn't specify metric
+        }
+    },
+    {
+        "question": "compare all campaigns in a table",
+        "dsl": {
+            "query_type": "metrics",  # Use metrics breakdown, NOT comparison query
+            "metric": ["spend", "revenue", "roas"],  # Multiple metrics for comparison
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 50,  # Get ALL campaigns
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"  # User explicitly wants table
+        }
+    },
+    {
+        "question": "show me campaign performance in a table",
+        "dsl": {
+            "metric": ["spend", "revenue", "roas"],
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 50,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"
+        }
+    },
+    {
+        "question": "give me a table of all adsets by CPC",
+        "dsl": {
+            "metric": "cpc",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "adset",
+            "breakdown": "adset",
+            "top_n": 50,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"
+        }
+    },
+    {
+        "question": "show me ROAS trend as a chart",
+        "dsl": {
+            "metric": "roas",
+            "time_range": {"last_n_days": 30},
+            "compare_to_previous": False,
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {},
+            "output_format": "chart"
+        }
+    },
+    {
+        "question": "just tell me my spend this week",
+        "dsl": {
+            "metric": "spend",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "none",
+            "breakdown": None,
+            "top_n": 5,
+            "filters": {},
+            "output_format": "text"
+        }
+    },
+
     # Non-metrics queries
     {
         "question": "Which platforms am I running ads on?",
@@ -761,11 +1012,218 @@ FEW_SHOT_EXAMPLES = [
             "filters": {}
         }
     },
+
+    # ===============================================================================
+    # CREATIVE QUERIES - v2.5
+    # "creatives" = ads with visual assets (thumbnail images)
+    # IMPORTANT: Creative images are ONLY available for Meta (Facebook/Instagram) ads.
+    # For Google/TikTok ads, we can show performance data but NOT creative images.
+    # Default top_n: 5 for creative queries (user expects multiple creatives)
+    # ===============================================================================
+    {
+        "question": "Show best creatives",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "roas",  # "best" = highest ROAS
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",  # Creatives = ads
+            "top_n": 5,  # Multiple creatives expected
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show me my top 5 creatives",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "spend",  # Default to spend for "top" without metric
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "desc",
+            "filters": {},
+            "metric_inferred": True  # No metric specified, defaulted to spend
+        }
+    },
+    {
+        "question": "Which creatives have the best ROAS?",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "roas",
+            "time_range": {"last_n_days": 14},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show me the worst performing creatives",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "roas",  # "worst performing" = lowest ROAS
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "asc",  # Ascending for worst
+            "filters": {}
+        }
+    },
+    {
+        "question": "Show me Meta creatives by CTR",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "ctr",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 5,
+            "sort_order": "desc",
+            "filters": {
+                "provider": "meta"  # Only Meta ads have creative images
+            }
+        }
+    },
+    {
+        "question": "Top 10 ad creatives by spend this month",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": "spend",
+            "time_range": {"last_n_days": 30},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 10,
+            "sort_order": "desc",
+            "filters": {}
+        }
+    },
 ]
 
 # Follow-up examples (demonstrating context usage)
-# These show how to handle pronouns and implicit references
+# These show how to handle pronouns, implicit references, and format changes
 FOLLOW_UP_EXAMPLES = [
+    # Format change follow-ups (NEW - output_format changes)
+    {
+        "context": "Previous: 'compare all campaigns' → breakdown: campaign, metric: roas",
+        "question": "put that in a table",
+        "dsl": {
+            "metric": "roas",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 50,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"  # User wants to change format to table
+        }
+    },
+    {
+        "context": "Previous: 'show me campaign ROAS' → breakdown: campaign, metric: roas",
+        "question": "show as table instead",
+        "dsl": {
+            "metric": "roas",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 50,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"
+        }
+    },
+    {
+        "context": "Previous: 'what's my spend by campaign' → breakdown: campaign, metric: spend",
+        "question": "can you chart that?",
+        "dsl": {
+            "metric": "spend",
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 10,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "chart"
+        }
+    },
+    # Entity level change follow-ups (campaigns → ads, etc.)
+    {
+        "context": "Previous: 'compare all campaigns in a table' → breakdown: campaign, output_format: table",
+        "question": "now all ads",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": ["spend", "revenue", "roas"],
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 50,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"  # INHERIT from previous query
+        }
+    },
+    {
+        "context": "Previous: 'show all ads in a table' → breakdown: ad, output_format: table",
+        "question": "now adsets",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": ["spend", "revenue", "roas"],
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "adset",
+            "breakdown": "adset",
+            "top_n": 50,
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"  # INHERIT from previous query
+        }
+    },
+    # Top N adjustment follow-ups
+    {
+        "context": "Previous: 'show all ads' → breakdown: ad, top_n: 50",
+        "question": "put the top 10 in a table",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": ["spend", "revenue", "roas"],
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "ad",
+            "breakdown": "ad",
+            "top_n": 10,  # User specified top 10
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"  # User explicitly asked for table
+        }
+    },
+    {
+        "context": "Previous: 'compare all campaigns' → breakdown: campaign",
+        "question": "just show top 5",
+        "dsl": {
+            "query_type": "metrics",
+            "metric": ["spend", "revenue", "roas"],
+            "time_range": {"last_n_days": 7},
+            "compare_to_previous": False,
+            "group_by": "campaign",
+            "breakdown": "campaign",
+            "top_n": 5,  # User specified top 5
+            "sort_order": "desc",
+            "filters": {},
+            "output_format": "table"
+        }
+    },
     {
         "context": "Previous: 'How many conversions this week?' → Metric Used: conversions",
         "question": "And the week before?",
@@ -856,7 +1314,25 @@ CRITICAL - Date Range Rules:
    - "last quarter", "last year" → {"last_n_days": 90}
    - "in September", "from Jan 1 to Jan 31", "2023-09-01 to 2023-09-30" → {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
 
-4. NEVER use both formats in the same query!
+2. YEAR INFERENCE (CRITICAL - v2.6):
+   When user mentions a month name WITHOUT a year:
+   - If the month is <= current month (today's month): use CURRENT year
+   - If the month is > current month: use PREVIOUS year
+   Example (if today is November 2025):
+     - "September" → 2025-09-01 to 2025-09-30 (September 2025)
+     - "December" → 2024-12-01 to 2024-12-31 (December 2024 - because Dec > Nov)
+   NEVER use old years like 2023 unless explicitly specified!
+
+3. MONTH VS MONTH COMPARISONS (CRITICAL - v2.6):
+   When user asks "X vs Y" where X and Y are month names:
+   - Use the LATER month as time_range (start/end dates)
+   - Set compare_to_previous: true to compare against the earlier month
+   Example: "September vs October"
+     - time_range: {"start": "2025-10-01", "end": "2025-10-31"} (October)
+     - compare_to_previous: true (will fetch September for comparison)
+   DO NOT combine both months into a single range!
+
+4. NEVER use both last_n_days and start/end formats in the same query!
 5. Default to {"last_n_days": 7} if timeframe is unclear.
 
 COMPARE_TO_PREVIOUS (v2.1 - CRITICAL for comparison charts):
@@ -866,12 +1342,14 @@ Set "compare_to_previous": true when user wants time period comparison:
 - "vs previous period" → compare_to_previous: true
 - "how did X change" → compare_to_previous: true
 - "X this week vs last week" → compare_to_previous: true
+- "September vs October" → compare_to_previous: true (month vs month)
 - Any question with "vs", "compared to", "change", "difference" → compare_to_previous: true
 
 Examples:
 - "Spend vs last week" → compare_to_previous: true (enables dual-line chart)
 - "What's my ROAS?" → compare_to_previous: false (simple metric query)
 - "Revenue compared to last month" → compare_to_previous: true
+- "Spend September vs October" → time_range: October, compare_to_previous: true
 """
 
     # Define the conversation context rules section
@@ -1075,6 +1553,70 @@ REQUIRED FIELDS FOR COMPARISON QUERIES:
 - time_range: Required for all comparison queries
 """
 
+    # Define the output format rules section
+    OUTPUT_FORMAT_RULES = """
+OUTPUT FORMAT (NEW - User Format Preference):
+Use "output_format" when user explicitly requests a specific format:
+- "auto": Let the system decide (DEFAULT)
+- "table": User wants tabular data display
+- "chart": User wants a chart/visualization ONLY (no cards, no table)
+- "text": User wants prose-only answer (no visuals)
+
+DETECTION RULES:
+- "in a table", "as a table", "show table", "put in table" → output_format: "table"
+- "show chart", "visualize", "graph", "make a graph", "chart of" → output_format: "chart"
+- "just tell me", "text only", "no chart" → output_format: "text"
+- No format mentioned → output_format: "auto"
+
+METRIC INFERENCE TRACKING (NEW v2.4 - CRITICAL):
+When user asks for "top N" or breakdown WITHOUT specifying a metric:
+- Default to "spend" as the sorting metric (most meaningful default)
+- Set "metric_inferred": true to indicate the metric was auto-selected
+- Only request ONE metric, not multiple
+
+When user EXPLICITLY specifies a metric (e.g., "by revenue", "by ROAS"):
+- Use the specified metric
+- Set "metric_inferred": false (or omit - defaults to false)
+
+EXAMPLES with metric_inferred:
+- "top 5 ads" → metric: "spend", metric_inferred: true (no metric specified)
+- "top 5 ads by revenue" → metric: "revenue", metric_inferred: false (user specified)
+- "graph top 10 campaigns" → metric: "spend", metric_inferred: true
+- "which campaign had highest ROAS?" → metric: "roas", metric_inferred: false (user specified ROAS)
+- "show me all campaigns" → metric: "spend", metric_inferred: true (performance query without metric)
+
+OUTPUT FORMAT EXAMPLES:
+- "compare all campaigns in a table" → output_format: "table", metric: ["spend", "revenue", "roas"]
+- "show me ROAS as a chart" → output_format: "chart", metric: "roas"
+- "make a graph of the top 5 ads" → output_format: "chart", metric: "spend", metric_inferred: true
+- "graph my top 10 campaigns by revenue" → output_format: "chart", metric: "revenue", metric_inferred: false
+- "just tell me the spend" → output_format: "text"
+- "what's my ROAS?" → output_format: "auto"
+"""
+
+    # Define the creative queries section
+    CREATIVE_QUERIES_SECTION = """
+CREATIVE QUERIES (NEW v2.5):
+"creatives" = ads with visual assets (thumbnail images, videos).
+
+IMPORTANT LIMITATION:
+- Creative images are ONLY available for Meta (Facebook/Instagram) ads
+- Google Ads and TikTok ads do NOT have creative image URLs stored
+- For non-Meta queries about creatives, show performance data but acknowledge no images
+
+TRANSLATION RULES FOR CREATIVE QUERIES:
+- "creatives" = breakdown: "ad" (creatives are ads)
+- "best creatives" = breakdown: "ad", sort_order: "desc", metric: "roas"
+- "top N creatives" = breakdown: "ad", top_n: N
+- DEFAULT: top_n: 5 for creative queries (user expects multiple, not just 1)
+
+EXAMPLES:
+- "Show best creatives" → breakdown: "ad", top_n: 5, metric: "roas", sort_order: "desc"
+- "Show me my top 5 creatives" → breakdown: "ad", top_n: 5, metric: "spend", metric_inferred: true
+- "Show me Meta creatives by CTR" → breakdown: "ad", filters: {provider: "meta"}, metric: "ctr"
+- "Which creatives have the best ROAS?" → breakdown: "ad", top_n: 5, metric: "roas", sort_order: "desc"
+"""
+
     # Define the JSON schema section
     JSON_SCHEMA_SECTION = """
 {
@@ -1090,39 +1632,45 @@ REQUIRED FIELDS FOR COMPARISON QUERIES:
   "thresholds": object | null,
   "comparison_type": "entity_vs_entity" | "provider_vs_provider" | "time_vs_time" | null,
   "comparison_entities": array | null,
-  "comparison_metrics": array | null
+  "comparison_metrics": array | null,
+  "output_format": "auto" | "table" | "chart" | "text",
+  "metric_inferred": boolean  // NEW v2.4: Set to true when metric was auto-selected (not specified by user)
 }
 """
 
     prompt = f"""You are an expert at translating marketing analytics questions into structured JSON queries.
-    
+
     {DATE_RANGE_RULES}
-    
+
     Your job is to convert natural language questions into a specific JSON format (DSL) that our backend uses to fetch data.
-    
+
     {CONVERSATION_CONTEXT_RULES}
-    
+
     {DEFAULT_METRIC_SELECTION_RULES}
-    
+
     {QUERY_TYPES_SECTION}
-    
+
     {COMPARISON_QUERY_RULES}
-    
+
     {METRICS_SECTION}
-    
+
     {FILTERS_SECTION}
-    
+
     {ENTITY_NAME_FILTERING_RULES}
-    
+
     {BREAKDOWN_DIMENSIONS_SECTION}
-    
+
     {THRESHOLDS_SECTION}
-    
+
     {SORT_ORDER_RULES}
-    
+
+    {OUTPUT_FORMAT_RULES}
+
+    {CREATIVE_QUERIES_SECTION}
+
     JSON SCHEMA:
     {JSON_SCHEMA_SECTION}
-    
+
     Remember: Output ONLY the JSON object, nothing else."""
     
     return prompt

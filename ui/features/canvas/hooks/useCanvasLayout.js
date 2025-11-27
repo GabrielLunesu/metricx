@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = (workspaceId) => `adnavi.canvas.layout.${workspaceId || 'unknown'}`;
+const STORAGE_KEY = (workspaceId) => `metricx.canvas.layout.${workspaceId || 'unknown'}`;
 
 export default function useCanvasLayout({ workspaceId }) {
   const [positions, setPositions] = useState({}); // id -> { x, y }
@@ -21,7 +21,7 @@ export default function useCanvasLayout({ workspaceId }) {
         setPositions(parsed.positions || {});
         setViewport(parsed.viewport || { x: 0, y: 0, zoom: 1 });
       }
-    } catch {}
+    } catch { }
   }, [workspaceId]);
 
   // Save
@@ -34,7 +34,7 @@ export default function useCanvasLayout({ workspaceId }) {
     try {
       const payload = JSON.stringify({ positions, viewport });
       localStorage.setItem(STORAGE_KEY(workspaceId), payload);
-    } catch {}
+    } catch { }
   }, [workspaceId, positions, viewport]);
 
   const updateNodePosition = useCallback((id, pos) => {

@@ -31,7 +31,7 @@ services:
        # OAuth Redirect URIs - ADD THESE
       META_OAUTH_REDIRECT_URI:
       GOOGLE_OAUTH_REDIRECT_URI:
-      FRONTEND_URL: "https://www.adnavi.app"
+      FRONTEND_URL: "https://www.metricx.ai"
       BACKEND_URL:
 
       # Forwarded Allow IPs
@@ -42,7 +42,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       
       # CORS Configuration - allow production frontend and localhost for development
-      BACKEND_CORS_ORIGINS: "https://www.adnavi.app,http://localhost:3000"
+      BACKEND_CORS_ORIGINS: "https://www.metricx.ai,http://localhost:3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s

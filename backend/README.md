@@ -1,6 +1,6 @@
-# AdNavi Backend (FastAPI + PostgreSQL + SQLAlchemy + Alembic)
+# metricx Backend (FastAPI + PostgreSQL + SQLAlchemy + Alembic)
 
-This service provides email/password authentication using JWT stored in an HTTP-only cookie, backed by PostgreSQL. It is designed to work with the AdNavi Next.js frontend at `http://localhost:3000`.
+This service provides email/password authentication using JWT stored in an HTTP-only cookie, backed by PostgreSQL. It is designed to work with the metricx Next.js frontend at `http://localhost:3000`.
 
 ## Prerequisites
 - Python 3.11+
@@ -20,12 +20,12 @@ JWT_EXPIRES_MINUTES=10080
 # DB (match docker-compose service, user, pass, db)
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_USER=adnavi
-POSTGRES_PASSWORD=adnavi
-POSTGRES_DB=adnavi
+POSTGRES_USER=metricx
+POSTGRES_PASSWORD=metricx
+POSTGRES_DB=metricx
 
 # SQLAlchemy URL (sync driver)
-DATABASE_URL=postgresql+psycopg2://adnavi:adnavi@localhost:5432/adnavi
+DATABASE_URL=postgresql+psycopg2://metricx:metricx@localhost:5432/metricx
 
 # CORS / Cookies
 BACKEND_CORS_ORIGINS=http://localhost:3000

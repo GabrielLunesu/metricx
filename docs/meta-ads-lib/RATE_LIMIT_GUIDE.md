@@ -1,6 +1,6 @@
 # Rate Limit Management Guide
 
-**Quick Reference for AdNavi Sync Frequency Selection**
+**Quick Reference for metricx Sync Frequency Selection**
 
 ---
 

@@ -170,8 +170,29 @@ class Translator:
         # Add date parsing results to the prompt for the LLM
         date_instruction = ""
         if parsed_date_range:
-            date_instruction = f"IMPORTANT: A date range has been pre-parsed for this question. You MUST use the following time_range object in your response:\n"
-            date_instruction += f"```json\n{json.dumps(parsed_date_range, default=str)}\n```\n"
+            # Handle month-vs-month comparisons specially
+            if "comparison_ranges" in parsed_date_range:
+                ranges = parsed_date_range["comparison_ranges"]
+                if len(ranges) >= 2:
+                    # Use the later period as primary, earlier as "previous"
+                    # Sort by start date to determine order
+                    sorted_ranges = sorted(ranges, key=lambda r: r["start"])
+                    earlier = sorted_ranges[0]
+                    later = sorted_ranges[1]
+
+                    date_instruction = f"""IMPORTANT: This is a MONTH-VS-MONTH comparison query.
+The user wants to compare {earlier['label']} vs {later['label']}.
+
+You MUST use:
+- time_range: {{"start": "{later['start']}", "end": "{later['end']}"}} (the later month: {later['label']})
+- compare_to_previous: true (this will automatically compare to {earlier['label']})
+
+The executor will fetch both periods and show a comparison chart.
+Do NOT combine the months into a single range.
+"""
+            else:
+                date_instruction = f"IMPORTANT: A date range has been pre-parsed for this question. You MUST use the following time_range object in your response:\n"
+                date_instruction += f"```json\n{json.dumps(parsed_date_range, default=str)}\n```\n"
         
         # Add entity catalog for entity recognition and goal-aware metric selection
         entity_catalog_instruction = ""
@@ -199,6 +220,8 @@ class Translator:
         messages.append({"role": "user", "content": final_question})
         
         # Step 5: Call OpenAI API with JSON mode (streaming preferred, fallback to non-stream)
+        # Timeout: 30 seconds to prevent hanging on slow LLM responses
+        LLM_TIMEOUT_SECONDS = 30
         raw_response = ""
         if self.use_streaming:
             try:
@@ -208,6 +231,7 @@ class Translator:
                     temperature=0,
                     response_format={"type": "json_object"},
                     stream=True,
+                    timeout=LLM_TIMEOUT_SECONDS,
                 )
                 raw_chunks: List[str] = []
                 for chunk in stream:
@@ -217,6 +241,7 @@ class Translator:
                 raw_response = "".join(raw_chunks).strip()
             except Exception as e:
                 # Fallback to non-streaming if streaming fails
+                logger.warning(f"[TRANSLATOR] Streaming failed, falling back to non-streaming: {e}")
                 raw_response = ""
                 try:
                     response = self.client.chat.completions.create(
@@ -224,6 +249,7 @@ class Translator:
                         messages=messages,
                         temperature=0,
                         response_format={"type": "json_object"},
+                        timeout=LLM_TIMEOUT_SECONDS,
                     )
                     raw_response = response.choices[0].message.content
                 except Exception as inner:
@@ -238,6 +264,7 @@ class Translator:
                     messages=messages,
                     temperature=0,
                     response_format={"type": "json_object"},
+                    timeout=LLM_TIMEOUT_SECONDS,
                 )
                 raw_response = response.choices[0].message.content
             except Exception as e:
@@ -271,11 +298,11 @@ class Translator:
         comparison_keywords = ['vs', 'versus', 'compared to', 'compare to', 'vs.', 'against last', 'vs last']
         if any(kw in question_lower for kw in comparison_keywords):
             if not dsl_dict.get('compare_to_previous'):
-                print(f"[TRANSLATOR] Forcing compare_to_previous=True for comparison query: {question}")
+                logger.info(f"[TRANSLATOR] Forcing compare_to_previous=True for comparison query: {question}")
                 dsl_dict['compare_to_previous'] = True
 
-        # Always print the DSL for debugging
-        print(f"[TRANSLATOR] DSL: compare_to_previous={dsl_dict.get('compare_to_previous')}, breakdown={dsl_dict.get('breakdown')}, metric_filters={dsl_dict.get('filters', {}).get('metric_filters')}", flush=True)
+        # Log the DSL for debugging
+        logger.debug(f"[TRANSLATOR] DSL: compare_to_previous={dsl_dict.get('compare_to_previous')}, breakdown={dsl_dict.get('breakdown')}, metric_filters={dsl_dict.get('filters', {}).get('metric_filters')}")
 
         try:
             validated_dsl = validate_dsl(dsl_dict)

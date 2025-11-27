@@ -1,4 +1,4 @@
-"""AdNavi FastAPI application package."""
+"""metricx FastAPI application package."""
 
 
 

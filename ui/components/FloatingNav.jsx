@@ -19,7 +19,7 @@ export const FloatingNav = ({
     >
       {/* Logo on the left */}
       <a href="/" className="flex items-center flex-shrink-0">
-        <img src="/adnavi-logo.png" alt="AdNavi" className="h-10 w-auto" />
+        <img src="/metricx-logo.png" alt="metricx" className="h-10 w-auto" />
       </a>
 
       {/* Navigation items in the center */}

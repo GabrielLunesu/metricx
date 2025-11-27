@@ -55,7 +55,7 @@
 
 - Update answer builder for entity-specific language (optional enhancement)
 - Document in QA_SYSTEM_ARCHITECTURE.md
-- Update ADNAVI_BUILD_LOG.md
+- Update metricx_BUILD_LOG.md
 
 ---
 
@@ -428,7 +428,7 @@ Test these queries in Swagger:
 - [ ] Run full test suite (40 questions)
 - [ ] Verify Test 18 now passes
 - [ ] Document in QA_SYSTEM_ARCHITECTURE.md
-- [ ] Update ADNAVI_BUILD_LOG.md
+- [ ] Update metricx_BUILD_LOG.md
 
 ---
 

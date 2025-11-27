@@ -2,7 +2,7 @@
 
 ## Overview
 
-When you ask AdNavi a question like "show me all campaigns with conversion rate above 50%", the system now provides intelligent, helpful answers even when no campaigns meet your criteria. Instead of just saying "No data available," it tells you whether this is good news (all campaigns already exceed your threshold) or something to work on (no campaigns meet the threshold yet).
+When you ask metricx a question like "show me all campaigns with conversion rate above 50%", the system now provides intelligent, helpful answers even when no campaigns meet your criteria. Instead of just saying "No data available," it tells you whether this is good news (all campaigns already exceed your threshold) or something to work on (no campaigns meet the threshold yet).
 
 ## The Problem We Solved
 
@@ -26,7 +26,7 @@ Now you get context-aware, intelligent responses:
 You might ask: "Show me campaigns with conversion rate above 50%"
 
 ### Step 2: The System Searches Your Data
-AdNavi looks through all your campaign data to find ones matching your criteria. Let's say you have 12 campaigns, but none have a conversion rate above 50%.
+metricx looks through all your campaign data to find ones matching your criteria. Let's say you have 12 campaigns, but none have a conversion rate above 50%.
 
 ### Step 3: The System Realizes the Results Are Empty
 Instead of immediately saying "no data," the system gets curious: *Why is this empty?*

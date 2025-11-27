@@ -2,22 +2,21 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
 import { currentUser, logout } from "../../../../lib/auth";
 import features from "../../../../lib/features";
 import { fetchWorkspaceInfo, fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
 import NavItem from "./NavItem";
 import LogoMark from "./LogoMark";
-import ProfileAvatar from "./ProfileAvatar";
+
 
 export default function Sidebar() {
     const pathname = usePathname();
     const [user, setUser] = useState(null);
     const [workspace, setWorkspace] = useState(null);
     const [workspaces, setWorkspaces] = useState([]);
-    const [showLogout, setShowLogout] = useState(false);
-    const avatarRef = useRef(null);
+
 
     useEffect(() => {
         let mounted = true;
@@ -69,6 +68,15 @@ export default function Sidebar() {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await logout();
+            window.location.href = "/login";
+        } catch (err) {
+            console.error("Failed to logout:", err);
+        }
+    };
+
     const navItems = [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/dashboard" },
         { href: "/analytics", label: "Analytics", icon: BarChart2, active: pathname === "/analytics" },
@@ -79,24 +87,11 @@ export default function Sidebar() {
         // ...(features.canvas ? [{ href: "/canvas", label: "Canvas", icon: Layers, active: pathname === "/canvas" }] : []),
     ];
 
-    const handleLogout = async () => {
-        await logout();
-        window.location.href = "/login";
-    };
 
-    useEffect(() => {
-        setShowLogout(false);
-    }, [pathname]);
 
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (avatarRef.current && !avatarRef.current.contains(e.target)) {
-                setShowLogout(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+
+
+
 
     return (
         <>
@@ -178,30 +173,31 @@ export default function Sidebar() {
                         <Settings className="w-5 h-5" />
                     </a>
 
-                    {/* User Avatar / Logout Trigger */}
+                    {/* User Avatar / Profile Link */}
                     {user && (
-                        <div className="relative" ref={avatarRef}>
-                            <button
-                                type="button"
-                                title="Profile"
-                                onClick={() => setShowLogout((v) => !v)}
-                                className="focus:outline-none"
+                        <div className="relative group/profile">
+                            <Link
+                                href="/settings?tab=profile"
+                                className="block"
+                                title="User Profile"
                             >
-                                <ProfileAvatar
-                                    initial={user.email?.charAt(0)?.toUpperCase() || "U"}
-                                    imageUrl="https://i.pravatar.cc/150?img=11"
-                                />
-                            </button>
-                            {showLogout && (
-                                <div className="absolute left-full bottom-0 ml-4 bg-white shadow-lg rounded-xl border border-slate-100 px-3 py-2 text-sm whitespace-nowrap z-50">
-                                    <button
-                                        className="text-slate-700 hover:text-red-500 transition-colors"
-                                        onClick={(e) => { e.preventDefault(); handleLogout(); }}
-                                    >
-                                        Logout
-                                    </button>
+                                <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-cyan-300 to-blue-400 hover:shadow-lg hover:shadow-cyan-200/50 transition-all duration-300">
+                                    <div className="w-full h-full rounded-full border-2 border-white bg-slate-50 flex items-center justify-center text-slate-500 group-hover/profile:text-cyan-600 transition-colors">
+                                        <User className="w-5 h-5" />
+                                    </div>
                                 </div>
-                            )}
+                            </Link>
+
+                            {/* Logout Dropdown */}
+                            <div className="absolute left-full bottom-0 ml-4 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-200 -translate-x-2 group-hover/profile:translate-x-0 z-50">
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Logout
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

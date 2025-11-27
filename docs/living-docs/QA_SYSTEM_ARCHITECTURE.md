@@ -1,8 +1,8 @@
 # QA System Architecture & DSL Specification
 
-**Version**: DSL v2.5.2 (Worker Infrastructure + Debug Tooling)
-**Last Updated**: 2025-11-25
-**Status**: Production Ready - Real-time Streaming + Worker Documentation
+**Version**: DSL v2.6.0 (Multi-Line Charts + Metric Clarification)
+**Last Updated**: 2025-11-26
+**Status**: Production Ready - Enhanced Visual Output + Answer Transparency
 
 ---
 
@@ -21,7 +21,7 @@
 
 ## Overview
 
-The AdNavi QA (Question-Answering) system translates natural language questions into validated database queries using a **DSL (Domain-Specific Language)**.
+The metricx QA (Question-Answering) system translates natural language questions into validated database queries using a **DSL (Domain-Specific Language)**.
 
 ### Why This Architecture?
 
@@ -1064,6 +1064,57 @@ pytest app/tests/ -v
 
 ---
 
+## Recent Improvements (v2.4 - November 2025)
+
+### Summary
+
+This release significantly improved the QA system's visual output capabilities and answer transparency:
+
+1. **Multi-Line Entity Charts**: When users ask for "graph of top N entities", the system now generates multi-line LINE charts showing each entity's performance over time (one colored line per entity with legend) instead of bar charts.
+
+2. **Output Format Enforcement**: The `output_format: "chart"` DSL field now properly suppresses cards and tables, showing only the requested visualization.
+
+3. **Entity Timeseries Data Flow**: New `get_entity_timeseries()` method in UnifiedMetricService fetches per-entity daily data, enabling rich multi-line visualizations.
+
+4. **Breakdown-Focused Answers**: Chart/table queries now focus on the breakdown items themselves, not workspace totals - matching user intent.
+
+5. **Metric Inference Clarification**: When users ask "top 5 ads" without specifying a metric, the system now:
+   - Defaults to "spend" as the sorting metric
+   - Sets `metric_inferred: true` in the DSL
+   - Clarifies in the answer what metric was used (e.g., "sorted by spend since no specific metric was requested")
+
+### Key Files Modified
+
+| File | Changes |
+|------|---------|
+| `app/dsl/schema.py` | Added `metric_inferred` boolean field, `entity_timeseries` field to MetricResult |
+| `app/nlp/prompts.py` | Added graph/chart examples, metric inference tracking rules |
+| `app/services/unified_metric_service.py` | Added `get_entity_timeseries()`, `entity_id` to MetricBreakdownItem |
+| `app/dsl/executor.py` | Entity timeseries fetching for chart queries in both metric paths |
+| `app/answer/visual_builder.py` | Added `_build_entity_timeseries_spec()` for multi-line charts, `_apply_output_format_override()` |
+| `app/answer/answer_builder.py` | Metric clarification in LLM prompts and template fallbacks |
+
+### Example Query Flow
+
+**User**: "make a graph of the top 5 ads"
+
+**DSL Generated**:
+```json
+{
+  "metric": "spend",
+  "breakdown": "ad",
+  "top_n": 5,
+  "output_format": "chart",
+  "metric_inferred": true
+}
+```
+
+**Visual Output**: Multi-line LINE chart with 5 colored lines (one per ad) showing daily spend trends with interactive legend.
+
+**Answer**: "Here are the top 5 ads by spend in the last 14 days (sorted by this metric since no specific metric was requested)..."
+
+---
+
 ## Future Roadmap
 
 ### Known Limitations & Constraints
@@ -1098,5 +1149,5 @@ pytest app/tests/ -v
 - **Main Architecture**: `backend/docs/QA_SYSTEM_ARCHITECTURE.md` (this file)
 - **Module Guide**: `backend/app/dsl/README.md`
 - **Few-Shot Examples**: `backend/app/dsl/examples.md`
-- **Build Log**: `docs/ADNAVI_BUILD_LOG.md`
+- **Build Log**: `docs/metricx_BUILD_LOG.md`
 - **Class Diagram**: `backend/CLASS-DIAGRAM.MD`

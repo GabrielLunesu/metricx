@@ -302,7 +302,7 @@ After:  "Google's ROAS was 6.5× vs Meta's 5.8×..."
 
 ✅ **Architecture docs** (need update):
 - `QA_SYSTEM_ARCHITECTURE.md` - Add Phase 5 to changelog
-- `ADNAVI_BUILD_LOG.md` - Add Phase 5 changelog entry
+- `metricx_BUILD_LOG.md` - Add Phase 5 changelog entry
 
 ---
 

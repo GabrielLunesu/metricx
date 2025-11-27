@@ -354,7 +354,12 @@ def detect_performer_intent(question: str, query: MetricQuery) -> PerformerInten
         return PerformerIntent.NEUTRAL
     
     # Check if metric is inverse (lower is better)
-    metric_is_inverse = is_inverse_metric(query.metric)
+    metric_name = query.metric
+    if isinstance(metric_name, list):
+        # For multi-metric queries, use the first metric to determine intent
+        metric_name = metric_name[0] if metric_name else "value"
+        
+    metric_is_inverse = is_inverse_metric(metric_name)
     
     # Apply truth table logic
     if asking_for_lowest:

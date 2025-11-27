@@ -75,7 +75,7 @@ Successfully implemented hierarchy rollups and comprehensive logging to fix data
 
 **Files Updated**:
 - `backend/docs/QA_SYSTEM_ARCHITECTURE.md` - Updated to v2.4.1
-- `docs/ADNAVI_BUILD_LOG.md` - Added changelog entry
+- `docs/metricx_BUILD_LOG.md` - Added changelog entry
 
 ## Testing Results
 
@@ -210,7 +210,7 @@ Log shows:
 
 **Documentation**:
 - `backend/docs/QA_SYSTEM_ARCHITECTURE.md` - Updated to v2.4.1
-- `docs/ADNAVI_BUILD_LOG.md` - Added changelog
+- `docs/metricx_BUILD_LOG.md` - Added changelog
 - `backend/docs/HIERARCHY_ROLLUPS_IMPLEMENTATION.md` - Technical guide
 - `backend/docs/TESTING_HIERARCHY_ROLLUPS.md` - Testing guide
 - `backend/docs/HOW_TO_VIEW_LOGS.md` - Log viewing guide

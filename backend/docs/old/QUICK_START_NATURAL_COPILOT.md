@@ -207,7 +207,7 @@ performance across your campaigns."  # ✅ Analytical
 - **Full Roadmap**: `backend/docs/ROADMAP_TO_NATURAL_COPILOT.md`
 - **Architecture**: `backend/docs/QA_SYSTEM_ARCHITECTURE.md`
 - **Test Questions**: `backend/docs/100-realistic-questions.md`
-- **Build Log**: `docs/ADNAVI_BUILD_LOG.md`
+- **Build Log**: `docs/metricx_BUILD_LOG.md`
 
 ---
 

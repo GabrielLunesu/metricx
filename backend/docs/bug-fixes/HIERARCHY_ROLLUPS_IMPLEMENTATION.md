@@ -108,7 +108,7 @@ User asks: "ROAS for Product Launch Teaser campaign"
   - Updated version to v2.4.1
   - Added changelog entry
 
-- `docs/ADNAVI_BUILD_LOG.md`:
+- `docs/metricx_BUILD_LOG.md`:
   - Added implementation entry with details
   - Documented impact and benefits
 

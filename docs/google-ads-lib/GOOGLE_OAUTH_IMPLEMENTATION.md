@@ -7,13 +7,13 @@
   - Comprehensive data collection, usage, and retention details
   - GDPR/CCPA rights outlined (access, deletion, portability)
   - Cookie policy and third-party services disclosure
-  - Published at: `https://www.adnavi.app/privacy`
+  - Published at: `https://www.metricx.ai/privacy`
 
 - **Terms of Service** (`/terms`)
   - Service usage terms and acceptable use policy
   - Account termination and liability clauses
   - Intellectual property and dispute resolution
-  - Published at: `https://www.adnavi.app/terms`
+  - Published at: `https://www.metricx.ai/terms`
 
 ### 2. Account Deletion (GDPR Right to Erasure)
 - **Backend Endpoint**: `DELETE /auth/delete-account`
@@ -80,13 +80,13 @@ Navigate to: [Google Cloud Console - OAuth Consent Screen](https://console.cloud
 **User Type**: External (for public access)
 
 **App Information**:
-- App name: `AdNavi`
+- App name: `metricx`
 - User support email: `[Your Support Email]`
-- App logo: Upload `ui/public/adnavi.png`
-- Application home page: `https://www.adnavi.app`
-- Application privacy policy link: `https://www.adnavi.app/privacy`
-- Application terms of service link: `https://www.adnavi.app/terms`
-- Authorized domains: `adnavi.app`
+- App logo: Upload `ui/public/metricx.png`
+- Application home page: `https://www.metricx.ai`
+- Application privacy policy link: `https://www.metricx.ai/privacy`
+- Application terms of service link: `https://www.metricx.ai/terms`
+- Authorized domains: `metricx.ai`
 
 **Developer Contact Information**:
 - Email addresses: `[Your Contact Email]`
@@ -100,12 +100,12 @@ Navigate to: [Google Cloud Console - Credentials](https://console.cloud.google.c
 
 **Create OAuth 2.0 Client ID**:
 - Application type: `Web application`
-- Name: `AdNavi Production`
+- Name: `metricx Production`
 - Authorized JavaScript origins:
-  - `https://www.adnavi.app`
+  - `https://www.metricx.ai`
   - `http://localhost:3000` (for testing)
 - Authorized redirect URIs:
-  - `https://api.adnavi.app/auth/google/callback` (production)
+  - `https://api.metricx.ai/auth/google/callback` (production)
   - `http://localhost:8000/auth/google/callback` (for testing)
 
 **Update Environment Variables**:
@@ -113,10 +113,10 @@ Navigate to: [Google Cloud Console - Credentials](https://console.cloud.google.c
 # Backend .env
 GOOGLE_CLIENT_ID="[Your Client ID from above]"
 GOOGLE_CLIENT_SECRET="[Your Client Secret from above]"
-GOOGLE_OAUTH_REDIRECT_URI="https://api.adnavi.app/auth/google/callback"
+GOOGLE_OAUTH_REDIRECT_URI="https://api.metricx.ai/auth/google/callback"
 
 # Frontend .env
-NEXT_PUBLIC_API_BASE="https://api.adnavi.app"
+NEXT_PUBLIC_API_BASE="https://api.metricx.ai"
 ```
 
 ### 3. Google Ads API Configuration
@@ -138,11 +138,11 @@ GOOGLE_DEVELOPER_TOKEN="[Your Developer Token]"
 2. **Demo Video** - Show how your app uses Google Ads data
 
 **Verification Requirements**:
-1. **App Homepage**: Live at `https://www.adnavi.app` ✅
-2. **Privacy Policy**: Live at `https://www.adnavi.app/privacy` ✅
-3. **Terms of Service**: Live at `https://www.adnavi.app/terms` ✅
+1. **App Homepage**: Live at `https://www.metricx.ai` ✅
+2. **Privacy Policy**: Live at `https://www.metricx.ai/privacy` ✅
+3. **Terms of Service**: Live at `https://www.metricx.ai/terms` ✅
 4. **OAuth Consent Screen**: Configured as above
-5. **Authorized Domains**: Verified ownership of `adnavi.app`
+5. **Authorized Domains**: Verified ownership of `metricx.ai`
 6. **Scope Justification**: Written explanation of why you need the scope
 7. **Verification Video**: 3-5 minute demo video showing OAuth flow and data usage
 
@@ -153,7 +153,7 @@ GOOGLE_DEVELOPER_TOKEN="[Your Developer Token]"
 **Video Script (Step-by-Step)**:
 
 **Part 1: Introduction & Account Setup (30 seconds)**
-1. Start on AdNavi homepage (`https://www.adnavi.app`)
+1. Start on metricx homepage (`https://www.metricx.ai`)
 2. Show Privacy Policy and Terms of Service links in footer
 3. Click "Get Started" or "Sign In"
 4. Register a new account or log in with existing credentials
@@ -166,7 +166,7 @@ GOOGLE_DEVELOPER_TOKEN="[Your Developer Token]"
    - Highlight that it requests `https://www.googleapis.com/auth/adwords` scope
    - Explain what permissions are being requested
 9. Click "Allow" to grant permissions
-10. **Account Selection Modal appears** (this is unique to AdNavi)
+10. **Account Selection Modal appears** (this is unique to metricx)
     - Show MCC accounts (Manager Accounts) displayed as headers
     - Show child ad accounts listed under each MCC
     - Demonstrate selecting which ad accounts to connect
@@ -223,13 +223,13 @@ GOOGLE_DEVELOPER_TOKEN="[Your Developer Token]"
 - Upload to YouTube as **Unlisted** (not private, not public)
 - Or upload to Google Drive with shareable link
 - Include the video URL in OAuth verification submission form
-- Video title: "AdNavi - Google Ads OAuth Integration Demo"
+- Video title: "metricx - Google Ads OAuth Integration Demo"
 
 **Scope Justification** (Required Text):
 When submitting for verification, you'll need to provide a justification for why you need the `auth/adwords` scope. Use this text:
 
 ```
-AdNavi is a marketing analytics platform that helps businesses analyze and optimize their Google Ads campaigns. 
+metricx is a marketing analytics platform that helps businesses analyze and optimize their Google Ads campaigns. 
 
 We require the Google Ads API scope (https://www.googleapis.com/auth/adwords) to:
 - Read campaign data, ad groups, ads, and performance metrics from users' Google Ads accounts
@@ -374,7 +374,7 @@ curl http://localhost:8000/auth/google/callback?error=access_denied \
 - ⏳ Submit OAuth verification request
 - ⏳ Wait for Google approval (3-7 business days)
 - ⏳ Update environment variables with OAuth credentials
-- ⏳ Domain verification for `adnavi.app` in Google Cloud Console
+- ⏳ Domain verification for `metricx.ai` in Google Cloud Console
 - ⏳ Deploy to production (after verification approval)
 
 ## 🎬 Next Steps: Verification & Production Deployment
@@ -416,8 +416,8 @@ curl http://localhost:8000/auth/google/callback?error=access_denied \
 
 1. Ensure production domains are live before OAuth verification
 2. SSL certificates must be valid (Let's Encrypt recommended)
-3. Frontend must be accessible at `https://www.adnavi.app`
-4. Backend API must be accessible at `https://api.adnavi.app`
+3. Frontend must be accessible at `https://www.metricx.ai`
+4. Backend API must be accessible at `https://api.metricx.ai`
 5. Test OAuth flow on production before submitting for verification
 6. Monitor logs during verification review for any issues
 

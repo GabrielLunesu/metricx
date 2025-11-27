@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Chart, registerables } from "chart.js";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Maximize2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
+import { motion, AnimatePresence } from "framer-motion";
 
 Chart.register(...registerables);
 
@@ -131,9 +133,278 @@ function SummaryCard({ card }) {
   );
 }
 
+// Shared function to build chart data structure
+function buildChartData(spec) {
+  if (!spec.series || spec.series.length === 0) return { labels: [], datasets: [] };
+
+  const isMultiSeries = spec.series.length > 1;
+  const chartType = spec.type === "bar" || spec.type === "grouped_bar" ? "bar" : "line";
+
+  if (isMultiSeries) {
+    const allXValues = new Set();
+    spec.series.forEach((s) => {
+      (s.data || []).forEach((d) => {
+        const xVal = d.x ?? d.date ?? d[spec.xKey || "x"];
+        if (xVal) allXValues.add(String(xVal));
+      });
+    });
+
+    const labels = Array.from(allXValues).sort();
+
+    // Color scheme: muted palette (Apple-like)
+    const colors = ["#3b82f6", "#94a3b8", "#64748b", "#cbd5e1"];
+
+    const datasets = spec.series.map((s, idx) => {
+      const dataMap = {};
+      (s.data || []).forEach((d) => {
+        const xVal = String(d.x ?? d.date ?? d[spec.xKey || "x"]);
+        const yVal = d.y ?? d.value ?? d[spec.yKey || "y"];
+        dataMap[xVal] = yVal;
+      });
+
+      const alignedData = labels.map(label => dataMap[label] ?? null);
+
+      return {
+        label: s.name || s.dataKey,
+        data: alignedData,
+        borderColor: s.color || colors[idx % colors.length],
+        backgroundColor: chartType === "bar"
+          ? (s.color || colors[idx % colors.length])
+          : "transparent",
+        borderWidth: 2,
+        tension: 0.4,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointBackgroundColor: s.color || colors[idx % colors.length],
+      };
+    });
+
+    return { labels, datasets };
+  }
+
+  // Single series (muted blue palette)
+  const sData = spec.series[0].data || [];
+  const labels = sData.map((d) => d.x ?? d.date ?? d[spec.xKey || "x"]);
+  const datasets = [
+    {
+      label: spec.series[0].name || spec.title,
+      data: sData.map((d) => d.y ?? d.value ?? d[spec.yKey || "y"]),
+      borderColor: spec.series[0].color || "#3b82f6",
+      backgroundColor: chartType === "bar" ? "#3b82f6" : "rgba(59, 130, 246, 0.08)",
+      borderWidth: 2,
+      tension: 0.4,
+      fill: chartType !== "bar",
+      pointRadius: 0,
+      pointHoverRadius: 4,
+    },
+  ];
+
+  return { labels, datasets };
+}
+
+// Shared function to get chart options
+function getChartOptions(spec, datasets, isFullscreen = false) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: datasets.length > 1,
+        position: "bottom",
+        labels: {
+          usePointStyle: true,
+          padding: isFullscreen ? 16 : 12,
+          font: { size: isFullscreen ? 13 : 11, weight: "500" },
+          color: "#475569",
+        },
+      },
+      tooltip: {
+        backgroundColor: "rgba(255, 255, 255, 0.97)",
+        titleColor: "#0f172a",
+        bodyColor: "#475569",
+        borderColor: "rgba(203, 213, 225, 0.5)",
+        borderWidth: 1,
+        padding: isFullscreen ? 14 : 10,
+        titleFont: { size: isFullscreen ? 14 : 12 },
+        bodyFont: { size: isFullscreen ? 13 : 11 },
+        displayColors: true,
+        callbacks: {
+          label: function (context) {
+            const label = context.dataset.label || '';
+            const value = formatValue(context.parsed.y, spec.valueFormat || "mixed");
+            return `${label}: ${value}`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          color: "#94a3b8",
+          font: { size: isFullscreen ? 12 : 10 },
+          maxRotation: isFullscreen ? 45 : 0,
+        },
+      },
+      y: {
+        grid: { color: "rgba(203, 213, 225, 0.3)", drawBorder: false },
+        ticks: {
+          color: "#94a3b8",
+          font: { size: isFullscreen ? 12 : 10 },
+          callback: function (value) {
+            return formatValue(value, spec.valueFormat || "mixed");
+          },
+        },
+      },
+    },
+  };
+}
+
+// Fullscreen Chart Modal
+// WHAT: Full viewport chart display with backdrop using Portal
+// WHY: Better visualization of complex multi-series data, escapes parent CSS constraints
+function FullscreenChart({ spec, onClose }) {
+  const canvasRef = useRef(null);
+  const chartInstance = useRef(null);
+  const containerRef = useRef(null);
+  const [isReady, setIsReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client-side mount (for portal)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Handle escape key to close
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  // Wait for modal animation to complete before rendering chart
+  useEffect(() => {
+    const timer = setTimeout(() => setIsReady(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Render chart after modal is ready
+  useEffect(() => {
+    if (!isReady || !canvasRef.current || !spec) return;
+
+    const ctx = canvasRef.current.getContext("2d");
+
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+    }
+
+    const { labels, datasets } = buildChartData(spec);
+    const chartType = spec.type === "bar" || spec.type === "grouped_bar" ? "bar" : "line";
+
+    chartInstance.current = new Chart(ctx, {
+      type: chartType,
+      data: { labels, datasets },
+      options: getChartOptions(spec, datasets, true),
+    });
+
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+    };
+  }, [spec, isReady]);
+
+  // Handle window resize
+  useEffect(() => {
+    if (!chartInstance.current) return;
+
+    const handleResize = () => {
+      chartInstance.current?.resize();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isReady]);
+
+  // Don't render on server
+  if (!mounted) return null;
+
+  const modalContent = (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 md:p-8"
+      style={{ zIndex: 9999 }}
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" />
+
+      {/* Modal Content */}
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+        className="relative w-full max-w-6xl h-[80vh] bg-white rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/60">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">{spec.title}</h2>
+            {spec.description && (
+              <p className="text-sm text-slate-500 mt-0.5">{spec.description}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-slate-100 transition-colors duration-200 text-slate-500 hover:text-slate-700"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Chart Container */}
+        <div ref={containerRef} className="p-6 h-[calc(100%-72px)] relative">
+          {!isReady && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          <div className={cn("w-full h-full", !isReady && "opacity-0")}>
+            <canvas ref={canvasRef} />
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+
+  // Render modal in portal at document body level
+  return createPortal(modalContent, document.body);
+}
+
 function ChartCard({ spec }) {
   const canvasRef = useRef(null);
   const chartInstance = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Debug: Log chart spec to see series data
   useEffect(() => {
@@ -154,142 +425,13 @@ function ChartCard({ spec }) {
       chartInstance.current.destroy();
     }
 
-    // Build data structure for Chart.js
-    const buildChartData = () => {
-      if (!spec.series || spec.series.length === 0) return { labels: [], datasets: [] };
-
-      const isMultiSeries = spec.series.length > 1;
-      const chartType = spec.type === "bar" || spec.type === "grouped_bar" ? "bar" : "line";
-
-      if (isMultiSeries) {
-        // For multi-series (e.g., current vs previous), we need to:
-        // 1. Collect all unique x-values (dates) across all series
-        // 2. Create a dataset for each series with values aligned to the labels
-
-        const allXValues = new Set();
-        spec.series.forEach((s) => {
-          (s.data || []).forEach((d) => {
-            const xVal = d.x ?? d.date ?? d[spec.xKey || "x"];
-            if (xVal) allXValues.add(String(xVal));
-          });
-        });
-
-        const labels = Array.from(allXValues).sort();
-
-        // Color scheme: muted palette (Apple-like)
-        // Primary blue for current, slate for previous
-        const colors = ["#3b82f6", "#94a3b8", "#64748b", "#cbd5e1"];
-
-        const datasets = spec.series.map((s, idx) => {
-          // Create a map of x-value to y-value for this series
-          const dataMap = {};
-          (s.data || []).forEach((d) => {
-            const xVal = String(d.x ?? d.date ?? d[spec.xKey || "x"]);
-            const yVal = d.y ?? d.value ?? d[spec.yKey || "y"];
-            dataMap[xVal] = yVal;
-          });
-
-          // Align data to labels (fill missing values with null)
-          const alignedData = labels.map(label => dataMap[label] ?? null);
-
-          return {
-            label: s.name || s.dataKey,
-            data: alignedData,
-            borderColor: s.color || colors[idx % colors.length],
-            backgroundColor: chartType === "bar"
-              ? (s.color || colors[idx % colors.length])
-              : "transparent",
-            borderWidth: 2,
-            tension: 0.4,
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointBackgroundColor: s.color || colors[idx % colors.length],
-          };
-        });
-
-        return { labels, datasets };
-      }
-
-      // Single series (muted blue palette)
-      const sData = spec.series[0].data || [];
-      const labels = sData.map((d) => d.x ?? d.date ?? d[spec.xKey || "x"]);
-      const datasets = [
-        {
-          label: spec.series[0].name || spec.title,
-          data: sData.map((d) => d.y ?? d.value ?? d[spec.yKey || "y"]),
-          // Muted blue (Apple-like)
-          borderColor: spec.series[0].color || "#3b82f6",
-          backgroundColor: chartType === "bar" ? "#3b82f6" : "rgba(59, 130, 246, 0.08)",
-          borderWidth: 2,
-          tension: 0.4,
-          fill: chartType !== "bar",
-          pointRadius: 0,
-          pointHoverRadius: 4,
-        },
-      ];
-
-      return { labels, datasets };
-    };
-
-    const { labels, datasets } = buildChartData();
+    const { labels, datasets } = buildChartData(spec);
     const chartType = spec.type === "bar" || spec.type === "grouped_bar" ? "bar" : "line";
 
     chartInstance.current = new Chart(ctx, {
       type: chartType,
       data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false,
-        },
-        plugins: {
-          legend: {
-            display: datasets.length > 1,
-            position: "bottom",
-            labels: {
-              usePointStyle: true,
-              padding: 12,
-              font: { size: 11, weight: "500" },
-              color: "#475569",
-            },
-          },
-          tooltip: {
-            backgroundColor: "rgba(255, 255, 255, 0.97)",
-            titleColor: "#0f172a",
-            bodyColor: "#475569",
-            borderColor: "rgba(203, 213, 225, 0.5)",
-            borderWidth: 1,
-            padding: 10,
-            displayColors: true,
-            callbacks: {
-              label: function (context) {
-                const label = context.dataset.label || '';
-                const value = formatValue(context.parsed.y, spec.valueFormat || "mixed");
-                return `${label}: ${value}`;
-              },
-            },
-          },
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: "#94a3b8", font: { size: 10 } },
-          },
-          y: {
-            grid: { color: "rgba(203, 213, 225, 0.3)", drawBorder: false },
-            ticks: {
-              color: "#94a3b8",
-              font: { size: 10 },
-              callback: function (value) {
-                return formatValue(value, spec.valueFormat || "mixed");
-              },
-            },
-          },
-        },
-      },
+      options: getChartOptions(spec, datasets, false),
     });
 
     return () => {
@@ -299,19 +441,47 @@ function ChartCard({ spec }) {
     };
   }, [spec]);
 
-  // Chart Card (v2.1 - Apple-inspired subtle glass design)
+  const handleOpenFullscreen = useCallback(() => {
+    setIsFullscreen(true);
+  }, []);
+
+  const handleCloseFullscreen = useCallback(() => {
+    setIsFullscreen(false);
+  }, []);
+
+  // Chart Card (v2.2 - Apple-inspired with fullscreen toggle)
   return (
-    <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50 rounded-xl hover:bg-slate-50/80 transition-colors duration-200">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-slate-800">{spec.title}</CardTitle>
-        {spec.description && <div className="text-[10px] text-slate-500 mt-1">{spec.description}</div>}
-      </CardHeader>
-      <CardContent>
-        <div className="w-full" style={{ height: '192px' }}>
-          <canvas ref={canvasRef} />
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card className="bg-white/90 backdrop-blur-sm border border-slate-200/50 rounded-xl hover:bg-slate-50/80 transition-colors duration-200 group">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold text-slate-800">{spec.title}</CardTitle>
+              {spec.description && <div className="text-[10px] text-slate-500 mt-1">{spec.description}</div>}
+            </div>
+            <button
+              onClick={handleOpenFullscreen}
+              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-slate-100 transition-all duration-200 text-slate-400 hover:text-slate-600"
+              title="Expand chart"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full" style={{ height: '192px' }}>
+            <canvas ref={canvasRef} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Fullscreen Modal */}
+      <AnimatePresence>
+        {isFullscreen && (
+          <FullscreenChart spec={spec} onClose={handleCloseFullscreen} />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 

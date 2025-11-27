@@ -1,6 +1,7 @@
 """Pydantic schemas for request/response payloads."""
 
 from datetime import datetime, date
+from enum import Enum
 from uuid import UUID
 from typing import Optional, List, Literal, Union, Any
 from decimal import Decimal
@@ -752,6 +753,62 @@ class QaLogCreate(BaseModel):
 
 
 # ==========================================================================
+# QA FEEDBACK SCHEMAS (Self-Learning System)
+# ==========================================================================
+
+
+class FeedbackType(str, Enum):
+    """Type of feedback provided on a QA answer."""
+    accuracy = "accuracy"
+    relevance = "relevance"
+    visualization = "visualization"
+    completeness = "completeness"
+    other = "other"
+
+
+class QaFeedbackCreate(BaseModel):
+    """
+    WHAT: Request body for submitting feedback on a QA answer.
+    WHY: Enables self-learning by collecting user feedback on answer quality.
+    """
+    query_log_id: str = Field(description="ID of the QaQueryLog being rated")
+    rating: int = Field(ge=1, le=5, description="Rating from 1 (poor) to 5 (excellent)")
+    feedback_type: Optional[FeedbackType] = Field(default=None, description="What aspect the feedback is about")
+    comment: Optional[str] = Field(default=None, description="Optional free-text comment")
+    corrected_answer: Optional[str] = Field(default=None, description="What the answer should have been")
+
+
+class QaFeedbackResponse(BaseModel):
+    """
+    WHAT: Response body for feedback operations.
+    WHY: Returns feedback details including self-learning flags.
+    """
+    id: str
+    query_log_id: str
+    user_id: str
+    rating: int
+    feedback_type: Optional[str] = None
+    comment: Optional[str] = None
+    corrected_answer: Optional[str] = None
+    is_few_shot_example: bool = False
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class QaFeedbackStats(BaseModel):
+    """
+    WHAT: Aggregated feedback statistics for a workspace.
+    WHY: Provides overview of QA system performance for monitoring.
+    """
+    total_feedback: int
+    average_rating: float
+    rating_distribution: dict[int, int]  # {1: count, 2: count, ...}
+    feedback_by_type: dict[str, int]
+    few_shot_examples_count: int
+
+
+# ==========================================================================
 # CAMPAIGN / ENTITY PERFORMANCE SCHEMAS
 # ==========================================================================
 
@@ -953,7 +1010,7 @@ class MetricFactCreate(BaseModel):
     # Pattern 1: Existing entity
     entity_id: Optional[UUID] = Field(
         None,
-        description="AdNavi entity UUID (if entity already synced)"
+        description="metricx entity UUID (if entity already synced)"
     )
     
     # Pattern 2: New entity (will be looked up or created)
