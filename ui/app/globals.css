@@ -113,6 +113,34 @@ body {
   pointer-events: none;
 }
 
+/* Animated blob keyframes for CSS gradient background */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -30px) scale(1.05);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  75% {
+    transform: translate(30px, 10px) scale(1.02);
+  }
+}
+
+.animate-blob {
+  animation: blob 15s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
 /* Blue Gradient Text - matches logo X */
 .text-gradient-blue {
   background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);

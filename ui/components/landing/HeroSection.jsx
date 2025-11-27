@@ -1,10 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Bot, ArrowRight } from "lucide-react";
-import { Cobe } from "@/components/ui/cobe-globe";
 import { ShaderGradientCanvas, ShaderGradient } from "@shadergradient/react";
+
+// Lazy load Cobe globe component
+const Cobe = dynamic(
+  () => import("@/components/ui/cobe-globe").then((mod) => ({ default: mod.Cobe })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full bg-gradient-to-br from-blue-100 to-cyan-100 rounded-lg animate-pulse" />
+    ),
+  }
+);
 
 function FeatureCard({ title, description, isActive, progress, onClick }) {
   return (
@@ -43,9 +54,30 @@ const scrollToSection = (sectionId) => {
 export default function HeroSection() {
   const [activeCard, setActiveCard] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
   const mountedRef = useRef(true);
+  const heroRef = useRef(null);
 
+  // Track visibility - unmount shader when scrolled away to free GPU memory
   useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: "200px" }
+    );
+
+    if (heroRef.current) {
+      observer.observe(heroRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Progress interval for card rotation
+  useEffect(() => {
+    if (!isVisible) return;
+
     const progressInterval = setInterval(() => {
       if (!mountedRef.current) return;
 
@@ -64,13 +96,7 @@ export default function HeroSection() {
       clearInterval(progressInterval);
       mountedRef.current = false;
     };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  }, [isVisible]);
 
   const handleCardClick = (index) => {
     if (!mountedRef.current) return;
@@ -101,50 +127,55 @@ export default function HeroSection() {
 
   return (
     <>
-      {/* Fixed shader gradient background - stays in place on scroll */}
+      {/* Shader gradient background - unmounts when scrolled past hero to free GPU memory */}
       <div className="shader-gradient-fixed">
-        <ShaderGradientCanvas
-          style={{ width: "100%", height: "100%" }}
-          pixelDensity={1}
-          pointerEvents="none"
-        >
-          <ShaderGradient
-            animate="on"
-            type="sphere"
-            wireframe={false}
-            shader="defaults"
-            uTime={0}
-            uSpeed={0.2}
-            uStrength={0.3}
-            uDensity={0.8}
-            uFrequency={5.5}
-            uAmplitude={3.2}
-            positionX={-0.1}
-            positionY={0}
-            positionZ={0}
-            rotationX={0}
-            rotationY={130}
-            rotationZ={70}
-            color1="#3B82F6"
-            color2="#06B6D4"
-            color3="#ffffff"
-            reflection={0.4}
-            cAzimuthAngle={270}
-            cPolarAngle={180}
-            cDistance={0.5}
-            cameraZoom={15.1}
-            lightType="env"
-            brightness={1.2}
-            envPreset="city"
-            grain="on"
-            toggleAxis={false}
-            zoomOut={false}
-            enableTransition={false}
-          />
-        </ShaderGradientCanvas>
+        {isVisible ? (
+          <ShaderGradientCanvas
+            style={{ width: "100%", height: "100%" }}
+            pixelDensity={1}
+            pointerEvents="none"
+          >
+            <ShaderGradient
+              animate="on"
+              type="sphere"
+              wireframe={false}
+              shader="defaults"
+              uTime={0}
+              uSpeed={0.2}
+              uStrength={0.3}
+              uDensity={0.8}
+              uFrequency={5.5}
+              uAmplitude={3.2}
+              positionX={-0.1}
+              positionY={0}
+              positionZ={0}
+              rotationX={0}
+              rotationY={130}
+              rotationZ={70}
+              color1="#3B82F6"
+              color2="#06B6D4"
+              color3="#ffffff"
+              reflection={0.4}
+              cAzimuthAngle={270}
+              cPolarAngle={180}
+              cDistance={0.5}
+              cameraZoom={15.1}
+              lightType="env"
+              brightness={1.2}
+              envPreset="city"
+              grain="on"
+              toggleAxis={false}
+              zoomOut={false}
+              enableTransition={false}
+            />
+          </ShaderGradientCanvas>
+        ) : (
+          // Static fallback when scrolled past - no GPU usage
+          <div className="w-full h-full bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600" />
+        )}
       </div>
 
-      <div className="relative w-full overflow-hidden min-h-screen">
+      <div ref={heroRef} className="relative w-full overflow-hidden min-h-screen">
         {/* Fade to white at bottom of hero */}
         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white to-transparent pointer-events-none z-[1]" />
 
