@@ -65,7 +65,8 @@ class Translator:
         # Returns: MetricQuery(metric="roas", time_range={"last_n_days": 7}, ...)
     
     Design:
-    - Uses OpenAI GPT-4o-mini for JSON mode
+    - Uses OpenAI GPT-4o-mini by default for faster responses (~300-500ms savings)
+    - Override via OPENAI_MODEL env var if needed (e.g., "gpt-4o" for complex queries)
     - Temperature=0 for consistency
     - JSON mode for structured outputs with Pydantic validation
     - Canonicalization reduces LLM variance
@@ -93,11 +94,11 @@ class Translator:
                     "Set it in your .env file or environment."
                 )
             self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-            # Allow swapping models via env; default stays on GPT-4o but uses streaming by default for SSE clients.
-            self.model = getattr(settings, "OPENAI_MODEL", None) or os.getenv("OPENAI_MODEL") or "gpt-4o"
+            # Allow swapping models via env; default is GPT-4o-mini for faster responses (~300-500ms savings)
+            self.model = getattr(settings, "OPENAI_MODEL", None) or os.getenv("OPENAI_MODEL") or "gpt-4o-mini"
         else:
             self.client = client
-            self.model = "gpt-4o"
+            self.model = "gpt-4o-mini"
         # Streaming can be toggled via env OPENAI_STREAMING=true|false; defaults to True.
         self.use_streaming = os.getenv("OPENAI_STREAMING", "true").lower() == "true"
         

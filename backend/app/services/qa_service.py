@@ -28,6 +28,7 @@ import time
 import logging
 from typing import Dict, Any, Optional, List
 from decimal import Decimal
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from sqlalchemy.orm import Session
 
@@ -301,60 +302,70 @@ class QAService:
             )
             logger.info(f"[QA_PIPELINE] Execution complete: {result}")
             
-            # Step 5: Build human-readable answer (hybrid approach)
-            logger.info(f"[QA_PIPELINE] Step 5: Building answer")
-            # WHY hybrid: LLM rephrases deterministic facts → natural + safe
-            # WHY fallback: If LLM fails, use template-based answer
-            # NEW v2.0: Pass date window for transparency in answers
-            answer_generation_ms = None
-            
+            # Step 5: Build answer + visuals in PARALLEL (~200-500ms savings)
+            logger.info(f"[QA_PIPELINE] Step 5: Building answer + visuals (parallel)")
+
             # Extract date window from plan (for metrics queries)
-            # WHY: Enables answers like "Summer Sale had highest ROAS from Sep 29–Oct 05, 2025"
             window = None
             if plan:
                 window = {"start": plan.start, "end": plan.end}
-            
-            try:
-                # Try hybrid answer builder (LLM-based rephrasing)
-                answer_text, answer_generation_ms = self.answer_builder.build_answer(
-                    dsl=dsl,
-                    result=result,
-                    window=window,  # NEW: Pass date window
-                    log_latency=True
-                )
-                logger.info(f"[QA_PIPELINE] Answer generated successfully")
-                logger.info(f"[QA_PIPELINE] Answer: '{answer_text}'")
-                # Ensure latency is always numeric (never None)
-                answer_generation_ms = answer_generation_ms if answer_generation_ms is not None else 0
-                logger.info(f"[QA_PIPELINE] Answer generation latency: {answer_generation_ms}ms")
-            except AnswerBuilderError as e:
-                # Fallback to template-based answer if LLM fails
-                # WHY fallback: Ensures we always return something, even if LLM is down
-                logger.warning(f"[QA_PIPELINE] Answer builder failed, using template fallback: {e.message}")
-                answer_text = self._build_answer_template(dsl, result, window)
-                answer_generation_ms = 0  # Template fallback (always 0ms for consistency)
-                logger.info(f"[QA_PIPELINE] Template answer: '{answer_text}'")
-                logger.info(f"[QA_PIPELINE] Answer generation latency: {answer_generation_ms}ms")
-            
-            # Step 6: Save to conversation context for follow-ups
-            # WHY: Enables next question to reference this query
-            # Example: User asks "Which one performed best?" → needs this result
-            # Serialize result based on type
+
+            # Serialize result FIRST (needed by both answer builder and visual builder)
             if hasattr(result, 'model_dump'):
-                result_data = result.model_dump(mode='json')  # Changed: added mode='json'
+                result_data = result.model_dump(mode='json')
             else:
-                result_data = result  # Already a dict
-            
-            # Convert Decimal values to floats for JSON serialization
+                result_data = result
             result_data = convert_decimals_to_floats(result_data)
 
-            # Debug: Log result_data before building visuals
+            # Debug logging
             logger.debug(f"[QA_SERVICE] Building visuals with result_data keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'not a dict'}")
             if isinstance(result_data, dict):
                 ts_prev = result_data.get('timeseries_previous')
                 logger.debug(f"[QA_SERVICE] timeseries_previous in result_data: {len(ts_prev) if ts_prev else 'None/empty'} points")
 
-            visuals = build_visual_payload(dsl, result_data, window)
+            # Define tasks for parallel execution
+            def _build_answer_task():
+                """Build answer in parallel thread."""
+                try:
+                    text, latency = self.answer_builder.build_answer(
+                        dsl=dsl,
+                        result=result,
+                        window=window,
+                        log_latency=True
+                    )
+                    return ("answer", text, latency if latency is not None else 0)
+                except AnswerBuilderError as e:
+                    logger.warning(f"[QA_PIPELINE] Answer builder failed, using template fallback: {e.message}")
+                    text = self._build_answer_template(dsl, result, window)
+                    return ("answer", text, 0)
+
+            def _build_visuals_task():
+                """Build visuals in parallel thread."""
+                vis = build_visual_payload(dsl, result_data, window)
+                return ("visuals", vis)
+
+            # Execute both tasks in parallel
+            answer_text = None
+            answer_generation_ms = 0
+            visuals = None
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures = [
+                    executor.submit(_build_answer_task),
+                    executor.submit(_build_visuals_task)
+                ]
+
+                for future in as_completed(futures):
+                    result_tuple = future.result()
+                    if result_tuple[0] == "answer":
+                        answer_text = result_tuple[1]
+                        answer_generation_ms = result_tuple[2]
+                        logger.info(f"[QA_PIPELINE] Answer generated: '{answer_text[:50]}...' in {answer_generation_ms}ms")
+                    else:  # visuals
+                        visuals = result_tuple[1]
+                        logger.info(f"[QA_PIPELINE] Visuals built: {len(visuals.get('viz_specs', [])) if visuals else 0} specs")
+
+            logger.info(f"[QA_PIPELINE] Parallel build complete - answer_generation_ms: {answer_generation_ms}ms")
 
             # Debug: Log what visuals were built
             if visuals:
@@ -362,26 +373,24 @@ class QAService:
                 for i, spec in enumerate(visuals.get('viz_specs', [])):
                     logger.debug(f"[QA_SERVICE] viz_spec[{i}]: type={spec.get('type')}, series_count={len(spec.get('series', []))}")
             
-            # Store context for future follow-up questions (if Redis is available)
+            # Step 6: Store context for future follow-up questions
             if self.context_manager:
                 self.context_manager.add_entry(
                     user_id=user_id or "anon",
                     workspace_id=workspace_id,
                     question=question,
-                    dsl=dsl.model_dump(mode='json'),  # Changed: added mode='json' to serialize dates
+                    dsl=dsl.model_dump(mode='json'),
                     result=result_data
                 )
             else:
                 logger.debug("[QA_PIPELINE] Context manager unavailable - skipping context storage")
-            
-            # Step 7: Build context summary for response (for debugging in Swagger)
-            # WHY: Makes it visible what context was used for this query
-            # Useful for testing follow-up questions in Swagger UI
+
+            # Step 7: Build context summary for response
             context_summary = self._build_context_summary_for_response(context)
-            
-            # Step 8: Log success (including answer generation latency)
+
+            # Step 8: Log success
             total_latency_ms = int((time.time() - start_time) * 1000)
-            logger.info(f"[QA_PIPELINE] Step 6: Saving to conversation context")
+            logger.info(f"[QA_PIPELINE] Step 6: Saved to context")
             logger.info(f"[QA_PIPELINE] Step 7: Logging telemetry")
             log_qa_run(
                 db=self.db,

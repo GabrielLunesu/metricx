@@ -8,6 +8,8 @@ import MetaSyncButton from '@/components/MetaSyncButton';
 import GoogleSyncButton from '@/components/GoogleSyncButton';
 import GoogleConnectButton from '@/components/GoogleConnectButton';
 import MetaConnectButton from '@/components/MetaConnectButton';
+import ShopifyConnectButton from '@/components/ShopifyConnectButton';
+import ShopifySyncButton from '@/components/ShopifySyncButton';
 
 export default function ConnectionsTab({ user }) {
     const [connections, setConnections] = useState([]);
@@ -119,6 +121,7 @@ export default function ConnectionsTab({ user }) {
             meta: 'Meta Ads',
             google: 'Google Ads',
             tiktok: 'TikTok Ads',
+            shopify: 'Shopify',
             other: 'Other'
         };
         return labels[provider] || provider;
@@ -142,6 +145,7 @@ export default function ConnectionsTab({ user }) {
             meta: '📘',
             google: '🔍',
             tiktok: '🎵',
+            shopify: '🛍️',
             other: '🔗'
         };
         return icons[provider] || '📊';
@@ -168,8 +172,11 @@ export default function ConnectionsTab({ user }) {
         <div>
             {/* Connect New Account Section */}
             <div className="mb-8">
-                <h2 className="text-lg font-semibold text-neutral-900 mb-4">Connect Ad Accounts</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h2 className="text-lg font-semibold text-neutral-900 mb-4">Connect Accounts</h2>
+
+                {/* Ad Platforms */}
+                <h3 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wide">Ad Platforms</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {/* Google Ads */}
                     <div className="p-6 bg-white border border-neutral-200 rounded-xl">
                         <h3 className="text-base font-semibold text-neutral-900 mb-2">Google Ads</h3>
@@ -191,16 +198,29 @@ export default function ConnectionsTab({ user }) {
                         />
                     </div>
                 </div>
+
+                {/* E-commerce Platforms */}
+                <h3 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wide">E-commerce</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Shopify */}
+                    <div className="p-6 bg-white border border-neutral-200 rounded-xl">
+                        <h3 className="text-base font-semibold text-neutral-900 mb-2">Shopify</h3>
+                        <p className="text-sm text-neutral-600 mb-4">
+                            Connect your Shopify store to sync orders, products, and customers for revenue and LTV tracking.
+                        </p>
+                        <ShopifyConnectButton onConnectionComplete={handleSyncComplete} />
+                    </div>
+                </div>
             </div>
 
             {/* Connected Accounts Section */}
             <div className="mb-8">
-                <h2 className="text-lg font-semibold text-neutral-900 mb-4">Connected Ad Accounts</h2>
+                <h2 className="text-lg font-semibold text-neutral-900 mb-4">Connected Accounts</h2>
 
                 {connections.length === 0 ? (
                     <div className="p-8 bg-neutral-50 border border-neutral-200 rounded-xl text-center text-neutral-600">
-                        <p className="mb-2">No ad accounts connected yet.</p>
-                        <p className="text-sm">Use the "Connect Ad Accounts" section above to get started.</p>
+                        <p className="mb-2">No accounts connected yet.</p>
+                        <p className="text-sm">Use the "Connect Accounts" section above to get started.</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -305,6 +325,12 @@ export default function ConnectionsTab({ user }) {
                                             </div>
                                             {connection.provider === 'meta' ? (
                                                 <MetaSyncButton
+                                                    workspaceId={user.workspace_id}
+                                                    connectionId={connection.id}
+                                                    onSyncComplete={handleSyncComplete}
+                                                />
+                                            ) : connection.provider === 'shopify' ? (
+                                                <ShopifySyncButton
                                                     workspaceId={user.workspace_id}
                                                     connectionId={connection.id}
                                                     onSyncComplete={handleSyncComplete}

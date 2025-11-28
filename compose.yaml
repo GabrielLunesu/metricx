@@ -32,7 +32,7 @@ services:
       META_OAUTH_REDIRECT_URI:
       GOOGLE_OAUTH_REDIRECT_URI:
       FRONTEND_URL: "https://www.metricx.ai"
-      BACKEND_URL:
+      BACKEND_URL: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
 
       # Forwarded Allow IPs
       FORWARDED_ALLOW_IPS: "*"
@@ -41,8 +41,8 @@ services:
       # Railway Redis URL configured via environment variable
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       
-      # CORS Configuration - allow production frontend and localhost for development
-      BACKEND_CORS_ORIGINS: "https://www.metricx.ai,http://localhost:3000"
+      # CORS Configuration - allow production frontend, localhost, and defang domains
+      BACKEND_CORS_ORIGINS: "https://www.metricx.ai,http://localhost:3000,https://t8zgrthold5r2-backend--8000.prod2.defang.dev,https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -103,11 +103,11 @@ services:
     restart: always
 
   # QA Worker - processes natural language question-answering jobs from Redis queue
-  qa_worker:
+  qa-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: python -m rq worker qa_jobs --url ${REDIS_URL:-redis://localhost:6379/0}
+    command: rq worker qa_jobs --url ${REDIS_URL:-redis://localhost:6379/0}
     environment:
       # Required for QA worker
       DATABASE_URL: ${DATABASE_URL}

@@ -1,21 +1,23 @@
 """RQ worker entrypoint for sync jobs.
 
 WHAT:
-    Processes sync jobs for Meta/Google connections outside HTTP request cycle.
+    Processes sync jobs for Meta/Google/Shopify connections outside HTTP request cycle.
 
 WHY:
     - Keeps FastAPI responses fast (enqueue job instead of blocking)
     - Central place to update sync tracking fields on Connection model
-    - Reuses service-layer sync functions for both providers
+    - Reuses service-layer sync functions for all providers
 
 REFERENCES:
     - docs/living-docs/REALTIME_SYNC_STATUS.md
     - backend/app/services/meta_sync_service.py
     - backend/app/services/google_sync_service.py
+    - backend/app/services/shopify_sync_service.py
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime
 from uuid import UUID
@@ -32,6 +34,9 @@ from app.services.meta_sync_service import (
 from app.services.google_sync_service import (
     sync_google_entities,
     sync_google_metrics,
+)
+from app.services.shopify_sync_service import (
+    sync_shopify_all,
 )
 
 logger = logging.getLogger(__name__)
@@ -100,6 +105,63 @@ def process_sync_job(connection_id: str, workspace_id: str) -> dict:
                 connection_id=connection.id,
                 request=MetricsSyncRequest(),
             )
+        elif connection.provider == ProviderEnum.shopify:
+            # =========================================================================
+            # Shopify sync (async functions - need asyncio.run)
+            # =========================================================================
+            # WHAT: Run full Shopify sync (products → customers → orders)
+            # WHY: sync_shopify_all is async due to GraphQL client with httpx
+            #      RQ worker is synchronous, so we wrap with asyncio.run()
+            shopify_result = asyncio.run(
+                sync_shopify_all(
+                    db=db,
+                    workspace_id=connection.workspace_id,
+                    connection_id=connection.id,
+                    force_full_sync=False,
+                )
+            )
+
+            # Convert Shopify response to match expected return format
+            # WHAT: Create pseudo entity/metrics responses for consistent return
+            # WHY: Maintains uniform interface across all providers
+            entity_resp = type(
+                "EntityResponse",
+                (),
+                {
+                    "synced": type(
+                        "Synced",
+                        (),
+                        {
+                            "model_dump": lambda self: {
+                                "products": shopify_result.stats.products_created + shopify_result.stats.products_updated,
+                                "customers": shopify_result.stats.customers_created + shopify_result.stats.customers_updated,
+                            }
+                        },
+                    )()
+                },
+            )()
+            metrics_resp = type(
+                "MetricsResponse",
+                (),
+                {
+                    "synced": type(
+                        "Synced",
+                        (),
+                        {
+                            "facts_ingested": shopify_result.stats.orders_created + shopify_result.stats.orders_updated,
+                            "model_dump": lambda self: {
+                                "orders": shopify_result.stats.orders_created + shopify_result.stats.orders_updated,
+                                "revenue": float(shopify_result.stats.total_revenue),
+                                "profit": float(shopify_result.stats.total_profit),
+                            },
+                        },
+                    )()
+                },
+            )()
+
+            # Check for errors in Shopify sync
+            if not shopify_result.success:
+                raise Exception("; ".join(shopify_result.errors) or "Shopify sync failed")
         else:
             logger.error(
                 "[SYNC_WORKER] Unsupported provider %s for connection %s",

@@ -36,6 +36,7 @@ class ProviderEnum(str, enum.Enum):
     google = "google"
     meta = "meta"
     tiktok = "tiktok"
+    shopify = "shopify"  # Shopify e-commerce platform for orders, products, customers
     other = "other"
 
 
@@ -665,6 +666,379 @@ class QaFeedback(Base):
 
     def __str__(self):
         return f"Feedback {self.rating}/5 for query {self.query_log_id}"
+
+
+# =============================================================================
+# SHOPIFY E-COMMERCE MODELS
+# =============================================================================
+# WHAT: Dedicated tables for Shopify store data (shops, products, customers, orders)
+# WHY: Shopify data structure differs from ad platforms - needs separate schema
+#      for LTV calculations, profit tracking (COGS), and revenue analytics
+# REFERENCES:
+#   - Shopify GraphQL Admin API: https://shopify.dev/docs/api/admin-graphql
+#   - Implementation plan: docs/living-docs/SHOPIFY_INTEGRATION_PLAN.md
+
+
+class ShopifyFinancialStatusEnum(str, enum.Enum):
+    """Shopify order financial status.
+
+    WHAT: Represents payment state of an order
+    WHY: Track payment lifecycle for accurate revenue reporting
+    REFERENCES: https://shopify.dev/docs/api/admin-graphql/2024-07/enums/OrderDisplayFinancialStatus
+    """
+    pending = "pending"
+    authorized = "authorized"
+    partially_paid = "partially_paid"
+    paid = "paid"
+    partially_refunded = "partially_refunded"
+    refunded = "refunded"
+    voided = "voided"
+
+
+class ShopifyFulfillmentStatusEnum(str, enum.Enum):
+    """Shopify order fulfillment status.
+
+    WHAT: Represents shipping/delivery state of an order
+    WHY: Track order lifecycle for operational reporting
+    REFERENCES: https://shopify.dev/docs/api/admin-graphql/2024-07/enums/OrderDisplayFulfillmentStatus
+    """
+    unfulfilled = "unfulfilled"
+    partial = "partial"
+    fulfilled = "fulfilled"
+    restocked = "restocked"
+    pending_fulfillment = "pending_fulfillment"
+    open = "open"
+    in_progress = "in_progress"
+    on_hold = "on_hold"
+    scheduled = "scheduled"
+
+
+class ShopifyShop(Base):
+    """Shopify store metadata - one per Connection.
+
+    WHAT: Stores Shopify shop configuration and metadata
+    WHY: Each Connection links to exactly one Shopify shop; we need shop-level
+         settings like timezone and currency for accurate metric calculations
+    REFERENCES:
+        - Shopify Shop API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Shop
+        - Similar pattern: Connection model stores external_account_id
+    """
+    __tablename__ = "shopify_shops"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Workspace scoping (required for data isolation)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+
+    # Link to Connection (one shop per connection)
+    connection_id = Column(UUID(as_uuid=True), ForeignKey("connections.id"), nullable=False, unique=True)
+
+    # Shopify identifiers
+    external_shop_id = Column(String, nullable=False)  # Shopify's internal shop ID (gid://shopify/Shop/xxx)
+    shop_domain = Column(String, nullable=False)  # e.g., "mystore.myshopify.com"
+    shop_name = Column(String, nullable=False)  # Display name from Shopify
+
+    # Shop settings (for metric calculations)
+    currency = Column(String, nullable=False, default="USD")  # ISO currency code
+    timezone = Column(String, nullable=True)  # IANA timezone (e.g., "America/New_York")
+    country_code = Column(String, nullable=True)  # ISO country code
+
+    # Shop metadata
+    plan_name = Column(String, nullable=True)  # Shopify plan (Basic, Shopify, Advanced, Plus)
+    email = Column(String, nullable=True)  # Shop contact email
+
+    # Sync tracking
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_synced_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    connection = relationship("Connection", backref="shopify_shop")
+    products = relationship("ShopifyProduct", back_populates="shop", cascade="all, delete-orphan")
+    customers = relationship("ShopifyCustomer", back_populates="shop", cascade="all, delete-orphan")
+    orders = relationship("ShopifyOrder", back_populates="shop", cascade="all, delete-orphan")
+
+    def __str__(self):
+        return f"{self.shop_name} ({self.shop_domain})"
+
+
+class ShopifyProduct(Base):
+    """Product catalog with COGS from metafields.
+
+    WHAT: Stores Shopify product data including cost information for profit calculations
+    WHY: Need product-level cost (COGS) to calculate true profit per order
+         Cost comes from: 1) inventoryItem.unitCost 2) custom metafield 3) None (user warned)
+    REFERENCES:
+        - Shopify Product API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Product
+        - Cost metafield: https://shopify.dev/docs/apps/selling-strategies/pricing/cost-per-item
+    """
+    __tablename__ = "shopify_products"
+    __table_args__ = (
+        UniqueConstraint("shop_id", "external_product_id", name="uq_shopify_product"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Workspace scoping
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+
+    # Link to shop
+    shop_id = Column(UUID(as_uuid=True), ForeignKey("shopify_shops.id"), nullable=False)
+
+    # Shopify identifiers
+    external_product_id = Column(String, nullable=False)  # gid://shopify/Product/xxx
+    handle = Column(String, nullable=True)  # URL-friendly handle
+
+    # Product info
+    title = Column(String, nullable=False)
+    product_type = Column(String, nullable=True)  # e.g., "T-Shirt", "Electronics"
+    vendor = Column(String, nullable=True)  # Brand/manufacturer
+    status = Column(String, nullable=False, default="active")  # active, archived, draft
+
+    # Pricing (representative price - variants may differ)
+    price = Column(Numeric(18, 4), nullable=True)  # Primary variant price
+    compare_at_price = Column(Numeric(18, 4), nullable=True)  # Original price (for sales)
+
+    # COGS - Cost of Goods Sold (critical for profit calculation)
+    # WHAT: Product cost used to calculate profit = revenue - COGS
+    # WHY: Without COGS, we can only report revenue, not actual profit
+    # PRIORITY: 1) variant.inventoryItem.unitCost 2) metafield 3) None (QA warns user)
+    cost_per_item = Column(Numeric(18, 4), nullable=True)  # From metafield or inventory item
+    cost_source = Column(String, nullable=True)  # "inventory_item", "metafield", "manual", None
+
+    # Inventory (for future use)
+    total_inventory = Column(Integer, nullable=True)  # Sum across all variants
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    shopify_created_at = Column(DateTime, nullable=True)  # When created in Shopify
+    shopify_updated_at = Column(DateTime, nullable=True)  # When updated in Shopify
+
+    # Relationships
+    shop = relationship("ShopifyShop", back_populates="products")
+    line_items = relationship("ShopifyOrderLineItem", back_populates="product")
+
+    def __str__(self):
+        return f"{self.title} (${self.price})"
+
+
+class ShopifyCustomer(Base):
+    """Customer master for LTV calculations.
+
+    WHAT: Stores Shopify customer data with aggregated order stats
+    WHY: Customer-level metrics enable LTV (Lifetime Value) calculations
+         LTV = total_spent / customer_count (average lifetime value)
+    REFERENCES:
+        - Shopify Customer API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Customer
+        - LTV calculation: revenue per customer over their entire history
+    """
+    __tablename__ = "shopify_customers"
+    __table_args__ = (
+        UniqueConstraint("shop_id", "external_customer_id", name="uq_shopify_customer"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Workspace scoping
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+
+    # Link to shop
+    shop_id = Column(UUID(as_uuid=True), ForeignKey("shopify_shops.id"), nullable=False)
+
+    # Shopify identifiers
+    external_customer_id = Column(String, nullable=False)  # gid://shopify/Customer/xxx
+
+    # Customer info (PII - handle with care)
+    email = Column(String, nullable=True)  # May be null for guest checkouts
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+
+    # Customer state
+    state = Column(String, nullable=True)  # enabled, disabled, invited, declined
+    verified_email = Column(Boolean, default=False)
+    accepts_marketing = Column(Boolean, default=False)
+
+    # LTV metrics (aggregated from orders)
+    # WHAT: Pre-computed customer lifetime stats
+    # WHY: Avoid expensive aggregation queries; update on each order sync
+    total_spent = Column(Numeric(18, 4), default=0)  # Sum of all order totals
+    order_count = Column(Integer, default=0)  # Number of orders
+    average_order_value = Column(Numeric(18, 4), nullable=True)  # total_spent / order_count
+
+    # Temporal metrics (for cohort analysis)
+    first_order_at = Column(DateTime, nullable=True)  # Date of first purchase
+    last_order_at = Column(DateTime, nullable=True)  # Date of most recent purchase
+
+    # Tags and segments
+    tags = Column(JSON, nullable=True)  # Shopify customer tags
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    shopify_created_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    shop = relationship("ShopifyShop", back_populates="customers")
+    orders = relationship("ShopifyOrder", back_populates="customer")
+
+    def __str__(self):
+        name = f"{self.first_name or ''} {self.last_name or ''}".strip() or "Guest"
+        return f"{name} ({self.email or 'No email'}) - ${self.total_spent}"
+
+
+class ShopifyOrder(Base):
+    """Order facts with attribution and line items.
+
+    WHAT: Stores Shopify order data including totals, status, and attribution
+    WHY: Orders are the source of truth for revenue and profit metrics
+         Attribution fields (utm_*, source_name) enable channel tracking
+    REFERENCES:
+        - Shopify Order API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Order
+        - Only last 60 days accessible by default; need read_all_orders scope for historical
+    """
+    __tablename__ = "shopify_orders"
+    __table_args__ = (
+        UniqueConstraint("shop_id", "external_order_id", name="uq_shopify_order"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Workspace scoping
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+
+    # Link to shop
+    shop_id = Column(UUID(as_uuid=True), ForeignKey("shopify_shops.id"), nullable=False)
+
+    # Link to customer (nullable for guest checkouts)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("shopify_customers.id"), nullable=True)
+
+    # Shopify identifiers
+    external_order_id = Column(String, nullable=False)  # gid://shopify/Order/xxx
+    order_number = Column(Integer, nullable=True)  # Human-readable order number (#1001)
+    name = Column(String, nullable=True)  # Display name (e.g., "#1001")
+
+    # Order totals (in shop currency)
+    total_price = Column(Numeric(18, 4), nullable=False)  # Final total including tax/shipping
+    subtotal_price = Column(Numeric(18, 4), nullable=True)  # Before tax/shipping
+    total_tax = Column(Numeric(18, 4), nullable=True)
+    total_shipping = Column(Numeric(18, 4), nullable=True)
+    total_discounts = Column(Numeric(18, 4), nullable=True)
+    currency = Column(String, nullable=False, default="USD")
+
+    # Profit calculation (computed from line items)
+    # WHAT: Pre-computed profit for fast queries
+    # WHY: Avoid joins to line_items for aggregate profit queries
+    total_cost = Column(Numeric(18, 4), nullable=True)  # Sum of line item costs
+    total_profit = Column(Numeric(18, 4), nullable=True)  # subtotal - total_cost
+    has_missing_costs = Column(Boolean, default=False)  # True if any line item missing COGS
+
+    # Order status
+    financial_status = Column(
+        Enum(ShopifyFinancialStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=True
+    )
+    fulfillment_status = Column(
+        Enum(ShopifyFulfillmentStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=True
+    )
+    cancelled_at = Column(DateTime, nullable=True)
+    cancel_reason = Column(String, nullable=True)
+
+    # Attribution (Phase 1: basic UTM tracking)
+    # WHAT: Where did this order come from?
+    # WHY: Connect revenue to marketing channels (even without full attribution engine)
+    # NOTE: Full attribution engine planned for Phase 2
+    source_name = Column(String, nullable=True)  # e.g., "web", "pos", "mobile"
+    landing_site = Column(String, nullable=True)  # Full landing page URL with UTMs
+    referring_site = Column(String, nullable=True)  # Referrer URL
+
+    # Extracted UTM params (parsed from landing_site for easy querying)
+    utm_source = Column(String, nullable=True)  # e.g., "facebook", "google", "email"
+    utm_medium = Column(String, nullable=True)  # e.g., "cpc", "social", "newsletter"
+    utm_campaign = Column(String, nullable=True)  # Campaign name
+    utm_content = Column(String, nullable=True)  # Ad content identifier
+    utm_term = Column(String, nullable=True)  # Search term (for PPC)
+
+    # Additional metadata
+    app_name = Column(String, nullable=True)  # App that created the order
+    tags = Column(JSON, nullable=True)  # Order tags
+    note = Column(Text, nullable=True)  # Order notes
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)  # When synced to our DB
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    order_created_at = Column(DateTime, nullable=False)  # When order was placed in Shopify
+    order_processed_at = Column(DateTime, nullable=True)  # When order was processed
+    order_closed_at = Column(DateTime, nullable=True)  # When order was closed
+
+    # Relationships
+    shop = relationship("ShopifyShop", back_populates="orders")
+    customer = relationship("ShopifyCustomer", back_populates="orders")
+    line_items = relationship("ShopifyOrderLineItem", back_populates="order", cascade="all, delete-orphan")
+
+    def __str__(self):
+        return f"Order {self.name or self.external_order_id} - ${self.total_price}"
+
+
+class ShopifyOrderLineItem(Base):
+    """Line items linking orders to products with cost tracking.
+
+    WHAT: Individual items within an order with quantity, price, and cost
+    WHY: Line-item level cost tracking enables accurate profit calculation
+         profit = (price * quantity) - (cost_per_item * quantity) - total_discount
+    REFERENCES:
+        - Shopify LineItem API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/LineItem
+        - Cost from variant.inventoryItem.unitCost or product metafield
+    """
+    __tablename__ = "shopify_order_line_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Link to order (required)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("shopify_orders.id"), nullable=False)
+
+    # Link to product (nullable - product may be deleted)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("shopify_products.id"), nullable=True)
+
+    # Shopify identifiers
+    external_line_item_id = Column(String, nullable=False)  # gid://shopify/LineItem/xxx
+    external_product_id = Column(String, nullable=True)  # Store even if product deleted
+    external_variant_id = Column(String, nullable=True)
+
+    # Item details
+    title = Column(String, nullable=False)  # Product title at time of order
+    variant_title = Column(String, nullable=True)  # Variant name (e.g., "Large / Blue")
+    sku = Column(String, nullable=True)
+
+    # Quantity and pricing
+    quantity = Column(Integer, nullable=False, default=1)
+    price = Column(Numeric(18, 4), nullable=False)  # Unit price
+    total_discount = Column(Numeric(18, 4), default=0)  # Discount on this line
+
+    # COGS tracking (critical for profit)
+    # WHAT: Cost per item at time of order
+    # WHY: Product cost may change; we snapshot cost at order time for accurate profit
+    cost_per_item = Column(Numeric(18, 4), nullable=True)  # From inventory or metafield
+    cost_source = Column(String, nullable=True)  # "inventory_item", "metafield", "product", None
+
+    # Computed profit for this line (price * qty - cost * qty - discount)
+    line_profit = Column(Numeric(18, 4), nullable=True)
+
+    # Fulfillment tracking
+    fulfillable_quantity = Column(Integer, nullable=True)
+    fulfillment_status = Column(String, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    order = relationship("ShopifyOrder", back_populates="line_items")
+    product = relationship("ShopifyProduct", back_populates="line_items")
+
+    def __str__(self):
+        return f"{self.title} x{self.quantity} @ ${self.price}"
 
 
 # Local auth credential (password hash stored separately) ----------

@@ -1,15 +1,15 @@
 # metricx Architecture Documentation
 
-**Last Updated**: 2025-01-16  
-**Version**: 1.0
+**Last Updated**: 2025-11-28
+**Version**: 1.1
 
 ## Overview
 
-metricx is a comprehensive advertising analytics and optimization platform that aggregates data from multiple ad platforms (Meta Ads, Google Ads, TikTok) and provides AI-powered insights through natural language queries.
+metricx is a comprehensive advertising analytics and optimization platform that aggregates data from multiple ad platforms (Meta Ads, Google Ads, TikTok) and e-commerce platforms (Shopify), providing AI-powered insights through natural language queries.
 
 ### Core Capabilities
 
-- **Multi-Platform Integration**: Meta Ads, Google Ads, TikTok
+- **Multi-Platform Integration**: Meta Ads, Google Ads, TikTok, Shopify
 - **AI-Powered Analytics**: Natural language query system (QA/Copilot)
 - **Real-Time Metrics**: Unified metric calculations across all platforms
 - **Financial Reporting**: P&L statements with manual cost tracking
@@ -45,7 +45,7 @@ metricx is a comprehensive advertising analytics and optimization platform that 
 │ - Entities  │  │ - Conversation   │  │ - Meta Ads │
 │ - Metrics   │  │   History        │  │ - Google   │
 │ - Users     │  │ - TTL-based       │  │ - TikTok   │
-│ - Workspaces│  │   Cleanup        │  │            │
+│ - Workspaces│  │   Cleanup        │  │ - Shopify  │
 └─────────────┘  └──────────────────┘  └───────────┘
 ```
 
@@ -66,7 +66,7 @@ backend/app/
 ├── deps.py                     # Dependency injection (DB sessions, settings)
 ├── state.py                    # Application-level singletons (Redis context)
 │
-├── routers/                    # API endpoints (17 routers)
+├── routers/                    # API endpoints (20 routers)
 │   ├── auth.py                 # Login, register, logout, /me
 │   ├── workspaces.py           # Workspace info, management
 │   ├── connections.py          # Platform connection CRUD
@@ -81,13 +81,18 @@ backend/app/
 │   ├── meta_sync.py            # Meta Ads entity/metrics sync
 │   ├── google_sync.py          # Google Ads entity/metrics sync
 │   ├── meta_oauth.py           # Meta OAuth flow
-│   └── google_oauth.py         # Google OAuth flow
+│   ├── google_oauth.py         # Google OAuth flow
+│   ├── shopify_oauth.py        # Shopify OAuth flow
+│   ├── shopify_sync.py         # Shopify data sync (orders, products, customers)
+│   └── shopify_webhooks.py     # Shopify GDPR compliance webhooks
 │
 ├── services/                   # Business logic layer
 │   ├── qa_service.py           # QA orchestrator (main entry point)
 │   ├── unified_metric_service.py  # Single source of truth for metrics
 │   ├── meta_ads_client.py      # Meta API wrapper (rate limiting, pagination)
 │   ├── google_ads_client.py    # Google Ads API wrapper (GAQL, rate limiting)
+│   ├── shopify_client.py       # Shopify Admin GraphQL API wrapper
+│   ├── shopify_sync_service.py # Shopify sync orchestration (orders, products, customers)
 │   ├── meta_sync_scheduler.py  # Automated Meta sync scheduler
 │   ├── token_service.py        # Token encryption/decryption
 │   ├── compute_service.py     # P&L snapshot generation
@@ -177,6 +182,7 @@ backend/app/
 - **Financial**: ManualCost, Pnl (P&L snapshots)
 - **Analytics**: QaQueryLog, ComputeRun
 - **Auth**: AuthCredential (bcrypt password hashes)
+- **Shopify**: ShopifyShop, ShopifyProduct, ShopifyCustomer, ShopifyOrder, ShopifyOrderLineItem
 
 ---
 
@@ -335,6 +341,22 @@ UnifiedMetricService.get_summary()
 - **Features**: GAQL queries, PMax support, rate limiting, retries
 - **Hierarchy**: Campaign → Ad Group → Ad → Asset Group → Creative
 
+### Shopify Integration
+- **API**: Admin GraphQL API (2024-07)
+- **Endpoints**: OAuth flow, product/customer/order sync, compliance webhooks
+- **Features**:
+  - OAuth 2.0 with HMAC verification
+  - Product catalog with COGS (cost of goods sold)
+  - Customer data with LTV metrics
+  - Order sync with UTM attribution
+  - GDPR compliance webhooks (mandatory)
+- **Data Flow**: Shop → Products/Customers → Orders → Line Items
+- **Attribution**: UTM parameters (source, medium, campaign) for revenue attribution
+- **Compliance**:
+  - `customers/data_request` - Customer data export
+  - `customers/redact` - Customer data deletion
+  - `shop/redact` - Full shop data deletion
+
 ### OpenAI Integration
 - **Model**: GPT-4-turbo (QA translation), GPT-4o-mini (answer generation)
 - **Usage**: Natural language → DSL translation, answer rephrasing
@@ -354,7 +376,7 @@ UnifiedMetricService.get_summary()
 
 - **workspaces**: Company/organization accounts
 - **users**: Workspace members (Owner/Admin/Viewer roles)
-- **connections**: Platform account links (Meta/Google/TikTok)
+- **connections**: Platform account links (Meta/Google/TikTok/Shopify)
 - **tokens**: Encrypted OAuth tokens (AES-256-GCM)
 - **entities**: Hierarchical campaign structure (campaign → adset → ad → creative)
 - **metric_facts**: Raw performance data (spend, revenue, clicks, etc.)
@@ -362,6 +384,14 @@ UnifiedMetricService.get_summary()
 - **pnl**: P&L snapshots (computed from MetricFact + ManualCost)
 - **qa_query_logs**: QA conversation history
 - **auth_credentials**: Bcrypt password hashes
+
+### Shopify Tables
+
+- **shopify_shops**: Store metadata (domain, currency, timezone, plan)
+- **shopify_products**: Product catalog with COGS for profit calculation
+- **shopify_customers**: Customer data with LTV metrics (total_spent, order_count, AOV)
+- **shopify_orders**: Orders with totals, status, and UTM attribution
+- **shopify_order_line_items**: Line items with cost tracking for profit
 
 ### Key Relationships
 
@@ -374,6 +404,15 @@ Entity N:1 Entity (parent)
 Entity 1:N MetricFact
 Workspace 1:N ManualCost
 Workspace 1:N Pnl
+
+# Shopify Relationships
+Connection 1:1 ShopifyShop
+ShopifyShop 1:N ShopifyProduct
+ShopifyShop 1:N ShopifyCustomer
+ShopifyShop 1:N ShopifyOrder
+ShopifyOrder N:1 ShopifyCustomer
+ShopifyOrder 1:N ShopifyOrderLineItem
+ShopifyOrderLineItem N:1 ShopifyProduct
 ```
 
 ### Indexes
@@ -422,6 +461,10 @@ Workspace 1:N Pnl
 - `OPENAI_API_KEY`: OpenAI API key
 - `ADMIN_SECRET_KEY`: Admin panel session secret
 - `BACKEND_CORS_ORIGINS`: Allowed CORS origins
+- `SHOPIFY_API_KEY`: Shopify app API key
+- `SHOPIFY_API_SECRET`: Shopify app secret (for HMAC verification)
+- `SHOPIFY_OAUTH_REDIRECT_URI`: OAuth callback URL
+- `SHOPIFY_API_VERSION`: API version (default: 2024-07)
 
 **Frontend**:
 - `NEXT_PUBLIC_API_BASE`: Backend API URL (build-time)
@@ -472,10 +515,11 @@ npm run dev  # Start Next.js dev server
 
 ## References
 
-- **Build Log**: `docs/living-docs/metricx_BUILD_LOG.md`
+- **Build Log**: `docs/living-docs/ADNAVI_BUILD_LOG.md`
 - **QA Architecture**: `docs/living-docs/QA_SYSTEM_ARCHITECTURE.md`
 - **Redis Context**: `backend/docs/REDIS_CONTEXT_MANAGER.md`
 - **Unified Metrics**: `backend/docs/architecture/unified-metrics.md`
 - **Meta Integration**: `docs/living-docs/META_INTEGRATION_STATUS.md`
 - **Google Integration**: `docs/living-docs/GOOGLE_INTEGRATION_STATUS.MD`
+- **Shopify Integration**: `docs/living-docs/SHOPIFY_INTEGRATION_PLAN.md`
 

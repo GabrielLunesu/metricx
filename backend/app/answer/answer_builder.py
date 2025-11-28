@@ -481,18 +481,21 @@ class AnswerBuilder:
                 
                 # Filter context based on intent (NEW in Phase 1)
                 if intent == AnswerIntent.SIMPLE:
-                    # SIMPLE: Only basic value, no extra context
+                    # SIMPLE: Skip LLM entirely, use deterministic template (~200-500ms savings)
                     filtered_context = {
                         "metric_name": context.metric_name,
                         "metric_value": context.metric_value,
                         "metric_value_raw": context.metric_value_raw,
                         "timeframe": timeframe_desc,
-                        "timeframe_display": timeframe_display,  # NEW: Human-friendly timeframe
+                        "timeframe_display": timeframe_display,
                         "tense": tense.value,
-                        "performer_intent": performer_intent.value  # NEW in Phase 4
+                        "performer_intent": performer_intent.value
                     }
-                    system_prompt = SIMPLE_ANSWER_PROMPT
-                    user_prompt = self._build_simple_prompt(filtered_context, question)
+                    return self._build_simple_answer_template(
+                        filtered_context,
+                        start_time=start_time,
+                        log_latency=log_latency
+                    )
                     
                 elif intent == AnswerIntent.COMPARATIVE:
                     # COMPARATIVE: Include comparison + top performer, skip trends
@@ -806,7 +809,55 @@ class AnswerBuilder:
             lines.append(f"{idx}. {name}")
         body = "\n".join(lines)
         return f"{header}\n{body}"
-    
+
+    def _build_simple_answer_template(
+        self,
+        context: Dict[str, Any],
+        start_time: float = None,
+        log_latency: bool = False
+    ) -> tuple[str, int]:
+        """
+        Build a template-based answer for SIMPLE intent queries.
+
+        WHY: Skip LLM call for simple factual answers (~200-500ms savings).
+        WHAT: Returns a deterministic template like "Your ROAS was 3.88× last week."
+        WHERE: Called by build_answer() when intent=SIMPLE
+
+        Args:
+            context: Filtered context with metric_name, metric_value, timeframe_display, tense
+            start_time: Start time for latency calculation
+            log_latency: Whether to track and return latency
+
+        Returns:
+            Tuple of (answer_text, latency_ms)
+
+        Examples:
+            - Past: "Your ROAS was 3.88× last week."
+            - Present: "Your ROAS is 3.88× over the last 7 days."
+        """
+        metric_name = context.get("metric_name", "metric").upper()
+        metric_value = context.get("metric_value", "N/A")
+        timeframe = context.get("timeframe_display", context.get("timeframe", ""))
+        tense = context.get("tense", "past")
+
+        # Select verb based on tense
+        verb = "was" if tense == "past" else "is"
+
+        # Build the answer
+        if timeframe:
+            answer = f"Your {metric_name} {verb} {metric_value} {timeframe}."
+        else:
+            answer = f"Your {metric_name} {verb} {metric_value}."
+
+        # Calculate latency
+        latency_ms = 0
+        if log_latency and start_time:
+            latency_ms = int((time.time() - start_time) * 1000)
+
+        logger.info(f"[ANSWER] Template SIMPLE answer ({len(answer)} chars) in {latency_ms}ms (LLM skipped)")
+
+        return answer, latency_ms
+
     def _build_system_prompt(self) -> str:
         """
         Build system prompt with strict safety instructions.

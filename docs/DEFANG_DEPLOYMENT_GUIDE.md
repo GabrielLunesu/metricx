@@ -192,6 +192,10 @@ This means:
 
 ```bash
 defang compose up
+
+# to gcp
+DEFANG_PROVIDER=gcp GCP_PROJECT_ID=adnavi defang compose up
+
 ```
 
 This should work now! Defang will only complain about truly required configs:

@@ -11,7 +11,7 @@ import {
     ChartLegendContent
 } from "@/components/ui/chart"
 
-export function metricxChart({
+export function MetricxChart({
     data,
     config,
     type = 'area', // 'area' | 'bar'

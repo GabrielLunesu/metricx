@@ -137,7 +137,7 @@ def seed():
     """Main seeding function."""
     with SessionLocal() as db:
         print("🧹 Clearing existing data...")
-        
+
         # Clear data in reverse dependency order
         db.query(models.Pnl).delete()
         db.query(models.ComputeRun).delete()
@@ -145,10 +145,18 @@ def seed():
         db.query(models.Entity).delete()
         db.query(models.Import).delete()
         db.query(models.Fetch).delete()
+        # Clear Shopify tables before connections (foreign key dependencies)
+        db.query(models.ShopifyOrderLineItem).delete()
+        db.query(models.ShopifyOrder).delete()
+        db.query(models.ShopifyCustomer).delete()
+        db.query(models.ShopifyProduct).delete()
+        db.query(models.ShopifyShop).delete()
         db.query(models.Connection).delete()
         db.query(models.QaQueryLog).delete()
         db.query(models.ManualCost).delete()
         db.query(models.AuthCredential).delete()
+        db.query(models.WorkspaceInvite).delete()
+        db.query(models.WorkspaceMember).delete()
         db.query(models.User).delete()
         db.query(models.Token).delete()
         db.query(models.Workspace).delete()
@@ -229,8 +237,19 @@ def seed():
             workspace_id=workspace.id,
             sync_frequency="hourly"
         )
-        
-        db.add_all([conn_google, conn_meta])
+
+        conn_shopify = models.Connection(
+            id=uuid.uuid4(),
+            provider=models.ProviderEnum.shopify,
+            external_account_id="SHOPIFY-789",
+            name="Demo Store",
+            status="active",
+            connected_at=datetime.utcnow(),
+            workspace_id=workspace.id,
+            sync_frequency="hourly"
+        )
+
+        db.add_all([conn_google, conn_meta, conn_shopify])
         db.flush()
 
         # Seed encrypted provider token if available (optional)
@@ -515,8 +534,219 @@ def seed():
         )
         db.add(hubspot_cost)
         db.commit()
-        
-        # 8. Run Compute Service
+
+        # 8. Create Shopify mock data
+        print("🛍️ Creating Shopify mock data...")
+
+        # 8.1 Create Shopify Shop
+        shopify_shop = models.ShopifyShop(
+            id=uuid.uuid4(),
+            workspace_id=workspace.id,
+            connection_id=conn_shopify.id,
+            external_shop_id="gid://shopify/Shop/12345678",
+            shop_domain="demo-store.myshopify.com",
+            shop_name="Demo Store",
+            currency="EUR",
+            timezone="Europe/Amsterdam",
+            country_code="NL",
+            plan_name="Shopify",
+            email="shop@demo-store.com",
+            last_synced_at=datetime.utcnow()
+        )
+        db.add(shopify_shop)
+        db.flush()
+
+        # 8.2 Create Shopify Products
+        product_data = [
+            {"title": "Premium T-Shirt", "type": "Apparel", "price": 29.99, "cost": 8.50, "vendor": "Cotton Co"},
+            {"title": "Classic Hoodie", "type": "Apparel", "price": 59.99, "cost": 18.00, "vendor": "Cotton Co"},
+            {"title": "Running Shoes", "type": "Footwear", "price": 129.99, "cost": 45.00, "vendor": "SportGear"},
+            {"title": "Wireless Earbuds", "type": "Electronics", "price": 79.99, "cost": 25.00, "vendor": "TechBrand"},
+            {"title": "Smart Watch", "type": "Electronics", "price": 199.99, "cost": 65.00, "vendor": "TechBrand"},
+            {"title": "Yoga Mat", "type": "Fitness", "price": 34.99, "cost": 10.00, "vendor": "FitLife"},
+            {"title": "Water Bottle", "type": "Accessories", "price": 24.99, "cost": 6.00, "vendor": "EcoGoods"},
+            {"title": "Backpack", "type": "Accessories", "price": 89.99, "cost": 28.00, "vendor": "TravelGear"},
+        ]
+
+        shopify_products = []
+        for i, p in enumerate(product_data):
+            product = models.ShopifyProduct(
+                id=uuid.uuid4(),
+                workspace_id=workspace.id,
+                shop_id=shopify_shop.id,
+                external_product_id=f"gid://shopify/Product/{1000 + i}",
+                handle=p["title"].lower().replace(" ", "-"),
+                title=p["title"],
+                product_type=p["type"],
+                vendor=p["vendor"],
+                status="active",
+                price=p["price"],
+                cost_per_item=p["cost"],
+                cost_source="inventory_item",
+                total_inventory=random.randint(50, 500),
+                shopify_created_at=datetime.utcnow() - timedelta(days=random.randint(30, 180))
+            )
+            shopify_products.append(product)
+            db.add(product)
+        db.flush()
+
+        # 8.3 Create Shopify Customers
+        customer_names = [
+            ("Emma", "Johnson", "emma.j@email.com"),
+            ("Liam", "Williams", "liam.w@email.com"),
+            ("Olivia", "Brown", "olivia.b@email.com"),
+            ("Noah", "Jones", "noah.j@email.com"),
+            ("Ava", "Garcia", "ava.g@email.com"),
+            ("Ethan", "Miller", "ethan.m@email.com"),
+            ("Sophia", "Davis", "sophia.d@email.com"),
+            ("Mason", "Rodriguez", "mason.r@email.com"),
+            ("Isabella", "Martinez", "isabella.m@email.com"),
+            ("Lucas", "Hernandez", "lucas.h@email.com"),
+            ("Mia", "Lopez", "mia.l@email.com"),
+            ("Alexander", "Gonzalez", "alex.g@email.com"),
+        ]
+
+        shopify_customers = []
+        for i, (first, last, email) in enumerate(customer_names):
+            order_count = random.randint(1, 8)
+            total_spent = round(random.uniform(50, 800) * order_count / 3, 2)
+            customer = models.ShopifyCustomer(
+                id=uuid.uuid4(),
+                workspace_id=workspace.id,
+                shop_id=shopify_shop.id,
+                external_customer_id=f"gid://shopify/Customer/{2000 + i}",
+                email=email,
+                first_name=first,
+                last_name=last,
+                state="enabled",
+                verified_email=True,
+                accepts_marketing=random.choice([True, False]),
+                total_spent=total_spent,
+                order_count=order_count,
+                average_order_value=round(total_spent / order_count, 2) if order_count > 0 else 0,
+                first_order_at=datetime.utcnow() - timedelta(days=random.randint(60, 365)),
+                last_order_at=datetime.utcnow() - timedelta(days=random.randint(1, 30)),
+                shopify_created_at=datetime.utcnow() - timedelta(days=random.randint(90, 400))
+            )
+            shopify_customers.append(customer)
+            db.add(customer)
+        db.flush()
+
+        # 8.4 Create Shopify Orders with attribution
+        utm_sources = [
+            {"source": "facebook", "medium": "cpc", "campaign": "Meta - Awareness Top Funnel"},
+            {"source": "facebook", "medium": "cpc", "campaign": "Meta - Conversions Mid Funnel"},
+            {"source": "facebook", "medium": "cpc", "campaign": "Meta - Catalog Sales"},
+            {"source": "google", "medium": "cpc", "campaign": "Search - Brand Terms"},
+            {"source": "google", "medium": "cpc", "campaign": "Search - Competitor"},
+            {"source": "google", "medium": "display", "campaign": "Display - Retargeting"},
+            {"source": "instagram", "medium": "social", "campaign": "organic"},
+            {"source": "email", "medium": "newsletter", "campaign": "weekly_promo"},
+            {"source": "direct", "medium": "none", "campaign": None},
+            {"source": "organic", "medium": "search", "campaign": None},
+        ]
+
+        shopify_orders = []
+        order_number = 1001
+
+        # Generate orders for last 30 days
+        for day_offset in range(30, 0, -1):
+            # 5-15 orders per day
+            orders_today = random.randint(5, 15)
+            order_date = datetime.utcnow() - timedelta(days=day_offset)
+
+            for _ in range(orders_today):
+                customer = random.choice(shopify_customers)
+                utm = random.choice(utm_sources)
+
+                # Select 1-4 products for this order
+                order_products = random.sample(shopify_products, random.randint(1, 4))
+                subtotal = 0
+                total_cost = 0
+                line_items_data = []
+
+                for prod in order_products:
+                    qty = random.randint(1, 3)
+                    item_price = float(prod.price)
+                    item_cost = float(prod.cost_per_item) if prod.cost_per_item else 0
+                    line_total = item_price * qty
+                    line_cost = item_cost * qty
+                    subtotal += line_total
+                    total_cost += line_cost
+                    line_items_data.append({
+                        "product": prod,
+                        "quantity": qty,
+                        "price": item_price,
+                        "cost": item_cost,
+                        "total": line_total
+                    })
+
+                # Calculate totals
+                discount = round(subtotal * random.uniform(0, 0.15), 2) if random.random() > 0.7 else 0
+                tax = round((subtotal - discount) * 0.21, 2)  # 21% VAT
+                shipping = random.choice([0, 4.95, 6.95, 9.95])
+                total_price = round(subtotal - discount + tax + shipping, 2)
+                profit = round(subtotal - discount - total_cost, 2)
+
+                order = models.ShopifyOrder(
+                    id=uuid.uuid4(),
+                    workspace_id=workspace.id,
+                    shop_id=shopify_shop.id,
+                    customer_id=customer.id,
+                    external_order_id=f"gid://shopify/Order/{3000 + order_number}",
+                    order_number=order_number,
+                    name=f"#{order_number}",
+                    total_price=total_price,
+                    subtotal_price=subtotal,
+                    total_tax=tax,
+                    total_shipping=shipping,
+                    total_discounts=discount,
+                    currency="EUR",
+                    total_cost=total_cost,
+                    total_profit=profit,
+                    has_missing_costs=False,
+                    financial_status=models.ShopifyFinancialStatusEnum.paid,
+                    fulfillment_status=random.choice([
+                        models.ShopifyFulfillmentStatusEnum.fulfilled,
+                        models.ShopifyFulfillmentStatusEnum.fulfilled,
+                        models.ShopifyFulfillmentStatusEnum.partial,
+                        models.ShopifyFulfillmentStatusEnum.unfulfilled,
+                    ]),
+                    source_name="web",
+                    utm_source=utm["source"],
+                    utm_medium=utm["medium"],
+                    utm_campaign=utm["campaign"],
+                    order_created_at=order_date + timedelta(hours=random.randint(8, 22)),
+                    order_processed_at=order_date + timedelta(hours=random.randint(8, 22), minutes=5),
+                )
+                db.add(order)
+                shopify_orders.append(order)
+                order_number += 1
+
+                # Create line items for this order
+                for li_data in line_items_data:
+                    line_profit = li_data["total"] - (li_data["cost"] * li_data["quantity"])
+                    line_item = models.ShopifyOrderLineItem(
+                        id=uuid.uuid4(),
+                        order_id=order.id,
+                        product_id=li_data["product"].id,
+                        external_line_item_id=f"gid://shopify/LineItem/{uuid.uuid4().hex[:12]}",
+                        external_product_id=li_data["product"].external_product_id,
+                        title=li_data["product"].title,
+                        sku=f"SKU-{li_data['product'].handle.upper()[:8]}",
+                        quantity=li_data["quantity"],
+                        price=li_data["price"],
+                        total_discount=0,
+                        cost_per_item=li_data["cost"],
+                        cost_source="inventory_item",
+                        line_profit=round(line_profit, 2),
+                    )
+                    db.add(line_item)
+
+        db.commit()
+        print(f"✅ Created Shopify data: 1 shop, {len(shopify_products)} products, {len(shopify_customers)} customers, {len(shopify_orders)} orders")
+
+        # 9. Run Compute Service
         print("💰 Running compute service to generate P&L snapshots...")
         try:
             run_id = run_compute_snapshot(
@@ -534,9 +764,10 @@ def seed():
         print("🎉 SEED COMPLETE!")
         print("="*70)
         print(f"   Workspace: {workspace.name}")
-        print(f"   Connections: 2 (Google, Meta)")
+        print(f"   Connections: 3 (Google, Meta, Shopify)")
         print(f"   Entities: {len(entities_to_seed)}")
         print(f"   Total Facts: {total_facts:,}")
+        print(f"   Shopify: 1 shop, {len(shopify_products)} products, {len(shopify_customers)} customers, {len(shopify_orders)} orders")
         print("="*70 + "\n")
 
 if __name__ == "__main__":
