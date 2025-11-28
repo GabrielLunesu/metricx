@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     CONTEXT_MAX_HISTORY: int = 5
     CONTEXT_TTL_SECONDS: int = 3600  # 1 hour
 
+    # Shopify OAuth Configuration
+    # WHAT: Shopify Partner app credentials for OAuth flow
+    # WHY: Required for shop authentication and API access
+    # REFERENCES: https://shopify.dev/docs/apps/auth/oauth
+    SHOPIFY_CLIENT_ID: Optional[str] = None
+    SHOPIFY_CLIENT_SECRET: Optional[str] = None
+    SHOPIFY_SCOPES: str = "read_orders,read_all_orders,read_products,read_customers,read_analytics,read_inventory,read_marketing_events"
+    SHOPIFY_REDIRECT_URI: Optional[str] = None  # e.g., https://api.yourapp.com/shopify/callback
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

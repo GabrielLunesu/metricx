@@ -2196,5 +2196,94 @@ Prefer concise bullets; link code paths when helpful.
 - QA now recognizes providers based on both connections and facts to avoid false negatives for newly connected Google.
 - Entity performance router supports `creative` leaf level; child routing selects creatives when present under PMax asset groups.
 
+## Shopify Integration (Phase 1 Complete)
+
+### 2025-11-28T12:00:00Z — **FEATURE**: Shopify E-Commerce Integration — Full OAuth flow, data sync, and compliance webhooks.
+
+**Summary**: Implemented complete Shopify integration for e-commerce analytics, enabling order revenue tracking, product COGS (cost of goods sold), customer LTV calculations, and UTM attribution.
+
+**New Files Created**:
+- `backend/app/routers/shopify_oauth.py`: OAuth 2.0 flow for Shopify store connections
+- `backend/app/routers/shopify_sync.py`: Manual sync endpoints for orders, products, customers
+- `backend/app/routers/shopify_webhooks.py`: GDPR compliance webhooks (mandatory for Shopify apps)
+- `backend/app/services/shopify_client.py`: Shopify Admin GraphQL API client
+- `backend/app/services/shopify_sync_service.py`: Sync orchestration service
+- `backend/alembic/versions/20251127_000001_add_shopify_tables.py`: Database migration
+- `ui/components/ShopifyConnectButton.jsx`: OAuth initiation button
+- `ui/components/ShopifyShopModal.jsx`: Shop confirmation modal
+- `ui/components/ShopifySyncButton.jsx`: Manual sync trigger button
+
+**Files Modified**:
+- `backend/app/models.py`: Added 5 new Shopify models (ShopifyShop, ShopifyProduct, ShopifyCustomer, ShopifyOrder, ShopifyOrderLineItem) + 2 enums (ShopifyFinancialStatusEnum, ShopifyFulfillmentStatusEnum)
+- `backend/app/main.py`: Registered 3 new routers (shopify_oauth, shopify_sync, shopify_webhooks)
+- `backend/app/seed_mock.py`: Added Shopify mock data generation (shop, products, customers, orders with UTM attribution)
+- `ui/app/(dashboard)/settings/components/ConnectionsTab.jsx`: Added Shopify connection UI
+
+**Database Schema** (new tables):
+```
+shopify_shops          - Store metadata (currency, timezone, plan)
+shopify_products       - Product catalog with COGS for profit calculation
+shopify_customers      - Customer data for LTV metrics
+shopify_orders         - Orders with attribution (utm_source, utm_medium, utm_campaign)
+shopify_order_line_items - Line items with cost tracking for profit
+```
+
+**Features Implemented**:
+- ✅ **OAuth Flow**: Complete authorization flow with HMAC validation
+- ✅ **Shop Connection**: Store shop metadata (currency, timezone, country)
+- ✅ **Product Sync**: Catalog with COGS from inventory/metafields
+- ✅ **Customer Sync**: Customer data with LTV metrics (total_spent, order_count, AOV)
+- ✅ **Order Sync**: Orders with UTM attribution and profit calculation
+- ✅ **Compliance Webhooks**: GDPR-compliant data request/deletion endpoints
+  - `POST /webhooks/shopify/customers/data_request` - Customer data export
+  - `POST /webhooks/shopify/customers/redact` - Customer data deletion
+  - `POST /webhooks/shopify/shop/redact` - Full shop data deletion (app uninstall)
+- ✅ **Mock Data**: Seed script generates realistic Shopify data for testing
+
+**OAuth Scopes Requested**:
+- `read_orders` - Order data for revenue/profit
+- `read_all_orders` - Historical orders (>60 days)
+- `read_products` - Product catalog with pricing
+- `read_analytics` - Shop analytics
+- `read_inventory` - Inventory levels and cost
+- `read_marketing_events` - Marketing attribution
+
+**API Endpoints**:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/auth/shopify/authorize` | GET | Start OAuth flow |
+| `/auth/shopify/callback` | GET | OAuth callback handler |
+| `/auth/shopify/shop` | GET | Get pending shop info |
+| `/auth/shopify/connect` | POST | Confirm shop connection |
+| `/sync/shopify/{connection_id}/products` | POST | Sync products |
+| `/sync/shopify/{connection_id}/customers` | POST | Sync customers |
+| `/sync/shopify/{connection_id}/orders` | POST | Sync orders |
+| `/webhooks/shopify/customers/data_request` | POST | GDPR data request |
+| `/webhooks/shopify/customers/redact` | POST | GDPR customer deletion |
+| `/webhooks/shopify/shop/redact` | POST | Shop data deletion |
+
+**Environment Variables Required**:
+- `SHOPIFY_API_KEY` - App API key from Shopify Partners
+- `SHOPIFY_API_SECRET` - App secret for HMAC verification
+- `SHOPIFY_OAUTH_REDIRECT_URI` - OAuth callback URL
+- `SHOPIFY_API_VERSION` - API version (default: 2024-07)
+
+**Attribution Model**:
+- Orders capture UTM parameters from `landing_site` URL
+- Attribution fields: `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`
+- Enables connecting Shopify revenue to ad campaigns (Meta, Google)
+
+**Testing**:
+- Mock data: `python -m app.seed_mock` generates 300+ orders with UTM attribution
+- Compliance webhooks: All 3 endpoints tested with HMAC verification
+
+**Impact**:
+- **Revenue Tracking**: Connect e-commerce revenue to ad spend for true ROAS
+- **Profit Calculation**: COGS tracking enables profit metrics (not just revenue)
+- **Customer LTV**: Aggregate customer metrics for cohort analysis
+- **Attribution**: UTM tracking connects orders to marketing channels
+
+---
+
 ## Changelog Addendum
 - 2025-11-04: Google Ads integration shipped with PMax hierarchy + metrics, provider awareness improvements, and UI updates.
