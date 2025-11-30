@@ -1,8 +1,8 @@
 # Metricx Attribution Engine
 
-**Version**: 1.1.0
+**Version**: 1.3.0
 **Last Updated**: 2025-11-30
-**Status**: In Development
+**Status**: Week 2 Complete - Attribution Live
 
 ---
 
@@ -40,12 +40,13 @@ The Attribution Engine bridges this gap.
 
 | Capability | Description | Status |
 |------------|-------------|--------|
-| **Journey Tracking** | Track visitors across sessions via Shopify Web Pixel | 🔲 Planned |
-| **UTM Attribution** | Match UTM parameters to campaigns/ads | 🔲 Planned |
-| **Click ID Resolution** | Resolve gclid/fbclid to actual ads | 🔲 Planned |
-| **Multi-Touch Models** | First-click, last-click, linear attribution | 🔲 Planned |
-| **Server-Side CAPI** | Send conversions back to Meta/Google | 🔲 Planned |
-| **Attribution Windows** | Configurable 7/14/28/30 day windows | 🔲 Planned |
+| **Journey Tracking** | Track visitors across sessions via Shopify Web Pixel | ✅ Complete |
+| **UTM Attribution** | Match UTM parameters to providers (meta, google, etc.) | ✅ Complete |
+| **Order Attribution** | Link orders to journeys via checkout_token | ✅ Complete |
+| **Click ID Resolution** | Resolve gclid/fbclid to actual ads | 🔲 Week 3 |
+| **Multi-Touch Models** | First-click, last-click, linear attribution | 🔲 Week 4 |
+| **Server-Side CAPI** | Send conversions back to Meta/Google | 🔲 Week 3 |
+| **Attribution Windows** | Configurable 7/14/28/30 day windows | 🔲 Week 4 |
 
 ### Key Design Decisions
 
@@ -389,7 +390,11 @@ register(async ({ analytics, browser, settings, init }) => {
 
     fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Skip ngrok interstitial page for local development
+        'ngrok-skip-browser-warning': 'true'
+      },
       body: JSON.stringify({
         workspace_id: workspaceId,
         visitor_id: visitorId,
@@ -1158,34 +1163,39 @@ logger.info(
 
 ## Implementation Progress
 
-### Week 1: Shopify Web Pixel Extension
+### Week 1: Shopify Web Pixel Extension ✅ COMPLETE
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Create extension scaffold | 🔲 | `shopify app generate extension --template web_pixel` |
-| Configure shopify.extension.toml | 🔲 | Privacy settings, workspace field |
-| Implement index.js with consent checks | 🔲 | Respect analyticsAllowed/marketingAllowed |
-| Use correct cookie API (strict mode) | 🔲 | No options object in strict mode |
-| Add event_id for deduplication | 🔲 | Client-generated UUID per event |
-| Subscribe to specific events (not all) | 🔲 | Only events we actually use |
-| Backend /v1/pixel-events endpoint | 🔲 | With idempotency check |
-| Pixel activation service | 🔲 | webPixelCreate mutation |
-| Add OAuth scopes | 🔲 | write_pixels, read_customer_events |
-| End-to-end test | 🔲 | Pixel → Backend flow |
+| Create extension scaffold | ✅ | `shopify-app/metricx/extensions/metricx-pixel/` |
+| Configure shopify.extension.toml | ✅ | Privacy settings, workspaceId, apiEndpoint fields |
+| Implement index.js with consent checks | ✅ | Respects analyticsAllowed/marketingAllowed |
+| Use correct cookie API (strict mode) | ✅ | No options object in strict mode |
+| Add event_id for deduplication | ✅ | Client-generated UUID per event |
+| Subscribe to specific events (not all) | ✅ | page_viewed, product_viewed, cart, checkout |
+| Backend /v1/pixel-events endpoint | ✅ | `backend/app/routers/pixel_events.py` with idempotency |
+| Pixel activation service | ✅ | `backend/app/services/pixel_activation_service.py` |
+| Add OAuth scopes | ✅ | write_pixels, read_customer_events added to Shopify Partners |
+| Integrate activation with OAuth | ✅ | Pixel activated on shop connect via GraphQL |
+| Database migrations | ✅ | `20251130_000001_add_attribution_tables.py` |
+| Deploy extension | ✅ | Deployed via `shopify app deploy` (v7) |
+| CORS for sandboxed iframe | ✅ | Wildcard `*` origin + ngrok header support |
+| End-to-end test | ✅ | Pixel → Backend flow verified working |
 
-### Week 2: Attribution Core
+### Week 2: Attribution Core ✅ COMPLETE
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Database migrations | 🔲 | journeys, touchpoints, attributions |
-| Add checkout_token to shopify_orders | 🔲 | For journey linking |
-| CustomerJourney model | 🔲 | SQLAlchemy model |
-| JourneyTouchpoint model | 🔲 | SQLAlchemy model |
-| Attribution model | 🔲 | SQLAlchemy model |
-| Journey service | 🔲 | Create/update journeys |
-| Attribution service with window | 🔲 | Configurable window, proper priority |
-| Webhook handler (triggers attribution) | 🔲 | Idempotent job queueing |
-| Attribution worker | 🔲 | INSERT ON CONFLICT for idempotency |
+| Database migrations | ✅ | journeys, touchpoints, attributions (done in Week 1) |
+| Add checkout_token to shopify_orders | ✅ | For journey linking |
+| CustomerJourney model | ✅ | SQLAlchemy model with relationships |
+| JourneyTouchpoint model | ✅ | SQLAlchemy model |
+| Attribution model | ✅ | SQLAlchemy model with unique constraint |
+| Journey service | ✅ | Created in pixel_events.py |
+| Attribution service with priority | ✅ | gclid > utm_campaign > fbclid > utm_source > referrer |
+| orders/paid webhook handler | ✅ | `POST /webhooks/shopify/orders/paid` |
+| Webhook subscription service | ✅ | Auto-subscribes on OAuth connect |
+| Direct/organic classification | ✅ | Proper fallback logic in webhook |
 
 ### Week 3: Click Resolution + CAPI
 
@@ -1508,6 +1518,74 @@ DEFAULT_ATTRIBUTION_WINDOW_DAYS=30
 ---
 
 ## Changelog
+
+### v1.3.0 (2025-11-30) - Week 2 Complete ✅ TESTED END-TO-END
+**Attribution engine fully implemented with orders/paid webhook.**
+
+**End-to-End Test Successful:**
+```
+✅ Pixel captures UTMs (utm_source=meta, utm_campaign=attribution_test)
+✅ Touchpoints created for journey
+✅ checkout_token linked to journey on checkout_completed
+✅ orders/paid webhook received from Shopify
+✅ Journey found by checkout_token
+✅ Attribution record created (provider=meta, match_type=utm_campaign)
+```
+
+New Features:
+- `orders/paid` webhook handler triggers attribution on payment
+- Orders linked to journeys via `checkout_token`
+- Attribution stored with provider, match_type, confidence
+- Webhook auto-subscription on OAuth connect (requires NGROK_URL for local dev)
+- Direct/organic/unknown classification for unattributed orders
+
+Attribution Flow:
+1. Visitor lands with UTMs → pixel creates journey + touchpoints
+2. Visitor completes checkout → pixel links checkout_token to journey
+3. Order paid → webhook finds journey by checkout_token
+4. Attribution runs → stores provider/match_type/confidence
+5. Journey stats updated (total_orders, total_revenue)
+
+Files Added/Modified:
+- `backend/app/routers/shopify_webhooks.py` - Added orders/paid handler with attribution logic
+- `backend/app/services/webhook_subscription_service.py` - New service for webhook registration
+- `backend/app/routers/shopify_oauth.py` - Added webhook subscription on connect
+
+Attribution Priority Chain:
+1. gclid → Google (high confidence)
+2. utm_campaign → inferred provider (high)
+3. fbclid → Meta (medium)
+4. utm_source → inferred provider (low)
+5. referrer → organic/social/unknown (low)
+6. No data → direct/unknown
+
+Environment Variables Required:
+- `NGROK_URL` - HTTPS ngrok URL for local webhook testing (e.g., `https://xxx.ngrok-free.dev`)
+
+### v1.2.0 (2025-11-30) - Week 1 Complete
+**Web Pixel Extension fully implemented and tested end-to-end.**
+
+New Features:
+- Shopify Web Pixel Extension deployed (v7)
+- Pixel auto-activates on OAuth connect via GraphQL `webPixelCreate`
+- Customer journeys created and updated per visitor
+- Touchpoints recorded when attribution data (UTM/click IDs) present
+- Event deduplication via client-generated `event_id`
+
+Backend Changes:
+- `POST /v1/pixel-events` endpoint with full CORS support
+- `PixelCORSMiddleware` handles sandboxed iframe origin (`null`)
+- Added `ngrok-skip-browser-warning` header support for local dev
+- Fixed journey flush before touchpoint creation (`db.flush()`)
+- Database migration: `20251130_000001_add_attribution_tables.py`
+
+Files Added/Modified:
+- `shopify-app/metricx/extensions/metricx-pixel/` - Full pixel extension
+- `backend/app/routers/pixel_events.py` - Events endpoint
+- `backend/app/services/pixel_activation_service.py` - GraphQL activation
+- `backend/app/routers/shopify_oauth.py` - Pixel activation on connect
+- `backend/app/routers/connections.py` - Shopify table cleanup on delete
+- `backend/app/main.py` - CORS middleware for pixel endpoint
 
 ### v1.1.0 (2025-11-30)
 - Fixed cookie API for Shopify strict mode (no options object)

@@ -493,8 +493,12 @@ def delete_connection(
 ):
     """Delete connection and all associated data."""
     import logging
-    from app.models import Entity, MetricFact, Token, Fetch, Import, Pnl
-    
+    from app.models import (
+        Entity, MetricFact, Token, Fetch, Import, Pnl,
+        ShopifyShop, ShopifyProduct, ShopifyCustomer, ShopifyOrder, ShopifyOrderLineItem,
+        PixelEvent, CustomerJourney, JourneyTouchpoint, Attribution,
+    )
+
     logger = logging.getLogger(__name__)
     
     connection = db.query(Connection).filter(
@@ -535,7 +539,68 @@ def delete_connection(
             ).delete(synchronize_session=False)
             logger.info(f"[DELETE_CONNECTION] Deleted {pnl_count} P&L snapshots")
             db.flush()
-        
+
+        # 1b. Delete Shopify-related data if this is a Shopify connection
+        shopify_shop = db.query(ShopifyShop).filter(
+            ShopifyShop.connection_id == connection_id
+        ).first()
+
+        if shopify_shop:
+            shop_id = shopify_shop.id
+            logger.info(f"[DELETE_CONNECTION] Deleting Shopify data for shop {shop_id}")
+
+            # Get order IDs for this shop
+            order_ids = [o.id for o in db.query(ShopifyOrder.id).filter(
+                ShopifyOrder.shop_id == shop_id
+            ).all()]
+
+            # Delete attributions referencing these orders
+            if order_ids:
+                attr_count = db.query(Attribution).filter(
+                    Attribution.shopify_order_id.in_(order_ids)
+                ).delete(synchronize_session=False)
+                logger.info(f"[DELETE_CONNECTION] Deleted {attr_count} attributions")
+                db.flush()
+
+            # Delete order line items
+            if order_ids:
+                line_count = db.query(ShopifyOrderLineItem).filter(
+                    ShopifyOrderLineItem.order_id.in_(order_ids)
+                ).delete(synchronize_session=False)
+                logger.info(f"[DELETE_CONNECTION] Deleted {line_count} order line items")
+                db.flush()
+
+            # Delete orders
+            order_count = db.query(ShopifyOrder).filter(
+                ShopifyOrder.shop_id == shop_id
+            ).delete(synchronize_session=False)
+            logger.info(f"[DELETE_CONNECTION] Deleted {order_count} orders")
+            db.flush()
+
+            # Delete customers
+            customer_count = db.query(ShopifyCustomer).filter(
+                ShopifyCustomer.shop_id == shop_id
+            ).delete(synchronize_session=False)
+            logger.info(f"[DELETE_CONNECTION] Deleted {customer_count} customers")
+            db.flush()
+
+            # Delete products
+            product_count = db.query(ShopifyProduct).filter(
+                ShopifyProduct.shop_id == shop_id
+            ).delete(synchronize_session=False)
+            logger.info(f"[DELETE_CONNECTION] Deleted {product_count} products")
+            db.flush()
+
+            # Delete shop
+            db.delete(shopify_shop)
+            logger.info(f"[DELETE_CONNECTION] Deleted ShopifyShop")
+            db.flush()
+
+        # 1c. Delete attribution-related data for this workspace
+        # (PixelEvents and Journeys are workspace-level, not connection-level,
+        # so we only delete them if this was the only Shopify connection)
+        # For now, leave pixel_events and journeys - they're workspace-level data
+
         # 2. Delete metric facts that reference these entities OR imports
         # MetricFact has FK to both Entity and Import, so delete all facts related to this connection
         fact_count = 0

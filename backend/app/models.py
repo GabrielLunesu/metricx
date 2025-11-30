@@ -220,6 +220,12 @@ class Connection(Base):
     timezone = Column(String, nullable=True)
     currency_code = Column(String, nullable=True)
 
+    # Attribution engine: Web Pixel ID for Shopify connections
+    # WHAT: Stores the Shopify web pixel ID after activation
+    # WHY: Need to track which pixel is activated for this store
+    # REFERENCES: docs/living-docs/ATTRIBUTION_ENGINE.md
+    web_pixel_id = Column(String, nullable=True)
+
     # Sync automation tracking
     # WHAT: Fields for managing near-realtime sync jobs and tracking sync health
     # WHY: Users need control over sync frequency and visibility into sync status
@@ -966,6 +972,11 @@ class ShopifyOrder(Base):
     tags = Column(JSON, nullable=True)  # Order tags
     note = Column(Text, nullable=True)  # Order notes
 
+    # Attribution engine: checkout_token for journey linking
+    # WHAT: Token from Shopify checkout, used to link pixel journey to order
+    # WHY: Pixel sends checkout_token on checkout_completed; webhook has same token
+    checkout_token = Column(String, nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)  # When synced to our DB
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1039,6 +1050,233 @@ class ShopifyOrderLineItem(Base):
 
     def __str__(self):
         return f"{self.title} x{self.quantity} @ ${self.price}"
+
+
+# =============================================================================
+# ATTRIBUTION ENGINE MODELS
+# =============================================================================
+# WHAT: Models for tracking customer journeys and attributing orders to campaigns
+# WHY: Bridges the gap between ad spend and revenue by tracking customer journeys
+#      from first ad click through purchase
+# REFERENCES:
+#   - docs/living-docs/ATTRIBUTION_ENGINE.md
+#   - Shopify Web Pixels API: https://shopify.dev/docs/api/web-pixels-api
+
+
+class PixelEvent(Base):
+    """Immutable raw event log from web pixel (event sourcing).
+
+    WHAT: Stores every event from the Shopify Web Pixel Extension
+    WHY: Never lose data; can recompute journeys if attribution logic changes
+    REFERENCES:
+        - Shopify Web Pixels API: https://shopify.dev/docs/api/web-pixels-api
+        - docs/living-docs/ATTRIBUTION_ENGINE.md
+    """
+    __tablename__ = "pixel_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    visitor_id = Column(String, nullable=False)
+
+    # Client-generated UUID for deduplication
+    event_id = Column(String, nullable=True)
+    event_type = Column(String, nullable=False)
+    event_data = Column(JSON, default={})
+
+    # Attribution fields (denormalized for fast queries)
+    utm_source = Column(String, nullable=True)
+    utm_medium = Column(String, nullable=True)
+    utm_campaign = Column(String, nullable=True)
+    utm_content = Column(String, nullable=True)
+    utm_term = Column(String, nullable=True)
+    fbclid = Column(String, nullable=True)
+    gclid = Column(String, nullable=True)
+    ttclid = Column(String, nullable=True)
+    landing_page = Column(String, nullable=True)
+
+    # Context
+    url = Column(String, nullable=True)
+    referrer = Column(String, nullable=True)
+    ip_hash = Column(String, nullable=True)  # Hashed for privacy
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __str__(self):
+        return f"{self.event_type} - {self.visitor_id} - {self.created_at}"
+
+
+class CustomerJourney(Base):
+    """Tracks visitors across sessions for attribution.
+
+    WHAT: Aggregates visitor activity across sessions
+    WHY: One visitor can make multiple purchases over time (journey 1:N orders)
+         Links pixel events to orders via checkout_token or email
+    REFERENCES:
+        - docs/living-docs/ATTRIBUTION_ENGINE.md
+    """
+    __tablename__ = "customer_journeys"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "visitor_id", name="uq_journey_visitor"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+
+    # Identity
+    visitor_id = Column(String, nullable=False)
+    customer_email = Column(String, nullable=True)
+    shopify_customer_id = Column(Integer, nullable=True)
+
+    # For linking to orders (most recent checkout)
+    checkout_token = Column(String, nullable=True)
+
+    # First touch attribution (captured on first visit)
+    first_touch_source = Column(String, nullable=True)
+    first_touch_medium = Column(String, nullable=True)
+    first_touch_campaign = Column(String, nullable=True)
+    first_touch_entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
+
+    # Last touch (updated on each touchpoint)
+    last_touch_source = Column(String, nullable=True)
+    last_touch_medium = Column(String, nullable=True)
+    last_touch_campaign = Column(String, nullable=True)
+    last_touch_entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
+
+    # Journey state
+    first_seen_at = Column(DateTime, nullable=False)
+    last_seen_at = Column(DateTime, nullable=False)
+    touchpoint_count = Column(Integer, default=0)
+
+    # Conversion tracking
+    total_orders = Column(Integer, default=0)
+    total_revenue = Column(Numeric(12, 2), default=0)
+    first_order_at = Column(DateTime, nullable=True)
+    last_order_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    touchpoints = relationship("JourneyTouchpoint", back_populates="journey", cascade="all, delete-orphan")
+    attributions = relationship("Attribution", back_populates="journey")
+
+    def __str__(self):
+        return f"Journey {self.visitor_id} - {self.touchpoint_count} touchpoints"
+
+
+class JourneyTouchpoint(Base):
+    """Each marketing interaction (UTMs, click IDs).
+
+    WHAT: Records each marketing touchpoint in a customer journey
+    WHY: Attribution models need all touchpoints to determine credit
+    REFERENCES:
+        - docs/living-docs/ATTRIBUTION_ENGINE.md
+    """
+    __tablename__ = "journey_touchpoints"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    journey_id = Column(UUID(as_uuid=True), ForeignKey("customer_journeys.id", ondelete="CASCADE"), nullable=False)
+
+    # Event info
+    event_type = Column(String, nullable=False)
+
+    # Attribution params
+    utm_source = Column(String, nullable=True)
+    utm_medium = Column(String, nullable=True)
+    utm_campaign = Column(String, nullable=True)
+    utm_content = Column(String, nullable=True)
+    utm_term = Column(String, nullable=True)
+    fbclid = Column(String, nullable=True)
+    gclid = Column(String, nullable=True)
+    ttclid = Column(String, nullable=True)
+
+    # Resolved entity (if matched)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
+    provider = Column(String, nullable=True)
+
+    # Context
+    landing_page = Column(String, nullable=True)
+    referrer = Column(String, nullable=True)
+
+    touched_at = Column(DateTime, nullable=False)
+
+    # Relationships
+    journey = relationship("CustomerJourney", back_populates="touchpoints")
+    entity = relationship("Entity")
+
+    def __str__(self):
+        source = self.utm_source or self.provider or "unknown"
+        return f"{self.event_type} from {source} at {self.touched_at}"
+
+
+class AttributionModelEnum(str, enum.Enum):
+    """Attribution model types."""
+    first_click = "first_click"
+    last_click = "last_click"
+    linear = "linear"
+
+
+class AttributionConfidenceEnum(str, enum.Enum):
+    """Attribution confidence levels."""
+    high = "high"      # gclid resolved, exact UTM match
+    medium = "medium"  # fbclid, partial UTM match
+    low = "low"        # utm_source only, referrer inference
+    none = "none"      # No attribution data
+
+
+class Attribution(Base):
+    """Final attribution records linking orders to entities.
+
+    WHAT: Stores the result of attribution processing
+    WHY: Fast dashboard queries for attributed revenue by campaign/ad
+    REFERENCES:
+        - docs/living-docs/ATTRIBUTION_ENGINE.md
+    """
+    __tablename__ = "attributions"
+    __table_args__ = (
+        # One attribution per order per model
+        UniqueConstraint("shopify_order_id", "attribution_model", name="uq_attribution_order_model"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+
+    # Links
+    journey_id = Column(UUID(as_uuid=True), ForeignKey("customer_journeys.id"), nullable=True)
+    shopify_order_id = Column(UUID(as_uuid=True), ForeignKey("shopify_orders.id"), nullable=True)
+
+    # Attribution result
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
+    # Provider: meta, google, tiktok, direct, organic, unknown
+    provider = Column(String, nullable=False)
+    # Entity level: campaign, adset, ad (NULL if no entity match)
+    entity_level = Column(String, nullable=True)
+
+    # Match info
+    # match_type: gclid, utm_campaign, utm_content, fbclid, utm_source, referrer, none
+    match_type = Column(String, nullable=False)
+    # confidence: high, medium, low, none
+    confidence = Column(String, nullable=False)
+    attribution_model = Column(String, nullable=False, default="last_click")
+    attribution_window_days = Column(Integer, default=30)
+
+    # Revenue (stored in order's original currency)
+    attributed_revenue = Column(Numeric(12, 2), nullable=True)
+    # For multi-touch (0.0-1.0)
+    attribution_credit = Column(Numeric(5, 4), default=1.0)
+    currency = Column(String, nullable=False, default="USD")
+
+    # Timestamps
+    order_created_at = Column(DateTime, nullable=True)
+    attributed_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    journey = relationship("CustomerJourney", back_populates="attributions")
+    shopify_order = relationship("ShopifyOrder", backref="attributions")
+    entity = relationship("Entity")
+
+    def __str__(self):
+        entity_name = self.entity.name if self.entity else self.provider
+        return f"Attribution to {entity_name} ({self.match_type}, {self.confidence})"
 
 
 # Local auth credential (password hash stored separately) ----------

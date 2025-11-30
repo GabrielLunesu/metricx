@@ -1,0 +1,26 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "3cd42321fabca39e5c4e9cc29b619aca"
+name = "metricx"
+application_url = "https://www.metricx.ai"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-10"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_analytics,read_customer_events,read_customers,read_inventory,read_marketing_events,read_orders,read_products"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://t8zgrthold5r2-backend.prod2.defang.dev/auth/shopify/callback",
+  "http://localhost:8000/auth/shopify/callback",
+  "https://esperanza-pseudophilosophical-nondeistically.ngrok-free.dev/auth/shopify/callback",
+  "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/shopify/callback"
+]

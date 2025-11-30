@@ -37,6 +37,7 @@ from .routers import meta_oauth as meta_oauth_router  # Meta OAuth flow
 from .routers import shopify_oauth as shopify_oauth_router  # Shopify OAuth flow
 from .routers import shopify_sync as shopify_sync_router  # Shopify sync endpoints
 from .routers import shopify_webhooks as shopify_webhooks_router  # Shopify compliance webhooks
+from .routers import pixel_events as pixel_events_router  # Attribution pixel events
 from . import schemas
 
 # Import models so Alembic can discover metadata
@@ -386,7 +387,7 @@ def create_app() -> FastAPI:
             ALLOWED_ORIGINS.append(backend_url)
     
     logger.info(f"[CORS] Allowed origins: {ALLOWED_ORIGINS}")
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ALLOWED_ORIGINS,
@@ -394,6 +395,45 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Custom middleware for pixel endpoint CORS (must be added AFTER CORSMiddleware)
+    # Middleware runs in reverse order, so this runs BEFORE CORSMiddleware
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.responses import Response as StarletteResponse
+
+    class PixelCORSMiddleware(BaseHTTPMiddleware):
+        """Handle CORS for pixel endpoint from Shopify Web Pixel (sandboxed iframe).
+
+        WHY: The Shopify Web Pixel runs in a sandboxed iframe with origin 'null'.
+        We MUST use wildcard '*' for Access-Control-Allow-Origin because:
+        1. Browsers reject echoing back 'null' as an allowed origin
+        2. We don't need credentials for this endpoint
+        3. Any Shopify store should be able to send pixel events
+        """
+        async def dispatch(self, request, call_next):
+            # Only handle /v1/pixel-events
+            if request.url.path == "/v1/pixel-events":
+                # ALWAYS use wildcard for sandboxed iframe compatibility
+                cors_headers = {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, ngrok-skip-browser-warning",
+                    "Access-Control-Max-Age": "86400",
+                }
+
+                # Handle preflight OPTIONS request
+                if request.method == "OPTIONS":
+                    return StarletteResponse(status_code=200, headers=cors_headers)
+
+                # For POST, add CORS headers to response
+                response = await call_next(request)
+                for key, value in cors_headers.items():
+                    response.headers[key] = value
+                return response
+
+            return await call_next(request)
+
+    app.add_middleware(PixelCORSMiddleware)
 
     # Include all API routers
     app.include_router(auth_router.router)
@@ -415,6 +455,7 @@ def create_app() -> FastAPI:
     app.include_router(shopify_oauth_router.router)  # Shopify OAuth flow
     app.include_router(shopify_sync_router.router)  # Shopify sync endpoints
     app.include_router(shopify_webhooks_router.router)  # Shopify compliance webhooks
+    app.include_router(pixel_events_router.router)  # Attribution pixel events
 
     @app.get(
         "/health",
