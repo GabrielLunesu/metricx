@@ -103,14 +103,24 @@ export default function MetaAccountSelectionModal({
         },
         credentials: 'include',
         body: JSON.stringify({
-          account_ids: Array.from(selectedIds),
+          selections: Array.from(selectedIds).map(id => ({
+            account_id: id,
+            pixel_id: null,  // Pixel selection can be added later
+          })),
           session_id: sessionId,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to connect accounts');
+        // FastAPI validation errors return detail as array, handle both formats
+        const detail = errorData.detail;
+        const errorMessage = typeof detail === 'string'
+          ? detail
+          : Array.isArray(detail)
+            ? detail.map(e => e.msg || e).join(', ')
+            : 'Failed to connect accounts';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
