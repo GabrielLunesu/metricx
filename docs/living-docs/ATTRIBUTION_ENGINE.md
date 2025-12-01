@@ -1,8 +1,8 @@
 # Metricx Attribution Engine
 
-**Version**: 1.3.0
-**Last Updated**: 2025-11-30
-**Status**: Week 2 Complete - Attribution Live
+**Version**: 1.7.0
+**Last Updated**: 2025-12-01
+**Status**: Phase 1-2 Complete - Attribution UI + Pixel Health
 
 ---
 
@@ -43,9 +43,9 @@ The Attribution Engine bridges this gap.
 | **Journey Tracking** | Track visitors across sessions via Shopify Web Pixel | ✅ Complete |
 | **UTM Attribution** | Match UTM parameters to providers (meta, google, etc.) | ✅ Complete |
 | **Order Attribution** | Link orders to journeys via checkout_token | ✅ Complete |
-| **Click ID Resolution** | Resolve gclid/fbclid to actual ads | 🔲 Week 3 |
+| **Click ID Resolution** | Resolve gclid/fbclid to actual ads | ✅ Complete |
 | **Multi-Touch Models** | First-click, last-click, linear attribution | 🔲 Week 4 |
-| **Server-Side CAPI** | Send conversions back to Meta/Google | 🔲 Week 3 |
+| **Server-Side CAPI** | Send conversions back to Meta/Google | ✅ Complete |
 | **Attribution Windows** | Configurable 7/14/28/30 day windows | 🔲 Week 4 |
 
 ### Key Design Decisions
@@ -1197,29 +1197,45 @@ logger.info(
 | Webhook subscription service | ✅ | Auto-subscribes on OAuth connect |
 | Direct/organic classification | ✅ | Proper fallback logic in webhook |
 
-### Week 3: Click Resolution + CAPI
+### Week 3: Click Resolution + CAPI ✅ COMPLETE
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Google Click Resolution | 🔲 | gclid → campaign/ad lookup (highest priority) |
-| Click ID caching | 🔲 | Redis cache for resolved IDs |
-| Meta CAPI service | 🔲 | With event_id deduplication |
-| Google Offline Conversions | 🔲 | Upload conversions |
-| CAPI worker integration | 🔲 | Send after attribution |
+| Meta CAPI service | ✅ | `backend/app/services/meta_capi_service.py` |
+| CAPI integration with attribution | ✅ | Fires on meta-attributed orders |
+| event_id deduplication | ✅ | Uses `order_{order_id}` prefix |
+| Google Click Resolution | ✅ | `backend/app/services/gclid_resolution_service.py` |
+| Click ID caching | ✅ | Redis cache with 7-day TTL |
+| Meta Pixel OAuth integration | ✅ | Pixels fetched during OAuth, saved to connection |
+| Google Offline Conversions | ✅ | `backend/app/services/google_conversions_service.py` |
 
-### Week 4: Integration + Testing
+### Week 4: Attribution UX - Phase 1 ✅ COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Pixel Health API | ✅ | `GET /workspaces/{id}/pixel/health` |
+| Pixel Reinstall API | ✅ | `POST /workspaces/{id}/pixel/reinstall` |
+| Attribution Summary API | ✅ | `GET /workspaces/{id}/attribution/summary` |
+| Attribution Campaigns API | ✅ | `GET /workspaces/{id}/attribution/campaigns` |
+| Attribution Feed API | ✅ | `GET /workspaces/{id}/attribution/feed` |
+| Campaign Warnings API | ✅ | `GET /workspaces/{id}/attribution/warnings` |
+| Pixel Health Card (Settings) | ✅ | `ui/app/(dashboard)/settings/components/PixelHealthCard.jsx` |
+| Attribution Card (Dashboard) | ✅ | `ui/app/(dashboard)/dashboard/components/AttributionCard.jsx` |
+| Live Attribution Feed | ✅ | `ui/app/(dashboard)/dashboard/components/LiveAttributionFeed.jsx` |
+| UTM Setup Guide | ✅ | `ui/app/(dashboard)/settings/components/UTMSetupGuide.jsx` |
+| Campaign Warnings Panel | ✅ | `ui/app/(dashboard)/campaigns/components/CampaignWarningsPanel.jsx` |
+| Frontend API Functions | ✅ | Added to `ui/lib/api.js` |
+
+### Week 5: Attribution UX - Phase 2 (Future)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | Multi-model support | 🔲 | first_click, last_click, linear |
 | Attribution windows config | 🔲 | 7/14/28/30 day per workspace |
-| Direct/organic/unknown classification | 🔲 | Proper fallback logic |
-| Health monitoring | 🔲 | All checks from table above |
-| UnifiedMetricService integration | 🔲 | Attributed revenue in metrics |
-| Dashboard UI | 🔲 | Attribution report by channel/campaign |
+| Platform comparison | 🔲 | Platform vs Metricx data |
+| Full analytics page | 🔲 | Detailed attribution section |
 | Smoke tests | 🔲 | Full pipeline tests |
 | Contract tests | 🔲 | Realistic webhook/pixel payloads |
-| Deploy extension | 🔲 | `shopify app deploy` |
 
 ---
 
@@ -1518,6 +1534,102 @@ DEFAULT_ATTRIBUTION_WINDOW_DAYS=30
 ---
 
 ## Changelog
+
+### v1.6.0 (2025-12-01) - Google Offline Conversions
+**Complete CAPI loop - both Meta and Google now receive purchase data.**
+
+New Features:
+- **Google Offline Conversions service** - Uploads purchase conversions to Google Ads
+- Automatic conversion upload for Google-attributed orders
+- `google_conversion_action_id` setting on connections
+- Settings endpoints for conversion action ID management
+- Integration with attribution flow (fires on Google-attributed orders)
+
+Files Added:
+- `backend/app/services/google_conversions_service.py` - Full Google conversions implementation
+- `backend/alembic/versions/20251201_000001_add_google_conversion_action_id.py` - Migration
+
+Files Modified:
+- `backend/app/models.py` - Added `google_conversion_action_id` column
+- `backend/app/routers/connections.py` - Added PATCH/GET endpoints for conversion action ID
+- `backend/app/routers/shopify_webhooks.py` - Integrated Google conversions upload
+
+How Google Offline Conversions Work:
+1. Order attributed to Google (via gclid or UTMs)
+2. Service looks up Google connection and conversion_action_id
+3. Uploads conversion via ConversionUploadService API
+4. Google uses data for Smart Bidding optimization
+
+Prerequisites:
+- Conversion Action must exist in Google Ads account
+- Set `google_conversion_action_id` via settings API or env var
+- gclid must be captured within 90 days of click
+
+Environment Variables:
+- `GOOGLE_CONVERSION_ACTION_ID` - Fallback conversion action ID
+- `GOOGLE_DEVELOPER_TOKEN` - Required for API access
+
+### v1.5.0 (2025-12-01) - Google Click Resolution + Meta OAuth Pixel
+**High-confidence attribution via gclid lookup and improved Meta integration.**
+
+New Features:
+- **gclid Resolution Service** - Queries Google Ads API ClickView to resolve gclid to actual campaign/ad
+- Automatic Entity matching from resolved campaign data
+- Redis caching for resolved gclid data (7-day TTL)
+- Meta Pixel fetched during OAuth and saved to connection
+- Meta OAuth accepts pixel_id selection with ad account selection
+
+Files Added:
+- `backend/app/services/gclid_resolution_service.py` - Full gclid resolution implementation
+
+Files Modified:
+- `backend/app/routers/shopify_webhooks.py` - Integrated gclid resolution in attribution flow
+- `backend/app/routers/meta_oauth.py` - Added pixel fetching and selection
+
+How gclid Resolution Works:
+1. When attribution runs with gclid, service queries Google Ads API
+2. Uses ClickView resource with date filter (click_view requires single-day query)
+3. Tries landing date + adjacent days for timezone tolerance
+4. Returns campaign_id, campaign_name, ad_group_id, ad_group_name, ad_id
+5. Results cached in Redis to avoid repeated API calls
+
+Constraints:
+- ClickView requires single-day filter (can't query by gclid alone)
+- Only last 90 days of click data available from Google
+- Requires active Google Ads connection with valid refresh token
+
+Environment Variables:
+- `GOOGLE_DEVELOPER_TOKEN` - Required for Google Ads API
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` - OAuth credentials
+- `REDIS_URL` - Required for gclid caching
+
+Dependencies:
+- `google-ads>=28.0.0` - Google deprecates old API versions; keep SDK updated
+- Error `501 GRPC target method can't be resolved` means SDK is outdated
+
+### v1.4.0 (2025-11-30) - Meta CAPI Integration
+**Server-side conversion tracking for Meta ads.**
+
+New Features:
+- Meta Conversions API (CAPI) service for sending purchase events
+- Automatic CAPI fire for Meta-attributed orders
+- event_id deduplication with order ID prefix
+- SHA256 hashing for PII (email, phone)
+- Support for fbclid matching
+- Test event code support for debugging in Events Manager
+
+Files Added:
+- `backend/app/services/meta_capi_service.py` - Full CAPI implementation
+
+Environment Variables:
+- `META_PIXEL_ID` - Required: Your Meta Pixel ID
+- `META_CAPI_ACCESS_TOKEN` - Optional: Override connection token
+- `META_CAPI_TEST_EVENT_CODE` - Optional: Test event code for debugging
+
+Flow:
+1. Order paid → Attribution created (provider=meta)
+2. CAPI fires Purchase event to Meta
+3. Event deduped with browser pixel via event_id
 
 ### v1.3.0 (2025-11-30) - Week 2 Complete ✅ TESTED END-TO-END
 **Attribution engine fully implemented with orders/paid webhook.**

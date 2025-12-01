@@ -123,6 +123,9 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Ensure Google Ads SDK is up to date (required for OAuth)
+pip install --upgrade google-ads
+
 # Run migrations
 alembic upgrade head
 
@@ -169,6 +172,17 @@ GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8000/auth/google/callback
 
 # Frontend URL
 FRONTEND_URL=http://localhost:3000
+
+# Attribution Engine (ngrok for webhooks)
+NGROK_URL=https://your-ngrok-url.ngrok-free.dev
+
+# Meta CAPI (Conversions API)
+META_PIXEL_ID=your-pixel-id
+META_CAPI_ACCESS_TOKEN=your-capi-access-token  # Optional: override connection token
+META_CAPI_TEST_EVENT_CODE=TEST12345           # Optional: test events in Events Manager
+
+# Google Offline Conversions
+GOOGLE_CONVERSION_ACTION_ID=your-conversion-action-id  # From Google Ads > Conversions
 ```
 
 ### 4. Frontend Setup
@@ -329,6 +343,25 @@ redis-cli ping  # Should return PONG
 1. Check Redis connection
 2. Check worker is running
 3. Look at worker logs for errors
+
+### Google Ads OAuth "failed to fetch accounts"
+This is usually a **google-ads SDK version issue**. Google deprecates old API versions regularly.
+
+**Error message**: `501 GRPC target method can't be resolved`
+
+**Fix**: Upgrade the google-ads package:
+```bash
+pip install --upgrade google-ads
+```
+
+Required version: **28.0.0+** (as of Dec 2025). Older versions use deprecated API endpoints.
+
+### Meta/Google OAuth 400 errors in console
+If you see `api/connections/google/from-env` or `api/connections/meta/from-env` returning 400:
+- These are dev-mode shortcuts that create connections from env vars
+- They fail if the required env vars aren't set (expected behavior)
+- Users should use the OAuth flow via connect buttons instead
+- These errors don't affect normal OAuth functionality
 
 ---
 

@@ -226,6 +226,18 @@ class Connection(Base):
     # REFERENCES: docs/living-docs/ATTRIBUTION_ENGINE.md
     web_pixel_id = Column(String, nullable=True)
 
+    # Attribution engine: Meta Pixel ID for CAPI
+    # WHAT: Stores the Meta Pixel ID for server-side conversion tracking
+    # WHY: CAPI needs pixel_id to send purchase events back to Meta
+    # REFERENCES: docs/living-docs/ATTRIBUTION_ENGINE.md
+    meta_pixel_id = Column(String, nullable=True)
+
+    # Attribution engine: Google Conversion Action ID
+    # WHAT: Stores the Google Ads conversion action ID for offline conversions
+    # WHY: Google Offline Conversions API needs conversion_action_id to upload purchases
+    # REFERENCES: docs/living-docs/ATTRIBUTION_ENGINE.md
+    google_conversion_action_id = Column(String, nullable=True)
+
     # Sync automation tracking
     # WHAT: Fields for managing near-realtime sync jobs and tracking sync health
     # WHY: Users need control over sync frequency and visibility into sync status

@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { fetchConnections, ensureGoogleConnectionFromEnv, ensureMetaConnectionFromEnv, deleteConnection, updateSyncFrequency } from '@/lib/api';
+import { fetchConnections, deleteConnection, updateSyncFrequency } from '@/lib/api';
 import MetaSyncButton from '@/components/MetaSyncButton';
 import GoogleSyncButton from '@/components/GoogleSyncButton';
 import GoogleConnectButton from '@/components/GoogleConnectButton';
 import MetaConnectButton from '@/components/MetaConnectButton';
 import ShopifyConnectButton from '@/components/ShopifyConnectButton';
 import ShopifySyncButton from '@/components/ShopifySyncButton';
+import PixelHealthCard from './PixelHealthCard';
+import UTMSetupGuide from './UTMSetupGuide';
 
 export default function ConnectionsTab({ user }) {
     const [connections, setConnections] = useState([]);
@@ -19,20 +21,7 @@ export default function ConnectionsTab({ user }) {
     const [frequencySavingId, setFrequencySavingId] = useState(null);
 
     const refreshConnectionsList = async (workspaceId, mounted = true) => {
-        let connectionsData = await fetchConnections({ workspaceId });
-
-        const hasGoogle = (connectionsData.connections || []).some(c => c.provider === 'google');
-        if (!hasGoogle) {
-            await ensureGoogleConnectionFromEnv();
-            connectionsData = await fetchConnections({ workspaceId });
-        }
-
-        const hasMeta = (connectionsData.connections || []).some(c => c.provider === 'meta');
-        if (!hasMeta) {
-            await ensureMetaConnectionFromEnv();
-            connectionsData = await fetchConnections({ workspaceId });
-        }
-
+        const connectionsData = await fetchConnections({ workspaceId });
         if (mounted) setConnections(connectionsData.connections || []);
     };
 
@@ -350,6 +339,25 @@ export default function ConnectionsTab({ user }) {
                     </div>
                 )}
             </div>
+
+            {/* Pixel Health Section - Show if Shopify connection exists */}
+            {connections.some(c => c.provider === 'shopify') && (
+                <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-neutral-900 mb-4">Attribution Pixel</h2>
+                    <PixelHealthCard
+                        workspaceId={user?.workspace_id}
+                        hasShopifyConnection={connections.some(c => c.provider === 'shopify' && c.status === 'active')}
+                    />
+                </div>
+            )}
+
+            {/* UTM Setup Guide - Show if any ad platform connection exists */}
+            {connections.some(c => ['meta', 'google', 'tiktok'].includes(c.provider)) && (
+                <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-neutral-900 mb-4">Attribution Setup</h2>
+                    <UTMSetupGuide />
+                </div>
+            )}
 
             {/* Info Section */}
             <div className="mb-8 p-6 bg-neutral-50 border border-neutral-200 rounded-xl">

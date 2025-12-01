@@ -9,6 +9,8 @@ import TopCreative from "./components/TopCreative";
 import PlatformSpendMix from "./components/PlatformSpendMix";
 import UnitEconomicsTable from "./components/UnitEconomicsTable";
 import TimeframeSelector from "./components/TimeframeSelector";
+import AttributionCard from "./components/AttributionCard";
+import LiveAttributionFeed from "./components/LiveAttributionFeed";
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
@@ -66,6 +68,12 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
         <MoneyPulseChart workspaceId={user.workspace_id} timeframe={timeframe} />
         <AiInsightsPanel workspaceId={user.workspace_id} timeframe={timeframe} />
+      </div>
+
+      {/* Attribution Section */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
+        <AttributionCard workspaceId={user.workspace_id} timeframe={timeframe} />
+        <LiveAttributionFeed workspaceId={user.workspace_id} />
       </div>
 
       {/* Bottom Section: Top Ads & Product Table */}

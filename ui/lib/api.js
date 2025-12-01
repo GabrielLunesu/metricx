@@ -686,8 +686,156 @@ export async function fetchEntityPerformance({
     throw new Error(`Failed to fetch entity performance: ${res.status} ${msg}`);
   }
 
-  // Transform response to match expected format if needed, 
+  // Transform response to match expected format if needed,
   // but for now return as is (TopCreative expects .items which might be .rows in actual response)
   const data = await res.json();
   return { items: data.rows, meta: data.meta };
+}
+
+// =============================================================================
+// ATTRIBUTION & PIXEL HEALTH
+// =============================================================================
+
+/**
+ * Fetch pixel health status and event statistics.
+ * WHAT: Returns pixel status, event counts, health score, and issues
+ * WHY: Users need visibility into whether their pixel is working
+ *
+ * @param {string} workspaceId - The workspace UUID
+ * @returns {Promise<Object>} Pixel health data
+ */
+export async function fetchPixelHealth({ workspaceId }) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/pixel/health`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch pixel health: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * Reinstall the Shopify web pixel.
+ * WHAT: Deletes existing pixel and creates a new one
+ * WHY: Sometimes pixels need to be reset if they're not working
+ *
+ * @param {string} workspaceId - The workspace UUID
+ * @returns {Promise<Object>} Reinstall result with old/new pixel IDs
+ */
+export async function reinstallPixel({ workspaceId }) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/pixel/reinstall`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to reinstall pixel: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * Fetch attribution summary by channel/provider.
+ * WHAT: Returns revenue attribution breakdown by provider and confidence
+ * WHY: Users need to see which channels drive their sales
+ *
+ * @param {string} workspaceId - The workspace UUID
+ * @param {number} days - Number of days to analyze (default 30)
+ * @returns {Promise<Object>} Attribution summary data
+ */
+export async function fetchAttributionSummary({ workspaceId, days = 30 }) {
+  const params = new URLSearchParams();
+  params.set("days", days.toString());
+
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/summary?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch attribution summary: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * Fetch top campaigns by attributed revenue.
+ * WHAT: Returns campaigns ranked by attributed revenue
+ * WHY: Users need to see which campaigns are performing best
+ *
+ * @param {string} workspaceId - The workspace UUID
+ * @param {number} days - Number of days to analyze (default 30)
+ * @param {number} limit - Max campaigns to return (default 20)
+ * @returns {Promise<Object>} Attributed campaigns data
+ */
+export async function fetchAttributedCampaigns({ workspaceId, days = 30, limit = 20 }) {
+  const params = new URLSearchParams();
+  params.set("days", days.toString());
+  params.set("limit", limit.toString());
+
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/campaigns?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch attributed campaigns: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * Fetch recent attribution feed for live display.
+ * WHAT: Returns recent attributions in chronological order
+ * WHY: Users want real-time visibility into attribution activity
+ *
+ * @param {string} workspaceId - The workspace UUID
+ * @param {number} limit - Max items to return (default 20)
+ * @returns {Promise<Object>} Attribution feed data
+ */
+export async function fetchAttributionFeed({ workspaceId, limit = 20 }) {
+  const params = new URLSearchParams();
+  params.set("limit", limit.toString());
+
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/feed?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch attribution feed: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * Fetch campaign attribution warnings.
+ * WHAT: Returns campaigns that have attribution issues
+ * WHY: Users need to know which campaigns aren't being tracked properly
+ *
+ * @param {string} workspaceId - The workspace UUID
+ * @param {number} days - Number of days to analyze (default 30)
+ * @returns {Promise<Object>} Campaign warnings data
+ */
+export async function fetchCampaignWarnings({ workspaceId, days = 30 }) {
+  const params = new URLSearchParams();
+  params.set("days", days.toString());
+
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/warnings?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch campaign warnings: ${res.status} ${msg}`);
+  }
+  return res.json();
 }

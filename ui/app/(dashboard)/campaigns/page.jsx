@@ -5,6 +5,7 @@ import { campaignsApiClient, campaignsAdapter } from "../../../lib";
 import TopToolbar from "./components/TopToolbar";
 import CampaignTableHeader from "./components/CampaignTableHeader";
 import CampaignRow from "./components/CampaignRow";
+import CampaignWarningsPanel from "./components/CampaignWarningsPanel";
 // import ActiveRulesPanel from "./components/ActiveRulesPanel"; // Not part of this task
 import Card from "../../../components/Card";
 import { useRouter } from "next/navigation";
@@ -181,6 +182,9 @@ export default function CampaignsPage() {
         loading={loading}
         summary={summary}
       />
+
+      {/* Attribution Warnings Panel */}
+      <CampaignWarningsPanel workspaceId={workspaceId} />
 
       <div className="rounded-[24px] border border-slate-200 bg-white shadow-lg shadow-slate-200/50 overflow-hidden relative">
         <CampaignTableHeader />

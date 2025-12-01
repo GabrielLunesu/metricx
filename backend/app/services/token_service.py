@@ -22,7 +22,8 @@ from typing import Optional, Sequence
 from sqlalchemy.orm import Session
 
 from app.models import Connection, Token
-from app.security import encrypt_secret
+from app.security import encrypt_secret, decrypt_secret
+from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
@@ -98,3 +99,59 @@ def store_connection_token(
 
     db.add(connection)
     return token
+
+
+def get_decrypted_token(
+    db: Session,
+    connection_id: UUID,
+    token_type: str = "access",
+) -> Optional[str]:
+    """Get decrypted token for a connection.
+
+    WHAT:
+        Retrieves and decrypts either the access or refresh token for a connection.
+    WHY:
+        Services need decrypted tokens to make API calls to providers.
+    REFERENCES:
+        - backend/app/services/gclid_resolution_service.py
+        - backend/app/services/google_conversions_service.py
+        - backend/app/services/meta_capi_service.py
+
+    Args:
+        db: Database session
+        connection_id: UUID of the connection
+        token_type: "access" or "refresh"
+
+    Returns:
+        Decrypted token string, or None if not found
+    """
+    connection = (
+        db.query(Connection)
+        .filter(Connection.id == connection_id)
+        .first()
+    )
+
+    if not connection or not connection.token:
+        logger.warning("[TOKEN_SERVICE] No token found for connection %s", connection_id)
+        return None
+
+    token = connection.token
+    label = f"{connection.provider.value}:{connection.external_account_id}"
+
+    try:
+        if token_type == "access":
+            if not token.access_token_enc:
+                logger.warning("[TOKEN_SERVICE] No access token for %s", label)
+                return None
+            return decrypt_secret(token.access_token_enc, context=f"{label}:access")
+        elif token_type == "refresh":
+            if not token.refresh_token_enc:
+                logger.warning("[TOKEN_SERVICE] No refresh token for %s", label)
+                return None
+            return decrypt_secret(token.refresh_token_enc, context=f"{label}:refresh")
+        else:
+            logger.error("[TOKEN_SERVICE] Invalid token_type: %s", token_type)
+            return None
+    except Exception as e:
+        logger.error("[TOKEN_SERVICE] Failed to decrypt %s token for %s: %s", token_type, label, e)
+        return None
