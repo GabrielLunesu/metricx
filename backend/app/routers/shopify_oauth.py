@@ -35,6 +35,7 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.models import User, Connection, ProviderEnum, Workspace, ShopifyShop
 from app.services.token_service import store_connection_token
+from app.services.pixel_activation_service import activate_pixel_for_connection
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,9 @@ SHOPIFY_SCOPES = [
     "read_analytics",        # Shop analytics
     "read_inventory",        # Inventory levels and cost
     "read_marketing_events", # Marketing attribution data
+    # Attribution engine scopes (Web Pixel Extension)
+    "write_pixels",          # Create and configure web pixels
+    "read_customer_events",  # Read customer browsing behavior from pixel
 ]
 
 
@@ -511,6 +515,9 @@ async def connect_shop(
     access_token = selection_data["access_token"]
     scope = selection_data["scope"]
 
+    # Debug: Log granted scopes to verify pixel scopes were included
+    logger.info(f"[SHOPIFY_OAUTH] Granted scopes: {scope}")
+
     shop_domain = shop_info["domain"]
     shop_id = shop_info["id"]
 
@@ -596,6 +603,66 @@ async def connect_shop(
 
         db.commit()
 
+        # =====================================================================
+        # PIXEL ACTIVATION (Attribution Engine)
+        # =====================================================================
+        # WHAT: Activate the web pixel for this shop after successful OAuth
+        # WHY: Pixel must be activated via GraphQL before it can capture events
+        # REFERENCES: docs/living-docs/ATTRIBUTION_ENGINE.md
+        pixel_id = None
+        pixel_error = None
+        try:
+            pixel_id = await activate_pixel_for_connection(
+                connection=connection,
+                access_token=access_token,
+                workspace_id=workspace_id,
+            )
+            if pixel_id:
+                # Store pixel ID on connection
+                connection.web_pixel_id = pixel_id
+                db.commit()
+                logger.info(
+                    f"[SHOPIFY_OAUTH] Activated pixel for {shop_domain}",
+                    extra={"pixel_id": pixel_id}
+                )
+            else:
+                pixel_error = "Pixel activation returned no ID"
+                logger.warning(
+                    f"[SHOPIFY_OAUTH] Pixel activation failed for {shop_domain}: {pixel_error}"
+                )
+        except Exception as e:
+            # Don't fail the connection if pixel activation fails
+            # The pixel can be activated later
+            pixel_error = str(e)
+            logger.warning(
+                f"[SHOPIFY_OAUTH] Pixel activation error for {shop_domain}: {e}"
+            )
+
+        # =====================================================================
+        # WEBHOOK SUBSCRIPTION (Attribution Engine)
+        # =====================================================================
+        # WHAT: Subscribe to orders/paid webhook for attribution triggers
+        # WHY: Attribution runs when orders are paid, not on checkout_completed
+        # REFERENCES: docs/living-docs/ATTRIBUTION_ENGINE.md
+        webhook_results = None
+        webhook_error = None
+        try:
+            from app.services.webhook_subscription_service import subscribe_to_webhooks
+            webhook_results = await subscribe_to_webhooks(
+                shop_domain=shop_domain,
+                access_token=access_token,
+            )
+            logger.info(
+                f"[SHOPIFY_OAUTH] Webhook subscription results for {shop_domain}",
+                extra={"results": webhook_results}
+            )
+        except Exception as e:
+            # Don't fail the connection if webhook subscription fails
+            webhook_error = str(e)
+            logger.warning(
+                f"[SHOPIFY_OAUTH] Webhook subscription error for {shop_domain}: {e}"
+            )
+
         # Clean up Redis session
         app_state.context_manager.redis_client.delete(
             f"shopify_oauth_selection:{request.session_id}"
@@ -614,6 +681,10 @@ async def connect_shop(
             "shop_name": shop_info["name"],
             "shop_domain": shop_domain,
             "is_new": is_new,
+            "pixel_id": pixel_id,
+            "pixel_error": pixel_error,
+            "webhook_results": webhook_results,
+            "webhook_error": webhook_error,
         }
 
     except Exception as e:

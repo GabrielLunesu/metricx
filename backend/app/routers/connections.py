@@ -1,10 +1,13 @@
 """Ad platform connection management endpoints."""
 
+import logging
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from .. import schemas
 from ..database import get_db
@@ -493,8 +496,12 @@ def delete_connection(
 ):
     """Delete connection and all associated data."""
     import logging
-    from app.models import Entity, MetricFact, Token, Fetch, Import, Pnl
-    
+    from app.models import (
+        Entity, MetricFact, Token, Fetch, Import, Pnl,
+        ShopifyShop, ShopifyProduct, ShopifyCustomer, ShopifyOrder, ShopifyOrderLineItem,
+        PixelEvent, CustomerJourney, JourneyTouchpoint, Attribution,
+    )
+
     logger = logging.getLogger(__name__)
     
     connection = db.query(Connection).filter(
@@ -535,7 +542,68 @@ def delete_connection(
             ).delete(synchronize_session=False)
             logger.info(f"[DELETE_CONNECTION] Deleted {pnl_count} P&L snapshots")
             db.flush()
-        
+
+        # 1b. Delete Shopify-related data if this is a Shopify connection
+        shopify_shop = db.query(ShopifyShop).filter(
+            ShopifyShop.connection_id == connection_id
+        ).first()
+
+        if shopify_shop:
+            shop_id = shopify_shop.id
+            logger.info(f"[DELETE_CONNECTION] Deleting Shopify data for shop {shop_id}")
+
+            # Get order IDs for this shop
+            order_ids = [o.id for o in db.query(ShopifyOrder.id).filter(
+                ShopifyOrder.shop_id == shop_id
+            ).all()]
+
+            # Delete attributions referencing these orders
+            if order_ids:
+                attr_count = db.query(Attribution).filter(
+                    Attribution.shopify_order_id.in_(order_ids)
+                ).delete(synchronize_session=False)
+                logger.info(f"[DELETE_CONNECTION] Deleted {attr_count} attributions")
+                db.flush()
+
+            # Delete order line items
+            if order_ids:
+                line_count = db.query(ShopifyOrderLineItem).filter(
+                    ShopifyOrderLineItem.order_id.in_(order_ids)
+                ).delete(synchronize_session=False)
+                logger.info(f"[DELETE_CONNECTION] Deleted {line_count} order line items")
+                db.flush()
+
+            # Delete orders
+            order_count = db.query(ShopifyOrder).filter(
+                ShopifyOrder.shop_id == shop_id
+            ).delete(synchronize_session=False)
+            logger.info(f"[DELETE_CONNECTION] Deleted {order_count} orders")
+            db.flush()
+
+            # Delete customers
+            customer_count = db.query(ShopifyCustomer).filter(
+                ShopifyCustomer.shop_id == shop_id
+            ).delete(synchronize_session=False)
+            logger.info(f"[DELETE_CONNECTION] Deleted {customer_count} customers")
+            db.flush()
+
+            # Delete products
+            product_count = db.query(ShopifyProduct).filter(
+                ShopifyProduct.shop_id == shop_id
+            ).delete(synchronize_session=False)
+            logger.info(f"[DELETE_CONNECTION] Deleted {product_count} products")
+            db.flush()
+
+            # Delete shop
+            db.delete(shopify_shop)
+            logger.info(f"[DELETE_CONNECTION] Deleted ShopifyShop")
+            db.flush()
+
+        # 1c. Delete attribution-related data for this workspace
+        # (PixelEvents and Journeys are workspace-level, not connection-level,
+        # so we only delete them if this was the only Shopify connection)
+        # For now, leave pixel_events and journeys - they're workspace-level data
+
         # 2. Delete metric facts that reference these entities OR imports
         # MetricFact has FK to both Entity and Import, so delete all facts related to this connection
         fact_count = 0
@@ -604,3 +672,228 @@ def delete_connection(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete connection: {str(e)}"
         )
+
+
+# =============================================================================
+# META PIXEL SETTINGS (for CAPI)
+# =============================================================================
+
+from pydantic import BaseModel
+
+class MetaPixelUpdate(BaseModel):
+    """Request body for updating Meta Pixel ID."""
+    pixel_id: str
+
+
+@router.patch(
+    "/{connection_id}/meta-pixel",
+    response_model=schemas.SuccessResponse,
+    summary="Set Meta Pixel ID for CAPI",
+    description="""
+    Set the Meta Pixel ID for a Meta connection to enable server-side
+    conversion tracking via Conversions API (CAPI).
+
+    The Pixel ID can be found in Meta Events Manager.
+    """
+)
+async def update_meta_pixel_id(
+    connection_id: UUID,
+    payload: MetaPixelUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update Meta Pixel ID for CAPI integration.
+
+    WHAT: Sets the meta_pixel_id on a Meta connection
+    WHY: Required for sending purchase events via CAPI
+
+    Args:
+        connection_id: The Meta connection UUID
+        payload: Contains the pixel_id to set
+
+    Returns:
+        Success message
+
+    Raises:
+        404: Connection not found
+        400: Connection is not a Meta connection
+        403: User doesn't have permission
+    """
+    # Find the connection
+    connection = db.query(Connection).filter(Connection.id == connection_id).first()
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not found"
+        )
+
+    # Check permission
+    _require_connection_permission(db, current_user, connection.workspace_id)
+
+    # Verify it's a Meta connection
+    if connection.provider != ProviderEnum.meta:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only for Meta connections"
+        )
+
+    # Update pixel ID
+    connection.meta_pixel_id = payload.pixel_id
+    db.commit()
+
+    logger.info(
+        f"[META_PIXEL] Updated pixel_id for connection {connection_id}",
+        extra={"pixel_id": payload.pixel_id}
+    )
+
+    return schemas.SuccessResponse(detail=f"Meta Pixel ID set to {payload.pixel_id}")
+
+
+@router.get(
+    "/{connection_id}/meta-pixel",
+    summary="Get Meta Pixel ID",
+    description="Get the currently configured Meta Pixel ID for a connection."
+)
+async def get_meta_pixel_id(
+    connection_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get Meta Pixel ID for a connection.
+
+    Args:
+        connection_id: The Meta connection UUID
+
+    Returns:
+        Dict with pixel_id (or null if not set)
+    """
+    connection = db.query(Connection).filter(Connection.id == connection_id).first()
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not found"
+        )
+
+    # Check permission (allow all roles to read)
+    _require_connection_permission(
+        db, current_user, connection.workspace_id,
+        roles=(RoleEnum.owner, RoleEnum.admin, RoleEnum.member)
+    )
+
+    return {
+        "connection_id": str(connection_id),
+        "provider": connection.provider.value,
+        "meta_pixel_id": connection.meta_pixel_id,
+    }
+
+
+# =============================================================================
+# GOOGLE CONVERSION ACTION SETTINGS
+# =============================================================================
+
+class GoogleConversionActionUpdate(BaseModel):
+    """Request body for updating Google Conversion Action ID."""
+    conversion_action_id: str
+
+
+@router.patch(
+    "/{connection_id}/google-conversion-action",
+    response_model=schemas.SuccessResponse,
+    summary="Set Google Conversion Action ID",
+    description="""
+    Set the Google Ads Conversion Action ID for offline conversion uploads.
+
+    The Conversion Action ID can be found in Google Ads under:
+    Tools & Settings > Measurement > Conversions > [Your conversion] > Details
+    """
+)
+async def update_google_conversion_action_id(
+    connection_id: UUID,
+    payload: GoogleConversionActionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update Google Conversion Action ID for offline conversions.
+
+    WHAT: Sets the google_conversion_action_id on a Google connection
+    WHY: Required for uploading purchase conversions to Google Ads
+
+    Args:
+        connection_id: The Google connection UUID
+        payload: Contains the conversion_action_id to set
+
+    Returns:
+        Success message
+
+    Raises:
+        404: Connection not found
+        400: Connection is not a Google connection
+        403: User doesn't have permission
+    """
+    connection = db.query(Connection).filter(Connection.id == connection_id).first()
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not found"
+        )
+
+    _require_connection_permission(db, current_user, connection.workspace_id)
+
+    if connection.provider != ProviderEnum.google:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only for Google connections"
+        )
+
+    connection.google_conversion_action_id = payload.conversion_action_id
+    db.commit()
+
+    logger.info(
+        f"[GOOGLE_CONV] Updated conversion_action_id for connection {connection_id}",
+        extra={"conversion_action_id": payload.conversion_action_id}
+    )
+
+    return schemas.SuccessResponse(
+        detail=f"Google Conversion Action ID set to {payload.conversion_action_id}"
+    )
+
+
+@router.get(
+    "/{connection_id}/google-conversion-action",
+    summary="Get Google Conversion Action ID",
+    description="Get the currently configured Google Conversion Action ID for a connection."
+)
+async def get_google_conversion_action_id(
+    connection_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get Google Conversion Action ID for a connection.
+
+    Args:
+        connection_id: The Google connection UUID
+
+    Returns:
+        Dict with conversion_action_id (or null if not set)
+    """
+    connection = db.query(Connection).filter(Connection.id == connection_id).first()
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not found"
+        )
+
+    _require_connection_permission(
+        db, current_user, connection.workspace_id,
+        roles=(RoleEnum.owner, RoleEnum.admin, RoleEnum.member)
+    )
+
+    return {
+        "connection_id": str(connection_id),
+        "provider": connection.provider.value,
+        "google_conversion_action_id": connection.google_conversion_action_id,
+    }

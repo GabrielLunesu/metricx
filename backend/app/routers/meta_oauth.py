@@ -262,7 +262,38 @@ async def meta_callback(
             
             for acc in accounts_for_selection:
                 logger.info(f"[META_OAUTH] Found ad account: {acc['name']} ({acc['id']})")
-            
+
+            # Fetch pixels for each ad account
+            for account in accounts_for_selection:
+                account["pixels"] = []
+                try:
+                    pixels_response = await client.get(
+                        f"https://graph.facebook.com/v24.0/{account['id']}/adspixels",
+                        params={
+                            "fields": "id,name,is_unavailable",
+                            "access_token": access_token,
+                        }
+                    )
+                    if pixels_response.status_code == 200:
+                        pixels_data = pixels_response.json()
+                        pixels = pixels_data.get("data", [])
+                        account["pixels"] = [
+                            {
+                                "id": p.get("id"),
+                                "name": p.get("name", f"Pixel {p.get('id')}"),
+                                "is_unavailable": p.get("is_unavailable", False),
+                            }
+                            for p in pixels
+                            if not p.get("is_unavailable", False)  # Filter out unavailable pixels
+                        ]
+                        logger.info(
+                            f"[META_OAUTH] Found {len(account['pixels'])} pixel(s) for account {account['id']}"
+                        )
+                except Exception as pixel_error:
+                    logger.warning(
+                        f"[META_OAUTH] Failed to fetch pixels for {account['id']}: {pixel_error}"
+                    )
+
     except Exception as e:
         logger.exception(f"[META_OAUTH] Failed to fetch ad accounts: {str(e)}")
         return RedirectResponse(
@@ -346,8 +377,19 @@ async def get_oauth_accounts(
     }
 
 
+class AccountSelection(BaseModel):
+    """Single account selection with optional pixel."""
+    account_id: str  # Account ID (with 'act_' prefix)
+    pixel_id: Optional[str] = None  # Selected pixel ID for CAPI
+
+
 class ConnectSelectedRequest(BaseModel):
-    account_ids: List[str]  # List of account IDs (with 'act_' prefix)
+    """Request to connect selected Meta ad accounts.
+
+    WHAT: Contains account selections with optional pixel assignments
+    WHY: Allows users to select both ad account and pixel during OAuth flow
+    """
+    selections: List[AccountSelection]  # Account + pixel selections
     session_id: str
 
 
@@ -384,12 +426,15 @@ async def connect_selected_accounts(
             detail="Session does not belong to your workspace"
         )
     
+    # Build a map of account_id to pixel_id from selections
+    selection_map = {sel.account_id: sel.pixel_id for sel in request.selections}
+
     # Filter accounts to only selected ones
     selected_accounts = [
         acc for acc in selection_data["accounts"]
-        if acc["id"] in request.account_ids
+        if acc["id"] in selection_map
     ]
-    
+
     if not selected_accounts:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -409,13 +454,17 @@ async def connect_selected_accounts(
         for account_data in selected_accounts:
             # Use account_id (numeric) for external_account_id storage
             account_id = account_data["account_id"]
-            
+            full_account_id = account_data["id"]  # 'act_123456789' format
+
+            # Get selected pixel_id for this account (if any)
+            selected_pixel_id = selection_map.get(full_account_id)
+
             connection = db.query(Connection).filter(
                 Connection.workspace_id == workspace_id,
                 Connection.provider == ProviderEnum.meta,
                 Connection.external_account_id == account_id,
             ).first()
-            
+
             if not connection:
                 connection = Connection(
                     provider=ProviderEnum.meta,
@@ -426,18 +475,28 @@ async def connect_selected_accounts(
                     currency_code=account_data["currency"],
                     workspace_id=workspace_id,
                     connected_at=datetime.utcnow(),
+                    meta_pixel_id=selected_pixel_id,  # Set pixel_id during creation
                 )
                 db.add(connection)
                 db.flush()
                 created_connections.append(connection)
-                logger.info(f"[META_OAUTH] Created new connection for account {account_id}")
+                logger.info(
+                    f"[META_OAUTH] Created new connection for account {account_id} "
+                    f"with pixel_id={selected_pixel_id}"
+                )
             else:
                 connection.name = account_data["name"]
                 connection.timezone = account_data["timezone"]
                 connection.currency_code = account_data["currency"]
                 connection.status = "active"
+                # Update pixel_id if provided
+                if selected_pixel_id:
+                    connection.meta_pixel_id = selected_pixel_id
                 updated_connections.append(connection)
-                logger.info(f"[META_OAUTH] Updating existing connection for account {account_id}")
+                logger.info(
+                    f"[META_OAUTH] Updating existing connection for account {account_id} "
+                    f"with pixel_id={selected_pixel_id}"
+                )
             
             # Store encrypted tokens for each connection
             # Meta uses access_token only (no refresh token)

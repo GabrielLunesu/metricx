@@ -54,7 +54,7 @@ services:
         reservations:
           memory: 512M
 
-  # RQ Worker - processes sync jobs from Redis queue
+  # RQ Worker - processes sync jobs AND QA jobs from Redis queue
   worker:
     build:
       context: ./backend
@@ -66,12 +66,15 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
       JWT_SECRET: ${JWT_SECRET}
-      
+
+      # Required for QA processing
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
       # Google SDK config (required for SDK, not user tokens)
       GOOGLE_DEVELOPER_TOKEN: ${GOOGLE_DEVELOPER_TOKEN:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      
+
       # Optional: Only used for /from-env fallback endpoints (OAuth provides these)
       META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
       META_AD_ACCOUNT_ID: ${META_AD_ACCOUNT_ID:-}
