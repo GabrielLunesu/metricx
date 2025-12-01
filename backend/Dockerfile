@@ -1,31 +1,35 @@
+# syntax=docker/dockerfile:1.4
 # Build stage
 FROM python:3.11-slim AS build
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install system dependencies with cache
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libpq-dev
 
 # Copy requirements and install Python dependencies
-# Use pip cache and parallel builds for faster installation
+# Use BuildKit cache mount to persist pip cache between builds
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt
 
 # Runtime stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies only (with cache)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    curl
 
 # Copy Python dependencies from build stage
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages

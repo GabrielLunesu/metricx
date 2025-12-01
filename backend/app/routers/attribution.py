@@ -17,7 +17,7 @@ REFERENCES:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from uuid import UUID
 
@@ -347,7 +347,7 @@ async def get_pixel_health(
         )
 
     # Get event statistics for last 24 hours
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     day_ago = now - timedelta(hours=24)
 
     # Count events by type
