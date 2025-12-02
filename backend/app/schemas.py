@@ -371,7 +371,7 @@ class ConnectionUpdate(BaseModel):
 
 class ConnectionOut(BaseModel):
     """Public representation of a connection."""
-    
+
     id: UUID = Field(description="Unique connection identifier")
     provider: ProviderEnum = Field(description="Ad platform provider")
     external_account_id: str = Field(description="External account ID")
@@ -387,7 +387,8 @@ class ConnectionOut(BaseModel):
     total_syncs_attempted: int = 0
     total_syncs_with_changes: int = 0
     last_sync_error: Optional[str] = None
-    
+    meta_pixel_id: Optional[str] = Field(None, description="Meta Pixel ID for CAPI (Meta connections only)")
+
     model_config = {"from_attributes": True}
 
 

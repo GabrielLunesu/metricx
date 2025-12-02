@@ -40,9 +40,7 @@ export default function MetaPixelSelector({ connection, onUpdate }) {
             setPixels(data.pixels || []);
             setSelectedPixelId(data.current_pixel_id || '');
 
-            if (data.pixels.length === 0) {
-                setError('No pixels found for this ad account');
-            }
+            // No error if no pixels - we'll show instructions instead
         } catch (err) {
             setError(err.message || 'Failed to load pixels');
         } finally {
@@ -147,6 +145,30 @@ export default function MetaPixelSelector({ connection, onUpdate }) {
                 </div>
             ) : error ? (
                 <div className="py-2 text-sm text-red-600">{error}</div>
+            ) : pixels.length === 0 ? (
+                <div className="space-y-3">
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm font-medium text-amber-800 mb-2">
+                            No pixel assigned to this ad account
+                        </p>
+                        <p className="text-xs text-amber-700 mb-2">
+                            To use Conversions API, your pixel must be assigned to this ad account in Meta Business Settings:
+                        </p>
+                        <ol className="text-xs text-amber-700 list-decimal list-inside space-y-1">
+                            <li>Go to <a href="https://business.facebook.com/settings/data-sources/pixels" target="_blank" rel="noopener noreferrer" className="underline font-medium">Business Settings → Data Sources → Pixels</a></li>
+                            <li>Select your pixel (or create one if you don't have any)</li>
+                            <li>Click <strong>Add Assets</strong> → <strong>Ad Accounts</strong></li>
+                            <li>Select this ad account: <code className="bg-amber-100 px-1 rounded">{connection.external_account_id}</code></li>
+                            <li>Click <strong>Add</strong>, then come back here and click <strong>Configure</strong> again</li>
+                        </ol>
+                    </div>
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-800"
+                    >
+                        Close
+                    </button>
+                </div>
             ) : (
                 <div className="space-y-3">
                     <p className="text-xs text-neutral-600">

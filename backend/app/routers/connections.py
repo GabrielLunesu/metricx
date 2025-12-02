@@ -769,7 +769,7 @@ async def list_meta_pixels(
         List of available pixels with id and name
     """
     import httpx
-    from app.services.token_service import get_connection_token
+    from app.services.token_service import get_decrypted_token
 
     connection = db.query(Connection).filter(Connection.id == connection_id).first()
 
@@ -788,16 +788,16 @@ async def list_meta_pixels(
         )
 
     # Get access token
-    token_data = get_connection_token(db, connection)
-    if not token_data or not token_data.get("access_token"):
+    access_token = get_decrypted_token(db, connection.id, token_type="access")
+    if not access_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No valid access token. Please reconnect Meta."
         )
 
-    access_token = token_data["access_token"]
+    # Query pixels assigned to this specific ad account
+    # Pixels must be assigned to the ad account for CAPI attribution to work
     account_id = f"act_{connection.external_account_id}"
-
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(

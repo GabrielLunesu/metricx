@@ -252,8 +252,8 @@ export default function MetaAccountSelectionModal({
 
                       {/* Show "No pixels" message if account has no pixels */}
                       {(!acc.pixels || acc.pixels.length === 0) && selectedIds.has(acc.id) && !isAlreadyConnected && (
-                        <div className="mt-2 text-xs text-neutral-400">
-                          No pixels found for this account
+                        <div className="mt-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                          No pixel assigned — <a href="https://business.facebook.com/settings/data-sources/pixels" target="_blank" rel="noopener noreferrer" className="underline">assign one in Business Settings</a> for CAPI
                         </div>
                       )}
                     </div>
