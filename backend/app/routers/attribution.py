@@ -996,3 +996,156 @@ async def get_campaign_warnings(
         campaigns_with_warnings=len(warnings),
         total_campaigns=len(campaigns),
     )
+
+
+# =============================================================================
+# META CAPI TEST ENDPOINT
+# =============================================================================
+
+class MetaCAPITestRequest(BaseModel):
+    """Request body for testing Meta CAPI."""
+    test_event_code: str = Field(
+        description="Test event code from Meta Events Manager (Test Events tab)"
+    )
+    value: float = Field(default=99.99, description="Test purchase value")
+    currency: str = Field(default="USD", description="Currency code")
+
+
+class MetaCAPITestResponse(BaseModel):
+    """Response from Meta CAPI test."""
+    success: bool
+    message: str
+    pixel_id: Optional[str] = None
+    events_received: Optional[int] = None
+    error: Optional[str] = None
+
+
+@router.post(
+    "/{workspace_id}/meta-capi/test",
+    response_model=MetaCAPITestResponse,
+    summary="Test Meta CAPI integration",
+    description="""
+    Send a test purchase event to Meta Conversions API.
+
+    To use this:
+    1. Go to Meta Events Manager → Your Pixel → Test Events
+    2. Copy the "Test event code" (looks like TEST12345)
+    3. Call this endpoint with that code
+    4. Watch the event appear in Meta Events Manager
+
+    The test event won't affect your actual data or ad optimization.
+    """
+)
+async def test_meta_capi(
+    workspace_id: UUID,
+    payload: MetaCAPITestRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Test Meta CAPI by sending a test purchase event.
+
+    WHAT: Sends a test purchase event to verify CAPI is working
+    WHY: Users need to verify their pixel configuration before relying on it
+
+    Args:
+        workspace_id: The workspace UUID
+        payload: Test event code and optional purchase details
+        db: Database session
+        current_user: Authenticated user
+
+    Returns:
+        MetaCAPITestResponse with success status and details
+    """
+    from decimal import Decimal
+    from app.services.meta_capi_service import MetaCAPIService, MetaCAPIError
+    from app.services.token_service import get_decrypted_token
+
+    _require_workspace_permission(db, current_user, workspace_id)
+
+    # Find Meta connection (prefer one with pixel configured)
+    meta_connection = db.query(Connection).filter(
+        Connection.workspace_id == workspace_id,
+        Connection.provider == ProviderEnum.meta,
+        Connection.status == "active",
+        Connection.meta_pixel_id.isnot(None),
+    ).first()
+
+    # Fallback to any Meta connection if none have pixel
+    if not meta_connection:
+        meta_connection = db.query(Connection).filter(
+            Connection.workspace_id == workspace_id,
+            Connection.provider == ProviderEnum.meta,
+            Connection.status == "active",
+        ).first()
+
+    if not meta_connection:
+        return MetaCAPITestResponse(
+            success=False,
+            message="No active Meta connection found",
+            error="Connect a Meta ad account first in Settings",
+        )
+
+    # Get pixel ID
+    pixel_id = meta_connection.meta_pixel_id
+    if not pixel_id:
+        return MetaCAPITestResponse(
+            success=False,
+            message="No pixel configured for this Meta connection",
+            error="Configure a CAPI pixel in Settings → Meta connection → Configure",
+        )
+
+    # Get access token
+    access_token = get_decrypted_token(db, meta_connection.id, "access")
+    if not access_token:
+        return MetaCAPITestResponse(
+            success=False,
+            message="No valid access token",
+            error="Please reconnect your Meta account",
+        )
+
+    # Send test event
+    try:
+        import uuid
+        service = MetaCAPIService(pixel_id=pixel_id, access_token=access_token)
+        result = await service.send_purchase_event(
+            event_id=f"test_{uuid.uuid4().hex[:8]}",
+            value=Decimal(str(payload.value)),
+            currency=payload.currency,
+            email="test@example.com",
+            order_id=f"TEST-{uuid.uuid4().hex[:8].upper()}",
+            test_event_code=payload.test_event_code,
+        )
+
+        events_received = result.get("events_received", 0) if result else 0
+
+        if events_received > 0:
+            return MetaCAPITestResponse(
+                success=True,
+                message=f"Test event sent successfully! Check Meta Events Manager.",
+                pixel_id=pixel_id,
+                events_received=events_received,
+            )
+        else:
+            return MetaCAPITestResponse(
+                success=False,
+                message="Event sent but Meta reported 0 events received",
+                pixel_id=pixel_id,
+                events_received=0,
+                error=str(result) if result else "No response from Meta",
+            )
+
+    except MetaCAPIError as e:
+        logger.error(f"[META_CAPI_TEST] Failed: {e}")
+        return MetaCAPITestResponse(
+            success=False,
+            message="Failed to send test event",
+            pixel_id=pixel_id,
+            error=str(e),
+        )
+    except Exception as e:
+        logger.exception(f"[META_CAPI_TEST] Unexpected error: {e}")
+        return MetaCAPITestResponse(
+            success=False,
+            message="Unexpected error",
+            error=str(e),
+        )
