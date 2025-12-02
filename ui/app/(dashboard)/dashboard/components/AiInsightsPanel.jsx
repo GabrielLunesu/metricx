@@ -1,74 +1,81 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { Sparkles, AlertTriangle, Zap } from "lucide-react";
-import { fetchQA } from "@/lib/api";
+/**
+ * AI Insights Panel
+ * =================
+ *
+ * WHAT: Displays AI-generated insights about performance drops and opportunities.
+ *
+ * WHY: Provides quick, actionable insights without requiring manual analysis.
+ *
+ * UPDATED: Now uses useQAMultiple hook for streaming + caching.
+ *
+ * REFERENCES:
+ *   - hooks/useQA.js (data fetching)
+ *   - lib/qaCache.js (caching layer)
+ */
+
+import { useMemo } from "react";
+import { Sparkles, AlertTriangle, Zap, Loader2 } from "lucide-react";
+import { useQAMultiple } from "@/hooks/useQA";
+
+// Helper to get time string from timeframe
+function getTimeString(timeframe) {
+    switch (timeframe) {
+        case 'today': return "today";
+        case 'yesterday': return "yesterday";
+        case 'last_7_days': return "last 7 days";
+        case 'last_30_days': return "last 30 days";
+        default: return "last 7 days";
+    }
+}
 
 export default function AiInsightsPanel({ workspaceId, timeframe }) {
-    const [insights, setInsights] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    // Build queries for parallel fetch
+    const timeStr = getTimeString(timeframe);
 
-    useEffect(() => {
-        if (!workspaceId) return;
+    const queries = useMemo(() => {
+        if (!workspaceId) return [];
+        return [
+            { workspaceId, question: `What is my biggest performance drop ${timeStr}?` },
+            { workspaceId, question: `What is my best performing area ${timeStr}?` }
+        ];
+    }, [workspaceId, timeStr]);
 
-        let mounted = true;
+    // Use the multi-query hook (streaming + caching)
+    const { results, loading, errors } = useQAMultiple(queries, {
+        enabled: !!workspaceId,
+        cacheTTL: 5 * 60 * 1000  // 5 minutes
+    });
 
-        const loadData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                let timeStr = "last 7 days";
-                switch (timeframe) {
-                    case 'today': timeStr = "today"; break;
-                    case 'yesterday': timeStr = "yesterday"; break;
-                    case 'last_7_days': timeStr = "last 7 days"; break;
-                    case 'last_30_days': timeStr = "last 30 days"; break;
-                }
+    // Process results into insights
+    const insights = useMemo(() => {
+        if (!results || results.length === 0) return [];
 
-                // Parallel fetch for 2 distinct insights
-                const [res1, res2] = await Promise.all([
-                    fetchQA({ workspaceId, question: `What is my biggest performance drop ${timeStr}?` }),
-                    fetchQA({ workspaceId, question: `What is my best performing area ${timeStr}?` })
-                ]);
+        const newInsights = [];
 
-                if (!mounted) return;
+        // Result 1: Performance drop (warning)
+        if (results[0]?.answer) {
+            newInsights.push({
+                type: 'warning',
+                text: results[0].answer
+            });
+        }
 
-                const newInsights = [];
+        // Result 2: Best performing (opportunity)
+        if (results[1]?.answer) {
+            newInsights.push({
+                type: 'opportunity',
+                text: results[1].answer
+            });
+        }
 
-                if (res1 && res1.answer) {
-                    newInsights.push({
-                        type: 'warning',
-                        text: res1.answer,
+        return newInsights;
+    }, [results]);
 
-                    });
-                }
-
-                if (res2 && res2.answer) {
-                    newInsights.push({
-                        type: 'opportunity',
-                        text: res2.answer,
-
-                    });
-                }
-
-                setInsights(newInsights);
-            } catch (err) {
-                console.error("Failed to fetch AI Insights:", err);
-                if (mounted) {
-                    setError(err.message);
-                }
-            } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        loadData();
-
-        return () => { mounted = false; };
-    }, [workspaceId, timeframe]);
+    // Check for any errors
+    const hasError = errors.some(e => e !== null);
+    const errorMessage = errors.find(e => e !== null);
 
     if (loading) {
         return (
@@ -76,14 +83,15 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
                 <div className="flex items-center gap-2 mb-1">
                     <Sparkles className="w-4 h-4 text-purple-500" />
                     <h3 className="text-sm font-medium text-slate-700">AI Insights</h3>
+                    <Loader2 className="w-3 h-3 text-purple-400 animate-spin ml-auto" />
                 </div>
-                <div className="glass-panel p-5 rounded-[20px] h-32 animate-pulse"></div>
-                <div className="glass-panel p-5 rounded-[20px] h-32 animate-pulse"></div>
+                <div className="glass-panel p-5 rounded-[20px] h-32 animate-pulse bg-slate-100/50"></div>
+                <div className="glass-panel p-5 rounded-[20px] h-32 animate-pulse bg-slate-100/50"></div>
             </div>
         );
     }
 
-    if (error) {
+    if (hasError) {
         return (
             <div className="lg:col-span-1 flex flex-col gap-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -91,7 +99,7 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
                     <h3 className="text-sm font-medium text-slate-700">AI Insights</h3>
                 </div>
                 <div className="glass-panel p-5 rounded-[20px] text-red-500 text-sm text-center">
-                    Failed to load insights: {error}
+                    Failed to load insights: {errorMessage}
                 </div>
             </div>
         );

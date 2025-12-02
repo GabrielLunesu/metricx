@@ -39,6 +39,7 @@ from .routers import shopify_sync as shopify_sync_router  # Shopify sync endpoin
 from .routers import shopify_webhooks as shopify_webhooks_router  # Shopify compliance webhooks
 from .routers import pixel_events as pixel_events_router  # Attribution pixel events
 from .routers import attribution as attribution_router  # Attribution and pixel health
+from .routers import dashboard_kpis as dashboard_kpis_router  # Dashboard KPIs with Shopify fallback
 from . import schemas
 
 # Import models so Alembic can discover metadata
@@ -458,6 +459,7 @@ def create_app() -> FastAPI:
     app.include_router(shopify_webhooks_router.router)  # Shopify compliance webhooks
     app.include_router(pixel_events_router.router)  # Attribution pixel events
     app.include_router(attribution_router.router)  # Attribution and pixel health
+    app.include_router(dashboard_kpis_router.router)  # Dashboard KPIs with Shopify fallback
 
     @app.get(
         "/health",

@@ -90,8 +90,7 @@ services:
   scheduler:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    command: python -m app.services.sync_scheduler
+      dockerfile: Dockerfile.scheduler
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}

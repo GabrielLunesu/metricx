@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut } from "lucide-react";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Target } from "lucide-react";
 import { useEffect, useState } from "react";
 import { currentUser, logout } from "../../../../lib/auth";
 import features from "../../../../lib/features";
@@ -79,6 +79,7 @@ export default function Sidebar() {
 
     const navItems = [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/dashboard" },
+        { href: "/dashboard/attribution", label: "Attribution", icon: Target, active: pathname === "/dashboard/attribution" },
         { href: "/analytics", label: "Analytics", icon: BarChart2, active: pathname === "/analytics" },
         { href: "/copilot", label: "Copilot AI", icon: Sparkles, active: pathname?.startsWith('/copilot') },
         { href: "/finance", label: "Finance", icon: Wallet, active: pathname === "/finance" },

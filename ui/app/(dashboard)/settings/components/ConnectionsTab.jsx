@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar, Send, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchConnections, deleteConnection, updateSyncFrequency } from '@/lib/api';
 import MetaSyncButton from '@/components/MetaSyncButton';
@@ -249,6 +249,32 @@ export default function ConnectionsTab({ user }) {
                                                     <span>Connected: {formatDate(connection.connected_at)}</span>
                                                 </div>
                                             </div>
+
+                                            {/* Meta CAPI Status - Show for Meta connections */}
+                                            {connection.provider === 'meta' && (
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <Send className="w-3 h-3 text-neutral-400" />
+                                                    <span className="text-xs text-neutral-600">
+                                                        Conversions API (CAPI):
+                                                    </span>
+                                                    {connection.meta_pixel_id ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
+                                                            <CheckCircle className="w-3 h-3" />
+                                                            Configured
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+                                                            <AlertCircle className="w-3 h-3" />
+                                                            Not configured
+                                                        </span>
+                                                    )}
+                                                    {!connection.meta_pixel_id && (
+                                                        <span className="text-xs text-neutral-500">
+                                                            - Reconnect to select a pixel
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
