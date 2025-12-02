@@ -263,7 +263,8 @@ async def meta_callback(
             for acc in accounts_for_selection:
                 logger.info(f"[META_OAUTH] Found ad account: {acc['name']} ({acc['id']})")
 
-            # Fetch pixels for each ad account
+            # Fetch pixels assigned to each ad account
+            # Pixels must be assigned to the ad account for CAPI attribution to work
             for account in accounts_for_selection:
                 account["pixels"] = []
                 try:
@@ -284,7 +285,7 @@ async def meta_callback(
                                 "is_unavailable": p.get("is_unavailable", False),
                             }
                             for p in pixels
-                            if not p.get("is_unavailable", False)  # Filter out unavailable pixels
+                            if not p.get("is_unavailable", False)
                         ]
                         logger.info(
                             f"[META_OAUTH] Found {len(account['pixels'])} pixel(s) for account {account['id']}"
