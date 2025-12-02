@@ -1,8 +1,8 @@
 # Metricx Attribution Engine
 
-**Version**: 1.9.0
+**Version**: 1.10.0
 **Last Updated**: 2025-12-02
-**Status**: Phase 1-3 Complete - Full Attribution Page + Settings Clarity
+**Status**: Phase 1-3 Complete - Full Attribution Page + Settings Clarity + CAPI Testing
 
 ---
 
@@ -829,6 +829,20 @@ def _classify_unattributed(self, order: ShopifyOrder) -> AttributionResult:
 - Include event_id for deduplication
 - Refunds handled separately (out of scope for v1)
 
+**Pixel Assignment Requirement**:
+
+Pixels in Meta are owned at the **Business Manager level**, not the Ad Account level.
+For CAPI to work, the pixel must be assigned to the ad account:
+
+1. Go to [Meta Business Settings → Data Sources → Pixels](https://business.facebook.com/settings/data-sources/pixels)
+2. Select your pixel
+3. Click **Add Assets** → **Ad Accounts**
+4. Select the ad account you connected to metricx
+5. Click **Add**
+
+If no pixel is assigned, the `/connections/{id}/meta-pixels` endpoint returns empty,
+and the UI shows instructions for assignment.
+
 **Meta CAPI**:
 ```python
 async def send_meta_conversion(self, order: ShopifyOrder, attribution: Attribution):
@@ -871,6 +885,57 @@ async def send_meta_conversion(self, order: ShopifyOrder, attribution: Attributi
         event_id=event_id
     )
 ```
+
+---
+
+### 6. Meta CAPI Test Endpoint
+
+**Location**: `backend/app/routers/attribution.py`
+
+**Purpose**: Allow users to verify CAPI integration without making a real purchase.
+
+**Endpoint**: `POST /workspaces/{workspace_id}/meta-capi/test`
+
+**Request Schema**:
+```python
+class MetaCAPITestRequest(BaseModel):
+    test_event_code: str  # From Meta Events Manager → Test Events tab
+    value: float = 99.99  # Test purchase value
+    currency: str = "USD"
+```
+
+**Response Schema**:
+```python
+class MetaCAPITestResponse(BaseModel):
+    success: bool
+    message: str
+    pixel_id: Optional[str]
+    events_received: Optional[int]
+    error: Optional[str]
+```
+
+**Usage**:
+```bash
+# 1. Get test event code from Meta Events Manager → Test Events
+# 2. Call the endpoint
+curl -X POST "https://api.metricx.io/workspaces/{id}/meta-capi/test" \
+  -H "Content-Type: application/json" \
+  -d '{"test_event_code": "TEST12345"}'
+
+# 3. Check Meta Events Manager - event should appear within seconds
+```
+
+**Key Logic**:
+- Finds Meta connection with configured pixel (prefers connections with `meta_pixel_id` set)
+- Uses connection's OAuth access token
+- Sends test Purchase event with unique event_id
+- Returns success/failure with Meta's response
+
+**Why Test Events?**:
+- Test events don't affect ad optimization or reporting
+- Visible immediately in Meta Events Manager
+- Validates entire CAPI pipeline (token, pixel ID, API connectivity)
+- Users can verify setup before relying on real attribution data
 
 ---
 
@@ -1238,7 +1303,7 @@ logger.info(
 | KpiStrip frontend update | ✅ | Uses new endpoint with data_source indicator |
 | API function | ✅ | `fetchDashboardKpis()` in api.js |
 
-### Week 6: Attribution Page + Settings Clarity ✅ COMPLETE
+### Week 6: Attribution Page + Settings Clarity + CAPI Testing ✅ COMPLETE
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -1253,6 +1318,9 @@ logger.info(
 | Live Attribution Feed | ✅ | Real-time feed on page |
 | Campaign Warnings Panel | ✅ | Issues with tracking |
 | Timeframe Selector | ✅ | 7, 14, 30, 90 days |
+| Meta CAPI Test Endpoint | ✅ | `POST /workspaces/{id}/meta-capi/test` |
+| ConnectionOut meta_pixel_id | ✅ | Fixed schema to include pixel ID in response |
+| Pixel Assignment UX | ✅ | Instructions for assigning pixel to ad account |
 
 ### Week 7: Attribution UX - Phase 3 (Future)
 
@@ -1561,6 +1629,37 @@ DEFAULT_ATTRIBUTION_WINDOW_DAYS=30
 ---
 
 ## Changelog
+
+### v1.10.0 (2025-12-02) - Meta CAPI Testing + Pixel Configuration UX
+**Added CAPI test endpoint and improved pixel assignment guidance.**
+
+New Features:
+- **Meta CAPI Test Endpoint** - `POST /workspaces/{id}/meta-capi/test` for verifying CAPI integration
+- **Test Event Code Support** - Send test events visible in Meta Events Manager
+- **ConnectionOut Schema Fix** - Added `meta_pixel_id` field so pixel config status shows correctly
+- **Improved Pixel Assignment UX** - Clear instructions when no pixel is assigned to ad account
+- **Business Settings Link** - Direct link to Meta Business Settings → Data Sources → Pixels
+
+Testing CAPI:
+1. Go to Meta Events Manager → Your Pixel → Test Events
+2. Copy the test event code (e.g., `TEST12345`)
+3. Call `POST /workspaces/{id}/meta-capi/test` with `{"test_event_code": "TEST12345"}`
+4. Watch the event appear in Meta Events Manager
+
+Files Added:
+- Test endpoint in `backend/app/routers/attribution.py`
+
+Files Modified:
+- `backend/app/schemas.py` - Added `meta_pixel_id` to `ConnectionOut`
+- `ui/app/(dashboard)/settings/components/MetaPixelSelector.jsx` - Improved no-pixel instructions
+- `ui/components/MetaAccountSelectionModal.jsx` - Added pixel assignment guidance
+
+Why This Matters:
+- Users couldn't verify CAPI was working without making a real purchase
+- Pixel config status showed "Not configured" even after saving (schema missing field)
+- Users were confused when no pixels appeared (pixels live at Business Manager level, must be assigned to ad accounts)
+
+---
 
 ### v1.9.0 (2025-12-02) - Attribution Page + Settings Clarity
 **Full dedicated Attribution page and improved Settings UX for pixel clarity.**
