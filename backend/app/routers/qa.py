@@ -41,6 +41,7 @@ from rq.job import Job
 from app.schemas import QARequest, QAJobResponse, QAJobStatusResponse
 from app.database import get_db
 from app.deps import get_current_user, get_settings
+from app import state  # Shared Redis pool
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,11 @@ router = APIRouter(prefix="/qa", tags=["qa"])
 JOB_TTL_SECONDS = 300  # Jobs expire after 5 minutes (result retention)
 JOB_TIMEOUT_SECONDS = 120  # Job must complete within 2 minutes
 DEDUP_WINDOW_SECONDS = 30  # Deduplication window for identical questions
+
+# SSE polling configuration (exponential backoff)
+SSE_POLL_MIN_MS = 50    # Start polling at 50ms
+SSE_POLL_MAX_MS = 300   # Max polling interval 300ms
+SSE_POLL_BACKOFF = 1.5  # Multiply interval by 1.5 each iteration
 
 
 def _generate_dedup_key(user_id: str, workspace_id: str, question: str) -> str:
@@ -126,10 +132,12 @@ def ask_question(
         GET /qa/jobs/{job_id}
     """
     try:
-        # Connect to Redis queue
-        redis_url = get_settings().REDIS_URL
-        redis_conn = Redis.from_url(redis_url)
-        queue = Queue("qa_jobs", connection=redis_conn)
+        # Use shared Redis connection pool (avoids creating new connections per request)
+        if not state.redis_client or not state.qa_queue:
+            raise HTTPException(status_code=503, detail="Redis not available")
+
+        redis_conn = state.redis_client
+        queue = state.qa_queue
 
         user_id = str(current_user.id)
 
@@ -207,12 +215,12 @@ def get_job_status(
         }
     """
     try:
-        # Connect to Redis
-        redis_url = get_settings().REDIS_URL
-        redis_conn = Redis.from_url(redis_url)
-        
+        # Use shared Redis connection pool
+        if not state.redis_client:
+            raise HTTPException(status_code=503, detail="Redis not available")
+
         # Fetch job
-        job = Job.fetch(job_id, connection=redis_conn)
+        job = Job.fetch(job_id, connection=state.redis_client)
         
         # Map RQ status to our status
         if job.is_queued:
@@ -318,10 +326,13 @@ async def ask_question_stream(
         6. Yield complete/error event when done
         """
         try:
-            # Connect to Redis queue
-            redis_url = get_settings().REDIS_URL
-            redis_conn = Redis.from_url(redis_url)
-            queue = Queue("qa_jobs", connection=redis_conn)
+            # Use shared Redis connection pool (avoids creating new connections per request)
+            if not state.redis_client or not state.qa_queue:
+                yield f"data: {json.dumps({'stage': 'error', 'error': 'Redis not available'})}\n\n"
+                return
+
+            redis_conn = state.redis_client
+            queue = state.qa_queue
 
             user_id = str(current_user.id)
 
@@ -357,6 +368,9 @@ async def ask_question_stream(
             # Track last stage to only emit on changes
             last_stage = "queued"
 
+            # Exponential backoff: start fast, slow down if job takes longer
+            poll_interval_ms = SSE_POLL_MIN_MS
+
             # Poll job status and yield events
             while True:
                 # Refresh job to get latest status
@@ -370,10 +384,11 @@ async def ask_question_stream(
                 else:
                     current_stage = "queued"  # Still in queue
 
-                # Emit stage change if different
+                # Emit stage change if different - reset backoff on stage change
                 if current_stage != last_stage and not job.is_finished and not job.is_failed:
                     yield f"data: {json.dumps({'stage': current_stage})}\n\n"
                     last_stage = current_stage
+                    poll_interval_ms = SSE_POLL_MIN_MS  # Reset to fast polling on progress
 
                 # Check if job is complete
                 if job.is_finished:
@@ -393,8 +408,9 @@ async def ask_question_stream(
                     yield f"data: {json.dumps({'stage': 'error', 'error': error_msg})}\n\n"
                     break
 
-                # Wait before next poll (300ms for responsive updates)
-                await asyncio.sleep(0.3)
+                # Wait with exponential backoff (50ms → 75ms → 112ms → ... → 300ms max)
+                await asyncio.sleep(poll_interval_ms / 1000)
+                poll_interval_ms = min(poll_interval_ms * SSE_POLL_BACKOFF, SSE_POLL_MAX_MS)
 
         except Exception as e:
             # Yield error event if something goes wrong

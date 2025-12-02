@@ -81,6 +81,35 @@ export async function fetchWorkspaceKpis({
   return res.json();
 }
 
+
+/**
+ * Fetch dashboard KPIs with smart data source selection.
+ *
+ * WHAT: Gets KPIs for the dashboard with Shopify-first data sourcing
+ * WHY: Shows "real" revenue from Shopify instead of inflated platform numbers
+ * HOW: Backend checks for Shopify connection and switches data source
+ *
+ * @param {string} workspaceId - Workspace UUID
+ * @param {string} timeframe - One of: today, yesterday, last_7_days, last_30_days
+ * @returns {Promise<{kpis: Array, data_source: string, has_shopify: boolean}>}
+ */
+export async function fetchDashboardKpis({ workspaceId, timeframe = 'last_7_days' }) {
+  const res = await fetch(
+    `${BASE}/workspaces/${workspaceId}/dashboard/kpis?timeframe=${timeframe}`,
+    {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Dashboard KPI fetch failed: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+
 // Call backend QA endpoint (DSL v1.1) - Async Job Queue Version.
 // WHY: LLM/DB operations can take 5-30 seconds, causing HTTP timeouts.
 //      Using async job queue prevents timeouts and enables production reliability.

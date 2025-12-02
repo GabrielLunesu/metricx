@@ -1,77 +1,72 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { fetchQA } from "@/lib/api";
+/**
+ * Platform Spend Mix
+ * ==================
+ *
+ * WHAT: Displays spend breakdown by ad platform (Google, Meta, etc.)
+ *
+ * WHY: Quick visual of where ad budget is being allocated.
+ *
+ * UPDATED: Now uses useQA hook for streaming + caching.
+ *
+ * REFERENCES:
+ *   - hooks/useQA.js (data fetching)
+ *   - lib/qaCache.js (caching layer)
+ */
 
+import { useMemo } from "react";
+import { useQA } from "@/hooks/useQA";
+
+// Helper to normalize provider labels (e.g., "ProviderEnum.meta" → "meta")
 const normalizeProviderLabel = (label) => {
     if (!label) return label;
     const lowered = String(label).toLowerCase();
-    // Common case: "ProviderEnum.meta" → "meta"
     if (lowered.includes("providerenum")) {
         return lowered.split(".").pop();
     }
-    // Fallback: take last segment if any dotted string
     if (lowered.includes(".")) {
         return lowered.split(".").pop();
     }
     return lowered;
 };
 
+// Helper to get time string from timeframe
+function getTimeString(timeframe) {
+    switch (timeframe) {
+        case 'today': return "today";
+        case 'yesterday': return "yesterday";
+        case 'last_7_days': return "last 7 days";
+        case 'last_30_days': return "last 30 days";
+        default: return "last 7 days";
+    }
+}
+
 export default function PlatformSpendMix({ workspaceId, timeframe }) {
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const timeStr = getTimeString(timeframe);
+    const question = `What is my spend by provider ${timeStr}?`;
 
-    useEffect(() => {
-        if (!workspaceId) return;
+    // Use the QA hook (streaming + caching)
+    const { data, loading, error } = useQA({
+        workspaceId,
+        question,
+        enabled: !!workspaceId,
+        cacheTTL: 5 * 60 * 1000  // 5 minutes
+    });
 
-        let mounted = true;
+    // Process data into chart format
+    const chartData = useMemo(() => {
+        if (!data?.data?.breakdown) return [];
 
-        const loadData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                let timeStr = "last 7 days";
-                switch (timeframe) {
-                    case 'today': timeStr = "today"; break;
-                    case 'yesterday': timeStr = "yesterday"; break;
-                    case 'last_7_days': timeStr = "last 7 days"; break;
-                    case 'last_30_days': timeStr = "last 30 days"; break;
-                }
+        const breakdown = data.data.breakdown;
+        const total = breakdown.reduce((sum, item) => sum + item.value, 0);
 
-                const question = `What is my spend by provider ${timeStr}?`;
-                const res = await fetchQA({ workspaceId, question });
-
-                if (!mounted) return;
-
-                // QA returns data.breakdown = [{ label: "Google", value: 123 }, ...]
-                if (res.data && res.data.breakdown) {
-                    const total = res.data.breakdown.reduce((sum, item) => sum + item.value, 0);
-                    const processed = res.data.breakdown.map(item => ({
-                        provider: normalizeProviderLabel(item.label),
-                        value: item.value,
-                        pct: total > 0 ? (item.value / total) * 100 : 0
-                    }));
-                    setData(processed);
-                } else {
-                    setData([]);
-                }
-            } catch (err) {
-                console.error("Failed to fetch Platform Spend Mix:", err);
-                if (mounted) {
-                    setError(err.message);
-                }
-            } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        loadData();
-
-        return () => { mounted = false; };
-    }, [workspaceId, timeframe]);
+        return breakdown.map(item => ({
+            provider: normalizeProviderLabel(item.label),
+            value: item.value,
+            pct: total > 0 ? (item.value / total) * 100 : 0
+        }));
+    }, [data]);
 
     if (loading) {
         return (
@@ -89,7 +84,7 @@ export default function PlatformSpendMix({ workspaceId, timeframe }) {
         );
     }
 
-    if (!data || data.length === 0) {
+    if (!chartData || chartData.length === 0) {
         return (
             <div className="glass-panel p-6 rounded-3xl mb-2 h-[200px] flex items-center justify-center">
                 <p className="text-slate-400 text-sm">No spend data available</p>
@@ -100,7 +95,7 @@ export default function PlatformSpendMix({ workspaceId, timeframe }) {
     return (
         <div className="glass-panel p-6 rounded-3xl mb-2 h-[200px] flex items-center justify-center">
             <div className="flex items-end gap-12 h-32 w-full px-8 justify-center">
-                {data.map((item) => {
+                {chartData.map((item) => {
                     const isGoogle = item.provider.toLowerCase().includes('google');
                     const colorClass = isGoogle
                         ? "from-blue-500 to-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]"

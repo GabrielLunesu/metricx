@@ -1,416 +1,354 @@
 "use client";
 
+/**
+ * HeroSection - Landing page hero with glassmorphic design and animated visuals
+ * Creates a WOW effect with floating elements, glass cards, and smooth animations
+ * Related: page.jsx, FeaturesSection.jsx
+ */
+
 import { useState, useEffect, useRef } from "react";
-import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
-import { Bot, ArrowRight } from "lucide-react";
-import { ShaderGradientCanvas, ShaderGradient } from "@shadergradient/react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { ArrowRight, Sparkles, TrendingUp, Zap, Bot } from "lucide-react";
 
-// Lazy load Cobe globe component
-const Cobe = dynamic(
-  () => import("@/components/ui/cobe-globe").then((mod) => ({ default: mod.Cobe })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-full bg-gradient-to-br from-blue-100 to-cyan-100 rounded-lg animate-pulse" />
-    ),
-  }
-);
+// Animated counter component for stats
+function AnimatedNumber({ value, suffix = "" }) {
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (latest) => Math.round(latest));
+  const [displayValue, setDisplayValue] = useState(0);
 
-function FeatureCard({ title, description, isActive, progress, onClick }) {
+  useEffect(() => {
+    const controls = animate(count, value, { duration: 2, ease: "easeOut" });
+    const unsubscribe = rounded.on("change", (v) => setDisplayValue(v));
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [value, count, rounded]);
+
+  return <span>{displayValue}{suffix}</span>;
+}
+
+// Floating glass orb component
+function FloatingOrb({ className, delay = 0 }) {
   return (
-    <div
-      className={`w-full md:flex-1 self-stretch px-6 py-5 overflow-hidden flex flex-col justify-start items-start gap-2 cursor-pointer relative transition-all duration-300 rounded-xl mx-1 my-1 ${isActive
-        ? "bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg scale-[1.02] border border-blue-200"
-        : "bg-white hover:bg-gray-50 border border-transparent"
-        }`}
-      onClick={onClick}
-    >
-      {/* Progress bar at top */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 rounded-t-xl overflow-hidden">
-        <div
-          className={`h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-100 ease-linear ${isActive ? "opacity-100" : "opacity-0"}`}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
-      <div className={`self-stretch flex justify-center flex-col text-sm font-bold leading-6 transition-colors ${isActive ? "text-blue-600" : "text-black"}`}>
-        {title}
-      </div>
-      <div className="self-stretch text-gray-500 text-[13px] font-normal leading-[22px]">
-        {description}
-      </div>
-    </div>
+    <motion.div
+      className={`absolute rounded-full bg-gradient-to-br from-blue-400/30 to-cyan-400/30 backdrop-blur-3xl ${className}`}
+      animate={{
+        y: [0, -20, 0],
+        scale: [1, 1.05, 1],
+        opacity: [0.5, 0.8, 0.5],
+      }}
+      transition={{
+        duration: 6,
+        repeat: Infinity,
+        delay,
+        ease: "easeInOut",
+      }}
+    />
   );
 }
 
-const scrollToSection = (sectionId) => {
-  const element = document.getElementById(sectionId);
-  if (element) {
-    element.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-};
+// Glass card with animated border
+function GlassCard({ children, className = "", hover = true }) {
+  return (
+    <motion.div
+      className={`relative overflow-hidden rounded-2xl ${className}`}
+      whileHover={hover ? { scale: 1.02, y: -4 } : {}}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+    >
+      {/* Animated gradient border */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 p-[1px]">
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+      </div>
+      {/* Glass background */}
+      <div className="relative h-full bg-white/70 dark:bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
+        {children}
+      </div>
+    </motion.div>
+  );
+}
+
+// Live metric pill that pulses
+function LiveMetric({ label, value, change, positive = true }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex items-center gap-3 px-4 py-2 bg-white/80 backdrop-blur-lg rounded-full border border-white/30 shadow-lg shadow-blue-500/5"
+    >
+      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+      <span className="text-xs text-gray-500 font-medium">{label}</span>
+      <span className="text-sm font-bold text-gray-900">{value}</span>
+      <span className={`text-xs font-semibold ${positive ? "text-green-500" : "text-red-500"}`}>
+        {positive ? "+" : ""}{change}
+      </span>
+    </motion.div>
+  );
+}
+
+// Feature preview card with animation
+function FeaturePreview({ icon: Icon, title, value, subtitle, delay }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.5 }}
+      className="flex-1 p-4 bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-xl rounded-xl border border-white/30"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-white" />
+        </div>
+        <span className="text-xs font-medium text-gray-500">{title}</span>
+      </div>
+      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <div className="text-xs text-green-500 font-medium">{subtitle}</div>
+    </motion.div>
+  );
+}
 
 export default function HeroSection() {
-  const [activeCard, setActiveCard] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
-  const mountedRef = useRef(true);
   const heroRef = useRef(null);
 
-  // Track visibility - unmount shader when scrolled away to free GPU memory
+  // Track visibility for performance
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
+      ([entry]) => setIsVisible(entry.isIntersecting),
       { threshold: 0, rootMargin: "200px" }
     );
-
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
-    }
-
+    if (heroRef.current) observer.observe(heroRef.current);
     return () => observer.disconnect();
   }, []);
 
-  // Progress interval for card rotation
-  useEffect(() => {
-    if (!isVisible) return;
-
-    const progressInterval = setInterval(() => {
-      if (!mountedRef.current) return;
-
-      setProgress((prev) => {
-        if (prev >= 100) {
-          if (mountedRef.current) {
-            setActiveCard((current) => (current + 1) % 3);
-          }
-          return 0;
-        }
-        return prev + 2;
-      });
-    }, 100);
-
-    return () => {
-      clearInterval(progressInterval);
-      mountedRef.current = false;
-    };
-  }, [isVisible]);
-
-  const handleCardClick = (index) => {
-    if (!mountedRef.current) return;
-    setActiveCard(index);
-    setProgress(0);
-  };
-
-  const features = [
-    {
-      title: "AI Copilot",
-      description: "Ask any question in plain English. Get instant insights on ROAS, spend, and performance.",
-    },
-    {
-      title: "Unified Analytics",
-      description: "Meta + Google in one view. Compare platforms side-by-side with consistent metrics.",
-    },
-    {
-      title: "Finance & P&L",
-      description: "Track every dollar. See budget vs actuals with real-time profit calculations.",
-    },
-  ];
-
-  const navItems = [
-    { label: "How It Works", href: "how-it-works" },
-    { label: "Features", href: "features" },
-    { label: "Pricing", href: "pricing" },
-  ];
-
   return (
-    <>
-      {/* Shader gradient background - unmounts when scrolled past hero to free GPU memory */}
-      <div className="shader-gradient-fixed">
-        {isVisible ? (
-          <ShaderGradientCanvas
-            style={{ width: "100%", height: "100%" }}
-            pixelDensity={1}
-            pointerEvents="none"
-          >
-            <ShaderGradient
-              animate="on"
-              type="sphere"
-              wireframe={false}
-              shader="defaults"
-              uTime={0}
-              uSpeed={0.2}
-              uStrength={0.3}
-              uDensity={0.8}
-              uFrequency={5.5}
-              uAmplitude={3.2}
-              positionX={-0.1}
-              positionY={0}
-              positionZ={0}
-              rotationX={0}
-              rotationY={130}
-              rotationZ={70}
-              color1="#3B82F6"
-              color2="#06B6D4"
-              color3="#ffffff"
-              reflection={0.4}
-              cAzimuthAngle={270}
-              cPolarAngle={180}
-              cDistance={0.5}
-              cameraZoom={15.1}
-              lightType="env"
-              brightness={1.2}
-              envPreset="city"
-              grain="on"
-              toggleAxis={false}
-              zoomOut={false}
-              enableTransition={false}
-            />
-          </ShaderGradientCanvas>
-        ) : (
-          // Static fallback when scrolled past - no GPU usage
-          <div className="w-full h-full bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600" />
-        )}
+    <section ref={heroRef} className="relative w-full min-h-screen overflow-hidden">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+        {/* Animated mesh gradient */}
+        <div className="absolute inset-0 opacity-60">
+          <div className="absolute top-0 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-blue-400/40 to-transparent rounded-full blur-3xl animate-blob" />
+          <div className="absolute top-40 -right-40 w-[500px] h-[500px] bg-gradient-to-br from-cyan-400/40 to-transparent rounded-full blur-3xl animate-blob animation-delay-2000" />
+          <div className="absolute -bottom-40 left-1/3 w-[600px] h-[600px] bg-gradient-to-br from-blue-300/30 to-cyan-300/30 rounded-full blur-3xl animate-blob animation-delay-4000" />
+        </div>
+        {/* Subtle grid overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
       </div>
 
-      <div ref={heroRef} className="relative w-full overflow-hidden min-h-screen">
-        {/* Fade to white at bottom of hero */}
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white to-transparent pointer-events-none z-[1]" />
+      {/* Floating orbs */}
+      {isVisible && (
+        <>
+          <FloatingOrb className="w-32 h-32 top-20 left-[10%]" delay={0} />
+          <FloatingOrb className="w-24 h-24 top-40 right-[15%]" delay={1} />
+          <FloatingOrb className="w-40 h-40 bottom-32 left-[20%]" delay={2} />
+          <FloatingOrb className="w-20 h-20 bottom-40 right-[25%]" delay={3} />
+        </>
+      )}
 
-        <div className="w-full max-w-[1060px] mx-auto relative z-10">
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+        {/* Navigation */}
+        <motion.nav
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex justify-center mb-16"
+        >
+          <div className="flex items-center gap-3 px-2 py-2 bg-white/70 backdrop-blur-xl rounded-full border border-white/30 shadow-lg shadow-black/5">
+            <a href="/" className="flex items-center pl-2">
+              <img src="/logo.png" alt="metricx" className="h-8" />
+            </a>
+            <div className="hidden sm:flex items-center gap-1">
+              {["Features", "Pricing"].map((item) => (
+                <button
+                  key={item}
+                  onClick={() => document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: "smooth" })}
+                  className="px-4 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-full transition-all"
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <a
+              href="/login"
+              className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20"
+            >
+              Log in
+            </a>
+          </div>
+        </motion.nav>
 
-          {/* Navigation */}
-          <motion.nav
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="w-full py-4 px-4 sm:px-6 lg:px-0 flex justify-center items-center relative z-20"
+        {/* Hero content */}
+        <div className="flex flex-col items-center text-center pt-8 pb-16">
+          {/* Eyebrow badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 backdrop-blur-sm rounded-full border border-blue-500/20 mb-8"
           >
-            <div className="w-full max-w-[700px] h-12 px-4 bg-white backdrop-blur-lg shadow-[0_4px_20px_rgba(0,0,0,0.1)] rounded-full flex justify-between items-center">
-              {/* Logo */}
-              <a href="/" className="flex items-center">
-                <img src="/logo.png" alt="metricx" className="h-12 sm:h-12" />
-              </a>
+            <Sparkles className="w-4 h-4 text-blue-500" />
+            <span className="text-sm font-medium text-gray-700">AI-Powered Marketing Intelligence</span>
+          </motion.div>
 
-              {/* Centered Nav Items */}
-              <div className="hidden sm:flex items-center justify-center gap-6 absolute left-1/2 -translate-x-1/2">
-                {navItems.map((item) => (
-                  <button
-                    key={item.href}
-                    onClick={() => scrollToSection(item.href)}
-                    className="text-gray-600 text-sm font-medium hover:text-black transition-colors"
-                  >
-                    {item.label}
-                  </button>
-                ))}
+          {/* Main headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight mb-6"
+          >
+            <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
+              Stop Guessing.
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-clip-text text-transparent">
+              Start Scaling.
+            </span>
+          </motion.h1>
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-lg sm:text-xl text-gray-600 max-w-xl mb-10 leading-relaxed"
+          >
+            Unify Google & Meta ads, ask questions in plain English,
+            and know exactly where to spend your next dollar.
+          </motion.p>
+
+          {/* CTA buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex flex-col sm:flex-row items-center gap-4 mb-16"
+          >
+            <a
+              href="/dashboard"
+              className="group flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-base font-semibold rounded-full hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-300 hover:-translate-y-0.5"
+            >
+              Start Free
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </a>
+            <button
+              onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+              className="px-8 py-4 text-gray-600 text-base font-medium hover:text-gray-900 transition-colors"
+            >
+              See how it works
+            </button>
+          </motion.div>
+
+          {/* Live metrics floating */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="flex flex-wrap justify-center gap-3 mb-12"
+          >
+            <LiveMetric label="ROAS" value="3.8x" change="12%" />
+            <LiveMetric label="Revenue" value="$89.2K" change="18%" />
+            <LiveMetric label="CPA" value="$24.50" change="8%" positive={false} />
+          </motion.div>
+
+          {/* Dashboard preview - glass card */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="w-full max-w-4xl"
+          >
+            <GlassCard className="p-6 sm:p-8" hover={false}>
+              {/* Mock dashboard header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">AI Copilot</div>
+                    <div className="text-xs text-gray-500">Ask anything about your ads</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-xs font-medium text-green-600">Live</span>
+                </div>
               </div>
 
-              {/* Login Button */}
-              <a
-                href="/login"
-                className="px-4 py-1.5 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors"
-              >
-                Log in
-              </a>
-            </div>
-          </motion.nav>
-
-          {/* Hero Content */}
-          <div className="pt-12 sm:pt-16 md:pt-20 pb-8 px-4 sm:px-6 lg:px-0 flex flex-col items-center">
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-center max-w-[800px] mx-auto"
-            >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
-                <span className="text-white drop-shadow-lg">Stop Guessing.</span>
-                <br />
-                <span className="text-white drop-shadow-lg">Start Scaling.</span>
-              </h1>
-              <p className="mt-6 text-lg sm:text-xl text-white/90 max-w-[540px] mx-auto leading-relaxed drop-shadow">
-                The AI marketing copilot that unifies your Google & Meta ads, answers questions in plain English, and shows you exactly where to spend your next dollar.
-              </p>
-            </motion.div>
-
-            {/* CTA Button */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-8"
-            >
-              <a
-                href="/dashboard"
-                className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-black text-base font-medium rounded-full hover:bg-white/90 transition-colors group shadow-xl"
-              >
-                Start for free
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </a>
-            </motion.div>
-
-            {/* Dashboard Preview with Globe */}
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="w-full max-w-[960px] mt-12 sm:mt-16"
-            >
-              <div className="bg-white rounded-xl shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_8px_40px_rgba(0,0,0,0.08)] overflow-hidden">
-                <div className="grid md:grid-cols-2 gap-0">
-                  {/* Left side - Metrics */}
-                  <div className="p-6 sm:p-8 border-b md:border-b-0 md:border-r border-gray-100">
-                    <div className="flex flex-col gap-6">
-                      {/* AI Copilot Preview */}
-                      <div
-                        className={`transition-all duration-500 ${activeCard === 0 ? "opacity-100" : "opacity-0 absolute pointer-events-none"
-                          }`}
-                      >
-                        <div className="flex items-start gap-3 mb-4">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                            <Bot className="w-4 h-4 text-white" strokeWidth={2} />
-                          </div>
-                          <div className="flex-1 bg-gray-50 rounded-2xl rounded-tl-sm p-4">
-                            <p className="text-sm text-gray-700">Your ROAS increased by 18% this week. Campaign "Summer Sale" is your top performer at 4.2x.</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <p className="text-xs text-gray-400 mb-1">Revenue</p>
-                            <p className="text-2xl font-bold text-black">$89.2K</p>
-                            <span className="text-xs text-green-500 font-medium">+18.2%</span>
-                          </div>
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <p className="text-xs text-gray-400 mb-1">ROAS</p>
-                            <p className="text-2xl font-bold text-black">3.63x</p>
-                            <span className="text-xs text-green-500 font-medium">+5.8%</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Analytics Preview */}
-                      <div
-                        className={`transition-all duration-500 ${activeCard === 1 ? "opacity-100" : "opacity-0 absolute pointer-events-none"
-                          }`}
-                      >
-                        <div className="grid grid-cols-3 gap-3 mb-4">
-                          <div className="bg-gray-50 rounded-xl p-3">
-                            <p className="text-xs text-gray-400 mb-1">Spend</p>
-                            <p className="text-lg font-bold text-black">$24.5K</p>
-                          </div>
-                          <div className="bg-gray-50 rounded-xl p-3">
-                            <p className="text-xs text-gray-400 mb-1">Revenue</p>
-                            <p className="text-lg font-bold text-black">$89.2K</p>
-                          </div>
-                          <div className="bg-gray-50 rounded-xl p-3">
-                            <p className="text-xs text-gray-400 mb-1">ROAS</p>
-                            <p className="text-lg font-bold text-black">3.63x</p>
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 rounded-xl p-4 h-32">
-                          <div className="h-full flex items-end justify-between gap-1.5">
-                            {[35, 52, 45, 68, 78, 92, 65, 82, 88, 70, 85, 95].map((h, i) => (
-                              <div
-                                key={i}
-                                className="flex-1 bg-gradient-to-t from-blue-500 to-cyan-400 rounded-t"
-                                style={{ height: `${h}%` }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Finance Preview */}
-                      <div
-                        className={`transition-all duration-500 ${activeCard === 2 ? "opacity-100" : "opacity-0 absolute pointer-events-none"
-                          }`}
-                      >
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <p className="text-xs text-gray-400 mb-1">Ad Spend</p>
-                            <p className="text-xl font-bold text-black">$24,500</p>
-                            <span className="text-xs text-green-500 font-medium">Under budget</span>
-                          </div>
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <p className="text-xs text-gray-400 mb-1">Net Profit</p>
-                            <p className="text-xl font-bold text-black">$64,700</p>
-                            <span className="text-xs text-green-500 font-medium">+22% MoM</span>
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Revenue</span>
-                            <span className="font-semibold text-black">$89,200</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Ad Spend</span>
-                            <span className="font-semibold text-red-500">-$24,500</span>
-                          </div>
-                          <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-                            <span className="font-semibold text-black">Profit</span>
-                            <span className="font-bold text-green-500">$64,700</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              {/* AI Chat preview */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl border border-gray-100">
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-white" />
                   </div>
-
-                  {/* Right side - Globe with glow effect */}
-                  <div className="p-6 sm:p-8 bg-white flex items-center justify-center min-h-[300px] md:min-h-[400px] relative overflow-hidden">
-                    {/* Subtle glow effects on white bg */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-cyan-400/30 rounded-full blur-2xl" />
-
-                    <div className="relative z-10 h-[300px] w-full max-w-[300px] overflow-hidden rounded-lg">
-                      <Cobe
-                        variant="default"
-                        phi={0}
-                        theta={0.2}
-                        mapSamples={16000}
-                        mapBrightness={1.2}
-                        mapBaseBrightness={0.05}
-                        diffuse={3}
-                        dark={0}
-                        baseColor="#ffffff"
-                        markerColor="#3b82f6"
-                        markerSize={0.07}
-                        glowColor="#60a5fa"
-                        scale={1.0}
-                        offsetX={0.0}
-                        offsetY={0.0}
-                        opacity={1}
-                      />
-                    </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      Your <span className="font-semibold text-blue-600">Summer Sale campaign</span> is outperforming others with a 4.2x ROAS.
+                      I recommend increasing its budget by 20% and pausing the "Brand Awareness" campaign which has a 0.8x ROAS.
+                    </p>
                   </div>
                 </div>
               </div>
-            </motion.div>
 
-            {/* Feature Cards */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="w-full max-w-[960px] mt-4 p-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg"
-            >
-              <div className="flex flex-col md:flex-row gap-1">
-                {features.map((feature, index) => (
-                  <FeatureCard
-                    key={index}
-                    title={feature.title}
-                    description={feature.description}
-                    isActive={activeCard === index}
-                    progress={activeCard === index ? progress : 0}
-                    onClick={() => handleCardClick(index)}
-                  />
-                ))}
+              {/* Metrics grid */}
+              <div className="grid grid-cols-3 gap-4">
+                <FeaturePreview
+                  icon={TrendingUp}
+                  title="Total Revenue"
+                  value="$89,247"
+                  subtitle="+18.2% this week"
+                  delay={0.7}
+                />
+                <FeaturePreview
+                  icon={Zap}
+                  title="ROAS"
+                  value="3.63x"
+                  subtitle="+5.8% vs last week"
+                  delay={0.8}
+                />
+                <FeaturePreview
+                  icon={Sparkles}
+                  title="Conversions"
+                  value="1,847"
+                  subtitle="+124 today"
+                  delay={0.9}
+                />
               </div>
-            </motion.div>
-          </div>
+            </GlassCard>
+          </motion.div>
         </div>
       </div>
-    </>
+
+      {/* Bottom fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+
+      {/* Shimmer animation styles */}
+      <style jsx global>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 3s infinite;
+        }
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(20px, -30px) scale(1.1); }
+          50% { transform: translate(-20px, 20px) scale(0.9); }
+          75% { transform: translate(30px, 10px) scale(1.05); }
+        }
+        .animate-blob {
+          animation: blob 15s infinite ease-in-out;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
+    </section>
   );
 }

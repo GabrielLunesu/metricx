@@ -1,8 +1,8 @@
 # Metricx Attribution Engine
 
-**Version**: 1.7.0
-**Last Updated**: 2025-12-01
-**Status**: Phase 1-2 Complete - Attribution UI + Pixel Health
+**Version**: 1.9.0
+**Last Updated**: 2025-12-02
+**Status**: Phase 1-3 Complete - Full Attribution Page + Settings Clarity
 
 ---
 
@@ -1226,14 +1226,41 @@ logger.info(
 | Campaign Warnings Panel | ✅ | `ui/app/(dashboard)/campaigns/components/CampaignWarningsPanel.jsx` |
 | Frontend API Functions | ✅ | Added to `ui/lib/api.js` |
 
-### Week 5: Attribution UX - Phase 2 (Future)
+### Week 5: Dashboard KPIs with Smart Data Source ✅ COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Dashboard KPIs endpoint | ✅ | `GET /workspaces/{id}/dashboard/kpis` |
+| Shopify-first revenue | ✅ | Uses Shopify orders when connected |
+| Platform fallback | ✅ | Falls back to MetricFact for SaaS users |
+| Attribution-based conversions | ✅ | Counts ad-attributed orders (excludes direct/organic) |
+| ROAS computation | ✅ | revenue/spend with daily sparkline |
+| KpiStrip frontend update | ✅ | Uses new endpoint with data_source indicator |
+| API function | ✅ | `fetchDashboardKpis()` in api.js |
+
+### Week 6: Attribution Page + Settings Clarity ✅ COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Dedicated Attribution Page | ✅ | `/dashboard/attribution` with full overview |
+| Sidebar Navigation | ✅ | Attribution link added under Dashboard |
+| Pixel Health Card Clarity | ✅ | Renamed to "Shopify Tracking Pixel" with explanation |
+| Health Score Explanation | ✅ | Tooltip + contextual text explaining 0-100 score |
+| Meta CAPI Status Indicator | ✅ | Shows "Configured" / "Not configured" per connection |
+| KPI Strip (Revenue, Orders, Rate, AOV) | ✅ | Top metrics with trend indicators |
+| Revenue by Channel Chart | ✅ | Pie chart + breakdown list |
+| Top Campaigns Bar Chart | ✅ | Horizontal bar chart of top 5 |
+| Live Attribution Feed | ✅ | Real-time feed on page |
+| Campaign Warnings Panel | ✅ | Issues with tracking |
+| Timeframe Selector | ✅ | 7, 14, 30, 90 days |
+
+### Week 7: Attribution UX - Phase 3 (Future)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | Multi-model support | 🔲 | first_click, last_click, linear |
 | Attribution windows config | 🔲 | 7/14/28/30 day per workspace |
-| Platform comparison | 🔲 | Platform vs Metricx data |
-| Full analytics page | 🔲 | Detailed attribution section |
+| Platform comparison | 🔲 | Platform vs Metricx data (side-by-side) |
 | Smoke tests | 🔲 | Full pipeline tests |
 | Contract tests | 🔲 | Realistic webhook/pixel payloads |
 
@@ -1534,6 +1561,94 @@ DEFAULT_ATTRIBUTION_WINDOW_DAYS=30
 ---
 
 ## Changelog
+
+### v1.9.0 (2025-12-02) - Attribution Page + Settings Clarity
+**Full dedicated Attribution page and improved Settings UX for pixel clarity.**
+
+New Features:
+- **Dedicated Attribution Page** - `/dashboard/attribution` with unified view
+- **Sidebar Navigation** - Attribution link with Target icon under Dashboard
+- **Improved Pixel Health Card** - Renamed to "Shopify Tracking Pixel" with explanation
+- **Health Score Explanation** - Tooltip showing calculation (base + events + checkouts - issues)
+- **Contextual Health Text** - Dynamic explanation based on score and events
+- **Meta CAPI Status** - Shows configuration status per Meta connection in Settings
+
+Attribution Page Components:
+- KPI Strip: Attributed Revenue, Orders, Attribution Rate, Avg Order Value
+- Revenue by Channel: Pie chart with breakdown list (Meta, Google, Direct, Organic, etc.)
+- Top Campaigns: Horizontal bar chart of top 5 campaigns by attributed revenue
+- Live Attribution Feed: Real-time feed with auto-refresh
+- Campaign Warnings: Alerts for campaigns with tracking issues
+- Timeframe Selector: 7, 14, 30, 90 day options
+
+Files Added:
+- `ui/app/(dashboard)/dashboard/attribution/page.jsx` - Full attribution page
+
+Files Modified:
+- `ui/app/(dashboard)/settings/components/PixelHealthCard.jsx` - Clarity improvements
+- `ui/app/(dashboard)/settings/components/ConnectionsTab.jsx` - Meta CAPI status
+- `ui/app/(dashboard)/components/shared/Sidebar.jsx` - Attribution nav item
+
+Why This Matters:
+- Users had scattered attribution components with no unified view
+- "Pixel Health" was confusing (Shopify Web Pixel vs Meta Pixel)
+- Health score (e.g., 70%) was unexplained
+- Meta CAPI configuration status was hidden
+
+User Journey:
+1. Dashboard → See KPI strip with attribution data
+2. Dashboard → Attribution → Full attribution overview
+3. Settings → Connections → See Shopify Tracking Pixel health with explanation
+4. Settings → Connections → See Meta CAPI status per connection
+
+### v1.8.0 (2025-12-02) - Dashboard KPIs Router Fix
+**Fixed dashboard KPIs endpoint registration.**
+
+### v1.7.0 (2025-12-02) - Dashboard KPIs with Smart Data Source
+**Triple Whale-style KPIs: Shopify orders as source of truth with SaaS fallback.**
+
+New Features:
+- **Dashboard KPIs endpoint** - `GET /workspaces/{id}/dashboard/kpis`
+- **Shopify-first revenue** - Uses `shopify_orders.total_price` when Shopify connected
+- **Platform fallback** - Falls back to `metric_facts.revenue` for SaaS users without Shopify
+- **Attribution-based conversions** - Counts attributions excluding direct/organic/unknown
+- **ROAS computation** - Daily sparkline from revenue/spend per day
+- **Data source indicator** - Response includes `data_source: "shopify" | "platform"`
+
+Why This Matters:
+- Platform-reported revenue is often inflated (attribution window differences)
+- Shopify orders are the actual source of truth for e-commerce merchants
+- SaaS users without Shopify still see their platform metrics
+- Isolated endpoint for production safety (doesn't affect existing /kpis)
+
+Files Added:
+- `backend/app/routers/dashboard_kpis.py` - New isolated endpoint
+
+Files Modified:
+- `backend/app/main.py` - Added router registration
+- `ui/lib/api.js` - Added `fetchDashboardKpis()` function
+- `ui/app/(dashboard)/dashboard/components/KpiStrip.jsx` - Updated to use new endpoint
+
+Response Shape:
+```json
+{
+  "kpis": [
+    {"key": "revenue", "value": 2100.00, "prev": 1800.00, "delta_pct": 0.167, "sparkline": [...]},
+    {"key": "roas", "value": 3.5, "prev": 3.2, "delta_pct": 0.094, "sparkline": [...]},
+    {"key": "spend", "value": 600.00, "prev": 562.50, "delta_pct": 0.067, "sparkline": [...]},
+    {"key": "conversions", "value": 12, "prev": 10, "delta_pct": 0.2, "sparkline": [...]}
+  ],
+  "data_source": "shopify",
+  "has_shopify": true
+}
+```
+
+Data Source Logic:
+1. Check if workspace has active Shopify connection
+2. If YES (e-commerce): Revenue from shopify_orders, conversions from attributions
+3. If NO (SaaS): Revenue from metric_facts.revenue, conversions from metric_facts.conversions
+4. Spend: Always from metric_facts (ad platforms)
+5. ROAS: Computed from revenue/spend regardless of source
 
 ### v1.6.0 (2025-12-01) - Google Offline Conversions
 **Complete CAPI loop - both Meta and Google now receive purchase data.**

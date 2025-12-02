@@ -221,8 +221,8 @@ Do NOT combine the months into a single range.
         messages.append({"role": "user", "content": final_question})
         
         # Step 5: Call OpenAI API with JSON mode (streaming preferred, fallback to non-stream)
-        # Timeout: 30 seconds to prevent hanging on slow LLM responses
-        LLM_TIMEOUT_SECONDS = 30
+        # Timeout: 15 seconds to prevent hanging on slow LLM responses (reduced from 30s)
+        LLM_TIMEOUT_SECONDS = 15
         raw_response = ""
         if self.use_streaming:
             try:

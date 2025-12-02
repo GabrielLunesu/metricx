@@ -4,7 +4,10 @@
  * PixelHealthCard component for Settings page.
  *
  * WHAT: Displays Shopify Web Pixel health status, event statistics, and health score
- * WHY: Users need visibility into whether their attribution pixel is working
+ * WHY: Users need visibility into whether their Shopify tracking pixel is working
+ *
+ * NOTE: This is the SHOPIFY Web Pixel (for tracking customer journeys on your store),
+ *       NOT the Meta/Facebook Pixel (which is for sending conversions back to Meta via CAPI).
  *
  * REFERENCES:
  * - docs/ATTRIBUTION_UX_COMPREHENSIVE_PLAN.md (Phase 1)
@@ -12,7 +15,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Activity, AlertTriangle, CheckCircle, RefreshCw, Eye, ShoppingCart, CreditCard, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, RefreshCw, Eye, ShoppingCart, CreditCard, XCircle, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchPixelHealth, reinstallPixel } from '@/lib/api';
 
@@ -78,6 +81,41 @@ function getProgressBarColor(score) {
     if (score >= 60) return 'bg-amber-500';
     if (score >= 40) return 'bg-orange-500';
     return 'bg-red-500';
+}
+
+/**
+ * Get human-readable explanation of health score.
+ * @param {number} score - Health score 0-100
+ * @param {Object} events - Event counts from last 24h
+ * @param {Array} issues - List of detected issues
+ * @returns {string} Explanation text
+ */
+function getHealthScoreExplanation(score, events, issues) {
+    const parts = [];
+
+    if (score >= 80) {
+        parts.push('Your pixel is working great!');
+    } else if (score >= 60) {
+        parts.push('Your pixel is working but could be better.');
+    } else if (score >= 40) {
+        parts.push('Your pixel has some issues that need attention.');
+    } else {
+        parts.push('Your pixel needs immediate attention.');
+    }
+
+    const totalEvents = (events?.page_viewed || 0) + (events?.product_viewed || 0) +
+                       (events?.product_added_to_cart || 0) + (events?.checkout_completed || 0);
+    if (totalEvents === 0) {
+        parts.push('No events received in the last 24 hours.');
+    } else if (totalEvents < 10) {
+        parts.push(`Only ${totalEvents} events in 24h - is your store getting traffic?`);
+    }
+
+    if ((events?.checkout_completed || 0) === 0 && (events?.checkout_started || 0) > 0) {
+        parts.push('Checkouts started but none completed.');
+    }
+
+    return parts.join(' ');
 }
 
 /**
@@ -210,7 +248,7 @@ export default function PixelHealthCard({ workspaceId, hasShopifyConnection = fa
                         <Activity className="w-5 h-5 text-neutral-600" />
                     </div>
                     <div>
-                        <h3 className="text-base font-semibold text-neutral-900">Pixel Status</h3>
+                        <h3 className="text-base font-semibold text-neutral-900">Shopify Tracking Pixel</h3>
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-neutral-100 text-neutral-700">
                             Not Installed
                         </span>
@@ -218,6 +256,9 @@ export default function PixelHealthCard({ workspaceId, hasShopifyConnection = fa
                 </div>
                 <p className="text-sm text-neutral-600">
                     {health?.issues?.[0] || 'Connect your Shopify store to enable pixel tracking for attribution.'}
+                </p>
+                <p className="text-xs text-neutral-500 mt-2">
+                    This pixel tracks customer journeys on your store to attribute sales to ad campaigns.
                 </p>
             </div>
         );
@@ -235,7 +276,8 @@ export default function PixelHealthCard({ workspaceId, hasShopifyConnection = fa
                         <Activity className={`w-5 h-5 ${health.status === 'active' ? 'text-emerald-600' : health.status === 'degraded' ? 'text-amber-600' : 'text-red-600'}`} />
                     </div>
                     <div>
-                        <h3 className="text-base font-semibold text-neutral-900">Pixel Status</h3>
+                        <h3 className="text-base font-semibold text-neutral-900">Shopify Tracking Pixel</h3>
+                        <p className="text-xs text-neutral-500 mb-1">Tracks customer journeys for attribution</p>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusBadge.classes}`}>
                             <StatusIcon className="w-3 h-3 inline mr-1" />
                             {statusBadge.label}
@@ -278,7 +320,22 @@ export default function PixelHealthCard({ workspaceId, hasShopifyConnection = fa
             {/* Health Score */}
             <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-neutral-700">Health Score</span>
+                    <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium text-neutral-700">Health Score</span>
+                        <div className="group relative">
+                            <HelpCircle className="w-3.5 h-3.5 text-neutral-400 cursor-help" />
+                            <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-neutral-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                <p className="font-medium mb-1">How is this calculated?</p>
+                                <ul className="space-y-1 text-neutral-300">
+                                    <li>• Base: 50 points</li>
+                                    <li>• Event volume: up to +25</li>
+                                    <li>• Checkout completions: +15</li>
+                                    <li>• Recent activity: up to +10</li>
+                                    <li>• Issues detected: -10 each</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                     <span className={`text-lg font-bold ${getHealthScoreColor(health.health_score)}`}>
                         {health.health_score}%
                     </span>
@@ -289,6 +346,9 @@ export default function PixelHealthCard({ workspaceId, hasShopifyConnection = fa
                         style={{ width: `${health.health_score}%` }}
                     />
                 </div>
+                <p className="text-xs text-neutral-500 mt-2">
+                    {getHealthScoreExplanation(health.health_score, health.events_24h, health.issues)}
+                </p>
             </div>
 
             {/* Event Counts */}

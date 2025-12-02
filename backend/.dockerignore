@@ -29,3 +29,40 @@ defang.exe
 # Local environment files
 .env
 .env.*
+
+# Virtual environment (420MB!)
+lib/
+bin/
+include/
+pyvenv.cfg
+
+# Tests and test artifacts
+tests/
+test-results/
+.pytest_cache/
+.deepeval/
+test_*.py
+*_test.py
+run_qa_tests.sh
+test_log_capture.sh
+
+# Debug and utility scripts (not needed in prod)
+debug_*.py
+check_connections.py
+inspect_redis.py
+generate_keys.py
+
+# Documentation (not needed in prod)
+docs/
+*.md
+*.MD
+
+# Log files
+*.log
+qa_logs.txt
+important-facts.txt
+
+# Editor/IDE
+*.swp
+*.swo
+*~

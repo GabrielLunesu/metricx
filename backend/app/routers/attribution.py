@@ -267,7 +267,7 @@ def _calculate_health_score(
 
     # Recent activity bonus
     if last_event_time:
-        time_since_event = datetime.utcnow() - last_event_time
+        time_since_event = datetime.now(timezone.utc) - last_event_time
         if time_since_event < timedelta(hours=1):
             score += 10
         elif time_since_event < timedelta(hours=6):
@@ -959,7 +959,7 @@ async def get_campaign_warnings(
             warnings.append(CampaignAttributionWarning(
                 campaign_id=campaign_id,
                 campaign_name=campaign.name or "Unknown",
-                provider=campaign.provider.value if campaign.provider else "unknown",
+                provider=campaign.connection.provider.value if campaign.connection and campaign.connection.provider else "unknown",
                 warning_type="no_attribution",
                 message="No attributed orders. Check if UTM parameters are set up correctly.",
                 spend=spend,
@@ -971,7 +971,7 @@ async def get_campaign_warnings(
             warnings.append(CampaignAttributionWarning(
                 campaign_id=campaign_id,
                 campaign_name=campaign.name or "Unknown",
-                provider=campaign.provider.value if campaign.provider else "unknown",
+                provider=campaign.connection.provider.value if campaign.connection and campaign.connection.provider else "unknown",
                 warning_type="low_confidence",
                 message="Only low-confidence attributions. Add UTM parameters for better tracking.",
                 spend=spend,
@@ -983,7 +983,7 @@ async def get_campaign_warnings(
             warnings.append(CampaignAttributionWarning(
                 campaign_id=campaign_id,
                 campaign_name=campaign.name or "Unknown",
-                provider=campaign.provider.value if campaign.provider else "unknown",
+                provider=campaign.connection.provider.value if campaign.connection and campaign.connection.provider else "unknown",
                 warning_type="no_utm",
                 message="No UTM tracking detected. Add UTM parameters for campaign-level attribution.",
                 spend=spend,
