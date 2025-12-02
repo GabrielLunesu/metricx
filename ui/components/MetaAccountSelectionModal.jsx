@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, ChevronDown } from 'lucide-react';
 
 import { getApiBase } from '../lib/config';
 
 /**
  * MetaAccountSelectionModal Component
- * 
- * WHAT: Modal for selecting which Meta ad accounts to connect
- * WHY: Allow users to choose specific accounts when multiple are available
+ *
+ * WHAT: Modal for selecting which Meta ad accounts to connect with optional pixel selection
+ * WHY: Allow users to choose specific accounts and assign pixels for Conversions API (CAPI)
  * WHERE USED: Settings page, triggered by MetaConnectButton
  */
 export default function MetaAccountSelectionModal({
@@ -21,6 +21,7 @@ export default function MetaAccountSelectionModal({
 }) {
   const [accounts, setAccounts] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [selectedPixels, setSelectedPixels] = useState({}); // { accountId: pixelId }
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -71,11 +72,24 @@ export default function MetaAccountSelectionModal({
       const next = new Set(prev);
       if (next.has(accountId)) {
         next.delete(accountId);
+        // Also clear pixel selection when deselecting account
+        setSelectedPixels(p => {
+          const updated = { ...p };
+          delete updated[accountId];
+          return updated;
+        });
       } else {
         next.add(accountId);
       }
       return next;
     });
+  };
+
+  const handlePixelChange = (accountId, pixelId) => {
+    setSelectedPixels(prev => ({
+      ...prev,
+      [accountId]: pixelId || null,
+    }));
   };
 
   const handleSelectAll = () => {
@@ -105,7 +119,7 @@ export default function MetaAccountSelectionModal({
         body: JSON.stringify({
           selections: Array.from(selectedIds).map(id => ({
             account_id: id,
-            pixel_id: null,  // Pixel selection can be added later
+            pixel_id: selectedPixels[id] || null,
           })),
           session_id: sessionId,
         }),
@@ -212,6 +226,36 @@ export default function MetaAccountSelectionModal({
                         {acc.currency && ` • ${acc.currency}`}
                         {acc.timezone && ` • ${acc.timezone}`}
                       </div>
+
+                      {/* Pixel Selection (if account has pixels and is selected) */}
+                      {acc.pixels && acc.pixels.length > 0 && selectedIds.has(acc.id) && !isAlreadyConnected && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-xs text-neutral-500">CAPI Pixel:</span>
+                          <div className="relative">
+                            <select
+                              value={selectedPixels[acc.id] || ''}
+                              onChange={(e) => handlePixelChange(acc.id, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs border border-neutral-200 rounded-md px-2 py-1 pr-6 bg-white appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="">None (optional)</option>
+                              {acc.pixels.map(pixel => (
+                                <option key={pixel.id} value={pixel.id}>
+                                  {pixel.name} ({pixel.id})
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show "No pixels" message if account has no pixels */}
+                      {(!acc.pixels || acc.pixels.length === 0) && selectedIds.has(acc.id) && !isAlreadyConnected && (
+                        <div className="mt-2 text-xs text-neutral-400">
+                          No pixels found for this account
+                        </div>
+                      )}
                     </div>
                   </label>
                 );
