@@ -751,6 +751,89 @@ async def update_meta_pixel_id(
 
 
 @router.get(
+    "/{connection_id}/meta-pixels",
+    summary="List available Meta Pixels",
+    description="Fetch available pixels for a Meta connection from Meta's API."
+)
+async def list_meta_pixels(
+    connection_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Fetch available pixels for a Meta connection.
+
+    WHAT: Calls Meta API to get pixels associated with the ad account
+    WHY: Allows users to select a pixel for CAPI without reconnecting
+
+    Returns:
+        List of available pixels with id and name
+    """
+    import httpx
+    from app.services.token_service import get_connection_token
+
+    connection = db.query(Connection).filter(Connection.id == connection_id).first()
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not found"
+        )
+
+    _require_connection_permission(db, current_user, connection.workspace_id)
+
+    if connection.provider != ProviderEnum.meta:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only for Meta connections"
+        )
+
+    # Get access token
+    token_data = get_connection_token(db, connection)
+    if not token_data or not token_data.get("access_token"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid access token. Please reconnect Meta."
+        )
+
+    access_token = token_data["access_token"]
+    account_id = f"act_{connection.external_account_id}"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://graph.facebook.com/v24.0/{account_id}/adspixels",
+                params={
+                    "fields": "id,name,is_unavailable",
+                    "access_token": access_token,
+                }
+            )
+
+            if response.status_code != 200:
+                logger.warning(f"[META_PIXELS] Failed to fetch pixels: {response.text}")
+                return {"pixels": [], "error": "Failed to fetch pixels from Meta"}
+
+            data = response.json()
+            pixels = [
+                {"id": p.get("id"), "name": p.get("name", f"Pixel {p.get('id')}")}
+                for p in data.get("data", [])
+                if not p.get("is_unavailable", False)
+            ]
+
+            return {
+                "connection_id": str(connection_id),
+                "pixels": pixels,
+                "current_pixel_id": connection.meta_pixel_id,
+            }
+
+    except Exception as e:
+        logger.exception(f"[META_PIXELS] Error fetching pixels: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch pixels from Meta"
+        )
+
+
+@router.get(
     "/{connection_id}/meta-pixel",
     summary="Get Meta Pixel ID",
     description="Get the currently configured Meta Pixel ID for a connection."
