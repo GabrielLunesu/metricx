@@ -943,25 +943,84 @@ async def get_campaign_warnings(
         if attr.confidence:
             attributions_by_campaign[entity_id]["confidences"].add(attr.confidence)
 
+    # Get proactive UTM status for each campaign by checking ad tracking_params
+    # WHY: Detect missing UTM params BEFORE orders come in
+    # REFERENCES: docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+    campaign_utm_status = {}
+    for campaign in campaigns:
+        # Get all adset IDs under this campaign
+        adset_ids = (
+            db.query(Entity.id)
+            .filter(
+                Entity.workspace_id == workspace_id,
+                Entity.level == LevelEnum.adset,
+                Entity.parent_id == campaign.id,
+            )
+            .all()
+        )
+        adset_id_list = [a[0] for a in adset_ids]
+
+        # Get all ads under those adsets
+        ads_with_tracking = []
+        if adset_id_list:
+            ads_with_tracking = (
+                db.query(Entity)
+                .filter(
+                    Entity.workspace_id == workspace_id,
+                    Entity.level == LevelEnum.ad,
+                    Entity.parent_id.in_(adset_id_list),
+                )
+                .all()
+            )
+
+        # Check if any ads have UTM tracking configured
+        has_utm = False
+        for ad in ads_with_tracking:
+            if ad.tracking_params:
+                # Check for utm_source or utm_campaign (minimum required)
+                if ad.tracking_params.get("has_utm_source") or ad.tracking_params.get("has_utm_campaign"):
+                    has_utm = True
+                    break
+                # For Google, also check gclid
+                if ad.tracking_params.get("has_gclid"):
+                    has_utm = True
+                    break
+
+        campaign_utm_status[str(campaign.id)] = has_utm
+
     # Analyze each campaign for warnings
     warnings = []
 
     for campaign in campaigns:
         campaign_id = str(campaign.id)
         campaign_attrs = attributions_by_campaign.get(campaign_id)
+        has_utm_configured = campaign_utm_status.get(campaign_id, False)
 
         # Get campaign spend (from metrics if available)
         # For now, we'll flag campaigns without any attributions
         spend = 0.0  # Would need to join with metrics table
 
-        if not campaign_attrs:
-            # No attributed orders at all
+        # Check for proactive UTM warning FIRST (before orders come in)
+        # WHY: This is the key value - warn users before they waste ad spend
+        if not has_utm_configured and not campaign_attrs:
+            warnings.append(CampaignAttributionWarning(
+                campaign_id=campaign_id,
+                campaign_name=campaign.name or "Unknown",
+                provider=campaign.connection.provider.value if campaign.connection and campaign.connection.provider else "unknown",
+                warning_type="no_utm",
+                message="No UTM parameters configured. Add UTM tracking to attribute conversions.",
+                spend=spend,
+                attributed_revenue=0.0,
+                attributed_orders=0,
+            ))
+        elif not campaign_attrs:
+            # No attributed orders at all (but UTM might be configured)
             warnings.append(CampaignAttributionWarning(
                 campaign_id=campaign_id,
                 campaign_name=campaign.name or "Unknown",
                 provider=campaign.connection.provider.value if campaign.connection and campaign.connection.provider else "unknown",
                 warning_type="no_attribution",
-                message="No attributed orders. Check if UTM parameters are set up correctly.",
+                message="No attributed orders yet. UTM tracking is configured - waiting for conversions.",
                 spend=spend,
                 attributed_revenue=0.0,
                 attributed_orders=0,

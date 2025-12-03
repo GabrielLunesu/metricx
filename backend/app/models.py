@@ -380,6 +380,23 @@ class Entity(Base):
     image_url = Column(String, nullable=True)  # Full-size creative image
     media_type = Column(Enum(MediaTypeEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=True)
 
+    # UTM Tracking Detection (proactive attribution warnings)
+    # WHAT: Stores URL tracking configuration from ad platforms
+    # WHY: Enables proactive warnings about missing UTM params BEFORE orders come in
+    # REFERENCES: docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+    #
+    # For Meta Ads: Stores url_tags from Ad level (e.g., "utm_source=facebook&utm_medium=cpc")
+    # For Google Ads: Stores tracking_url_template and final_url_suffix
+    #
+    # Example JSON:
+    # {
+    #   "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign={{campaign.name}}",
+    #   "tracking_url_template": "https://example.com?gclid={gclid}",
+    #   "final_url_suffix": "utm_source=google&utm_medium=cpc",
+    #   "has_utm": true  # Computed flag for quick queries
+    # }
+    tracking_params = Column(JSON, nullable=True)
+
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
     workspace = relationship("Workspace", back_populates="entities")
 

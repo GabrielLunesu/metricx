@@ -304,11 +304,13 @@ class MetaAdsClient:
                 Ad.Field.status,
                 Ad.Field.adset_id,
                 Ad.Field.creative,
+                # Note: url_tags is on AdCreative, not Ad. We fetch it via get_creative_details
             ])
 
             result = []
             for ad in ads:
-                result.append(dict(ad))
+                ad_dict = dict(ad)
+                result.append(ad_dict)
 
             logger.info(f"[META_CLIENT] Fetched {len(result)} ads")
             return result
@@ -318,15 +320,19 @@ class MetaAdsClient:
 
     @rate_limit(calls_per_hour=200)
     def get_creative_details(self, creative_id: str) -> Optional[Dict[str, Any]]:
-        """Fetch creative details including thumbnail URL.
+        """Fetch creative details including thumbnail URL and url_tags.
 
         WHAT:
             Retrieves creative asset details from Meta for displaying ad previews.
-            Returns thumbnail URL, image URL, and media type information.
+            Returns thumbnail URL, image URL, media type, and url_tags for UTM tracking.
 
         WHY:
             Enables showing actual creative images in the QA system when users
             ask "show me my best creatives" or similar queries.
+            Also fetches url_tags for proactive UTM detection.
+
+        REFERENCES:
+            - docs/living-docs/FRONTEND_REFACTOR_PLAN.md (UTM detection)
 
         Args:
             creative_id: Meta creative ID (from Ad.creative.id)
@@ -337,6 +343,7 @@ class MetaAdsClient:
                 - thumbnail_url: URL to thumbnail image
                 - image_url: URL to full-size image (if available)
                 - media_type: "image", "video", or "carousel"
+                - url_tags: URL tracking parameters (for UTM detection)
             Returns None if creative cannot be fetched.
 
         Raises:
@@ -354,6 +361,7 @@ class MetaAdsClient:
                 AdCreative.Field.image_url,
                 AdCreative.Field.object_type,
                 AdCreative.Field.object_story_spec,
+                AdCreative.Field.url_tags,  # For UTM tracking detection
             ])
 
             result = {
@@ -361,6 +369,7 @@ class MetaAdsClient:
                 "thumbnail_url": creative_data.get("thumbnail_url"),
                 "image_url": creative_data.get("image_url"),
                 "media_type": self._determine_media_type(creative_data),
+                "url_tags": creative_data.get("url_tags"),  # UTM tracking params
             }
 
             # Try to extract image from object_story_spec if not directly available
@@ -423,7 +432,79 @@ class MetaAdsClient:
             return "image"
 
         return "unknown"
-    
+
+    def _extract_tracking_params(self, ad_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extract UTM tracking parameters from Meta ad data.
+
+        WHAT:
+            Parses url_tags field to detect UTM parameter configuration.
+            Returns structured data about which UTM params are present.
+
+        WHY:
+            Enables proactive attribution warnings. If ads don't have UTM params,
+            we can warn users before they spend money without proper tracking.
+
+        REFERENCES:
+            - docs/living-docs/FRONTEND_REFACTOR_PLAN.md (UTM detection feature)
+
+        Args:
+            ad_dict: Ad data dictionary from Meta API
+
+        Returns:
+            Dictionary with tracking info:
+                - url_tags: Raw URL tags string
+                - has_utm_source: Whether utm_source is present
+                - has_utm_medium: Whether utm_medium is present
+                - has_utm_campaign: Whether utm_campaign is present
+                - detected_params: List of detected UTM param names
+            Returns None if no url_tags present.
+
+        Example:
+            >>> ad = {"url_tags": "utm_source=facebook&utm_campaign={{campaign.name}}"}
+            >>> client._extract_tracking_params(ad)
+            {
+                "url_tags": "utm_source=facebook&utm_campaign={{campaign.name}}",
+                "has_utm_source": True,
+                "has_utm_medium": False,
+                "has_utm_campaign": True,
+                "detected_params": ["utm_source", "utm_campaign"]
+            }
+        """
+        url_tags = ad_dict.get("url_tags")
+
+        if not url_tags:
+            return None
+
+        # Normalize to lowercase for matching
+        url_tags_lower = url_tags.lower()
+
+        # Check for standard UTM parameters
+        detected_params = []
+        utm_params = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]
+
+        for param in utm_params:
+            if param in url_tags_lower:
+                detected_params.append(param)
+
+        # Also check for fbclid (Meta's click ID) and gclid passthrough
+        if "fbclid" in url_tags_lower:
+            detected_params.append("fbclid")
+
+        result = {
+            "url_tags": url_tags,
+            "has_utm_source": "utm_source" in url_tags_lower,
+            "has_utm_medium": "utm_medium" in url_tags_lower,
+            "has_utm_campaign": "utm_campaign" in url_tags_lower,
+            "detected_params": detected_params,
+        }
+
+        logger.debug(
+            f"[META_CLIENT] Ad tracking params: has_source={result['has_utm_source']}, "
+            f"has_campaign={result['has_utm_campaign']}, params={detected_params}"
+        )
+
+        return result
+
     @rate_limit(calls_per_hour=200)
     def get_insights(
         self,

@@ -322,6 +322,43 @@ export async function fetchWorkspaceInfo(workspaceId) {
   return res.json();
 }
 
+/**
+ * Fetch workspace connection status for conditional UI rendering.
+ *
+ * WHAT: Returns flags indicating which platforms are connected
+ * WHY: Frontend uses this to show/hide attribution components
+ *
+ * @param {string} workspaceId - Workspace UUID
+ * @returns {Promise<{
+ *   has_shopify: boolean,
+ *   has_ad_platform: boolean,
+ *   connected_platforms: string[],
+ *   attribution_ready: boolean
+ * }>}
+ *
+ * REFERENCES:
+ *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+ *   - backend/app/routers/workspaces.py (get_workspace_status)
+ *
+ * Example:
+ *   const status = await fetchWorkspaceStatus(workspaceId);
+ *   if (status.has_shopify) {
+ *     // Show attribution widgets
+ *   }
+ */
+export async function fetchWorkspaceStatus({ workspaceId }) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/status`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch workspace status: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
 export async function fetchWorkspaces() {
   const res = await fetch(`${BASE}/workspaces`, {
     method: "GET",

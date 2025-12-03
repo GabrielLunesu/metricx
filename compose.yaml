@@ -28,9 +28,14 @@ services:
       META_OAUTH_SCOPES: ${META_OAUTH_SCOPES:-}
       META_OAUTH_CONFIG_ID: ${META_OAUTH_CONFIG_ID:-} 
 
-       # OAuth Redirect URIs - ADD THESE
+      # Google OAuth Configuration
+      GOOGLE_DEVELOPER_TOKEN: ${GOOGLE_DEVELOPER_TOKEN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+       # OAuth Redirect URIs
       META_OAUTH_REDIRECT_URI:
-      GOOGLE_OAUTH_REDIRECT_URI:
+      GOOGLE_REDIRECT_URI: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/google/callback"
       FRONTEND_URL: "https://www.metricx.ai"
       BACKEND_URL: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
 

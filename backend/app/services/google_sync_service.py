@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, date
-from typing import List, Tuple, Optional, Dict
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -92,11 +92,15 @@ def _upsert_entity(
     status: str,
     parent_id: Optional[UUID] = None,
     goal: Optional[GoalEnum] = None,
+    tracking_params: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Entity, bool]:
     """UPSERT entity by external_id + connection_id.
 
     WHAT: Creates new Entity or updates existing one.
     WHY: Idempotent synchronization across re-runs.
+
+    Args:
+        tracking_params: Optional URL tracking configuration (utm_source, etc.)
     """
     entity = db.query(Entity).filter(
         Entity.connection_id == connection.id,
@@ -109,6 +113,9 @@ def _upsert_entity(
         entity.status = status
         entity.parent_id = parent_id
         entity.goal = goal
+        # Update tracking params for UTM detection
+        if tracking_params is not None:
+            entity.tracking_params = tracking_params
         entity.updated_at = datetime.utcnow()
     else:
         entity = Entity(
@@ -118,6 +125,7 @@ def _upsert_entity(
             status=status,
             parent_id=parent_id,
             goal=goal,
+            tracking_params=tracking_params,
             workspace_id=connection.workspace_id,
             connection_id=connection.id,
             created_at=datetime.utcnow(),
@@ -345,6 +353,10 @@ def sync_google_entities(
                         try:
                             ads = client.list_ads(customer_id, str(ag["id"]))
                             for ad in ads:
+                                # Extract tracking params for UTM detection
+                                # WHY: Enables proactive attribution warnings
+                                tracking_params = ad.get("tracking_params")
+
                                 _, ad_created = _upsert_entity(
                                     db=db,
                                     connection=connection,
@@ -353,6 +365,7 @@ def sync_google_entities(
                                     name=ad.get("name") or f"Ad {ad['id']}",
                                     status=_normalize_status(ad.get("status")),
                                     parent_id=adset.id,
+                                    tracking_params=tracking_params,
                                 )
                                 if ad_created:
                                     stats.ads_created += 1

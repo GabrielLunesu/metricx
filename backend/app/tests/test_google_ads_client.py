@@ -117,3 +117,135 @@ def test_fetch_daily_metrics_normalizes_spend_and_fields():
     assert data[0]["clicks"] == 10
     assert data[0]["revenue"] == 50.0
     assert "resource_id" in data[0]
+
+
+# =============================================================================
+# UTM Tracking Parameter Extraction Tests
+# =============================================================================
+
+
+class TestExtractGoogleTrackingParams:
+    """Test UTM tracking parameter extraction from Google Ads.
+
+    WHAT: Tests the _extract_google_tracking_params helper method
+    WHY: Proactive UTM detection enables warnings before orders come in
+    REFERENCES: docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+    """
+
+    def test_extract_tracking_params_with_full_utm(self):
+        """WHAT: Should detect all UTM parameters in tracking template.
+        WHY: Full UTM setup is the ideal attribution configuration.
+        """
+        fake_service = _FakeService({})
+        client = GAdsClient(client=_FakeClient(fake_service))
+
+        result = client._extract_google_tracking_params(
+            tracking_url_template="https://example.com/?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}",
+            final_url_suffix=None
+        )
+
+        assert result is not None
+        assert result["has_utm_source"] is True
+        assert result["has_utm_medium"] is True
+        assert result["has_utm_campaign"] is True
+        assert "utm_source" in result["detected_params"]
+        assert "utm_medium" in result["detected_params"]
+        assert "utm_campaign" in result["detected_params"]
+
+    def test_extract_tracking_params_from_final_url_suffix(self):
+        """WHAT: Should detect UTM params in final_url_suffix.
+        WHY: Google Ads allows UTM params in either location.
+        """
+        fake_service = _FakeService({})
+        client = GAdsClient(client=_FakeClient(fake_service))
+
+        result = client._extract_google_tracking_params(
+            tracking_url_template=None,
+            final_url_suffix="utm_source=google&utm_campaign=test"
+        )
+
+        assert result is not None
+        assert result["has_utm_source"] is True
+        assert result["has_utm_campaign"] is True
+        assert result["tracking_url_template"] is None
+        assert result["final_url_suffix"] == "utm_source=google&utm_campaign=test"
+
+    def test_extract_tracking_params_with_gclid(self):
+        """WHAT: Should detect gclid (Google Click ID) auto-tagging.
+        WHY: gclid enables Google's automatic conversion tracking.
+        """
+        fake_service = _FakeService({})
+        client = GAdsClient(client=_FakeClient(fake_service))
+
+        result = client._extract_google_tracking_params(
+            tracking_url_template="https://track.com/?gclid={gclid}",
+            final_url_suffix=None
+        )
+
+        assert result is not None
+        assert result["has_gclid"] is True
+
+    def test_extract_tracking_params_combined_sources(self):
+        """WHAT: Should check both template and suffix.
+        WHY: UTM params can be split across both fields.
+        """
+        fake_service = _FakeService({})
+        client = GAdsClient(client=_FakeClient(fake_service))
+
+        result = client._extract_google_tracking_params(
+            tracking_url_template="https://track.com/?utm_source=google",
+            final_url_suffix="utm_campaign={campaignid}"
+        )
+
+        assert result is not None
+        assert result["has_utm_source"] is True
+        assert result["has_utm_campaign"] is True
+
+    def test_extract_tracking_params_case_insensitive(self):
+        """WHAT: Should detect UTM params regardless of case.
+        WHY: URL parameters can be in any case.
+        """
+        fake_service = _FakeService({})
+        client = GAdsClient(client=_FakeClient(fake_service))
+
+        result = client._extract_google_tracking_params(
+            tracking_url_template="https://track.com/?UTM_SOURCE=Google&UTM_CAMPAIGN=Test",
+            final_url_suffix=None
+        )
+
+        assert result is not None
+        assert result["has_utm_source"] is True
+        assert result["has_utm_campaign"] is True
+
+    def test_extract_tracking_params_no_tracking(self):
+        """WHAT: Should return None when no tracking configured.
+        WHY: Ads without tracking have no URL parameters.
+        """
+        fake_service = _FakeService({})
+        client = GAdsClient(client=_FakeClient(fake_service))
+
+        result = client._extract_google_tracking_params(
+            tracking_url_template=None,
+            final_url_suffix=None
+        )
+
+        assert result is None
+
+    def test_extract_tracking_params_preserves_raw_values(self):
+        """WHAT: Should include raw tracking fields in result.
+        WHY: Useful for debugging and displaying to users.
+        """
+        fake_service = _FakeService({})
+        client = GAdsClient(client=_FakeClient(fake_service))
+
+        template = "https://track.com/?utm_source=google"
+        suffix = "utm_campaign=test"
+
+        result = client._extract_google_tracking_params(
+            tracking_url_template=template,
+            final_url_suffix=suffix
+        )
+
+        assert result is not None
+        assert result["tracking_url_template"] == template
+        assert result["final_url_suffix"] == suffix

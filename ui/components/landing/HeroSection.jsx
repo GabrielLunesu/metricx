@@ -156,7 +156,7 @@ export default function HeroSection() {
         >
           <div className="flex items-center gap-3 px-2 py-2 bg-white/70 backdrop-blur-xl rounded-full border border-white/30 shadow-lg shadow-black/5">
             <a href="/" className="flex items-center pl-2">
-              <img src="/logo.png" alt="metricx" className="h-8" />
+              <img src="/logo.png" alt="metricx" className="h-12" />
             </a>
             <div className="hidden sm:flex items-center gap-1">
               {["Features", "Pricing"].map((item) => (

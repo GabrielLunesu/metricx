@@ -12,16 +12,25 @@
  * - Spend: Always from ad platforms
  * - ROAS: Computed from revenue/spend
  * - Conversions: Attributed orders (Shopify) or platform conversions (fallback)
+ *
+ * PROPS:
+ *   - workspaceId: Workspace UUID
+ *   - timeframe: Selected timeframe
+ *   - connectedPlatforms: Optional array from workspace status (fallback)
+ *
+ * REFERENCES:
+ *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
  */
 
 import { useEffect, useState } from 'react';
 import KpiCard from "./KPICard";
 import { fetchDashboardKpis } from "@/lib/api";
 
-export default function KpiStrip({ workspaceId, timeframe }) {
+export default function KpiStrip({ workspaceId, timeframe, connectedPlatforms: connectedPlatformsProp }) {
     const [data, setData] = useState(null);
     const [dataSource, setDataSource] = useState(null);
-    const [connectedPlatforms, setConnectedPlatforms] = useState([]);
+    // Use prop as fallback if API doesn't return platforms
+    const [connectedPlatforms, setConnectedPlatforms] = useState(connectedPlatformsProp || []);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -43,7 +52,8 @@ export default function KpiStrip({ workspaceId, timeframe }) {
                 });
                 setData(kpiMap);
                 setDataSource(res.data_source); // 'shopify' or 'platform'
-                setConnectedPlatforms(res.connected_platforms || []); // ['meta', 'google', etc.]
+                // Use API response if available, otherwise fall back to prop from workspace status
+                setConnectedPlatforms(res.connected_platforms || connectedPlatformsProp || []);
             } catch (err) {
                 console.error("Failed to fetch dashboard KPIs:", err);
             } finally {

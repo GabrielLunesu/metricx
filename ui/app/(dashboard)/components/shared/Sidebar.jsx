@@ -1,8 +1,21 @@
+/**
+ * Sidebar navigation component.
+ *
+ * WHAT: Main navigation sidebar for the dashboard
+ * WHY: Users need consistent navigation across all pages
+ *
+ * CHANGES (2025-12-02):
+ *   - Removed standalone Attribution nav item (moved under Analytics)
+ *   - Attribution is now accessed via Analytics page unlock widget
+ *
+ * REFERENCES:
+ *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+ */
 'use client'
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Target } from "lucide-react";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { currentUser, logout } from "../../../../lib/auth";
 import features from "../../../../lib/features";
@@ -77,15 +90,14 @@ export default function Sidebar() {
         }
     };
 
+    // Navigation items - Attribution removed (now accessed via Analytics page)
+    // WHY: Ad analytics first, attribution second (only for Shopify users)
     const navItems = [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/dashboard" },
-        { href: "/dashboard/attribution", label: "Attribution", icon: Target, active: pathname === "/dashboard/attribution" },
-        { href: "/analytics", label: "Analytics", icon: BarChart2, active: pathname === "/analytics" },
+        { href: "/analytics", label: "Analytics", icon: BarChart2, active: pathname?.startsWith("/analytics") },
         { href: "/copilot", label: "Copilot AI", icon: Sparkles, active: pathname?.startsWith('/copilot') },
         { href: "/finance", label: "Finance", icon: Wallet, active: pathname === "/finance" },
         { href: "/campaigns", label: "Campaigns", icon: Layers, active: pathname?.startsWith('/campaigns') },
-        // Canvas feature flag check
-        // ...(features.canvas ? [{ href: "/canvas", label: "Canvas", icon: Layers, active: pathname === "/canvas" }] : []),
     ];
 
 

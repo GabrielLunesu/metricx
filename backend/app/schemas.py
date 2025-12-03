@@ -289,7 +289,40 @@ class WorkspaceInfo(BaseModel):
     id: str = Field(description="Workspace ID")
     name: str = Field(description="Workspace name")
     last_sync: Optional[datetime] = Field(description="Last successful sync timestamp")
-    
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceStatus(BaseModel):
+    """
+    Connection status for conditional UI rendering.
+
+    WHAT: Returns flags indicating which platforms are connected and ready
+    WHY: Frontend needs to know whether to show attribution UI components
+
+    Fields:
+        has_shopify: True if an active Shopify connection exists
+        has_ad_platform: True if any ad platform (Meta/Google/TikTok) is connected
+        connected_platforms: List of connected platform names
+        attribution_ready: True if Shopify + pixel is receiving events
+
+    REFERENCES:
+        - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+        - Frontend uses this to conditionally render attribution components
+    """
+    has_shopify: bool = Field(
+        description="Whether Shopify is connected and active"
+    )
+    has_ad_platform: bool = Field(
+        description="Whether any ad platform (Meta, Google, TikTok) is connected"
+    )
+    connected_platforms: List[str] = Field(
+        description="List of connected platform provider names (e.g., ['meta', 'google', 'shopify'])"
+    )
+    attribution_ready: bool = Field(
+        description="Whether attribution is fully set up (Shopify + pixel receiving events)"
+    )
+
     model_config = {"from_attributes": True}
 
 
