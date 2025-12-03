@@ -1,7 +1,7 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { fetchQA, fetchQAStream } from "@/lib/api";
+import { fetchQA, fetchQAStream, fetchQASemantic, fetchQAAgent } from "@/lib/api";
 import { currentUser } from "@/lib/auth";
 import ConversationThread from "./components/ConversationThread";
 import { renderMarkdownLite } from "@/lib/markdown";
@@ -47,9 +47,16 @@ export default function CopilotPage() {
     handleSubmit(question.trim());
   }, [question, resolvedWs]);
 
-  // Handle question submission with SSE streaming (v2.1)
-  // WHAT: Uses streaming for real-time progress, falls back to polling if streaming fails
-  // WHY: Better UX with live stage updates, graceful degradation for older browsers
+  // Handle question submission with Agentic Copilot (v4.0)
+  // WHAT: Uses LangGraph + Claude agent first, falls back to semantic/streaming/polling
+  // WHY: Feels like talking to a smart human that understands any question naturally
+  //      Agent generates visualizations automatically for comparison queries
+  // Streaming message state for typing effect
+  const [streamingText, setStreamingText] = useState('');
+  const streamingIdRef = useRef(null);
+  const streamingBufferRef = useRef(''); // Buffer for accumulating tokens
+  const rafRef = useRef(null); // requestAnimationFrame ID
+
   const handleSubmit = async (q) => {
     if (!resolvedWs || !q.trim() || loading) return;
 
@@ -62,9 +69,33 @@ export default function CopilotPage() {
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setStage('queued'); // Initial stage
+    setStreamingText(''); // Reset streaming text
+    streamingBufferRef.current = ''; // Reset buffer
 
-    // Helper to add AI response
+    // Create a placeholder AI message for streaming
+    const streamingId = Date.now();
+    streamingIdRef.current = streamingId;
+
+    // Function to flush buffer to state (called via requestAnimationFrame)
+    const flushBuffer = () => {
+      if (streamingIdRef.current === streamingId && streamingBufferRef.current) {
+        setStreamingText(streamingBufferRef.current);
+      }
+      rafRef.current = requestAnimationFrame(flushBuffer);
+    };
+    // Start the render loop
+    rafRef.current = requestAnimationFrame(flushBuffer);
+
+    // Helper to add final AI response (replaces streaming placeholder)
     const addAiResponse = (res) => {
+      // Stop the render loop
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      setStreamingText(''); // Clear streaming text
+      streamingBufferRef.current = ''; // Clear buffer
+      streamingIdRef.current = null;
       const aiMessage = {
         type: 'ai',
         text: renderMarkdownLite(res.answer),
@@ -78,6 +109,14 @@ export default function CopilotPage() {
 
     // Helper to add error message
     const addErrorMessage = (error) => {
+      // Stop the render loop
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      setStreamingText('');
+      streamingBufferRef.current = '';
+      streamingIdRef.current = null;
       const errorMessage = {
         type: 'ai',
         text: `I encountered an error: ${error}. Please try again.`,
@@ -88,27 +127,69 @@ export default function CopilotPage() {
     };
 
     try {
-      // Try SSE streaming first (preferred for better UX)
-      const result = await fetchQAStream({
+      // Try Agentic Copilot with streaming (preferred - typing effect)
+      console.log('[Copilot] Trying agent SSE endpoint...');
+      const result = await fetchQAAgent({
         workspaceId: resolvedWs,
         question: q,
         onStage: (newStage) => {
-          // Update stage for UI feedback
-          // Stages: queued → translating → executing → formatting
           setStage(newStage);
+        },
+        onToken: (token) => {
+          // Accumulate tokens in buffer (RAF will flush to state)
+          if (streamingIdRef.current === streamingId) {
+            streamingBufferRef.current += token;
+          }
         }
       });
+      console.log('[Copilot] Agent success! Has visuals:', !!result.visuals);
       addAiResponse(result);
-    } catch (streamError) {
-      // Fallback to polling if streaming fails
-      // WHY: Graceful degradation for browsers without ReadableStream support
-      console.warn('[Copilot] SSE streaming failed, falling back to polling:', streamError.message);
+    } catch (agentError) {
+      // Fallback to Semantic Layer if agent fails
+      console.warn('[Copilot] Agent failed, falling back to semantic:', agentError.message);
+      // Stop the render loop when falling back
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      setStreamingText('');
+      streamingBufferRef.current = '';
 
       try {
-        const result = await fetchQA({ workspaceId: resolvedWs, question: q });
+        console.log('[Copilot] Trying semantic endpoint...');
+        const result = await fetchQASemantic({
+          workspaceId: resolvedWs,
+          question: q,
+          onStage: (newStage) => {
+            setStage(newStage);
+          }
+        });
+        console.log('[Copilot] Semantic success! Strategy:', result.telemetry?.strategy, 'Has visuals:', !!result.visuals);
         addAiResponse(result);
-      } catch (pollError) {
-        addErrorMessage(pollError.message);
+      } catch (semanticError) {
+        // Fallback to SSE streaming if semantic fails
+        console.warn('[Copilot] Semantic layer failed, falling back to streaming:', semanticError.message);
+
+        try {
+          const result = await fetchQAStream({
+            workspaceId: resolvedWs,
+            question: q,
+            onStage: (newStage) => {
+              setStage(newStage);
+            }
+          });
+          addAiResponse(result);
+        } catch (streamError) {
+          // Final fallback to polling
+          console.warn('[Copilot] SSE streaming failed, falling back to polling:', streamError.message);
+
+          try {
+            const result = await fetchQA({ workspaceId: resolvedWs, question: q });
+            addAiResponse(result);
+          } catch (pollError) {
+            addErrorMessage(pollError.message);
+          }
+        }
       }
     } finally {
       setLoading(false);
@@ -120,8 +201,13 @@ export default function CopilotPage() {
     <div className="mesh-bg h-full relative flex flex-col md:pl-[90px]">
       {/* Conversation Area */}
       <main className="flex-1 overflow-y-auto pt-8 pb-48 w-full">
-        {/* Pass stage for real-time progress indicator (v2.1) */}
-        <ConversationThread messages={messages} isLoading={loading} stage={stage} />
+        {/* Pass stage and streamingText for real-time typing effect (v4.0) */}
+        <ConversationThread
+          messages={messages}
+          isLoading={loading}
+          stage={stage}
+          streamingText={streamingText}
+        />
       </main>
 
       {/* Fixed Input Bar */}

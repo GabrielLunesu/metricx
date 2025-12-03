@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 Chart.register(...registerables);
 
-const currencyMetrics = new Set(["spend", "revenue", "cpa", "cpc", "cpm", "cpl", "cpi", "cpp", "aov"]);
+const currencyMetrics = new Set(["spend", "revenue", "cpa", "cpc", "cpm", "cpl", "cpi", "cpp", "aov", "profit"]);
 const percentMetrics = new Set(["ctr", "cvr"]);
 const ratioMetrics = new Set(["roas", "poas", "arpv"]);
 
@@ -18,14 +18,28 @@ const formatNumber = (value) => new Intl.NumberFormat("en-US", { maximumFraction
 
 function formatValue(value, format) {
   if (value === null || value === undefined) return "—";
-  // If value is a string (like labels/names), return as-is
-  if (typeof value === "string") return value;
+
+  // Convert numeric strings to numbers (handles Python Decimal serialization)
+  let numValue = value;
+  if (typeof value === "string") {
+    // Check if it's a numeric string
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && format !== "text") {
+      numValue = parsed;
+    } else {
+      // Non-numeric string (like labels/names), return as-is
+      return value;
+    }
+  }
+
   const metric = (format || "").toLowerCase();
-  if (currencyMetrics.has(metric)) return `$${formatNumber(value)}`;
-  if (percentMetrics.has(metric)) return `${(value * 100).toFixed(1)}%`;
-  if (ratioMetrics.has(metric)) return `${value.toFixed(2)}×`;
-  if (metric === "mixed") return formatNumber(value);
-  return formatNumber(value);
+  if (currencyMetrics.has(metric)) return `$${formatNumber(numValue)}`;
+  if (percentMetrics.has(metric)) return `${(numValue * 100).toFixed(1)}%`;
+  if (ratioMetrics.has(metric)) return `${numValue.toFixed(2)}×`;
+  if (metric === "percent") return `${(numValue * 100).toFixed(1)}%`;
+  if (metric === "text") return value;
+  if (metric === "mixed") return formatNumber(numValue);
+  return formatNumber(numValue);
 }
 
 function DeltaBadge({ delta, formattedDelta }) {
