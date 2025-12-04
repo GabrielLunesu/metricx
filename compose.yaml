@@ -51,6 +51,26 @@ services:
       
       # CORS Configuration - allow production frontend, localhost, and defang domains
       BACKEND_CORS_ORIGINS: "https://www.metricx.ai,http://localhost:3000,https://t8zgrthold5r2-backend--8000.prod2.defang.dev,https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
+
+      # ===========================================
+      # Observability Stack
+      # ===========================================
+
+      # Environment (production, staging, development)
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+
+      # Sentry - Error Tracking
+      SENTRY_DSN: ${SENTRY_DSN:-}
+
+      # RudderStack - User Analytics → GA4
+      RUDDERSTACK_WRITE_KEY: ${RUDDERSTACK_WRITE_KEY:-}
+      RUDDERSTACK_DATA_PLANE_URL: ${RUDDERSTACK_DATA_PLANE_URL:-}
+
+      # Langfuse - LLM Observability
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -89,6 +109,13 @@ services:
       META_AD_ACCOUNT_ID: ${META_AD_ACCOUNT_ID:-}
       GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN:-}
       GOOGLE_CUSTOMER_ID: ${GOOGLE_CUSTOMER_ID:-}
+
+      # Observability (worker also processes LLM calls)
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
     deploy:
       resources:
         reservations:
@@ -103,6 +130,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+      # Error tracking
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     deploy:
       resources:
         reservations:

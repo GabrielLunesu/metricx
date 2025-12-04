@@ -45,6 +45,13 @@ from app.schemas import QARequest, QAJobResponse, QAJobStatusResponse
 from app.database import get_db
 from app.deps import get_current_user, get_settings
 from app import state  # Shared Redis pool
+from app.telemetry import (
+    track_copilot_query_sent,
+    create_copilot_trace,
+    complete_copilot_trace,
+    log_generation,
+    set_user_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -891,12 +898,39 @@ async def ask_question_agent_sse(
     from app.agent.nodes import get_claude_client, UNDERSTAND_PROMPT, RESPOND_PROMPT, _build_visuals_from_data
     from app.agent.tools import SemanticTools
     import json as json_module
+    import time as time_module
 
     user_id = str(current_user.id)
     question = req.question
 
+    # Set Sentry user context for error tracking
+    set_user_context(
+        user_id=user_id,
+        email=current_user.email,
+        workspace_id=workspace_id,
+    )
+
+    # Create Langfuse trace for LLM observability
+    trace = create_copilot_trace(
+        user_id=user_id,
+        workspace_id=workspace_id,
+        question=question,
+    )
+
+    # Track copilot query event (flows to Google Analytics)
+    track_copilot_query_sent(
+        user_id=user_id,
+        workspace_id=workspace_id,
+        question_length=len(question),
+        has_context=False,  # TODO: Add context tracking
+    )
+
     async def generate():
         """Generator that yields SSE events."""
+        start_time = time_module.time()
+        total_tokens = 0
+        success = False
+
         try:
             # Stage 1: Understanding
             yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Understanding your question...'})}\n\n"
@@ -910,6 +944,22 @@ async def ask_question_agent_sse(
                 system=UNDERSTAND_PROMPT,
                 messages=[{"role": "user", "content": question}],
             )
+
+            # Log understand generation to Langfuse
+            if trace and response.usage:
+                log_generation(
+                    trace=trace,
+                    name="understand",
+                    model="claude-sonnet-4-20250514",
+                    input_messages=[{"role": "user", "content": question}],
+                    output=response.content[0].text,
+                    usage={
+                        "input": response.usage.input_tokens,
+                        "output": response.usage.output_tokens,
+                        "total": response.usage.input_tokens + response.usage.output_tokens,
+                    },
+                )
+                total_tokens += response.usage.input_tokens + response.usage.output_tokens
 
             content = response.content[0].text
             if "```json" in content:
@@ -983,12 +1033,30 @@ Please write a helpful, conversational response based on this data."""
                     yield f"data: {json_module.dumps({'type': 'token', 'data': text})}\n\n"
                     await asyncio.sleep(0)  # Allow other tasks to run
 
+                # Log respond generation to Langfuse (after stream completes)
+                final_message = stream.get_final_message()
+                if trace and final_message.usage:
+                    log_generation(
+                        trace=trace,
+                        name="respond",
+                        model="claude-sonnet-4-20250514",
+                        input_messages=messages,
+                        output=full_answer,
+                        usage={
+                            "input": final_message.usage.input_tokens,
+                            "output": final_message.usage.output_tokens,
+                            "total": final_message.usage.input_tokens + final_message.usage.output_tokens,
+                        },
+                    )
+                    total_tokens += final_message.usage.input_tokens + final_message.usage.output_tokens
+
             # Stage 4: Send visuals
             visuals = _build_visuals_from_data(data, semantic_query)
             if visuals:
                 yield f"data: {json_module.dumps({'type': 'visual', 'data': visuals}, default=str)}\n\n"
 
             # Stage 5: Done
+            success = True
             final_result = {
                 "success": True,
                 "answer": full_answer,
@@ -999,9 +1067,29 @@ Please write a helpful, conversational response based on this data."""
             }
             yield f"data: {json_module.dumps({'type': 'done', 'data': final_result}, default=str)}\n\n"
 
+            # Complete Langfuse trace
+            latency_ms = int((time_module.time() - start_time) * 1000)
+            complete_copilot_trace(
+                trace=trace,
+                success=True,
+                answer=full_answer,
+                latency_ms=latency_ms,
+                total_tokens=total_tokens,
+            )
+
         except Exception as e:
             logger.exception(f"[QA_AGENT_SSE] Failed: {e}")
             yield f"data: {json_module.dumps({'type': 'error', 'data': str(e)})}\n\n"
+
+            # Complete Langfuse trace with error
+            latency_ms = int((time_module.time() - start_time) * 1000)
+            complete_copilot_trace(
+                trace=trace,
+                success=False,
+                error=str(e),
+                latency_ms=latency_ms,
+                total_tokens=total_tokens,
+            )
 
     return StreamingResponse(
         generate(),

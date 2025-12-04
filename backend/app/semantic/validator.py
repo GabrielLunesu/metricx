@@ -349,13 +349,9 @@ class SemanticValidator:
         if result.valid:
             logger.debug(f"Query validation passed: {query.metrics}")
         else:
+            error_messages = [e.message for e in result.errors]
             logger.warning(
-                f"Query validation failed",
-                extra={
-                    "error_count": len(result.errors),
-                    "metrics": query.metrics,
-                    "errors": [e.to_dict() for e in result.errors]
-                }
+                f"Query validation failed: {error_messages} | metrics={query.metrics}"
             )
 
         return result

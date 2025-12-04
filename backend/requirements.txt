@@ -22,3 +22,8 @@ cryptography==43.0.1
 google-ads>=28.0.0  # Min version - Google deprecates old API versions regularly
 anthropic>=0.39.0  # Claude API client for agent
 langgraph>=0.2.0  # Agent graph framework
+
+# Observability Stack
+sentry-sdk[fastapi]>=2.0.0  # Error tracking and performance monitoring
+rudder-sdk-python>=2.0.0    # User tracking to Google Analytics
+langfuse>=2.0.0             # LLM observability and tracing

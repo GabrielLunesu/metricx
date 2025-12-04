@@ -257,7 +257,7 @@ def _get_platform_metric(
     entity_ids = (
         db.query(Entity.id)
         .filter(Entity.workspace_id == workspace_id)
-        .subquery()
+        .scalar_subquery()
     )
 
     column = getattr(MetricFact, metric, None)
@@ -290,7 +290,7 @@ def _get_platform_sparkline(
     entity_ids = (
         db.query(Entity.id)
         .filter(Entity.workspace_id == workspace_id)
-        .subquery()
+        .scalar_subquery()
     )
 
     column = getattr(MetricFact, metric, None)

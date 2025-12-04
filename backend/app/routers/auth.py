@@ -10,6 +10,12 @@ from ..database import get_db
 from ..deps import get_current_user, get_settings
 from ..models import User, Workspace, WorkspaceMember, WorkspaceInvite, AuthCredential, RoleEnum, InviteStatusEnum
 from ..security import create_access_token, get_password_hash, verify_password
+from ..telemetry import (
+    track_user_signed_up,
+    track_user_logged_in,
+    set_user_context,
+    clear_user_context,
+)
 import secrets
 from datetime import datetime, timedelta
 from sqlalchemy.orm import joinedload
@@ -166,10 +172,18 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(user)
-    
+
     # Log verification link (Mock email service)
     logger.info(f"[AUTH] Verification link for {user.email}: http://localhost:3000/auth/verify-email?token={verification_token}")
-    
+
+    # Track user signup event (flows to Google Analytics via RudderStack)
+    track_user_signed_up(
+        user_id=str(user.id),
+        email=user.email,
+        name=user.name,
+        workspace_id=str(workspace.id),
+    )
+
     return _hydrate_user_context(db, user)
 
 
@@ -274,6 +288,20 @@ def login_user(
         cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
     
     response.set_cookie(**cookie_kwargs)
+
+    # Set Sentry user context for error tracking
+    set_user_context(
+        user_id=str(user.id),
+        email=user.email,
+        workspace_id=str(user.workspace_id) if user.workspace_id else None,
+    )
+
+    # Track login event (flows to Google Analytics via RudderStack)
+    track_user_logged_in(
+        user_id=str(user.id),
+        email=user.email,
+        workspace_id=str(user.workspace_id) if user.workspace_id else None,
+    )
 
     user = _hydrate_user_context(db, user)
     return schemas.LoginResponse(user=schemas.UserOut.model_validate(user))
@@ -508,8 +536,11 @@ def verify_email(
 )
 def logout_user(response: Response, request: Request):
     """Clear the access token cookie."""
+    # Clear Sentry user context
+    clear_user_context()
+
     settings = get_settings()
-    
+
     cookie_kwargs = {
         "key": "access_token",
         "value": "",
@@ -589,8 +620,8 @@ def delete_account(
         - Privacy Policy page (/privacy)
     """
     from app.models import (
-        AuthCredential, QaQueryLog, MetricFact, Entity, 
-        Connection, Token, Workspace, ManualCost
+        AuthCredential, QaQueryLog, MetricFact, Entity,
+        Connection, Token, Workspace, ManualCost, WorkspaceMember
     )
     
     user_id = current_user.id
@@ -657,14 +688,22 @@ def delete_account(
             
             # 5. Delete all query logs for workspace
             db.query(QaQueryLog).filter(QaQueryLog.workspace_id == workspace_id).delete()
-            
-            # 6. Delete the workspace
+
+            # 6. Delete workspace memberships for this user
+            db.query(WorkspaceMember).filter(WorkspaceMember.user_id == user_id).delete()
+
+            # 7. Delete the user BEFORE workspace (user has FK to workspace)
+            db.query(User).filter(User.id == user_id).delete()
+            logger.info(f"[DELETE_ACCOUNT] Deleted user {user_id}")
+
+            # 8. Delete the workspace (now safe, no FK references)
             db.query(Workspace).filter(Workspace.id == workspace_id).delete()
-            
+
             logger.info(f"[DELETE_ACCOUNT] Deleted workspace {workspace_id} and all associated data")
-        
-        # Delete the user
-        db.query(User).filter(User.id == user_id).delete()
+        else:
+            # Multi-user workspace: only delete the user, keep workspace
+            db.query(WorkspaceMember).filter(WorkspaceMember.user_id == user_id).delete()
+            db.query(User).filter(User.id == user_id).delete()
         
         db.commit()
         logger.info(f"[DELETE_ACCOUNT] Successfully deleted user {user_id}")
