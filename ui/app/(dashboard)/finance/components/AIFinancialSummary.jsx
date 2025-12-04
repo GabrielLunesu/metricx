@@ -1,30 +1,28 @@
 /**
  * AI Financial Summary
- * 
- * WHAT: AI-generated financial insight via QA system
- * WHY: Natural language summary and recommendations
- * REFERENCES: lib/api.js:fetchQA
+ *
+ * WHAT: AI-generated financial insight via lightweight insights endpoint
+ * WHY: Natural language summary without visual generation (faster)
+ * REFERENCES: lib/api.js:fetchInsights, backend/app/routers/qa.py:POST /qa/insights
  */
 
 "use client";
-import { useState, useEffect } from "react";
-import { Sparkles, TrendingUp } from "lucide-react";
-import { fetchQA } from "@/lib/api";
+import { useState, useEffect, useCallback } from "react";
+import { Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { fetchInsights } from "@/lib/api";
 import { renderMarkdownLite } from "@/lib/markdown";
 
 export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
   const [insight, setInsight] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Auto-generate insight on mount or period change
-  useEffect(() => {
-    if (workspaceId && selectedPeriod) {
-      generateInsight();
-    }
-  }, [workspaceId, selectedPeriod]); // Removed hasGenerated from dependencies to trigger on period change
+  const generateInsight = useCallback(async () => {
+    if (!workspaceId || !selectedPeriod) return;
 
-  const generateInsight = async () => {
     setLoading(true);
+    setError(null);
+
     try {
       // Calculate date range
       const startDate = new Date(selectedPeriod.year, selectedPeriod.month - 1, 1);
@@ -36,10 +34,8 @@ export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
 
       let endDate;
       if (isCurrentMonth) {
-        // If current month, use today's date
         endDate = now;
       } else {
-        // Otherwise, use the last day of the selected month
         endDate = new Date(selectedPeriod.year, selectedPeriod.month, 0);
       }
 
@@ -50,26 +46,30 @@ export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
         return `${monthNames[date.getMonth()]} ${date.getDate()}`;
       };
 
-      const question = `Workspace performance breakdown from ${formatDate(startDate)} to ${formatDate(endDate)} 2025`;
+      const question = `Give me a brief financial summary from ${formatDate(startDate)} to ${formatDate(endDate)} ${selectedPeriod.year}. Focus on spend, revenue, profit margins, and ROAS.`;
 
-      // Log for debugging
-      console.log('Finance AI Question:', question);
+      console.log('[AIFinancialSummary] Requesting insight:', question.substring(0, 60) + '...');
 
-      const response = await fetchQA({
+      const response = await fetchInsights({
         workspaceId,
         question
       });
 
-      console.log('Finance AI Response:', response);
-
+      console.log('[AIFinancialSummary] Response received');
       setInsight(response.answer);
     } catch (err) {
-      console.error('Failed to generate insight:', err);
-      setInsight('Unable to generate insight. Please try again.');
+      console.error('[AIFinancialSummary] Failed:', err);
+      setError(err.message);
+      setInsight(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, selectedPeriod]);
+
+  // Auto-generate insight on mount or period change
+  useEffect(() => {
+    generateInsight();
+  }, [generateInsight]);
 
   return (
     <div className="glass-card rounded-xl p-5 border border-blue-100 bg-gradient-to-br from-white to-blue-50/50 flex flex-col justify-between h-full">
@@ -81,6 +81,16 @@ export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
           <h3 className="text-xs font-bold uppercase text-blue-700 tracking-wide">
             Financial Copilot
           </h3>
+          {loading && <Loader2 className="w-3 h-3 text-blue-500 animate-spin ml-auto" />}
+          {!loading && (
+            <button
+              onClick={generateInsight}
+              className="ml-auto p-1 hover:bg-blue-100 rounded transition-colors"
+              title="Refresh insight"
+            >
+              <RefreshCw className="w-3 h-3 text-blue-500" />
+            </button>
+          )}
         </div>
 
         {loading && !insight && (
@@ -92,13 +102,19 @@ export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
           </div>
         )}
 
-        {!insight && !loading && (
+        {error && (
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Unable to generate insight. Click refresh to try again.
+          </p>
+        )}
+
+        {!insight && !loading && !error && (
           <p className="text-xs text-slate-600 leading-relaxed">
             Get a natural-language breakdown of how your spend, revenue, and margins are evolving this period.
           </p>
         )}
 
-        {insight && (
+        {insight && !loading && (
           <div className="mt-2">
             <div
               className="text-xs text-slate-600 leading-relaxed"
@@ -107,17 +123,6 @@ export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
           </div>
         )}
       </div>
-
-
-      {/* ask copilot for scenarios button */}
-      {/* <button
-        onClick={generateInsight}
-        disabled={loading}
-        className="mt-6 w-full py-2.5 rounded-lg bg-white border border-blue-200 text-blue-600 text-xs font-semibold hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        <TrendingUp className="w-3.5 h-3.5" />
-        {insight ? "Ask Copilot for scenarios" : "Generate financial insight"}
-      </button> */}
     </div>
   );
 }

@@ -1,9 +1,16 @@
 'use client';
 
+/**
+ * VerifyEmailPage - Email verification page
+ * Matches the new white theme with blue/cyan accents
+ * Related: login/page.jsx
+ */
+
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Loader2, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Loader2, CheckCircle, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { verifyEmail } from '@/lib/api';
 
 function VerifyEmailContent() {
@@ -35,9 +42,9 @@ function VerifyEmailContent() {
     if (status === 'verifying') {
         return (
             <div className="text-center py-8">
-                <Loader2 className="w-12 h-12 animate-spin text-neutral-900 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-neutral-900">Verifying your email...</h2>
-                <p className="text-neutral-600 mt-2">Please wait while we confirm your email address.</p>
+                <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-6" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying your email...</h2>
+                <p className="text-gray-500">Please wait while we confirm your email address.</p>
             </div>
         );
     }
@@ -48,13 +55,13 @@ function VerifyEmailContent() {
                 <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <CheckCircle className="w-8 h-8" />
                 </div>
-                <h2 className="text-2xl font-bold text-neutral-900 mb-2">Email Verified!</h2>
-                <p className="text-neutral-600 mb-8">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">Email Verified!</h2>
+                <p className="text-gray-500 mb-8">
                     Your email address has been successfully verified. You can now access all features.
                 </p>
                 <Link
                     href="/dashboard"
-                    className="inline-flex items-center justify-center gap-2 bg-neutral-900 text-white py-3 px-6 rounded-xl hover:bg-neutral-800 transition-all font-medium"
+                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-b from-gray-800 to-gray-950 text-white py-3.5 px-6 rounded-xl hover:shadow-lg hover:shadow-gray-900/20 transition-all font-medium"
                 >
                     Go to Dashboard
                     <ArrowRight className="w-4 h-4" />
@@ -68,32 +75,51 @@ function VerifyEmailContent() {
             <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">Verification Failed</h2>
-            <p className="text-red-600 mb-8 bg-red-50 p-3 rounded-lg inline-block">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Verification Failed</h2>
+            <p className="text-red-600 mb-8 bg-red-50 border border-red-200 p-4 rounded-xl text-sm">
                 {error || 'An unknown error occurred.'}
             </p>
-            <div>
-                <Link
-                    href="/auth/login"
-                    className="text-neutral-900 font-medium hover:underline"
-                >
-                    Back to Login
-                </Link>
-            </div>
+            <Link
+                href="/login"
+                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Login
+            </Link>
         </div>
     );
 }
 
 export default function VerifyEmailPage() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-4">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden">
-                <div className="p-8">
-                    <Suspense fallback={<div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>}>
+        <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 via-white to-gray-50/50 relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-br from-blue-100/40 via-cyan-100/30 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 w-full max-w-md">
+                {/* Logo */}
+                <div className="flex justify-center mb-8">
+                    <Image
+                        src="/logo.png"
+                        alt="metricx"
+                        width={180}
+                        height={50}
+                        className="h-12 w-auto"
+                        priority
+                    />
+                </div>
+
+                {/* Card */}
+                <div className="bg-white/80 backdrop-blur-xl border border-gray-200/60 rounded-3xl p-8 shadow-xl shadow-gray-200/40">
+                    <Suspense fallback={
+                        <div className="flex justify-center py-8">
+                            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                        </div>
+                    }>
                         <VerifyEmailContent />
                     </Suspense>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }

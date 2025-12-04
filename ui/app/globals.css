@@ -461,3 +461,80 @@ body {
 .animate-spin-slow {
   animation: spin-slow 3s linear infinite;
 }
+
+/* ==========================================
+   Landing Page Animations (New Homepage)
+   ========================================== */
+
+/* Flowing beam animation for data flow visualizations */
+@keyframes dash-flow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1000;
+  }
+}
+
+.animate-beam {
+  stroke-dasharray: 40 400;
+  animation: dash-flow 10s linear infinite;
+}
+
+.animate-beam-slow {
+  stroke-dasharray: 30 300;
+  animation: dash-flow 8s linear infinite;
+}
+
+/* Floating card animation */
+@keyframes float-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float-subtle {
+  animation: float-subtle 6s ease-in-out infinite;
+}
+
+/* Gradient text animation */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
+}
+
+/* Radial gradient utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* No scrollbar utility for carousels */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Snap scroll for mobile carousels */
+.snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}

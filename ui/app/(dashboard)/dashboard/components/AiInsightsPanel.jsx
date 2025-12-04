@@ -8,16 +8,16 @@
  *
  * WHY: Provides quick, actionable insights without requiring manual analysis.
  *
- * UPDATED: Now uses useQAMultiple hook for streaming + caching.
+ * UPDATED: Now uses lightweight /qa/insights endpoint (no visual generation).
  *
  * REFERENCES:
- *   - hooks/useQA.js (data fetching)
- *   - lib/qaCache.js (caching layer)
+ *   - lib/api.js (fetchInsights)
+ *   - backend/app/routers/qa.py (POST /qa/insights)
  */
 
-import { useMemo } from "react";
-import { Sparkles, AlertTriangle, Zap, Loader2 } from "lucide-react";
-import { useQAMultiple } from "@/hooks/useQA";
+import { useEffect, useState, useCallback } from "react";
+import { Sparkles, AlertTriangle, Zap, Loader2, RefreshCw } from "lucide-react";
+import { fetchInsights } from "@/lib/api";
 
 // Helper to get time string from timeframe
 function getTimeString(timeframe) {
@@ -30,59 +30,70 @@ function getTimeString(timeframe) {
     }
 }
 
-export default function AiInsightsPanel({ workspaceId, timeframe }) {
-    // Build queries for parallel fetch
+export default function AiInsightsPanel({ workspaceId, timeframe, metricsData }) {
+    const [insights, setInsights] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
     const timeStr = getTimeString(timeframe);
 
-    const queries = useMemo(() => {
-        if (!workspaceId) return [];
-        return [
-            { workspaceId, question: `What is my biggest performance drop ${timeStr}?` },
-            { workspaceId, question: `What is my best performing area ${timeStr}?` }
+    // Fetch insights
+    const fetchAllInsights = useCallback(async () => {
+        if (!workspaceId) return;
+
+        setLoading(true);
+        setError(null);
+
+        const questions = [
+            { question: `What is my biggest performance drop ${timeStr}?`, type: 'warning' },
+            { question: `What is my best performing area ${timeStr}?`, type: 'opportunity' }
         ];
-    }, [workspaceId, timeStr]);
 
-    // Use the multi-query hook (streaming + caching)
-    const { results, loading, errors } = useQAMultiple(queries, {
-        enabled: !!workspaceId,
-        cacheTTL: 5 * 60 * 1000  // 5 minutes
-    });
+        try {
+            const results = await Promise.all(
+                questions.map(async ({ question, type }) => {
+                    try {
+                        const result = await fetchInsights({
+                            workspaceId,
+                            question,
+                            metricsData: metricsData || null
+                        });
+                        return { type, text: result.answer, error: null };
+                    } catch (err) {
+                        console.error(`[AiInsightsPanel] Failed to fetch insight:`, err);
+                        return { type, text: null, error: err.message };
+                    }
+                })
+            );
 
-    // Process results into insights
-    const insights = useMemo(() => {
-        if (!results || results.length === 0) return [];
+            // Filter out failed results
+            const validInsights = results.filter(r => r.text && !r.error);
+            setInsights(validInsights);
 
-        const newInsights = [];
-
-        // Result 1: Performance drop (warning)
-        if (results[0]?.answer) {
-            newInsights.push({
-                type: 'warning',
-                text: results[0].answer
-            });
+            // Check if all failed
+            if (validInsights.length === 0 && results.some(r => r.error)) {
+                setError(results.find(r => r.error)?.error || 'Failed to load insights');
+            }
+        } catch (err) {
+            console.error('[AiInsightsPanel] Fetch failed:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
+    }, [workspaceId, timeStr, metricsData]);
 
-        // Result 2: Best performing (opportunity)
-        if (results[1]?.answer) {
-            newInsights.push({
-                type: 'opportunity',
-                text: results[1].answer
-            });
-        }
-
-        return newInsights;
-    }, [results]);
-
-    // Check for any errors
-    const hasError = errors.some(e => e !== null);
-    const errorMessage = errors.find(e => e !== null);
+    // Fetch on mount and when dependencies change
+    useEffect(() => {
+        fetchAllInsights();
+    }, [fetchAllInsights]);
 
     if (loading) {
         return (
             <div className="lg:col-span-1 flex flex-col gap-4">
                 <div className="flex items-center gap-2 mb-1">
                     <Sparkles className="w-4 h-4 text-purple-500" />
-                    <h3 className="text-sm font-medium text-slate-700">AI Insights</h3>
+                    <h3 className="text-sm font-medium text-slate-700">Insights</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-rose-100 text-rose-600 rounded-full font-medium ml-1">Live Analysis</span>
                     <Loader2 className="w-3 h-3 text-purple-400 animate-spin ml-auto" />
                 </div>
                 <div className="glass-panel p-5 rounded-[20px] h-32 animate-pulse bg-slate-100/50"></div>
@@ -91,15 +102,23 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
         );
     }
 
-    if (hasError) {
+    if (error) {
         return (
             <div className="lg:col-span-1 flex flex-col gap-4">
                 <div className="flex items-center gap-2 mb-1">
                     <Sparkles className="w-4 h-4 text-purple-500" />
-                    <h3 className="text-sm font-medium text-slate-700">AI Insights</h3>
+                    <h3 className="text-sm font-medium text-slate-700">Insights</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-rose-100 text-rose-600 rounded-full font-medium ml-1">Live Analysis</span>
+                    <button
+                        onClick={fetchAllInsights}
+                        className="ml-auto p-1 hover:bg-slate-100 rounded transition-colors"
+                        title="Retry"
+                    >
+                        <RefreshCw className="w-3 h-3 text-slate-400" />
+                    </button>
                 </div>
-                <div className="glass-panel p-5 rounded-[20px] text-red-500 text-sm text-center">
-                    Failed to load insights: {errorMessage}
+                <div className="glass-panel p-5 rounded-[20px] text-slate-500 text-sm text-center">
+                    Unable to load insights. Click refresh to try again.
                 </div>
             </div>
         );
@@ -110,10 +129,18 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
             <div className="lg:col-span-1 flex flex-col gap-4">
                 <div className="flex items-center gap-2 mb-1">
                     <Sparkles className="w-4 h-4 text-purple-500" />
-                    <h3 className="text-sm font-medium text-slate-700">AI Insights</h3>
+                    <h3 className="text-sm font-medium text-slate-700">Insights</h3>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-rose-100 text-rose-600 rounded-full font-medium ml-1">Live Analysis</span>
+                    <button
+                        onClick={fetchAllInsights}
+                        className="ml-auto p-1 hover:bg-slate-100 rounded transition-colors"
+                        title="Refresh insights"
+                    >
+                        <RefreshCw className="w-3 h-3 text-slate-400" />
+                    </button>
                 </div>
                 <div className="glass-panel p-5 rounded-[20px] text-slate-400 text-sm text-center">
-                    No insights available for this period.
+                    No insights generated.
                 </div>
             </div>
         );
@@ -123,7 +150,15 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
         <div className="lg:col-span-1 flex flex-col gap-4">
             <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4 text-purple-500" />
-                <h3 className="text-sm font-medium text-slate-700">AI Insights</h3>
+                <h3 className="text-sm font-medium text-slate-700">Insights</h3>
+                <span className="text-[10px] px-1.5 py-0.5 bg-rose-100 text-rose-600 rounded-full font-medium ml-1">Live Analysis</span>
+                <button
+                    onClick={fetchAllInsights}
+                    className="ml-auto p-1 hover:bg-slate-100 rounded transition-colors"
+                    title="Refresh insights"
+                >
+                    <RefreshCw className="w-3 h-3 text-slate-400" />
+                </button>
             </div>
 
             {insights.map((insight, index) => (
@@ -149,7 +184,6 @@ export default function AiInsightsPanel({ workspaceId, timeframe }) {
                             <p className="text-xs font-medium text-slate-800 leading-relaxed">
                                 {insight.text}
                             </p>
-
                         </div>
                     </div>
                 </div>

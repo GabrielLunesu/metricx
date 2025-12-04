@@ -384,6 +384,67 @@ export async function fetchQASemantic({ workspaceId, question, context = {}, onS
 }
 
 
+// =============================================================================
+// INSIGHTS ENDPOINT (Lightweight, no visuals)
+// =============================================================================
+//
+// WHAT: Fetches AI-generated text insights WITHOUT visual generation.
+// WHY: Optimized for dashboard widgets where visuals are already rendered.
+//
+// BENEFITS:
+// - Faster response (skips visual building)
+// - Lower token usage
+// - Concise 2-3 sentence answers
+//
+// USAGE:
+//   const insight = await fetchInsights({
+//     workspaceId: '...',
+//     question: 'What is my biggest performance drop this week?',
+//     metricsData: { ... }  // Optional: pre-fetched metrics for context
+//   });
+//
+// REFERENCES:
+// - backend/app/routers/qa.py (POST /qa/insights)
+export async function fetchInsights({ workspaceId, question, metricsData = null }) {
+  console.log('[fetchInsights] Starting request:', { workspaceId, question: question.substring(0, 50) + '...' });
+
+  const body = { question };
+  if (metricsData) {
+    body.metrics_data = metricsData;
+  }
+
+  const res = await fetch(`${BASE}/qa/insights?workspace_id=${workspaceId}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  console.log('[fetchInsights] Response status:', res.status);
+
+  if (!res.ok) {
+    const msg = await res.text();
+    console.error('[fetchInsights] Error:', res.status, msg);
+    throw new Error(`Insights request failed: ${res.status} ${msg}`);
+  }
+
+  const result = await res.json();
+  console.log('[fetchInsights] Success:', result.success);
+
+  if (!result.success) {
+    throw new Error(result.answer || 'Failed to generate insight');
+  }
+
+  return {
+    answer: result.answer,
+    intent: result.intent,
+    // No visuals in insights response
+    visuals: null,
+    data: null
+  };
+}
+
+
 // SSE Streaming version of QA endpoint (v2.1).
 // WHAT: Uses Server-Sent Events for real-time progress updates instead of polling.
 // WHY: Better UX with live stage updates ("Understanding...", "Fetching...", "Preparing...")

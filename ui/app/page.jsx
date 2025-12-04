@@ -1,34 +1,51 @@
 "use client";
 
 /**
- * HomePage - Landing page with glassmorphic design and WOW effect
- * Compact structure: Hero -> Features -> Pricing -> CTA -> Footer
+ * HomePage - Modern landing page for metricx ad analytics platform
+ * White theme with flowing data visualizations and premium design
+ * Structure: Hero -> Features -> Copilot -> Data Ingestion -> CTA -> Footer
  * Related: components/landing/*
  */
 
-import HeroSection from "@/components/landing/HeroSection";
-import FeaturesSection from "@/components/landing/FeaturesSection";
-import PricingSection from "@/components/landing/PricingSection";
-import CTASection from "@/components/landing/CTASection";
-import FooterSection from "@/components/landing/FooterSection";
+import HeroSectionNew from "@/components/landing/HeroSectionNew";
+import FeaturesSectionNew from "@/components/landing/FeaturesSectionNew";
+import CopilotShowcaseSection from "@/components/landing/CopilotShowcaseSection";
+import DataIngestionSection from "@/components/landing/DataIngestionSection";
+import CTASectionNew from "@/components/landing/CTASectionNew";
+import FooterSectionNew from "@/components/landing/FooterSectionNew";
 
 export default function HomePage() {
   return (
-    <main className="w-full min-h-screen relative overflow-x-hidden">
-      {/* Hero with glassmorphic design and animated background */}
-      <HeroSection />
+    <main className="w-full min-h-screen relative overflow-x-hidden bg-white">
+      {/* Subtle grid background */}
+      <div className="fixed inset-0 w-full h-full pointer-events-none z-0">
+        <div className="absolute inset-0 flex justify-between px-6 md:px-12 lg:px-24 opacity-30">
+          <div className="w-px h-full bg-gray-200" />
+          <div className="w-px h-full bg-gray-200 hidden sm:block" />
+          <div className="w-px h-full bg-gray-200 hidden md:block" />
+          <div className="w-px h-full bg-gray-200 hidden lg:block" />
+          <div className="w-px h-full bg-gray-200 hidden xl:block" />
+          <div className="w-px h-full bg-gray-200" />
+        </div>
+      </div>
 
-      {/* Features bento grid */}
-      <FeaturesSection />
+      {/* Hero with data flow visualization */}
+      <HeroSectionNew />
 
-      {/* Pricing cards */}
-      <PricingSection />
+      {/* Features with semantic clustering & granular control */}
+      <FeaturesSectionNew />
+
+      {/* AI Copilot showcase */}
+      <CopilotShowcaseSection />
+
+      {/* Data ingestion / platform integrations */}
+      <DataIngestionSection />
 
       {/* Final CTA */}
-      <CTASection />
+      <CTASectionNew />
 
-      {/* Minimal footer */}
-      <FooterSection />
+      {/* Footer */}
+      <FooterSectionNew />
     </main>
   );
 }

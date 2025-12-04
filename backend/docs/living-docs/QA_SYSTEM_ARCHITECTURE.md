@@ -144,6 +144,31 @@ POST /qa/agent/sse
 |----------|--------|-------------|
 | `/qa/agent/sse` | POST | SSE streaming with typing effect |
 | `/qa/agent/sync` | POST | Synchronous (no streaming) |
+| `/qa/insights` | POST | Lightweight insights (no visuals) |
+
+### Lightweight Insights (`/qa/insights`)
+
+A fast endpoint for dashboard widgets that need AI-generated text without visualizations:
+
+```python
+# Request
+{
+    "question": "What is my biggest performance drop last 7 days?",
+    "metrics_data": {}  # Optional: pass pre-fetched metrics
+}
+
+# Response
+{
+    "success": true,
+    "answer": "Your CPC increased by 15% due to...",
+    "intent": "analysis"
+}
+```
+
+**Used by:**
+- Dashboard: `AiInsightsPanel` (performance drops, opportunities)
+- Analytics: `AnalyticsIntelligenceZone` (contextual analysis)
+- Finance: `AIFinancialSummary` (financial summary)
 
 ### Fallback (Legacy)
 
@@ -160,10 +185,26 @@ The agent generates visualizations based on query type:
 | Query Type | Visualization |
 |------------|---------------|
 | Single metric | Summary card |
-| Comparison | Bar chart (Previous vs This Period) |
+| Comparison (aggregate) | Bar chart (Previous vs This Period) |
+| Comparison (timeseries) | Line chart with overlaid series |
 | Breakdown | Bar chart + Table |
 | Multi-metric breakdown | Table with all metrics |
 | Timeseries | Area/Line chart |
+
+### Comparison Timeseries
+
+When a user requests a comparison with a graph/chart, the system generates overlaid line charts:
+
+```
+User: "Compare this week's CPC with last week with a graph"
+
+Result: Line chart with two series:
+- "This Period" (current week data)
+- "Previous Period" (last week data)
+- X-axis normalized to "Day 1", "Day 2", etc. for proper overlay
+```
+
+This is controlled by `Comparison.include_timeseries=True` in the semantic query.
 
 ### Multi-Metric Table Generation
 
@@ -251,10 +292,12 @@ curl -X POST 'http://localhost:8000/qa/agent/sync?workspace_id=YOUR_ID' \
 
 ## Frontend Integration
 
-The frontend uses SSE streaming for typing effect:
+### Copilot Page (Full Agent)
+
+The Copilot page uses SSE streaming for typing effect:
 
 ```javascript
-// ui/lib/api.js
+// ui/lib/api.js - fetchQA()
 const res = await fetch(`${BASE}/qa/agent/sse?workspace_id=${id}`, {
   method: 'POST',
   body: JSON.stringify({ question })
@@ -271,6 +314,25 @@ while (true) {
 // ui/app/(dashboard)/copilot/page.jsx
 // Uses requestAnimationFrame to batch token updates for smooth typing
 ```
+
+### Dashboard Widgets (Lightweight Insights)
+
+Dashboard insight widgets use the lightweight `/qa/insights` endpoint:
+
+```javascript
+// ui/lib/api.js - fetchInsights()
+const res = await fetch(`${BASE}/qa/insights?workspace_id=${id}`, {
+  method: 'POST',
+  body: JSON.stringify({ question })
+});
+const data = await res.json();
+// Returns: { success, answer, intent }
+```
+
+**Widget Components:**
+- `ui/app/(dashboard)/dashboard/components/AiInsightsPanel.jsx`
+- `ui/app/(dashboard)/analytics/components/AnalyticsIntelligenceZone.jsx`
+- `ui/app/(dashboard)/finance/components/AIFinancialSummary.jsx`
 
 ## Fallback Chain
 
@@ -301,10 +363,15 @@ The frontend tries endpoints in order:
 - `app/services/semantic_qa_service.py` - Semantic QA service
 
 ### Frontend
-- `ui/lib/api.js` - API client with SSE handling
+- `ui/lib/api.js` - API client with SSE handling + fetchInsights
 - `ui/hooks/useQA.js` - React hook for QA queries
 - `ui/app/(dashboard)/copilot/page.jsx` - Copilot page
 - `ui/app/(dashboard)/copilot/components/AnswerVisuals.jsx` - Charts and tables
+
+### Insight Widgets
+- `ui/app/(dashboard)/dashboard/components/AiInsightsPanel.jsx` - Dashboard insights
+- `ui/app/(dashboard)/analytics/components/AnalyticsIntelligenceZone.jsx` - Analytics insights
+- `ui/app/(dashboard)/finance/components/AIFinancialSummary.jsx` - Finance summary
 
 ## Version History
 
@@ -315,3 +382,4 @@ The frontend tries endpoints in order:
 | v2.5 | Creative support |
 | v3.0 | Semantic Layer |
 | v4.0 | Agentic Copilot (LangGraph + Claude) |
+| v4.1 | Lightweight insights endpoint, comparison timeseries |

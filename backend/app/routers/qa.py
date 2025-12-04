@@ -31,8 +31,11 @@ import logging
 import os
 from datetime import timedelta
 
+from typing import Any, Dict, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
@@ -154,6 +157,174 @@ async def ask_question_stream(
         status_code=410,
         detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming responses."
     )
+
+
+# =============================================================================
+# INSIGHTS ENDPOINT (Widget/Dashboard Integration)
+# =============================================================================
+
+
+class InsightsRequest(BaseModel):
+    """Request for insights endpoint."""
+    question: str
+    metrics_data: Optional[Dict[str, Any]] = None  # Optional pre-fetched metrics
+
+
+class InsightsResponse(BaseModel):
+    """Response from insights endpoint."""
+    success: bool
+    answer: str
+    intent: Optional[str] = None
+
+
+@router.post("/insights", response_model=InsightsResponse)
+async def get_insights(
+    req: InsightsRequest,
+    workspace_id: str = Query(..., description="Workspace UUID"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/insights
+
+    Lightweight insights endpoint for dashboard widgets.
+
+    WHAT:
+        Returns AI-generated text insights WITHOUT visual generation.
+        Optimized for widget integration where visuals are already rendered.
+
+    WHY:
+        - Dashboard/analytics pages already have their own charts
+        - Faster response (skips visual building)
+        - Lower token usage (no visual specs in response)
+
+    INPUT:
+        {
+            "question": "What is my biggest performance drop this week?",
+            "metrics_data": { ... }  // Optional: pre-fetched metrics for context
+        }
+
+    OUTPUT:
+        {
+            "success": true,
+            "answer": "Your CPC increased by 15% this week...",
+            "intent": "analysis"
+        }
+
+    USAGE:
+        - Dashboard insights widget
+        - Analytics page summaries
+        - Finance page highlights
+    """
+    import json as json_module
+    from app.agent.nodes import get_claude_client, UNDERSTAND_PROMPT
+    from app.agent.tools import SemanticTools
+
+    user_id = str(current_user.id)
+    question = req.question
+
+    try:
+        client = get_claude_client()
+
+        # Step 1: Understand the question
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=512,
+            system=UNDERSTAND_PROMPT,
+            messages=[{"role": "user", "content": question}],
+        )
+
+        content = response.content[0].text
+        if "```json" in content:
+            json_str = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            json_str = content.split("```")[1].split("```")[0]
+        else:
+            json_str = content
+
+        parsed = json_module.loads(json_str.strip())
+        intent = parsed.get("intent", "metric_query")
+
+        # Step 2: Fetch data (or use provided metrics_data)
+        if req.metrics_data:
+            # Use pre-fetched metrics data
+            data = req.metrics_data
+        else:
+            # Fetch from semantic layer
+            semantic_query = {
+                "metrics": parsed.get("metrics") or ["roas"],
+                "time_range": parsed.get("time_range") or "7d",
+                "breakdown_level": parsed.get("breakdown_level"),
+                "compare_to_previous": parsed.get("compare_to_previous") or True,  # Always compare for insights
+                "include_timeseries": False,  # No charts needed
+                "filters": parsed.get("filters") or {},
+            }
+
+            tools = SemanticTools(db, workspace_id, user_id)
+            result = tools.query_metrics(
+                metrics=semantic_query["metrics"],
+                time_range=semantic_query["time_range"],
+                breakdown_level=semantic_query.get("breakdown_level"),
+                compare_to_previous=semantic_query.get("compare_to_previous", True),
+                include_timeseries=False,  # No visuals
+                filters=semantic_query.get("filters"),
+            )
+
+            if result.get("error"):
+                return InsightsResponse(
+                    success=False,
+                    answer=f"Unable to analyze: {result['error']}",
+                    intent=intent
+                )
+
+            data = result.get("data", {})
+
+        # Step 3: Generate insight (no visuals, concise answer)
+        INSIGHT_PROMPT = """You are a concise advertising analyst.
+
+Generate a brief, actionable insight based on the data provided.
+
+RULES:
+- Maximum 2-3 sentences
+- Focus on the most important finding
+- Include specific numbers when available
+- Be direct and actionable
+- Do NOT mention charts, graphs, or visualizations
+- Do NOT offer to show more data"""
+
+        data_summary = json_module.dumps(data, indent=2, default=str)
+        messages = [{
+            "role": "user",
+            "content": f"""Question: "{question}"
+
+Data:
+{data_summary}
+
+Provide a brief insight."""
+        }]
+
+        insight_response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=256,  # Keep responses short
+            system=INSIGHT_PROMPT,
+            messages=messages,
+        )
+
+        answer = insight_response.content[0].text
+
+        return InsightsResponse(
+            success=True,
+            answer=answer,
+            intent=intent
+        )
+
+    except Exception as e:
+        logger.exception(f"[QA_INSIGHTS] Failed: {e}")
+        return InsightsResponse(
+            success=False,
+            answer="Unable to generate insight at this time.",
+            intent=None
+        )
 
 
 # =============================================================================
