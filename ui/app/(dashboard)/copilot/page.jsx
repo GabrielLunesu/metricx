@@ -128,7 +128,6 @@ export default function CopilotPage() {
 
     try {
       // Try Agentic Copilot with streaming (preferred - typing effect)
-      console.log('[Copilot] Trying agent SSE endpoint...');
       const result = await fetchQAAgent({
         workspaceId: resolvedWs,
         question: q,
@@ -142,11 +141,9 @@ export default function CopilotPage() {
           }
         }
       });
-      console.log('[Copilot] Agent success! Has visuals:', !!result.visuals);
       addAiResponse(result);
-    } catch (agentError) {
+    } catch {
       // Fallback to Semantic Layer if agent fails
-      console.warn('[Copilot] Agent failed, falling back to semantic:', agentError.message);
       // Stop the render loop when falling back
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -156,7 +153,6 @@ export default function CopilotPage() {
       streamingBufferRef.current = '';
 
       try {
-        console.log('[Copilot] Trying semantic endpoint...');
         const result = await fetchQASemantic({
           workspaceId: resolvedWs,
           question: q,
@@ -164,12 +160,9 @@ export default function CopilotPage() {
             setStage(newStage);
           }
         });
-        console.log('[Copilot] Semantic success! Strategy:', result.telemetry?.strategy, 'Has visuals:', !!result.visuals);
         addAiResponse(result);
-      } catch (semanticError) {
+      } catch {
         // Fallback to SSE streaming if semantic fails
-        console.warn('[Copilot] Semantic layer failed, falling back to streaming:', semanticError.message);
-
         try {
           const result = await fetchQAStream({
             workspaceId: resolvedWs,
@@ -179,10 +172,8 @@ export default function CopilotPage() {
             }
           });
           addAiResponse(result);
-        } catch (streamError) {
+        } catch {
           // Final fallback to polling
-          console.warn('[Copilot] SSE streaming failed, falling back to polling:', streamError.message);
-
           try {
             const result = await fetchQA({ workspaceId: resolvedWs, question: q });
             addAiResponse(result);

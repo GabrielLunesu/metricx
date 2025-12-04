@@ -420,16 +420,6 @@ function ChartCard({ spec }) {
   const chartInstance = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Debug: Log chart spec to see series data
-  useEffect(() => {
-    console.log('[ChartCard] Rendering spec:', {
-      title: spec?.title,
-      type: spec?.type,
-      seriesCount: spec?.series?.length,
-      series: spec?.series?.map(s => ({ name: s.name, dataKey: s.dataKey, dataLength: s.data?.length }))
-    });
-  }, [spec]);
-
   useEffect(() => {
     if (!canvasRef.current || !spec) return;
 

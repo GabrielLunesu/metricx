@@ -48,14 +48,11 @@ export default function AIFinancialSummary({ workspaceId, selectedPeriod }) {
 
       const question = `Give me a brief financial summary from ${formatDate(startDate)} to ${formatDate(endDate)} ${selectedPeriod.year}. Focus on spend, revenue, profit margins, and ROAS.`;
 
-      console.log('[AIFinancialSummary] Requesting insight:', question.substring(0, 60) + '...');
-
       const response = await fetchInsights({
         workspaceId,
         question
       });
 
-      console.log('[AIFinancialSummary] Response received');
       setInsight(response.answer);
     } catch (err) {
       console.error('[AIFinancialSummary] Failed:', err);

@@ -20,3 +20,5 @@ rq==1.15.1
 facebook-business==19.0.0
 cryptography==43.0.1
 google-ads>=28.0.0  # Min version - Google deprecates old API versions regularly
+anthropic>=0.39.0  # Claude API client for agent
+langgraph>=0.2.0  # Agent graph framework

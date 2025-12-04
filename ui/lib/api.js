@@ -212,8 +212,6 @@ export async function fetchQA({ workspaceId, question, context = {}, maxRetries 
 // - backend/app/agent/ (LangGraph agent)
 // - backend/app/routers/qa.py (POST /qa/agent/sync)
 export async function fetchQAAgent({ workspaceId, question, context = {}, onStage, onToken }) {
-  console.log('[fetchQAAgent] Starting SSE request:', { workspaceId, question });
-
   // Append context to question if provided
   let finalQuestion = question;
   if (context && Object.keys(context).length > 0) {
@@ -233,11 +231,8 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
     body: JSON.stringify({ question: finalQuestion })
   });
 
-  console.log('[fetchQAAgent] Response status:', res.status);
-
   if (!res.ok) {
     const msg = await res.text();
-    console.error('[fetchQAAgent] Error:', res.status, msg);
     throw new Error(`Agent QA failed: ${res.status} ${msg}`);
   }
 
@@ -246,14 +241,10 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
   const decoder = new TextDecoder();
   let buffer = '';
   let finalResult = null;
-  let tokenCount = 0;
-
-  console.log('[fetchQAAgent] Starting stream processing...');
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) {
-      console.log('[fetchQAAgent] Stream complete. Total tokens:', tokenCount);
       break;
     }
 
@@ -273,33 +264,28 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
 
             switch (event.type) {
               case 'thinking':
-                console.log('[fetchQAAgent] Thinking:', event.data);
                 onStage?.(event.data);
                 break;
               case 'token':
-                tokenCount++;
-                // Stream token to callback for typing effect
                 if (onToken) {
                   onToken(event.data);
                 }
                 break;
               case 'visual':
-                console.log('[fetchQAAgent] Received visuals');
+                // Visuals received, will be in final result
                 break;
               case 'done':
-                console.log('[fetchQAAgent] Done! Intent:', event.data?.intent, 'Tokens received:', tokenCount);
                 finalResult = event.data;
                 break;
               case 'error':
-                console.error('[fetchQAAgent] Error:', event.data);
                 throw new Error(event.data);
             }
           } catch (e) {
-            if (!e.message?.includes(event?.data)) {
-              console.warn('[fetchQAAgent] Parse error:', e.message, 'Line:', line.substring(0, 50));
-            } else {
+            // Re-throw if it's an actual error from the event
+            if (e.message === event?.data) {
               throw e;
             }
+            // Otherwise ignore parse errors for malformed SSE chunks
           }
         }
       }
@@ -338,8 +324,6 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
 // - backend/app/services/semantic_qa_service.py
 // - backend/app/semantic/ (the semantic layer)
 export async function fetchQASemantic({ workspaceId, question, context = {}, onStage }) {
-  console.log('[fetchQASemantic] Starting request:', { workspaceId, question });
-
   // Append context to question if provided
   let finalQuestion = question;
   if (context && Object.keys(context).length > 0) {
@@ -359,16 +343,12 @@ export async function fetchQASemantic({ workspaceId, question, context = {}, onS
     body: JSON.stringify({ question: finalQuestion })
   });
 
-  console.log('[fetchQASemantic] Response status:', res.status);
-
   if (!res.ok) {
     const msg = await res.text();
-    console.error('[fetchQASemantic] Error:', res.status, msg);
     throw new Error(`Semantic QA failed: ${res.status} ${msg}`);
   }
 
   const result = await res.json();
-  console.log('[fetchQASemantic] Success! Has visuals:', !!result.visuals, 'Strategy:', result.telemetry?.strategy);
 
   // Map semantic response to expected format
   return {
@@ -406,8 +386,6 @@ export async function fetchQASemantic({ workspaceId, question, context = {}, onS
 // REFERENCES:
 // - backend/app/routers/qa.py (POST /qa/insights)
 export async function fetchInsights({ workspaceId, question, metricsData = null }) {
-  console.log('[fetchInsights] Starting request:', { workspaceId, question: question.substring(0, 50) + '...' });
-
   const body = { question };
   if (metricsData) {
     body.metrics_data = metricsData;
@@ -420,16 +398,12 @@ export async function fetchInsights({ workspaceId, question, metricsData = null 
     body: JSON.stringify(body)
   });
 
-  console.log('[fetchInsights] Response status:', res.status);
-
   if (!res.ok) {
     const msg = await res.text();
-    console.error('[fetchInsights] Error:', res.status, msg);
     throw new Error(`Insights request failed: ${res.status} ${msg}`);
   }
 
   const result = await res.json();
-  console.log('[fetchInsights] Success:', result.success);
 
   if (!result.success) {
     throw new Error(result.answer || 'Failed to generate insight');
@@ -531,11 +505,10 @@ export async function fetchQAStream({ workspaceId, question, context = {}, onSta
                   } else {
                     // Stage update - call callback if provided
                     // Stages: queued, translating, executing, formatting
-                    console.log('[fetchQAStream] Stage update:', data.stage);
                     onStage?.(data.stage, data.job_id);
                   }
-                } catch (parseError) {
-                  console.warn('[fetchQAStream] Failed to parse SSE data:', line, parseError);
+                } catch {
+                  // Ignore parse errors for malformed SSE chunks
                 }
               }
             }

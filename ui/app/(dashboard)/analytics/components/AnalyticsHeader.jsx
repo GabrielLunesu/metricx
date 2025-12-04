@@ -1,8 +1,19 @@
 "use client";
-import { Sparkles, ArrowRight, Calendar, SlidersHorizontal, X, Filter, ChevronDown } from "lucide-react";
+/**
+ * AnalyticsHeader Component
+ * -------------------------
+ * WHAT: Analytics page header with filters and AI search bar
+ * WHY: Provides filtering controls and quick access to Copilot
+ *
+ * REFACTORED: Removed fire-and-forget fetchQA call that was wasting
+ * backend resources. The question is passed to Copilot via URL param.
+ *
+ * REFERENCES:
+ * - app/(dashboard)/copilot/page.jsx (receives question via ?q= param)
+ */
+import { Sparkles, ArrowRight, Calendar, X, Filter, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchQA } from "@/lib/api";
 
 export default function AnalyticsHeader({
     workspaceId,
@@ -114,25 +125,9 @@ export default function AnalyticsHeader({
 
         const question = qaInput.trim();
         setIsQaSubmitting(true);
-
-        // Fire and forget - log QA intent before transitioning to Copilot
-        fetchQA({
-            workspaceId,
-            question,
-            context: {
-                source: 'analytics_header',
-                provider: selectedProvider,
-                campaignId: selectedCampaign?.id,
-                campaignName: selectedCampaign?.name,
-                timeframe: timeFilters.type === 'custom'
-                    ? `${timeFilters.customStart || ''}:${timeFilters.customEnd || ''}`
-                    : timeFilters.preset || `${timeFilters.rangeDays}d`
-            }
-        }).catch((err) => {
-            console.error('QA request failed:', err);
-        });
-
         setIsTransitioning(true);
+
+        // Navigate to Copilot with question - Copilot handles the QA request
         setTimeout(() => {
             const params = new URLSearchParams({ q: question, ws: workspaceId });
             router.push(`/copilot?${params.toString()}`);
