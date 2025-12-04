@@ -943,25 +943,84 @@ async def get_campaign_warnings(
         if attr.confidence:
             attributions_by_campaign[entity_id]["confidences"].add(attr.confidence)
 
+    # Get proactive UTM status for each campaign by checking ad tracking_params
+    # WHY: Detect missing UTM params BEFORE orders come in
+    # REFERENCES: docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+    campaign_utm_status = {}
+    for campaign in campaigns:
+        # Get all adset IDs under this campaign
+        adset_ids = (
+            db.query(Entity.id)
+            .filter(
+                Entity.workspace_id == workspace_id,
+                Entity.level == LevelEnum.adset,
+                Entity.parent_id == campaign.id,
+            )
+            .all()
+        )
+        adset_id_list = [a[0] for a in adset_ids]
+
+        # Get all ads under those adsets
+        ads_with_tracking = []
+        if adset_id_list:
+            ads_with_tracking = (
+                db.query(Entity)
+                .filter(
+                    Entity.workspace_id == workspace_id,
+                    Entity.level == LevelEnum.ad,
+                    Entity.parent_id.in_(adset_id_list),
+                )
+                .all()
+            )
+
+        # Check if any ads have UTM tracking configured
+        has_utm = False
+        for ad in ads_with_tracking:
+            if ad.tracking_params:
+                # Check for utm_source or utm_campaign (minimum required)
+                if ad.tracking_params.get("has_utm_source") or ad.tracking_params.get("has_utm_campaign"):
+                    has_utm = True
+                    break
+                # For Google, also check gclid
+                if ad.tracking_params.get("has_gclid"):
+                    has_utm = True
+                    break
+
+        campaign_utm_status[str(campaign.id)] = has_utm
+
     # Analyze each campaign for warnings
     warnings = []
 
     for campaign in campaigns:
         campaign_id = str(campaign.id)
         campaign_attrs = attributions_by_campaign.get(campaign_id)
+        has_utm_configured = campaign_utm_status.get(campaign_id, False)
 
         # Get campaign spend (from metrics if available)
         # For now, we'll flag campaigns without any attributions
         spend = 0.0  # Would need to join with metrics table
 
-        if not campaign_attrs:
-            # No attributed orders at all
+        # Check for proactive UTM warning FIRST (before orders come in)
+        # WHY: This is the key value - warn users before they waste ad spend
+        if not has_utm_configured and not campaign_attrs:
+            warnings.append(CampaignAttributionWarning(
+                campaign_id=campaign_id,
+                campaign_name=campaign.name or "Unknown",
+                provider=campaign.connection.provider.value if campaign.connection and campaign.connection.provider else "unknown",
+                warning_type="no_utm",
+                message="No UTM parameters configured. Add UTM tracking to attribute conversions.",
+                spend=spend,
+                attributed_revenue=0.0,
+                attributed_orders=0,
+            ))
+        elif not campaign_attrs:
+            # No attributed orders at all (but UTM might be configured)
             warnings.append(CampaignAttributionWarning(
                 campaign_id=campaign_id,
                 campaign_name=campaign.name or "Unknown",
                 provider=campaign.connection.provider.value if campaign.connection and campaign.connection.provider else "unknown",
                 warning_type="no_attribution",
-                message="No attributed orders. Check if UTM parameters are set up correctly.",
+                message="No attributed orders yet. UTM tracking is configured - waiting for conversions.",
                 spend=spend,
                 attributed_revenue=0.0,
                 attributed_orders=0,
@@ -996,3 +1055,156 @@ async def get_campaign_warnings(
         campaigns_with_warnings=len(warnings),
         total_campaigns=len(campaigns),
     )
+
+
+# =============================================================================
+# META CAPI TEST ENDPOINT
+# =============================================================================
+
+class MetaCAPITestRequest(BaseModel):
+    """Request body for testing Meta CAPI."""
+    test_event_code: str = Field(
+        description="Test event code from Meta Events Manager (Test Events tab)"
+    )
+    value: float = Field(default=99.99, description="Test purchase value")
+    currency: str = Field(default="USD", description="Currency code")
+
+
+class MetaCAPITestResponse(BaseModel):
+    """Response from Meta CAPI test."""
+    success: bool
+    message: str
+    pixel_id: Optional[str] = None
+    events_received: Optional[int] = None
+    error: Optional[str] = None
+
+
+@router.post(
+    "/{workspace_id}/meta-capi/test",
+    response_model=MetaCAPITestResponse,
+    summary="Test Meta CAPI integration",
+    description="""
+    Send a test purchase event to Meta Conversions API.
+
+    To use this:
+    1. Go to Meta Events Manager → Your Pixel → Test Events
+    2. Copy the "Test event code" (looks like TEST12345)
+    3. Call this endpoint with that code
+    4. Watch the event appear in Meta Events Manager
+
+    The test event won't affect your actual data or ad optimization.
+    """
+)
+async def test_meta_capi(
+    workspace_id: UUID,
+    payload: MetaCAPITestRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Test Meta CAPI by sending a test purchase event.
+
+    WHAT: Sends a test purchase event to verify CAPI is working
+    WHY: Users need to verify their pixel configuration before relying on it
+
+    Args:
+        workspace_id: The workspace UUID
+        payload: Test event code and optional purchase details
+        db: Database session
+        current_user: Authenticated user
+
+    Returns:
+        MetaCAPITestResponse with success status and details
+    """
+    from decimal import Decimal
+    from app.services.meta_capi_service import MetaCAPIService, MetaCAPIError
+    from app.services.token_service import get_decrypted_token
+
+    _require_workspace_permission(db, current_user, workspace_id)
+
+    # Find Meta connection (prefer one with pixel configured)
+    meta_connection = db.query(Connection).filter(
+        Connection.workspace_id == workspace_id,
+        Connection.provider == ProviderEnum.meta,
+        Connection.status == "active",
+        Connection.meta_pixel_id.isnot(None),
+    ).first()
+
+    # Fallback to any Meta connection if none have pixel
+    if not meta_connection:
+        meta_connection = db.query(Connection).filter(
+            Connection.workspace_id == workspace_id,
+            Connection.provider == ProviderEnum.meta,
+            Connection.status == "active",
+        ).first()
+
+    if not meta_connection:
+        return MetaCAPITestResponse(
+            success=False,
+            message="No active Meta connection found",
+            error="Connect a Meta ad account first in Settings",
+        )
+
+    # Get pixel ID
+    pixel_id = meta_connection.meta_pixel_id
+    if not pixel_id:
+        return MetaCAPITestResponse(
+            success=False,
+            message="No pixel configured for this Meta connection",
+            error="Configure a CAPI pixel in Settings → Meta connection → Configure",
+        )
+
+    # Get access token
+    access_token = get_decrypted_token(db, meta_connection.id, "access")
+    if not access_token:
+        return MetaCAPITestResponse(
+            success=False,
+            message="No valid access token",
+            error="Please reconnect your Meta account",
+        )
+
+    # Send test event
+    try:
+        import uuid
+        service = MetaCAPIService(pixel_id=pixel_id, access_token=access_token)
+        result = await service.send_purchase_event(
+            event_id=f"test_{uuid.uuid4().hex[:8]}",
+            value=Decimal(str(payload.value)),
+            currency=payload.currency,
+            email="test@example.com",
+            order_id=f"TEST-{uuid.uuid4().hex[:8].upper()}",
+            test_event_code=payload.test_event_code,
+        )
+
+        events_received = result.get("events_received", 0) if result else 0
+
+        if events_received > 0:
+            return MetaCAPITestResponse(
+                success=True,
+                message=f"Test event sent successfully! Check Meta Events Manager.",
+                pixel_id=pixel_id,
+                events_received=events_received,
+            )
+        else:
+            return MetaCAPITestResponse(
+                success=False,
+                message="Event sent but Meta reported 0 events received",
+                pixel_id=pixel_id,
+                events_received=0,
+                error=str(result) if result else "No response from Meta",
+            )
+
+    except MetaCAPIError as e:
+        logger.error(f"[META_CAPI_TEST] Failed: {e}")
+        return MetaCAPITestResponse(
+            success=False,
+            message="Failed to send test event",
+            pixel_id=pixel_id,
+            error=str(e),
+        )
+    except Exception as e:
+        logger.exception(f"[META_CAPI_TEST] Unexpected error: {e}")
+        return MetaCAPITestResponse(
+            success=False,
+            message="Unexpected error",
+            error=str(e),
+        )

@@ -65,6 +65,54 @@ OBJECTIVE_TO_GOAL = {
 }
 
 
+def _parse_url_tags(url_tags: str) -> Dict[str, Any]:
+    """Parse url_tags string to detect UTM parameters.
+
+    WHAT:
+        Parses Meta AdCreative url_tags to detect UTM parameter configuration.
+        Returns structured data about which UTM params are present.
+
+    WHY:
+        Enables proactive attribution warnings. If ads don't have UTM params,
+        we can warn users before they spend money without proper tracking.
+
+    REFERENCES:
+        - docs/living-docs/FRONTEND_REFACTOR_PLAN.md (UTM detection feature)
+
+    Args:
+        url_tags: URL tags string from Meta AdCreative (e.g., "utm_source=fb&utm_campaign=test")
+
+    Returns:
+        Dictionary with tracking info:
+            - url_tags: Raw URL tags string
+            - has_utm_source: Whether utm_source is present
+            - has_utm_medium: Whether utm_medium is present
+            - has_utm_campaign: Whether utm_campaign is present
+            - detected_params: List of detected UTM param names
+    """
+    url_tags_lower = url_tags.lower()
+
+    # Check for standard UTM parameters
+    detected_params = []
+    utm_params = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]
+
+    for param in utm_params:
+        if param in url_tags_lower:
+            detected_params.append(param)
+
+    # Also check for fbclid (Meta's click ID)
+    if "fbclid" in url_tags_lower:
+        detected_params.append("fbclid")
+
+    return {
+        "url_tags": url_tags,
+        "has_utm_source": "utm_source" in url_tags_lower,
+        "has_utm_medium": "utm_medium" in url_tags_lower,
+        "has_utm_campaign": "utm_campaign" in url_tags_lower,
+        "detected_params": detected_params,
+    }
+
+
 def sync_meta_entities(
     db: Session,
     workspace_id: UUID,
@@ -182,21 +230,38 @@ def sync_meta_entities(
                     thumbnail_url = None
                     image_url = None
                     media_type = None
+                    tracking_params = None
 
                     creative_ref = ad_data.get("creative")
-                    if creative_ref and isinstance(creative_ref, dict):
-                        creative_id = creative_ref.get("id")
-                        if creative_id:
-                            creative_details = client.get_creative_details(creative_id)
-                            if creative_details:
-                                thumbnail_url = creative_details.get("thumbnail_url")
-                                image_url = creative_details.get("image_url")
-                                media_type_str = creative_details.get("media_type")
-                                if media_type_str:
-                                    try:
-                                        media_type = MediaTypeEnum(media_type_str)
-                                    except ValueError:
-                                        media_type = MediaTypeEnum.unknown
+                    # Note: creative_ref can be a dict OR an AdCreative object from SDK
+                    # Both support .get("id") or have an "id" key/attribute
+                    creative_id = None
+                    if creative_ref:
+                        if isinstance(creative_ref, dict):
+                            creative_id = creative_ref.get("id")
+                        elif hasattr(creative_ref, "get"):
+                            # AdCreative object from Meta SDK
+                            creative_id = creative_ref.get("id")
+                        elif hasattr(creative_ref, "id"):
+                            creative_id = creative_ref.id
+                    if creative_id:
+                        creative_details = client.get_creative_details(creative_id)
+                        if creative_details:
+                            thumbnail_url = creative_details.get("thumbnail_url")
+                            image_url = creative_details.get("image_url")
+                            media_type_str = creative_details.get("media_type")
+                            if media_type_str:
+                                try:
+                                    media_type = MediaTypeEnum(media_type_str)
+                                except ValueError:
+                                    media_type = MediaTypeEnum.unknown
+
+                            # Extract tracking params from url_tags for UTM detection
+                            # WHY: Enables proactive attribution warnings
+                            # url_tags is on AdCreative, not Ad
+                            url_tags = creative_details.get("url_tags")
+                            if url_tags:
+                                tracking_params = _parse_url_tags(url_tags)
 
                     _, ad_created = _upsert_entity(
                         db=db,
@@ -209,6 +274,7 @@ def sync_meta_entities(
                         thumbnail_url=thumbnail_url,
                         image_url=image_url,
                         media_type=media_type,
+                        tracking_params=tracking_params,
                     )
 
                     if ad_created:
@@ -604,6 +670,7 @@ def _upsert_entity(
     thumbnail_url: Optional[str] = None,
     image_url: Optional[str] = None,
     media_type: Optional[MediaTypeEnum] = None,
+    tracking_params: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Entity, bool]:
     """UPSERT entity by external_id + connection_id (idempotent).
 
@@ -619,6 +686,7 @@ def _upsert_entity(
         thumbnail_url: Optional creative thumbnail URL (ad-level only, Meta only)
         image_url: Optional creative full-size image URL (ad-level only, Meta only)
         media_type: Optional media type (image, video, carousel)
+        tracking_params: Optional URL tracking configuration (utm_source, etc.)
 
     Returns:
         Tuple of (entity, was_created)
@@ -646,6 +714,9 @@ def _upsert_entity(
             entity.image_url = image_url
         if media_type is not None:
             entity.media_type = media_type
+        # Update tracking params for UTM detection
+        if tracking_params is not None:
+            entity.tracking_params = tracking_params
         entity.updated_at = datetime.utcnow()
         logger.debug(
             "[META_SYNC] Updated entity: %s (%s)", external_id, level.value
@@ -664,6 +735,7 @@ def _upsert_entity(
             thumbnail_url=thumbnail_url,
             image_url=image_url,
             media_type=media_type,
+            tracking_params=tracking_params,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )

@@ -396,9 +396,133 @@ class TestGetInsights:
         assert "Invalid request" in str(exc_info.value)
 
 
+class TestExtractTrackingParams:
+    """Test UTM tracking parameter extraction from Meta ads.
+
+    WHAT: Tests the _extract_tracking_params helper method
+    WHY: Proactive UTM detection enables warnings before orders come in
+    REFERENCES: docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+    """
+
+    @patch('app.services.meta_ads_client.FacebookAdsApi')
+    def test_extract_tracking_params_with_full_utm(self, mock_api):
+        """WHAT: Should detect all UTM parameters.
+        WHY: Full UTM setup is the ideal attribution configuration.
+        """
+        client = MetaAdsClient(access_token="test_token")
+
+        ad_dict = {
+            "url_tags": "utm_source=facebook&utm_medium=cpc&utm_campaign={{campaign.name}}&utm_content={{ad.name}}"
+        }
+
+        result = client._extract_tracking_params(ad_dict)
+
+        assert result is not None
+        assert result["has_utm_source"] is True
+        assert result["has_utm_medium"] is True
+        assert result["has_utm_campaign"] is True
+        assert "utm_source" in result["detected_params"]
+        assert "utm_medium" in result["detected_params"]
+        assert "utm_campaign" in result["detected_params"]
+        assert "utm_content" in result["detected_params"]
+
+    @patch('app.services.meta_ads_client.FacebookAdsApi')
+    def test_extract_tracking_params_with_partial_utm(self, mock_api):
+        """WHAT: Should detect partial UTM setup.
+        WHY: Some advertisers only use utm_source and utm_campaign.
+        """
+        client = MetaAdsClient(access_token="test_token")
+
+        ad_dict = {
+            "url_tags": "utm_source=fb&utm_campaign=sale2024"
+        }
+
+        result = client._extract_tracking_params(ad_dict)
+
+        assert result is not None
+        assert result["has_utm_source"] is True
+        assert result["has_utm_medium"] is False
+        assert result["has_utm_campaign"] is True
+        assert len(result["detected_params"]) == 2
+
+    @patch('app.services.meta_ads_client.FacebookAdsApi')
+    def test_extract_tracking_params_with_fbclid(self, mock_api):
+        """WHAT: Should detect fbclid parameter.
+        WHY: fbclid is Meta's automatic click ID for tracking.
+        """
+        client = MetaAdsClient(access_token="test_token")
+
+        ad_dict = {
+            "url_tags": "fbclid={{ad.id}}"
+        }
+
+        result = client._extract_tracking_params(ad_dict)
+
+        assert result is not None
+        assert "fbclid" in result["detected_params"]
+
+    @patch('app.services.meta_ads_client.FacebookAdsApi')
+    def test_extract_tracking_params_case_insensitive(self, mock_api):
+        """WHAT: Should detect UTM params regardless of case.
+        WHY: URL parameters can be in any case.
+        """
+        client = MetaAdsClient(access_token="test_token")
+
+        ad_dict = {
+            "url_tags": "UTM_SOURCE=Facebook&UTM_CAMPAIGN=Test"
+        }
+
+        result = client._extract_tracking_params(ad_dict)
+
+        assert result is not None
+        assert result["has_utm_source"] is True
+        assert result["has_utm_campaign"] is True
+
+    @patch('app.services.meta_ads_client.FacebookAdsApi')
+    def test_extract_tracking_params_no_url_tags(self, mock_api):
+        """WHAT: Should return None when no url_tags.
+        WHY: Ads without URL tags have no tracking configured.
+        """
+        client = MetaAdsClient(access_token="test_token")
+
+        ad_dict = {}
+
+        result = client._extract_tracking_params(ad_dict)
+
+        assert result is None
+
+    @patch('app.services.meta_ads_client.FacebookAdsApi')
+    def test_extract_tracking_params_empty_url_tags(self, mock_api):
+        """WHAT: Should return None for empty url_tags.
+        WHY: Empty string means no tracking configured.
+        """
+        client = MetaAdsClient(access_token="test_token")
+
+        ad_dict = {"url_tags": ""}
+
+        result = client._extract_tracking_params(ad_dict)
+
+        assert result is None
+
+    @patch('app.services.meta_ads_client.FacebookAdsApi')
+    def test_extract_tracking_params_preserves_raw_url_tags(self, mock_api):
+        """WHAT: Should include raw url_tags in result.
+        WHY: Useful for debugging and displaying to users.
+        """
+        client = MetaAdsClient(access_token="test_token")
+
+        original_url_tags = "utm_source=facebook&custom_param=test"
+        ad_dict = {"url_tags": original_url_tags}
+
+        result = client._extract_tracking_params(ad_dict)
+
+        assert result is not None
+        assert result["url_tags"] == original_url_tags
+
+
 class TestErrorHandling:
     """Test error handling and exception mapping."""
-    
+
     @patch('app.services.meta_ads_client.FacebookAdsApi')
     @patch('app.services.meta_ads_client.AdAccount')
     def test_rate_limit_error_handling(self, mock_account_class, mock_api):

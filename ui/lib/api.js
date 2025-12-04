@@ -198,6 +198,253 @@ export async function fetchQA({ workspaceId, question, context = {}, maxRetries 
   throw new Error("QA job polling timeout - job took too long to complete");
 }
 
+// =============================================================================
+// AGENTIC COPILOT ENDPOINT (NEW - v4.0)
+// =============================================================================
+// WHAT: Uses LangGraph agent with Claude for fully agentic responses
+// WHY: Understands natural language better, handles "why" questions,
+//      provides insightful analysis, not just data retrieval.
+//
+// This is a SYNCHRONOUS endpoint for simplicity.
+// Use /qa/agent + /qa/agent/stream/{job_id} for streaming in production.
+//
+// REFERENCES:
+// - backend/app/agent/ (LangGraph agent)
+// - backend/app/routers/qa.py (POST /qa/agent/sync)
+export async function fetchQAAgent({ workspaceId, question, context = {}, onStage, onToken }) {
+  console.log('[fetchQAAgent] Starting SSE request:', { workspaceId, question });
+
+  // Append context to question if provided
+  let finalQuestion = question;
+  if (context && Object.keys(context).length > 0) {
+    const contextStr = Object.entries(context)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+    finalQuestion = `${question} (Context: ${contextStr})`;
+  }
+
+  // Notify stage
+  onStage?.('understanding');
+
+  const res = await fetch(`${BASE}/qa/agent/sse?workspace_id=${workspaceId}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: finalQuestion })
+  });
+
+  console.log('[fetchQAAgent] Response status:', res.status);
+
+  if (!res.ok) {
+    const msg = await res.text();
+    console.error('[fetchQAAgent] Error:', res.status, msg);
+    throw new Error(`Agent QA failed: ${res.status} ${msg}`);
+  }
+
+  // Process SSE stream
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let finalResult = null;
+  let tokenCount = 0;
+
+  console.log('[fetchQAAgent] Starting stream processing...');
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      console.log('[fetchQAAgent] Stream complete. Total tokens:', tokenCount);
+      break;
+    }
+
+    const chunk = decoder.decode(value, { stream: true });
+    buffer += chunk;
+
+    // Split on double newline (SSE event separator)
+    const events = buffer.split('\n\n');
+    buffer = events.pop() || ''; // Keep incomplete event in buffer
+
+    for (const eventBlock of events) {
+      const lines = eventBlock.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const event = JSON.parse(line.slice(6));
+
+            switch (event.type) {
+              case 'thinking':
+                console.log('[fetchQAAgent] Thinking:', event.data);
+                onStage?.(event.data);
+                break;
+              case 'token':
+                tokenCount++;
+                // Stream token to callback for typing effect
+                if (onToken) {
+                  onToken(event.data);
+                }
+                break;
+              case 'visual':
+                console.log('[fetchQAAgent] Received visuals');
+                break;
+              case 'done':
+                console.log('[fetchQAAgent] Done! Intent:', event.data?.intent, 'Tokens received:', tokenCount);
+                finalResult = event.data;
+                break;
+              case 'error':
+                console.error('[fetchQAAgent] Error:', event.data);
+                throw new Error(event.data);
+            }
+          } catch (e) {
+            if (!e.message?.includes(event?.data)) {
+              console.warn('[fetchQAAgent] Parse error:', e.message, 'Line:', line.substring(0, 50));
+            } else {
+              throw e;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!finalResult) {
+    throw new Error('No result received from agent');
+  }
+
+  // Map agent response to expected format
+  return {
+    answer: finalResult.answer,
+    executed_dsl: finalResult.semantic_query,
+    data: finalResult.data,
+    visuals: finalResult.visuals,
+    context_used: [],
+    intent: finalResult.intent,
+    error: finalResult.error
+  };
+}
+
+
+// =============================================================================
+// SEMANTIC QA ENDPOINT (v3.0 - fallback)
+// =============================================================================
+// WHAT: Uses the new Semantic Layer for composable queries
+// WHY: Enables queries that were impossible before:
+//      - "Compare CPC for top 3 ads this week vs last week" (breakdown + comparison)
+//      - "Graph daily spend for top 5 campaigns" (breakdown + timeseries)
+//
+// This is a SYNCHRONOUS endpoint (no Redis queue, no SSE streaming).
+// Simpler and faster for most queries.
+//
+// REFERENCES:
+// - backend/app/services/semantic_qa_service.py
+// - backend/app/semantic/ (the semantic layer)
+export async function fetchQASemantic({ workspaceId, question, context = {}, onStage }) {
+  console.log('[fetchQASemantic] Starting request:', { workspaceId, question });
+
+  // Append context to question if provided
+  let finalQuestion = question;
+  if (context && Object.keys(context).length > 0) {
+    const contextStr = Object.entries(context)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+    finalQuestion = `${question} (Context: ${contextStr})`;
+  }
+
+  // Notify stage (semantic is synchronous, so just show "processing")
+  onStage?.('processing');
+
+  const res = await fetch(`${BASE}/qa/semantic?workspace_id=${workspaceId}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: finalQuestion })
+  });
+
+  console.log('[fetchQASemantic] Response status:', res.status);
+
+  if (!res.ok) {
+    const msg = await res.text();
+    console.error('[fetchQASemantic] Error:', res.status, msg);
+    throw new Error(`Semantic QA failed: ${res.status} ${msg}`);
+  }
+
+  const result = await res.json();
+  console.log('[fetchQASemantic] Success! Has visuals:', !!result.visuals, 'Strategy:', result.telemetry?.strategy);
+
+  // Map semantic response to expected format
+  return {
+    answer: result.answer,
+    executed_dsl: result.query,  // Semantic uses 'query' not 'executed_dsl'
+    data: result.data,
+    visuals: result.visuals,
+    context_used: [],
+    // NEW: Semantic-specific fields
+    telemetry: result.telemetry,
+    error: result.error
+  };
+}
+
+
+// =============================================================================
+// INSIGHTS ENDPOINT (Lightweight, no visuals)
+// =============================================================================
+//
+// WHAT: Fetches AI-generated text insights WITHOUT visual generation.
+// WHY: Optimized for dashboard widgets where visuals are already rendered.
+//
+// BENEFITS:
+// - Faster response (skips visual building)
+// - Lower token usage
+// - Concise 2-3 sentence answers
+//
+// USAGE:
+//   const insight = await fetchInsights({
+//     workspaceId: '...',
+//     question: 'What is my biggest performance drop this week?',
+//     metricsData: { ... }  // Optional: pre-fetched metrics for context
+//   });
+//
+// REFERENCES:
+// - backend/app/routers/qa.py (POST /qa/insights)
+export async function fetchInsights({ workspaceId, question, metricsData = null }) {
+  console.log('[fetchInsights] Starting request:', { workspaceId, question: question.substring(0, 50) + '...' });
+
+  const body = { question };
+  if (metricsData) {
+    body.metrics_data = metricsData;
+  }
+
+  const res = await fetch(`${BASE}/qa/insights?workspace_id=${workspaceId}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  console.log('[fetchInsights] Response status:', res.status);
+
+  if (!res.ok) {
+    const msg = await res.text();
+    console.error('[fetchInsights] Error:', res.status, msg);
+    throw new Error(`Insights request failed: ${res.status} ${msg}`);
+  }
+
+  const result = await res.json();
+  console.log('[fetchInsights] Success:', result.success);
+
+  if (!result.success) {
+    throw new Error(result.answer || 'Failed to generate insight');
+  }
+
+  return {
+    answer: result.answer,
+    intent: result.intent,
+    // No visuals in insights response
+    visuals: null,
+    data: null
+  };
+}
+
+
 // SSE Streaming version of QA endpoint (v2.1).
 // WHAT: Uses Server-Sent Events for real-time progress updates instead of polling.
 // WHY: Better UX with live stage updates ("Understanding...", "Fetching...", "Preparing...")
@@ -318,6 +565,43 @@ export async function fetchWorkspaceInfo(workspaceId) {
   if (!res.ok) {
     const msg = await res.text();
     throw new Error(`Failed to load workspace info: ${res.status} ${msg}`);
+  }
+  return res.json();
+}
+
+/**
+ * Fetch workspace connection status for conditional UI rendering.
+ *
+ * WHAT: Returns flags indicating which platforms are connected
+ * WHY: Frontend uses this to show/hide attribution components
+ *
+ * @param {string} workspaceId - Workspace UUID
+ * @returns {Promise<{
+ *   has_shopify: boolean,
+ *   has_ad_platform: boolean,
+ *   connected_platforms: string[],
+ *   attribution_ready: boolean
+ * }>}
+ *
+ * REFERENCES:
+ *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+ *   - backend/app/routers/workspaces.py (get_workspace_status)
+ *
+ * Example:
+ *   const status = await fetchWorkspaceStatus(workspaceId);
+ *   if (status.has_shopify) {
+ *     // Show attribution widgets
+ *   }
+ */
+export async function fetchWorkspaceStatus({ workspaceId }) {
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/status`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch workspace status: ${res.status} ${msg}`);
   }
   return res.json();
 }

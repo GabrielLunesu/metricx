@@ -4,11 +4,11 @@
  * useQA Hook
  * ==========
  *
- * WHAT: React hook for QA queries with built-in caching and SSE streaming.
+ * WHAT: React hook for QA queries with built-in caching using the Semantic Layer.
  *
  * WHY:
  *   - Centralizes QA fetching logic across all components
- *   - Uses SSE streaming by default (faster, fewer requests than polling)
+ *   - Uses the new Semantic Layer (synchronous, composable queries)
  *   - Built-in caching prevents redundant requests on page refresh
  *   - Deduplication prevents same question being asked simultaneously
  *   - Consistent loading/error state management
@@ -22,16 +22,23 @@
  *   });
  *
  * REFERENCES:
- *   - lib/api.js (fetchQAStream)
+ *   - lib/api.js (fetchQASemantic)
  *   - lib/qaCache.js (caching layer)
+ *   - backend/app/semantic/ (Semantic Layer)
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchQAStream, fetchQA } from '@/lib/api';
+import { fetchQAAgent, fetchQASemantic, fetchQAStream, fetchQA } from '@/lib/api';
 import { qaCache } from '@/lib/qaCache';
 
 /**
- * Custom hook for QA queries with caching and streaming.
+ * Custom hook for QA queries using the Semantic Layer.
+ *
+ * EXECUTION ORDER:
+ *   1. Check cache (if enabled)
+ *   2. Try Semantic Layer endpoint (synchronous, composable queries)
+ *   3. Fallback to SSE streaming (if semantic fails)
+ *   4. Final fallback to polling (if streaming fails)
  *
  * @param {Object} options - Hook options
  * @param {string} options.workspaceId - Workspace UUID
@@ -42,7 +49,7 @@ import { qaCache } from '@/lib/qaCache';
  * @param {Function} options.onStage - Optional callback for stage updates
  * @param {boolean} options.skipCache - Skip cache lookup (default: false)
  *
- * @returns {Object} { data, loading, error, stage, refetch }
+ * @returns {Object} { data, loading, error, stage, refetch, answer, visuals, executedDsl }
  */
 export function useQA({
   workspaceId,
@@ -117,15 +124,15 @@ export function useQA({
     // Create fetch promise
     const fetchPromise = (async () => {
       try {
-        // Use SSE streaming (preferred)
-        const result = await fetchQAStream({
+        // Use Agentic Copilot (preferred - LangGraph + Claude for natural understanding)
+        const result = await fetchQAAgent({
           workspaceId,
           question,
           context,
-          onStage: (newStage, jobId) => {
+          onStage: (newStage) => {
             if (mountedRef.current && requestIdRef.current === currentRequestId) {
               setStage(newStage);
-              onStage?.(newStage, jobId);
+              onStage?.(newStage);
             }
           }
         });
@@ -134,22 +141,60 @@ export function useQA({
         qaCache.set(workspaceId, question, result, cacheTTL);
 
         return result;
-      } catch (streamError) {
-        // Fallback to polling if streaming fails
-        console.warn('[useQA] Streaming failed, falling back to polling:', streamError.message);
+      } catch (agentError) {
+        // Fallback to Semantic Layer if agent fails
+        console.warn('[useQA] Agent failed, falling back to semantic layer:', agentError.message);
 
-        const result = await fetchQA({
-          workspaceId,
-          question,
-          context,
-          maxRetries: 30,
-          pollInterval: 1000  // Reduced from 2000ms
-        });
+        try {
+          const result = await fetchQASemantic({
+            workspaceId,
+            question,
+            context,
+            onStage: (newStage) => {
+              if (mountedRef.current && requestIdRef.current === currentRequestId) {
+                setStage(newStage);
+                onStage?.(newStage);
+              }
+            }
+          });
 
-        // Cache the result
-        qaCache.set(workspaceId, question, result, cacheTTL);
+          qaCache.set(workspaceId, question, result, cacheTTL);
+          return result;
+        } catch (semanticError) {
+          // Fallback to legacy SSE streaming if semantic layer fails
+          console.warn('[useQA] Semantic layer failed, falling back to streaming:', semanticError.message);
 
-        return result;
+          try {
+            const result = await fetchQAStream({
+              workspaceId,
+              question,
+              context,
+              onStage: (newStage, jobId) => {
+                if (mountedRef.current && requestIdRef.current === currentRequestId) {
+                  setStage(newStage);
+                  onStage?.(newStage, jobId);
+                }
+              }
+            });
+
+            qaCache.set(workspaceId, question, result, cacheTTL);
+            return result;
+          } catch (streamError) {
+            // Final fallback to polling
+            console.warn('[useQA] Streaming also failed, falling back to polling:', streamError.message);
+
+            const result = await fetchQA({
+              workspaceId,
+              question,
+              context,
+              maxRetries: 30,
+              pollInterval: 1000
+            });
+
+            qaCache.set(workspaceId, question, result, cacheTTL);
+            return result;
+          }
+        }
       }
     })();
 
@@ -241,8 +286,8 @@ export function useQAMultiple(queries, options = {}) {
       }
 
       try {
-        // Use streaming
-        const result = await fetchQAStream({
+        // Use Agentic Copilot (preferred)
+        const result = await fetchQAAgent({
           workspaceId,
           question,
           context,
@@ -254,13 +299,35 @@ export function useQAMultiple(queries, options = {}) {
 
         return { index, data: result, error: null };
       } catch (err) {
-        // Fallback to polling
+        // Fallback to Semantic Layer then streaming then polling
         try {
-          const result = await fetchQA({ workspaceId, question, context });
+          const result = await fetchQASemantic({
+            workspaceId,
+            question,
+            context,
+            onStage: () => {}
+          });
           qaCache.set(workspaceId, question, result, cacheTTL);
           return { index, data: result, error: null };
-        } catch (fallbackErr) {
-          return { index, data: null, error: fallbackErr.message };
+        } catch (semanticErr) {
+          try {
+            const result = await fetchQAStream({
+              workspaceId,
+              question,
+              context,
+              onStage: () => {}
+            });
+            qaCache.set(workspaceId, question, result, cacheTTL);
+            return { index, data: result, error: null };
+          } catch (streamErr) {
+            try {
+              const result = await fetchQA({ workspaceId, question, context });
+              qaCache.set(workspaceId, question, result, cacheTTL);
+              return { index, data: result, error: null };
+            } catch (fallbackErr) {
+              return { index, data: null, error: fallbackErr.message };
+            }
+          }
         }
       }
     });

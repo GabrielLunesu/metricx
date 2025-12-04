@@ -56,25 +56,6 @@ const PLATFORM_TEMPLATES = {
         ],
         docsUrl: 'https://support.google.com/google-ads/answer/6305348'
     },
-    tiktok: {
-        name: 'TikTok Ads',
-        icon: '🎵',
-        description: 'TikTok For Business',
-        template: `?utm_source=tiktok&utm_medium=paid&utm_campaign=__CAMPAIGN_NAME__&utm_content=__AID_NAME__`,
-        steps: [
-            'Go to TikTok Ads Manager',
-            'Select your Campaign → Ad Group → Ad',
-            'In the "Destination" section, find "URL Parameters"',
-            'Add the UTM parameters using TikTok\'s dynamic macros',
-            'TikTok will replace __CAMPAIGN_NAME__ with actual values'
-        ],
-        tips: [
-            'TikTok uses double underscore syntax like __CAMPAIGN_NAME__',
-            'ttclid is automatically added by TikTok for click tracking',
-            'Test your tracking URLs before launching campaigns'
-        ],
-        docsUrl: 'https://ads.tiktok.com/help/article/url-tracking-parameters'
-    },
     manual: {
         name: 'Manual / Other',
         icon: '✏️',

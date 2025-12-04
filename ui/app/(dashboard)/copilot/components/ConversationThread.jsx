@@ -142,20 +142,21 @@ function UserMessage({ text }) {
   );
 }
 
-// Conversation Thread (v2.1)
-// WHAT: Main conversation container with messages and loading states
-// WHY: Displays chat history with real-time stage updates during processing
+// Conversation Thread (v4.0)
+// WHAT: Main conversation container with messages and streaming typing effect
+// WHY: Displays chat history with real-time token streaming for natural feel
 // PROPS:
 //   - messages: Array of user/ai messages
 //   - isLoading: Boolean for loading state
 //   - stage: Current processing stage (from SSE streaming)
-export default function ConversationThread({ messages = [], isLoading, stage }) {
+//   - streamingText: Text being streamed token-by-token (typing effect)
+export default function ConversationThread({ messages = [], isLoading, stage, streamingText = '' }) {
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll to bottom when new message arrives or stage changes
+  // Auto-scroll to bottom when new message arrives, stage changes, or streaming text updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, isLoading, stage]);
+  }, [messages.length, isLoading, stage, streamingText]);
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-8 flex flex-col gap-8">
@@ -219,7 +220,7 @@ export default function ConversationThread({ messages = [], isLoading, stage }) 
         ))}
       </AnimatePresence>
 
-      {/* Loading indicator with real-time stage updates (v2.1) */}
+      {/* Loading indicator with streaming text (v4.0) */}
       <AnimatePresence>
         {isLoading && (
           <motion.div
@@ -228,7 +229,13 @@ export default function ConversationThread({ messages = [], isLoading, stage }) 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9 }}
           >
-            <AIMessage isTyping={true} stage={stage} />
+            {streamingText ? (
+              // Show streaming text with typing cursor
+              <AIMessage text={streamingText + '<span class="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse"></span>'} />
+            ) : (
+              // Show stage indicator while waiting for tokens
+              <AIMessage isTyping={true} stage={stage} />
+            )}
           </motion.div>
         )}
       </AnimatePresence>

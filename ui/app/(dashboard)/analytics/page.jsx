@@ -1,5 +1,23 @@
+/**
+ * Analytics Page - Deep dive into ad performance data.
+ *
+ * WHAT: Advanced analytics with graphs, intelligence zone, and drill-down capabilities
+ * WHY: Users need detailed analysis tools beyond the dashboard summary
+ *
+ * FEATURES:
+ *   - KPI strip with key metrics
+ *   - Graph engine for visualizations
+ *   - Intelligence zone for AI insights
+ *   - Attribution unlock widget (shows when Shopify is connected)
+ *
+ * REFERENCES:
+ *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+ *   - /analytics/attribution page (accessible via widget when Shopify connected)
+ */
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Target, ChevronRight, Lock } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 
 // New Components
@@ -10,12 +28,16 @@ import AnalyticsIntelligenceZone from "./components/AnalyticsIntelligenceZone";
 import AnalyticsCustomDashboards from "./components/AnalyticsCustomDashboards";
 import AnalyticsDrillDown from "./components/AnalyticsDrillDown";
 import FilterModal from './components/FilterModal';
-import { fetchWorkspaceKpis, fetchWorkspaceProviders } from '@/lib/api';
+import { fetchWorkspaceKpis, fetchWorkspaceProviders, fetchWorkspaceStatus } from '@/lib/api';
 
 export default function AnalyticsPage() {
   // User & workspace
   const [user, setUser] = useState(null);
   const [workspaceId, setWorkspaceId] = useState(null);
+
+  // Workspace status for conditional rendering (Attribution widget)
+  // WHY: Only show Attribution unlock if Shopify is connected
+  const [status, setStatus] = useState(null);
 
   // Top filter state
   const [providers, setProviders] = useState([]);
@@ -46,6 +68,18 @@ export default function AnalyticsPage() {
         setUser(u);
         setWorkspaceId(u?.workspace_id);
         setLoading(false);
+
+        // Fetch workspace status for conditional UI (Attribution widget)
+        if (u?.workspace_id) {
+          fetchWorkspaceStatus({ workspaceId: u.workspace_id })
+            .then((s) => {
+              if (mounted) setStatus(s);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch workspace status:", err);
+              // Don't block analytics if status fetch fails
+            });
+        }
       })
       .catch((err) => {
         console.error("Failed to get user:", err);
@@ -152,6 +186,65 @@ export default function AnalyticsPage() {
             campaignId={selectedCampaign?.id}
             campaignName={selectedCampaign?.name}
           />
+        </div>
+
+        {/* Attribution Unlock Widget */}
+        {/* WHY: Attribution is a premium feature unlocked with Shopify connection.
+            Shows clickable card when Shopify is connected, locked card when not.
+            Reference: docs/living-docs/FRONTEND_REFACTOR_PLAN.md */}
+        <div className="mt-6">
+          {status?.has_shopify ? (
+            <Link
+              href="/analytics/attribution"
+              className="block glass-panel p-5 rounded-2xl hover:ring-2 ring-cyan-200/50 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-lg shadow-cyan-500/20">
+                    <Target className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-900 text-lg">Attribution Analytics</h3>
+                    <p className="text-sm text-neutral-500">
+                      See which channels and campaigns drive your verified revenue
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-6 h-6 text-neutral-400 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" />
+              </div>
+              {status?.attribution_ready && (
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs text-emerald-600 font-medium">Pixel active - receiving events</span>
+                </div>
+              )}
+            </Link>
+          ) : (
+            <div className="glass-panel p-5 rounded-2xl opacity-70">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-neutral-200">
+                    <Target className="w-6 h-6 text-neutral-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-neutral-500 text-lg">Attribution Analytics</h3>
+                    <p className="text-sm text-neutral-400">
+                      Connect Shopify to unlock verified revenue attribution
+                    </p>
+                  </div>
+                </div>
+                <Lock className="w-5 h-5 text-neutral-300" />
+              </div>
+              <div className="mt-3">
+                <Link
+                  href="/settings?tab=connections"
+                  className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
+                >
+                  Connect Shopify →
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Custom Dashboards (Removed for now) */}

@@ -1,6 +1,43 @@
 # metricx — Living Build Log
 
-_Last updated: 2025-11-25T13:05:00Z_
+_Last updated: 2025-12-02_
+
+---
+
+## Strategic Vision (2025-12-02)
+
+### Ad Analytics Platform First. Attribution Second.
+
+**This one decision unblocks everything.**
+
+We're building an ad analytics platform that helps merchants get the most out of their advertising spend. Attribution is a premium enhancement layer, not a gatekeeper.
+
+### What This Means Practically
+
+**Primary (front and center):**
+- **Dashboard** → Ad performance, spend, ROAS (platform-reported), AI insights
+- **Analytics** → Deep dive, campaign comparisons, trends
+- **P&L** → Profitability view
+- **Campaigns** → Manage and monitor
+
+**Secondary (there, but not in your face):**
+- **Attribution** → Settings/setup thing, a "verification layer" that enhances your numbers
+- **UTM setup, pixel config, Shopify connection** → Lives in Settings or "Integrations" area
+- **Attribution warnings** → Only surface when Shopify is connected but something's misconfigured
+
+### The Unlocks
+
+1. **Onboarding gets simpler**: "Connect Meta + Google" → done, you're in
+2. **Dashboard isn't full of empty boxes**: Platform data is the baseline, attribution enhances it
+3. **Stop apologizing for missing attribution data**: It's an upgrade, not a requirement
+4. **Shopify users get a "premium" feeling**: Their data is verified
+5. **We can go live now**: Without everything needing to be perfect
+
+### The Goal
+
+**Help merchants understand and optimize their ad spend.** Attribution is the cherry on top, not the cake. People should get the most out of their ads!
+
+---
 
 ## 0) Monorepo Map (Current & Planned)
 - **Frontend (current):** `ui/` — Next.js 15.5.4 (App Router), **JSX only**

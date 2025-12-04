@@ -1,20 +1,39 @@
 # metricx Architecture Documentation
 
-**Last Updated**: 2025-11-28
-**Version**: 1.1
+**Last Updated**: 2025-12-02
+**Version**: 1.2
 
 ## Overview
 
-metricx is a comprehensive advertising analytics and optimization platform that aggregates data from multiple ad platforms (Meta Ads, Google Ads, TikTok) and e-commerce platforms (Shopify), providing AI-powered insights through natural language queries.
+metricx is an **ad analytics platform first** that helps merchants get the most out of their advertising spend. We aggregate data from multiple ad platforms (Meta Ads, Google Ads, TikTok) and optionally enhance it with e-commerce data (Shopify) for verified attribution.
+
+### Strategic Focus: Ad Analytics First, Attribution Second
+
+**Primary Features** (front and center):
+- **Dashboard** → Ad performance, spend, ROAS (platform-reported), AI insights
+- **Analytics** → Deep dive, campaign comparisons, trends
+- **P&L** → Profitability view
+- **Campaigns** → Manage and monitor
+
+**Secondary Features** (enhancement layer):
+- **Attribution** → Verification layer that enhances numbers when Shopify is connected
+- **Pixel/UTM Config** → Lives in Settings/Integrations
+- **Attribution Warnings** → Only surfaces when something's misconfigured
+
+This focus means:
+1. Onboarding = "Connect Meta + Google" → done
+2. Dashboard shows value immediately (no empty boxes waiting for attribution)
+3. Shopify users get verified data as a premium enhancement
 
 ### Core Capabilities
 
-- **Multi-Platform Integration**: Meta Ads, Google Ads, TikTok, Shopify
+- **Multi-Platform Integration**: Meta Ads, Google Ads, TikTok, Shopify (optional)
 - **AI-Powered Analytics**: Natural language query system (QA/Copilot)
 - **Real-Time Metrics**: Unified metric calculations across all platforms
 - **Financial Reporting**: P&L statements with manual cost tracking
 - **Campaign Management**: Hierarchical entity management (Campaign → Ad Set → Ad → Creative)
 - **Automated Sync**: Scheduled data synchronization from ad platforms
+- **Attribution Engine**: Optional Shopify integration for verified order attribution (see `docs/living-docs/ATTRIBUTION_ENGINE.md`)
 
 ---
 

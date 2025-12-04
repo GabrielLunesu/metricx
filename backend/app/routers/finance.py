@@ -462,20 +462,20 @@ def get_financial_insight(
     
     # Construct QA question
     question = f"Give me a financial breakdown of {req.month} {req.year}"
-    
-    # Call QA service
-    from app.services.qa_service import QAService
-    qa_service = QAService(db)
-    
+
+    # Call Semantic QA service (v3.0+ - replaced legacy QAService)
+    from app.services.semantic_qa_service import SemanticQAService
+    qa_service = SemanticQAService(db)
+
     try:
-        result = qa_service.ask(
+        result = qa_service.answer(
             question=question,
             workspace_id=str(workspace_id),
             user_id=str(current_user.id)
         )
-        
+
         return schemas.FinancialInsightResponse(
-            message=result.answer
+            message=result.get("answer", "No insight available.")
         )
     except Exception as e:
         # Fallback message

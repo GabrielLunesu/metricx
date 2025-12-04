@@ -1,3 +1,16 @@
+/**
+ * Campaigns Page - Campaign management and performance view.
+ *
+ * WHAT: Lists all campaigns with performance metrics
+ * WHY: Users need to see and manage their campaigns in one place
+ *
+ * NOTE: Attribution warnings have been moved to Settings > Attribution
+ * per the "Ad Analytics First, Attribution Second" strategy.
+ * See: .claude/CLAUDE.md
+ *
+ * REFERENCES:
+ *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+ */
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { currentUser } from "@/lib/auth";
@@ -5,8 +18,6 @@ import { campaignsApiClient, campaignsAdapter } from "../../../lib";
 import TopToolbar from "./components/TopToolbar";
 import CampaignTableHeader from "./components/CampaignTableHeader";
 import CampaignRow from "./components/CampaignRow";
-import CampaignWarningsPanel from "./components/CampaignWarningsPanel";
-// import ActiveRulesPanel from "./components/ActiveRulesPanel"; // Not part of this task
 import Card from "../../../components/Card";
 import { useRouter } from "next/navigation";
 
@@ -35,7 +46,7 @@ export default function CampaignsPage() {
     pageSize: 8,
   });
 
-  // Fetch user and workspace ID on mount
+  // Fetch user on mount
   useEffect(() => {
     let mounted = true;
     currentUser()
@@ -183,9 +194,6 @@ export default function CampaignsPage() {
         summary={summary}
       />
 
-      {/* Attribution Warnings Panel */}
-      <CampaignWarningsPanel workspaceId={workspaceId} />
-
       <div className="rounded-[24px] border border-slate-200 bg-white shadow-lg shadow-slate-200/50 overflow-hidden relative">
         <CampaignTableHeader />
 
@@ -226,7 +234,7 @@ export default function CampaignsPage() {
 
         {/* Pagination */}
         {!loading && !error && rows.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-3 text-[11px] text-slate-400 border-t border-slate-100 bg-slate-50/60">
+          <div className="flex items-center justify-between px-6 py-3 text-[11px] text-slate-400 border-t border-slate-100 bg-white">
             <span>
               Showing{" "}
               {Math.min(
@@ -265,7 +273,7 @@ export default function CampaignsPage() {
         {selectedIds.size > 0 && (
           <div className="pointer-events-none">
             <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
-              <div className="flex items-center gap-4 px-6 py-3 bg-slate-900 text-white rounded-full shadow-xl shadow-slate-900/30 border border-slate-700/60">
+              <div className="flex items-center gap-4 px-6 py-3 bg-white text-white rounded-full shadow-xl shadow-slate-900/30 border border-slate-700/60">
                 <span className="text-xs font-medium text-slate-300 border-r border-slate-700 pr-4">
                   {selectedIds.size} selected
                 </span>

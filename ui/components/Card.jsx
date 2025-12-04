@@ -7,7 +7,7 @@ export default function Card({ className, children }) {
     <div
       className={cn(
         "rounded-xl p-4 md:p-6 card-surface shadow-soft",
-        "border border-slate-800/60 bg-slate-900/60 backdrop-blur",
+        "border border-slate-800/60 bg-white backdrop-blur",
         className
       )}
     >

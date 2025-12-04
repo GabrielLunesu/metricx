@@ -6,6 +6,7 @@ import { Settings, Loader2 } from 'lucide-react';
 import { currentUser } from '@/lib/auth';
 import SettingsTabs from './components/SettingsTabs';
 import ConnectionsTab from './components/ConnectionsTab';
+import AttributionTab from './components/AttributionTab';
 import ProfileTab from './components/ProfileTab';
 import UsersTab from './components/UsersTab';
 import WorkspacesTab from './components/WorkspacesTab';
@@ -19,7 +20,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['connections', 'profile', 'users', 'invites', 'workspaces'].includes(tabParam)) {
+    if (tabParam && ['connections', 'attribution', 'profile', 'users', 'invites', 'workspaces'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -54,6 +55,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'connections', label: 'Connections' },
+    { id: 'attribution', label: 'Attribution' },
     { id: 'profile', label: 'Profile' },
     { id: 'workspaces', label: 'Workspaces' },
     { id: 'users', label: 'Members' },
@@ -104,6 +106,7 @@ export default function SettingsPage() {
 
       <div className="mt-8">
         {activeTab === 'connections' && <ConnectionsTab user={user} />}
+        {activeTab === 'attribution' && <AttributionTab user={user} />}
         {activeTab === 'profile' && <ProfileTab user={user} />}
         {activeTab === 'workspaces' && <WorkspacesTab user={user} />}
         {activeTab === 'users' && <UsersTab user={user} />}

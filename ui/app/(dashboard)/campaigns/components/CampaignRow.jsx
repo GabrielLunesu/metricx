@@ -1,19 +1,31 @@
+/**
+ * CampaignRow - Single row in the campaigns table.
+ *
+ * WHAT: Displays campaign data in a clean, focused view
+ * WHY: Presentational component for campaign list
+ *
+ * NOTE: Attribution warnings have been moved to Settings > Attribution
+ * per the "Ad Analytics First, Attribution Second" strategy.
+ *
+ * PROPS:
+ *   - row: Campaign data from adapter
+ *   - selected: Whether row is selected
+ *   - onRowClick: Click handler
+ *   - onSelectToggle: Checkbox toggle handler
+ *
+ * REFERENCES:
+ *   - ui/app/(dashboard)/campaigns/page.jsx (parent)
+ *   - ui/lib/campaignsAdapter.js (data source)
+ */
 "use client";
 import PlatformBadge from "../../../../components/campaigns/PlatformBadge";
 import TrendSparkline from "../../../../components/campaigns/TrendSparkline";
-import StatusPill from "../../../../components/StatusPill"; // Global StatusPill
+import StatusPill from "../../../../components/StatusPill";
 import { Facebook, Search, Instagram, Youtube } from "lucide-react";
 
 function CellValue({ v }) {
   return <div className="text-right tabular-nums">{v || '—'}</div>;
 }
-
-// WHAT: Displays a single row in the Campaigns or Ad Sets table.
-// WHY: Presentational component, receives pre-formatted data from adapter.
-// REFERENCES:
-// - ui/app/(dashboard)/campaigns/page.jsx (parent)
-// - ui/app/(dashboard)/campaigns/[id]/page.jsx (parent)
-// - ui/lib/campaignsAdapter.js (data source)
 function CampaignIcon({ platform }) {
   const normalized =
     platform?.toLowerCase().replace(/\s+ads?$/i, "").trim() || "";
@@ -62,9 +74,8 @@ function CampaignIcon({ platform }) {
 export default function CampaignRow({ row, selected, onRowClick, onSelectToggle }) {
   return (
     <div
-      className={`grid grid-cols-[40px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,1fr)] gap-4 items-center px-6 md:px-8 py-4 cursor-pointer transition-all ${
-        selected ? "bg-cyan-50/40 border-l-2 border-l-cyan-400" : "hover:bg-slate-50/80"
-      }`}
+      className={`grid grid-cols-[40px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,1fr)] gap-4 items-center px-6 md:px-8 py-4 cursor-pointer transition-all ${selected ? "bg-cyan-50/40 border-l-2 border-l-cyan-400" : "hover:bg-slate-50/80"
+        }`}
       onClick={onRowClick}
     >
       {/* Checkbox */}
@@ -79,7 +90,7 @@ export default function CampaignRow({ row, selected, onRowClick, onSelectToggle 
           type="checkbox"
           className="custom-checkbox cursor-pointer"
           checked={!!selected}
-          onChange={() => {}}
+          onChange={() => { }}
           aria-label="Select campaign"
         />
       </div>
@@ -87,9 +98,9 @@ export default function CampaignRow({ row, selected, onRowClick, onSelectToggle 
       {/* Campaign name + icon */}
       <div className="flex items-center gap-3">
         <CampaignIcon platform={row.platform} />
-        <div>
-          <p className="text-sm font-semibold text-slate-900">{row.name}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-900 truncate">{row.name}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5 truncate">
             {row.display?.subtitle || "—"}
           </p>
         </div>

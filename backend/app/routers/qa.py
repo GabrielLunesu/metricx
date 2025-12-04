@@ -2,26 +2,26 @@
 QA Router
 ==========
 
-HTTP endpoint for natural language question answering using the DSL v1.1 pipeline.
+HTTP endpoint for natural language question answering using the Agentic Copilot.
 
-UPDATED v2.1: Now supports SSE streaming for real-time progress updates.
+VERSION 4.0 - Agentic Copilot with LangGraph + Claude
 
 Related files:
-- app/services/qa_service.py: Service layer
-- app/workers/qa_worker.py: Async job worker (with stage metadata)
+- app/agent/nodes.py: Agent nodes (understand, fetch_data, respond)
+- app/agent/tools.py: SemanticTools wrapper
+- app/agent/graph.py: LangGraph StateGraph
+- app/services/semantic_qa_service.py: Semantic QA service (fallback)
 - app/schemas.py: Request/response models
-- app/dsl/schema.py: DSL structure
 
-Architecture:
-- POST /qa: Enqueues job and returns job_id (polling mode)
-- GET /qa/jobs/{job_id}: Polls for job status/result (polling mode)
-- POST /qa/stream: SSE endpoint for real-time progress (streaming mode)
-- Uses Redis/RQ for job queue (same as sync jobs)
+Primary Endpoints (v4.0):
+- POST /qa/agent/sse: SSE streaming with typing effect (RECOMMENDED)
+- POST /qa/agent/sync: Synchronous agent (no streaming)
+- POST /qa/semantic: Direct semantic layer access
 
-SSE Streaming (NEW v2.1):
-- Frontend connects to /qa/stream
-- Server yields events as job progresses: translating → executing → formatting → complete
-- Eliminates polling overhead, provides better UX
+Legacy Endpoints (DEPRECATED):
+- POST /qa: Deprecated - use /qa/agent/sse
+- POST /qa/stream: Deprecated - use /qa/agent/sse
+- GET /qa/jobs/{job_id}: Deprecated
 """
 
 import asyncio
@@ -31,8 +31,11 @@ import logging
 import os
 from datetime import timedelta
 
+from typing import Any, Dict, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue
@@ -97,7 +100,7 @@ def _find_existing_job(redis_conn: Redis, queue: Queue, dedup_key: str) -> Job |
     return None
 
 
-@router.post("", response_model=QAJobResponse)
+@router.post("", response_model=QAJobResponse, deprecated=True)
 def ask_question(
     req: QARequest,
     workspace_id: str = Query(..., description="Workspace context for scoping queries"),
@@ -106,167 +109,37 @@ def ask_question(
 ):
     """
     POST /qa
-    
-    Enqueues a natural language question for async processing.
-    
-    Input:  { "question": "What's my ROAS this week?" }
-    Output: { "job_id": "...", "status": "queued" }
-    
-    Process:
-    1. Validates authentication and workspace access
-    2. Enqueues job to Redis queue
-    3. Returns job_id immediately (non-blocking)
-    4. Worker processes job asynchronously
-    5. Poll GET /qa/jobs/{job_id} for results
-    
-    Security:
-    - Requires authentication (current_user dependency)
-    - Workspace scoping enforced in worker
-    
-    Examples:
-        # Enqueue job
-        POST /qa?workspace_id=123...
-        { "question": "Show me revenue from active campaigns this month" }
-        
-        # Poll for result
-        GET /qa/jobs/{job_id}
+
+    DEPRECATED: Use POST /qa/agent/sse instead.
+
+    This endpoint used the legacy DSL-based QA system which has been replaced
+    by the Agentic Copilot (v4.0).
     """
-    try:
-        # Use shared Redis connection pool (avoids creating new connections per request)
-        if not state.redis_client or not state.qa_queue:
-            raise HTTPException(status_code=503, detail="Redis not available")
-
-        redis_conn = state.redis_client
-        queue = state.qa_queue
-
-        user_id = str(current_user.id)
-
-        # Check for duplicate job (same user, workspace, question)
-        dedup_key = _generate_dedup_key(user_id, workspace_id, req.question)
-        existing_job = _find_existing_job(redis_conn, queue, dedup_key)
-
-        if existing_job:
-            # Return existing job instead of creating duplicate
-            logger.info(f"[QA_ROUTER] Returning existing job {existing_job.id} (dedup)")
-            return QAJobResponse(
-                job_id=existing_job.id,
-                status="queued" if existing_job.is_queued else "processing"
-            )
-
-        # Enqueue new job with TTL and timeout
-        job = queue.enqueue(
-            "app.workers.qa_worker.process_qa_job",
-            question=req.question,
-            workspace_id=workspace_id,
-            user_id=user_id,
-            job_timeout=JOB_TIMEOUT_SECONDS,  # Job must complete in 2 min
-            result_ttl=JOB_TTL_SECONDS,  # Result kept for 5 min
-            ttl=JOB_TTL_SECONDS,  # Job expires if not started in 5 min
-        )
-
-        # Store dedup key → job_id mapping (expires after dedup window)
-        redis_conn.setex(dedup_key, DEDUP_WINDOW_SECONDS, job.id)
-
-        logger.info(f"[QA_ROUTER] Enqueued new job {job.id}")
-
-        return QAJobResponse(
-            job_id=job.id,
-            status="queued"
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to enqueue QA job: {str(e)}"
-        )
+    raise HTTPException(
+        status_code=410,
+        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming or POST /qa/agent/sync for synchronous responses."
+    )
 
 
-@router.get("/jobs/{job_id}", response_model=QAJobStatusResponse)
+@router.get("/jobs/{job_id}", response_model=QAJobStatusResponse, deprecated=True)
 def get_job_status(
     job_id: str,
     current_user=Depends(get_current_user),
 ):
     """
     GET /qa/jobs/{job_id}
-    
-    Poll for QA job status and results.
-    
-    Returns:
-    - status: "queued" | "processing" | "completed" | "failed"
-    - When completed: answer, executed_dsl, data, context_used
-    - When failed: error message
-    
-    Frontend should poll this endpoint every 1-2 seconds until
-    status is "completed" or "failed".
-    
-    Examples:
-        GET /qa/jobs/abc-123-def
-        
-        # Queued response:
-        { "job_id": "abc-123-def", "status": "queued" }
-        
-        # Completed response:
-        {
-          "job_id": "abc-123-def",
-          "status": "completed",
-          "answer": "Your ROAS this week is 2.45×",
-          "executed_dsl": {...},
-          "data": {...}
-        }
+
+    DEPRECATED: The job-based QA system has been replaced by streaming.
+
+    Use POST /qa/agent/sse for real-time streaming responses.
     """
-    try:
-        # Use shared Redis connection pool
-        if not state.redis_client:
-            raise HTTPException(status_code=503, detail="Redis not available")
-
-        # Fetch job
-        job = Job.fetch(job_id, connection=state.redis_client)
-        
-        # Map RQ status to our status
-        if job.is_queued:
-            status = "queued"
-        elif job.is_started:
-            status = "processing"
-        elif job.is_finished:
-            status = "completed"
-        elif job.is_failed:
-            status = "failed"
-        else:
-            status = "unknown"
-        
-        # Build response
-        response = QAJobStatusResponse(
-            job_id=job_id,
-            status=status
-        )
-        
-        # Add result data if completed
-        if job.is_finished and job.result:
-            result = job.result
-            if result.get("success"):
-                response.answer = result.get("answer")
-                response.executed_dsl = result.get("executed_dsl")
-                response.data = result.get("data")
-                response.context_used = result.get("context_used")
-                response.visuals = result.get("visuals")
-            else:
-                response.error = result.get("error", "Unknown error occurred")
-                response.status = "failed"
-        
-        # Add error if failed
-        elif job.is_failed:
-            response.error = str(job.exc_info) if job.exc_info else "Job failed"
-        
-        return response
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Job not found or error fetching status: {str(e)}"
-        )
+    raise HTTPException(
+        status_code=410,
+        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming responses."
+    )
 
 
-@router.post("/stream")
+@router.post("/stream", deprecated=True)
 async def ask_question_stream(
     req: QARequest,
     workspace_id: str = Query(..., description="Workspace context for scoping queries"),
@@ -275,156 +148,183 @@ async def ask_question_stream(
     """
     POST /qa/stream
 
-    SSE endpoint for real-time QA progress streaming.
+    DEPRECATED: Use POST /qa/agent/sse instead.
+
+    This endpoint used the legacy DSL-based QA worker which has been replaced
+    by the Agentic Copilot (v4.0).
+    """
+    raise HTTPException(
+        status_code=410,
+        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming responses."
+    )
+
+
+# =============================================================================
+# INSIGHTS ENDPOINT (Widget/Dashboard Integration)
+# =============================================================================
+
+
+class InsightsRequest(BaseModel):
+    """Request for insights endpoint."""
+    question: str
+    metrics_data: Optional[Dict[str, Any]] = None  # Optional pre-fetched metrics
+
+
+class InsightsResponse(BaseModel):
+    """Response from insights endpoint."""
+    success: bool
+    answer: str
+    intent: Optional[str] = None
+
+
+@router.post("/insights", response_model=InsightsResponse)
+async def get_insights(
+    req: InsightsRequest,
+    workspace_id: str = Query(..., description="Workspace UUID"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/insights
+
+    Lightweight insights endpoint for dashboard widgets.
 
     WHAT:
-        Enqueues a question and streams progress updates via Server-Sent Events.
-        Replaces polling with push-based updates for better UX.
+        Returns AI-generated text insights WITHOUT visual generation.
+        Optimized for widget integration where visuals are already rendered.
 
     WHY:
-        - Eliminates polling overhead (no repeated GET requests)
-        - Provides real-time feedback: "Understanding...", "Fetching...", "Preparing..."
-        - Better perceived performance (user sees progress immediately)
+        - Dashboard/analytics pages already have their own charts
+        - Faster response (skips visual building)
+        - Lower token usage (no visual specs in response)
 
-    Events Emitted:
-        - {"stage": "queued", "job_id": "..."}     - Job enqueued
-        - {"stage": "translating"}                  - Converting question to DSL
-        - {"stage": "executing"}                    - Running database queries
-        - {"stage": "formatting"}                   - Building answer and visuals
-        - {"stage": "complete", "answer": "...", ...}  - Job finished with results
-        - {"stage": "error", "error": "..."}        - Job failed
+    INPUT:
+        {
+            "question": "What is my biggest performance drop this week?",
+            "metrics_data": { ... }  // Optional: pre-fetched metrics for context
+        }
 
-    Usage (JavaScript):
-        const response = await fetch('/qa/stream?workspace_id=...', {
-            method: 'POST',
-            body: JSON.stringify({ question: "What's my ROAS?" }),
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const reader = response.body.getReader();
-        // Read SSE events from stream...
+    OUTPUT:
+        {
+            "success": true,
+            "answer": "Your CPC increased by 15% this week...",
+            "intent": "analysis"
+        }
 
-    Example Events:
-        data: {"stage": "queued", "job_id": "abc-123"}
-
-        data: {"stage": "translating"}
-
-        data: {"stage": "executing"}
-
-        data: {"stage": "complete", "answer": "Your ROAS is 2.45×", ...}
+    USAGE:
+        - Dashboard insights widget
+        - Analytics page summaries
+        - Finance page highlights
     """
+    import json as json_module
+    from app.agent.nodes import get_claude_client, UNDERSTAND_PROMPT
+    from app.agent.tools import SemanticTools
 
-    async def event_generator():
-        """
-        Async generator that yields SSE events as job progresses.
+    user_id = str(current_user.id)
+    question = req.question
 
-        Flow:
-        1. Check for existing duplicate job (dedup)
-        2. Enqueue job to Redis queue (with TTL)
-        3. Yield queued event with job_id
-        4. Poll job status every 300ms
-        5. Yield stage changes as they occur
-        6. Yield complete/error event when done
-        """
-        try:
-            # Use shared Redis connection pool (avoids creating new connections per request)
-            if not state.redis_client or not state.qa_queue:
-                yield f"data: {json.dumps({'stage': 'error', 'error': 'Redis not available'})}\n\n"
-                return
+    try:
+        client = get_claude_client()
 
-            redis_conn = state.redis_client
-            queue = state.qa_queue
+        # Step 1: Understand the question
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=512,
+            system=UNDERSTAND_PROMPT,
+            messages=[{"role": "user", "content": question}],
+        )
 
-            user_id = str(current_user.id)
+        content = response.content[0].text
+        if "```json" in content:
+            json_str = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            json_str = content.split("```")[1].split("```")[0]
+        else:
+            json_str = content
 
-            # Check for duplicate job (same user, workspace, question)
-            dedup_key = _generate_dedup_key(user_id, workspace_id, req.question)
-            existing_job = _find_existing_job(redis_conn, queue, dedup_key)
+        parsed = json_module.loads(json_str.strip())
+        intent = parsed.get("intent", "metric_query")
 
-            if existing_job:
-                # Reuse existing job instead of creating duplicate
-                job = existing_job
-                logger.info(f"[QA_ROUTER] Reusing existing job {job.id} for SSE stream (dedup)")
-            else:
-                # Enqueue new job with TTL and timeout
-                job = queue.enqueue(
-                    "app.workers.qa_worker.process_qa_job",
-                    question=req.question,
-                    workspace_id=workspace_id,
-                    user_id=user_id,
-                    job_timeout=JOB_TIMEOUT_SECONDS,
-                    result_ttl=JOB_TTL_SECONDS,
-                    ttl=JOB_TTL_SECONDS,
+        # Step 2: Fetch data (or use provided metrics_data)
+        if req.metrics_data:
+            # Use pre-fetched metrics data
+            data = req.metrics_data
+        else:
+            # Fetch from semantic layer
+            semantic_query = {
+                "metrics": parsed.get("metrics") or ["roas"],
+                "time_range": parsed.get("time_range") or "7d",
+                "breakdown_level": parsed.get("breakdown_level"),
+                "compare_to_previous": parsed.get("compare_to_previous") or True,  # Always compare for insights
+                "include_timeseries": False,  # No charts needed
+                "filters": parsed.get("filters") or {},
+            }
+
+            tools = SemanticTools(db, workspace_id, user_id)
+            result = tools.query_metrics(
+                metrics=semantic_query["metrics"],
+                time_range=semantic_query["time_range"],
+                breakdown_level=semantic_query.get("breakdown_level"),
+                compare_to_previous=semantic_query.get("compare_to_previous", True),
+                include_timeseries=False,  # No visuals
+                filters=semantic_query.get("filters"),
+            )
+
+            if result.get("error"):
+                return InsightsResponse(
+                    success=False,
+                    answer=f"Unable to analyze: {result['error']}",
+                    intent=intent
                 )
 
-                # Store dedup key → job_id mapping
-                redis_conn.setex(dedup_key, DEDUP_WINDOW_SECONDS, job.id)
-                logger.info(f"[QA_ROUTER] Enqueued new job {job.id} to qa_jobs queue")
+            data = result.get("data", {})
 
-            logger.debug(f"[QA_ROUTER] Question: {req.question}")
+        # Step 3: Generate insight (no visuals, concise answer)
+        INSIGHT_PROMPT = """You are a concise advertising analyst.
 
-            # Yield queued event
-            yield f"data: {json.dumps({'stage': 'queued', 'job_id': job.id})}\n\n"
+Generate a brief, actionable insight based on the data provided.
 
-            # Track last stage to only emit on changes
-            last_stage = "queued"
+RULES:
+- Maximum 2-3 sentences
+- Focus on the most important finding
+- Include specific numbers when available
+- Be direct and actionable
+- Do NOT mention charts, graphs, or visualizations
+- Do NOT offer to show more data"""
 
-            # Exponential backoff: start fast, slow down if job takes longer
-            poll_interval_ms = SSE_POLL_MIN_MS
+        data_summary = json_module.dumps(data, indent=2, default=str)
+        messages = [{
+            "role": "user",
+            "content": f"""Question: "{question}"
 
-            # Poll job status and yield events
-            while True:
-                # Refresh job to get latest status
-                job.refresh()
+Data:
+{data_summary}
 
-                # Get current stage from job metadata
-                # If job has started but no stage set yet, show "processing"
-                # Worker sets: translating → executing → formatting
-                if job.is_started:
-                    current_stage = job.meta.get('stage', 'translating')  # Default to translating when started
-                else:
-                    current_stage = "queued"  # Still in queue
+Provide a brief insight."""
+        }]
 
-                # Emit stage change if different - reset backoff on stage change
-                if current_stage != last_stage and not job.is_finished and not job.is_failed:
-                    yield f"data: {json.dumps({'stage': current_stage})}\n\n"
-                    last_stage = current_stage
-                    poll_interval_ms = SSE_POLL_MIN_MS  # Reset to fast polling on progress
+        insight_response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=256,  # Keep responses short
+            system=INSIGHT_PROMPT,
+            messages=messages,
+        )
 
-                # Check if job is complete
-                if job.is_finished:
-                    result = job.result
-                    if result and result.get("success"):
-                        # Yield complete event with full result
-                        yield f"data: {json.dumps({'stage': 'complete', **result})}\n\n"
-                    else:
-                        # Job finished but with error
-                        error_msg = result.get("error", "Unknown error") if result else "No result"
-                        yield f"data: {json.dumps({'stage': 'error', 'error': error_msg})}\n\n"
-                    break
+        answer = insight_response.content[0].text
 
-                # Check if job failed
-                elif job.is_failed:
-                    error_msg = str(job.exc_info) if job.exc_info else "Job failed"
-                    yield f"data: {json.dumps({'stage': 'error', 'error': error_msg})}\n\n"
-                    break
+        return InsightsResponse(
+            success=True,
+            answer=answer,
+            intent=intent
+        )
 
-                # Wait with exponential backoff (50ms → 75ms → 112ms → ... → 300ms max)
-                await asyncio.sleep(poll_interval_ms / 1000)
-                poll_interval_ms = min(poll_interval_ms * SSE_POLL_BACKOFF, SSE_POLL_MAX_MS)
-
-        except Exception as e:
-            # Yield error event if something goes wrong
-            yield f"data: {json.dumps({'stage': 'error', 'error': str(e)})}\n\n"
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable nginx buffering
-        }
-    )
+    except Exception as e:
+        logger.exception(f"[QA_INSIGHTS] Failed: {e}")
+        return InsightsResponse(
+            success=False,
+            answer="Unable to generate insight at this time.",
+            intent=None
+        )
 
 
 # =============================================================================
@@ -614,6 +514,56 @@ def get_feedback_stats(
     )
 
 
+# =============================================================================
+# SEMANTIC LAYER ENDPOINT (NEW - for testing)
+# =============================================================================
+
+@router.post("/semantic")
+def ask_question_semantic(
+    req: QARequest,
+    workspace_id: str = Query(..., description="Workspace context for scoping queries"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/semantic
+
+    **EXPERIMENTAL**: Test endpoint for the new Semantic Layer.
+
+    This endpoint uses the new SemanticQAService which supports:
+    - Composable queries (breakdown + comparison + timeseries together)
+    - THE KEY FEATURE: "Compare CPC for top 3 ads this week vs last week"
+    - Better observability via telemetry
+
+    Input:  { "question": "Compare CPC for top 3 ads vs last week" }
+    Output: { "answer": "...", "data": {...}, "query": {...}, "visuals": {...} }
+
+    Unlike /qa and /qa/stream, this endpoint is SYNCHRONOUS (no Redis queue).
+    Use for testing the semantic layer before full production rollout.
+    """
+    from app.services.semantic_qa_service import SemanticQAService
+    import traceback
+
+    try:
+        logger.info(f"[QA_SEMANTIC] Processing: '{req.question}' for workspace={workspace_id}")
+        service = SemanticQAService(db)
+        result = service.answer(
+            question=req.question,
+            workspace_id=workspace_id,
+            user_id=str(current_user.id),
+        )
+        logger.info(f"[QA_SEMANTIC] Success! Strategy: {result.get('telemetry', {}).get('strategy')}, has_visuals: {result.get('visuals') is not None}")
+        return result
+
+    except Exception as e:
+        logger.error(f"[QA_SEMANTIC] Error: {type(e).__name__}: {e}")
+        logger.error(f"[QA_SEMANTIC] Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Semantic QA failed: {str(e)}"
+        )
+
+
 @router.get("/examples", response_model=list[dict])
 def get_few_shot_examples(
     workspace_id: str = Query(..., description="Workspace to get examples from"),
@@ -651,3 +601,414 @@ def get_few_shot_examples(
         }
         for ex in examples
     ]
+
+
+# =============================================================================
+# AGENTIC COPILOT ENDPOINTS (NEW - LangGraph Agent)
+# =============================================================================
+
+@router.post("/agent", response_model=QAJobResponse)
+def ask_question_agent(
+    req: QARequest,
+    workspace_id: str = Query(..., description="Workspace context for scoping queries"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/agent
+
+    Enqueues a question for the LangGraph agent (agentic copilot).
+
+    WHAT:
+        This is the new fully agentic endpoint. Unlike /qa which uses DSL translation,
+        this endpoint uses a LangGraph agent with Claude that can:
+        - Understand natural language with context
+        - Call semantic layer tools
+        - Reason about data
+        - Stream responses token-by-token
+
+    Input:  { "question": "Why is my ROAS down?" }
+    Output: { "job_id": "...", "status": "queued" }
+
+    Use /qa/agent/stream/{job_id} to receive streaming updates.
+    """
+    try:
+        if not state.redis_client or not state.qa_queue:
+            raise HTTPException(status_code=503, detail="Redis not available")
+
+        redis_conn = state.redis_client
+        queue = state.qa_queue
+
+        user_id = str(current_user.id)
+
+        # Check for duplicate job
+        dedup_key = _generate_dedup_key(user_id, workspace_id, f"agent:{req.question}")
+        existing_job = _find_existing_job(redis_conn, queue, dedup_key)
+
+        if existing_job:
+            logger.info(f"[QA_AGENT] Returning existing job {existing_job.id} (dedup)")
+            return QAJobResponse(
+                job_id=existing_job.id,
+                status="queued" if existing_job.is_queued else "processing"
+            )
+
+        # Get conversation history for context
+        conversation_history = []
+        if state.context_manager:
+            try:
+                context = state.context_manager.get_context(user_id, workspace_id)
+                conversation_history = context[-5:]  # Last 5 entries
+            except Exception as e:
+                logger.warning(f"[QA_AGENT] Failed to get context: {e}")
+
+        # Enqueue agent job
+        job = queue.enqueue(
+            "app.workers.agent_worker.process_agent_job",
+            question=req.question,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            conversation_history=conversation_history,
+            job_timeout=JOB_TIMEOUT_SECONDS,
+            result_ttl=JOB_TTL_SECONDS,
+            ttl=JOB_TTL_SECONDS,
+        )
+
+        # Store dedup key
+        redis_conn.setex(dedup_key, DEDUP_WINDOW_SECONDS, job.id)
+
+        logger.info(f"[QA_AGENT] Enqueued agent job {job.id}")
+
+        return QAJobResponse(
+            job_id=job.id,
+            status="queued"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to enqueue agent job: {str(e)}"
+        )
+
+
+@router.get("/agent/stream/{job_id}")
+async def stream_agent_response(
+    job_id: str,
+    current_user=Depends(get_current_user),
+):
+    """
+    GET /qa/agent/stream/{job_id}
+
+    SSE endpoint for streaming agent responses via Redis Pub/Sub.
+
+    WHAT:
+        Subscribes to Redis Pub/Sub channel for the job and forwards events.
+        Provides real-time typing effect for agent answers.
+
+    Events:
+        - {"type": "thinking", "data": {"text": "..."}}        - Agent is processing
+        - {"type": "tool_call", "data": {"tool": "...", ...}}  - Tool being called
+        - {"type": "tool_result", "data": {"preview": "..."}}  - Tool result
+        - {"type": "answer", "data": {"token": "..."}}         - Answer token (typing)
+        - {"type": "visual", "data": {"spec": {...}}}          - Chart/table spec
+        - {"type": "done", "data": {...}}                      - Complete result
+        - {"type": "error", "data": {"message": "..."}}        - Error occurred
+
+    Usage (JavaScript):
+        const eventSource = new EventSource('/qa/agent/stream/' + jobId);
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'answer') {
+                // Append token to display (typing effect)
+                display.textContent += data.data.token;
+            }
+        };
+    """
+    from app.agent.stream import create_subscriber
+
+    async def event_generator():
+        """
+        Async generator that yields SSE events from Redis Pub/Sub.
+
+        Flow:
+        1. Subscribe to Redis channel for this job
+        2. Also poll job.meta as fallback (if pub/sub fails)
+        3. Forward events to client
+        4. Close when done/error received
+        """
+        try:
+            if not state.redis_client:
+                yield f"data: {json.dumps({'type': 'error', 'data': {'message': 'Redis not available'}})}\n\n"
+                return
+
+            # Try to subscribe to Redis pub/sub channel
+            subscriber = None
+            try:
+                subscriber = create_subscriber(job_id)
+                logger.info(f"[QA_AGENT] SSE subscriber created for job {job_id}")
+            except Exception as e:
+                logger.warning(f"[QA_AGENT] Failed to create subscriber: {e}")
+
+            # Fallback: poll job meta if no subscriber
+            if subscriber:
+                # Use Redis Pub/Sub for real-time streaming
+                for event in subscriber.listen():
+                    # Forward event to SSE
+                    yield f"data: {event.to_json()}\n\n"
+
+                    if event.is_final:
+                        break
+            else:
+                # Fallback to polling job status
+                poll_interval_ms = SSE_POLL_MIN_MS
+                last_stage = "queued"
+
+                while True:
+                    try:
+                        job = Job.fetch(job_id, connection=state.redis_client)
+                    except Exception:
+                        yield f"data: {json.dumps({'type': 'error', 'data': {'message': 'Job not found'}})}\n\n"
+                        break
+
+                    # Get stage from meta
+                    current_stage = job.meta.get('stage', 'queued') if job.is_started else 'queued'
+
+                    # Emit stage changes
+                    if current_stage != last_stage:
+                        yield f"data: {json.dumps({'type': 'thinking', 'data': {'text': current_stage}})}\n\n"
+                        last_stage = current_stage
+                        poll_interval_ms = SSE_POLL_MIN_MS
+
+                    # Check completion
+                    if job.is_finished:
+                        result = job.result or {}
+                        yield f"data: {json.dumps({'type': 'done', 'data': result, 'is_final': True})}\n\n"
+                        break
+
+                    if job.is_failed:
+                        error_msg = str(job.exc_info) if job.exc_info else "Job failed"
+                        yield f"data: {json.dumps({'type': 'error', 'data': {'message': error_msg}, 'is_final': True})}\n\n"
+                        break
+
+                    await asyncio.sleep(poll_interval_ms / 1000)
+                    poll_interval_ms = min(poll_interval_ms * SSE_POLL_BACKOFF, SSE_POLL_MAX_MS)
+
+        except Exception as e:
+            logger.exception(f"[QA_AGENT] SSE error for job {job_id}: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'data': {'message': str(e)}, 'is_final': True})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+@router.post("/agent/sync")
+def ask_question_agent_sync(
+    req: QARequest,
+    workspace_id: str = Query(..., description="Workspace context for scoping queries"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/agent/sync
+
+    Synchronous endpoint for agent (no streaming).
+
+    WHAT:
+        Runs the agent synchronously and returns the full result.
+        Use for testing or when streaming isn't needed.
+
+    Note: This will block for 5-30 seconds depending on question complexity.
+    Prefer /qa/agent + /qa/agent/stream/{job_id} for production use.
+    """
+    from app.workers.agent_worker import process_agent_job_sync
+
+    try:
+        user_id = str(current_user.id)
+
+        # Get conversation history
+        conversation_history = []
+        if state.context_manager:
+            try:
+                context = state.context_manager.get_context(user_id, workspace_id)
+                conversation_history = context[-5:]
+            except Exception as e:
+                logger.warning(f"[QA_AGENT] Failed to get context: {e}")
+
+        # Run agent synchronously
+        result = process_agent_job_sync(
+            question=req.question,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            db=db,
+            conversation_history=conversation_history,
+        )
+
+        return result
+
+    except Exception as e:
+        logger.exception(f"[QA_AGENT] Sync agent failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Agent failed: {str(e)}"
+        )
+
+
+# =============================================================================
+# DIRECT SSE STREAMING ENDPOINT (no Redis)
+# =============================================================================
+
+@router.post("/agent/sse")
+async def ask_question_agent_sse(
+    req: QARequest,
+    workspace_id: str = Query(..., description="Workspace context for scoping queries"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    POST /qa/agent/sse
+
+    Direct SSE streaming endpoint for agent (no Redis queue).
+
+    WHAT:
+        Streams agent response token-by-token via Server-Sent Events.
+        Provides real-time typing effect in the frontend.
+
+    EVENTS:
+        - thinking: Agent is processing
+        - token: Single answer token (for typing effect)
+        - visual: Chart/table specification
+        - done: Final result with all data
+        - error: Something went wrong
+    """
+    from app.agent.graph import create_agent_graph
+    from app.agent.state import create_initial_state
+    from app.agent.nodes import get_claude_client, UNDERSTAND_PROMPT, RESPOND_PROMPT, _build_visuals_from_data
+    from app.agent.tools import SemanticTools
+    import json as json_module
+
+    user_id = str(current_user.id)
+    question = req.question
+
+    async def generate():
+        """Generator that yields SSE events."""
+        try:
+            # Stage 1: Understanding
+            yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Understanding your question...'})}\n\n"
+
+            client = get_claude_client()
+
+            # Understand the question
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                system=UNDERSTAND_PROMPT,
+                messages=[{"role": "user", "content": question}],
+            )
+
+            content = response.content[0].text
+            if "```json" in content:
+                json_str = content.split("```json")[1].split("```")[0]
+            elif "```" in content:
+                json_str = content.split("```")[1].split("```")[0]
+            else:
+                json_str = content
+
+            parsed = json_module.loads(json_str.strip())
+            intent = parsed.get("intent", "metric_query")
+
+            # Build semantic query (use 'or' to handle null values)
+            semantic_query = {
+                "metrics": parsed.get("metrics") or ["roas"],
+                "time_range": parsed.get("time_range") or "7d",
+                "breakdown_level": parsed.get("breakdown_level"),
+                "compare_to_previous": parsed.get("compare_to_previous") or False,
+                "include_timeseries": parsed.get("include_timeseries") or False,
+                "filters": parsed.get("filters") or {},
+            }
+
+            # Auto-enable timeseries for comparisons
+            if semantic_query["compare_to_previous"] and not semantic_query["include_timeseries"]:
+                semantic_query["include_timeseries"] = True
+
+            yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Fetching your data...'})}\n\n"
+
+            # Stage 2: Fetch data
+            tools = SemanticTools(db, workspace_id, user_id)
+            result = tools.query_metrics(
+                metrics=semantic_query["metrics"],
+                time_range=semantic_query["time_range"],
+                breakdown_level=semantic_query.get("breakdown_level"),
+                compare_to_previous=semantic_query.get("compare_to_previous", False),
+                include_timeseries=semantic_query.get("include_timeseries", False),
+                filters=semantic_query.get("filters"),
+            )
+
+            if result.get("error"):
+                yield f"data: {json_module.dumps({'type': 'error', 'data': result['error']})}\n\n"
+                return
+
+            data = result.get("data", {})
+
+            yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Preparing your answer...'})}\n\n"
+
+            # Stage 3: Stream the response
+            data_summary = json_module.dumps(data, indent=2, default=str)
+            messages = [{
+                "role": "user",
+                "content": f"""User asked: "{question}"
+
+Intent: {intent}
+
+Data retrieved:
+{data_summary}
+
+Please write a helpful, conversational response based on this data."""
+            }]
+
+            full_answer = ""
+            with client.messages.stream(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                system=RESPOND_PROMPT,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    full_answer += text
+                    yield f"data: {json_module.dumps({'type': 'token', 'data': text})}\n\n"
+                    await asyncio.sleep(0)  # Allow other tasks to run
+
+            # Stage 4: Send visuals
+            visuals = _build_visuals_from_data(data, semantic_query)
+            if visuals:
+                yield f"data: {json_module.dumps({'type': 'visual', 'data': visuals}, default=str)}\n\n"
+
+            # Stage 5: Done
+            final_result = {
+                "success": True,
+                "answer": full_answer,
+                "visuals": visuals,
+                "data": data,
+                "semantic_query": semantic_query,
+                "intent": intent,
+            }
+            yield f"data: {json_module.dumps({'type': 'done', 'data': final_result}, default=str)}\n\n"
+
+        except Exception as e:
+            logger.exception(f"[QA_AGENT_SSE] Failed: {e}")
+            yield f"data: {json_module.dumps({'type': 'error', 'data': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        }
+    )

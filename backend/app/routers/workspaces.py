@@ -633,6 +633,118 @@ def get_workspace_info(
 
 
 @router.get(
+    "/{workspace_id}/status",
+    response_model=schemas.WorkspaceStatus,
+    summary="Get workspace connection status",
+    description="""
+    Get connection status flags for conditional UI rendering.
+
+    Returns:
+        - has_shopify: Whether Shopify is connected and active
+        - has_ad_platform: Whether any ad platform is connected
+        - connected_platforms: List of connected platforms
+        - attribution_ready: Whether attribution is fully set up
+
+    Use this endpoint to determine which UI components to render:
+        - Dashboard attribution widgets (only if has_shopify)
+        - Attribution page access (only if has_shopify)
+        - Platform source indicators (show connected_platforms)
+
+    REFERENCES:
+        - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+    """
+)
+def get_workspace_status(
+    workspace_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get workspace connection status for conditional UI rendering.
+
+    WHAT: Returns flags indicating platform connection states
+    WHY: Frontend needs this to show/hide attribution components
+
+    Args:
+        workspace_id: The workspace UUID as string
+        db: Database session
+        current_user: Authenticated user
+
+    Returns:
+        WorkspaceStatus with has_shopify, has_ad_platform, connected_platforms, attribution_ready
+
+    Raises:
+        HTTPException 400: Invalid workspace ID format
+        HTTPException 403: User doesn't have access to workspace
+
+    Example:
+        GET /workspaces/123e4567-e89b-12d3-a456-426614174000/status
+        -> { "has_shopify": true, "has_ad_platform": true,
+             "connected_platforms": ["meta", "google", "shopify"],
+             "attribution_ready": true }
+    """
+    from ..models import PixelEvent
+    from datetime import timedelta
+
+    # Convert string ID to UUID
+    try:
+        workspace_uuid = UUID(workspace_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid workspace ID format"
+        )
+
+    # Check user has access to this workspace
+    _require_membership(db, current_user, workspace_uuid)
+
+    # Get all active connections for this workspace
+    connections = (
+        db.query(Connection)
+        .filter(
+            Connection.workspace_id == workspace_uuid,
+            Connection.status == "active"
+        )
+        .all()
+    )
+
+    # Extract provider names
+    connected_platforms = [c.provider.value for c in connections if c.provider]
+
+    # Check for Shopify connection
+    has_shopify = any(c.provider.value == "shopify" for c in connections if c.provider)
+
+    # Check for any ad platform connection
+    ad_platforms = {"meta", "google", "tiktok"}
+    has_ad_platform = any(
+        c.provider.value in ad_platforms for c in connections if c.provider
+    )
+
+    # Check if attribution is ready (Shopify connected + pixel receiving events recently)
+    attribution_ready = False
+    if has_shopify:
+        # Check for recent pixel events (within last 7 days)
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        recent_events = (
+            db.query(PixelEvent)
+            .filter(
+                PixelEvent.workspace_id == workspace_uuid,
+                PixelEvent.created_at >= seven_days_ago
+            )
+            .limit(1)
+            .first()
+        )
+        attribution_ready = recent_events is not None
+
+    return schemas.WorkspaceStatus(
+        has_shopify=has_shopify,
+        has_ad_platform=has_ad_platform,
+        connected_platforms=sorted(connected_platforms),
+        attribution_ready=attribution_ready
+    )
+
+
+@router.get(
     "/{workspace_id}/providers",
     summary="Get available providers",
     description="""

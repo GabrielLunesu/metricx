@@ -1,7 +1,32 @@
 # Project Instructions for Claude Code
 
 ## Overview
-This project is building a competitor to Triple Whale (named metricx) - an e-commerce/SaaS analytics and attribution platform. Keep this context in mind for all architectural and feature decisions.
+This project is building **metricx** - an ad analytics platform that helps merchants get the most out of their advertising spend. We compete with Triple Whale but with a clearer focus.
+
+## Strategic Vision: Ad Analytics First, Attribution Second
+
+**This one decision unblocks everything.**
+
+### Primary (Front and Center)
+- **Dashboard** → Ad performance, spend, ROAS (platform-reported), AI insights
+- **Analytics** → Deep dive, campaign comparisons, trends
+- **P&L** → Profitability view
+- **Campaigns** → Manage and monitor
+
+### Secondary (There, but Not in Your Face)
+- **Attribution** → Settings/setup thing, a "verification layer" that enhances your numbers
+- **UTM Setup, Pixel Config, Shopify Connection** → Lives in Settings or "Integrations" area
+- **Attribution Warnings** → Only surface when Shopify is connected but something's misconfigured
+
+### Why This Matters
+1. **Onboarding gets simpler**: "Connect Meta + Google" → done, you're in
+2. **Dashboard isn't full of empty boxes**: Show platform data immediately
+3. **Stop apologizing for missing attribution data**: It's an enhancement, not a requirement
+4. **Shopify users get a "premium" feeling**: Their data is verified
+5. **We can go live now**: Without everything needing to be perfect
+
+### The Goal
+**Help merchants understand and optimize their ad spend.** Attribution is the cherry on top, not the cake.
 
 ## Core Philosophy
 

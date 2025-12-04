@@ -267,18 +267,36 @@ class GAdsClient:
         } for r in rows]
 
     def list_ads(self, customer_id: str, ad_group_id: str) -> List[Dict[str, Any]]:
+        # UTM Tracking Detection: fetch tracking_url_template and final_url_suffix
+        # WHY: Enables proactive warnings about missing UTM params
+        # REFERENCES: docs/living-docs/FRONTEND_REFACTOR_PLAN.md
         q = (
-            "SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status, ad_group_ad.ad_group "
+            "SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status, "
+            "ad_group_ad.ad_group, ad_group_ad.ad.tracking_url_template, "
+            "ad_group_ad.ad.final_url_suffix "
             "FROM ad_group_ad WHERE ad_group_ad.ad_group = 'customers/{cid}/adGroups/{ag}' "
             "ORDER BY ad_group_ad.ad.name"
         ).format(cid=customer_id, ag=ad_group_id)
         rows = self.search(customer_id, q)
-        return [{
-            "id": r.ad_group_ad.ad.id,
-            "name": getattr(r.ad_group_ad.ad, "name", None),
-            "status": r.ad_group_ad.status,
-            "ad_group_id": ad_group_id,
-        } for r in rows]
+        result = []
+        for r in rows:
+            ad = r.ad_group_ad.ad
+            tracking_url_template = getattr(ad, "tracking_url_template", None)
+            final_url_suffix = getattr(ad, "final_url_suffix", None)
+
+            # Build tracking_params for UTM detection
+            tracking_params = self._extract_google_tracking_params(
+                tracking_url_template, final_url_suffix
+            )
+
+            result.append({
+                "id": ad.id,
+                "name": getattr(ad, "name", None),
+                "status": r.ad_group_ad.status,
+                "ad_group_id": ad_group_id,
+                "tracking_params": tracking_params,
+            })
+        return result
 
     # --- Performance Max (Asset Groups) ---------------------------------
     def list_asset_groups(self, customer_id: str, campaign_id: str) -> List[Dict[str, Any]]:
@@ -317,6 +335,65 @@ class GAdsClient:
                 "asset_group_id": asset_group_id,
             })
         return out
+
+    def _extract_google_tracking_params(
+        self,
+        tracking_url_template: Optional[str],
+        final_url_suffix: Optional[str],
+    ) -> Optional[Dict[str, Any]]:
+        """Extract UTM tracking parameters from Google Ads tracking fields.
+
+        WHAT:
+            Parses tracking_url_template and final_url_suffix to detect UTM presence.
+            Returns structured data about which UTM params are configured.
+
+        WHY:
+            Enables proactive attribution warnings. If ads don't have UTM params,
+            we can warn users before they spend money without proper tracking.
+
+        REFERENCES:
+            - docs/living-docs/FRONTEND_REFACTOR_PLAN.md (UTM detection feature)
+
+        Args:
+            tracking_url_template: Google Ads tracking URL template
+            final_url_suffix: URL suffix appended to final URLs
+
+        Returns:
+            Dictionary with tracking info or None if no tracking configured.
+        """
+        if not tracking_url_template and not final_url_suffix:
+            return None
+
+        # Combine both sources for checking
+        combined = ""
+        if tracking_url_template:
+            combined += tracking_url_template.lower()
+        if final_url_suffix:
+            combined += " " + final_url_suffix.lower()
+
+        # Check for standard UTM parameters
+        detected_params = []
+        utm_params = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]
+
+        for param in utm_params:
+            if param in combined:
+                detected_params.append(param)
+
+        # Also check for gclid (Google's click ID - auto-tagging)
+        # If gclid is present, tracking is configured via auto-tagging
+        has_gclid = "gclid" in combined
+
+        result = {
+            "tracking_url_template": tracking_url_template,
+            "final_url_suffix": final_url_suffix,
+            "has_utm_source": "utm_source" in combined,
+            "has_utm_medium": "utm_medium" in combined,
+            "has_utm_campaign": "utm_campaign" in combined,
+            "has_gclid": has_gclid,
+            "detected_params": detected_params,
+        }
+
+        return result
 
     # --- Account metadata ----------------------------------------------
     def get_customer_metadata(self, customer_id: str) -> Dict[str, Optional[str]]:
