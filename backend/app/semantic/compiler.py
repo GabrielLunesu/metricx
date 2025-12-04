@@ -544,6 +544,26 @@ class SemanticCompiler:
         result.summary = summary.metrics
         result.comparison = summary.metrics  # Same data, explicit comparison field
 
+        # Also fetch timeseries if requested (for overlaid comparison charts)
+        if query.include_timeseries:
+            include_previous = (
+                query.has_comparison()
+                and query.comparison.include_timeseries
+            )
+            logger.info(f"[COMPILER] Fetching timeseries for comparison (include_previous={include_previous})")
+
+            timeseries = self.service.get_timeseries(
+                workspace_id=workspace_id,
+                metrics=query.metrics,
+                time_range=self._to_dsl_time_range(query.time_range),
+                filters=filters,
+                granularity="day",
+                include_previous=include_previous,
+            )
+
+            result.timeseries = timeseries
+            logger.info(f"[COMPILER] Comparison timeseries retrieved: {list(timeseries.keys())}")
+
     def _compile_entity_breakdown(
         self,
         workspace_id: str,

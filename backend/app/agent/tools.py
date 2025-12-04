@@ -283,7 +283,12 @@ class SemanticTools:
 
             # Add comparison if specified
             if compare_to_previous:
-                query.comparison = Comparison(type=ComparisonType.PREVIOUS_PERIOD)
+                # Include previous period timeseries if timeseries is requested
+                # This enables overlaid line charts for comparison queries
+                query.comparison = Comparison(
+                    type=ComparisonType.PREVIOUS_PERIOD,
+                    include_timeseries=include_timeseries,
+                )
 
             # Add filters if specified (only valid filter fields!)
             # Valid fields: provider, entity_name, level, status, entity_id

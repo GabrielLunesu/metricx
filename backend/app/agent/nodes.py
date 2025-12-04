@@ -562,10 +562,59 @@ def _build_visuals_from_data(
     metrics = semantic_query.get("metrics") or ["roas"]
     primary_metric = metrics[0] if metrics else "roas"
 
-    # Timeseries chart (area chart for trends)
+    # Timeseries chart (area chart for trends, line chart for comparisons)
     timeseries = data.get("timeseries", {})
-    for metric, points in timeseries.items():
-        if points:
+
+    # Group metrics and their previous-period counterparts
+    base_metrics = set()
+    previous_metrics = set()
+    for key in timeseries.keys():
+        if key.endswith("_previous"):
+            previous_metrics.add(key)
+            base_metrics.add(key.replace("_previous", ""))
+        else:
+            base_metrics.add(key)
+
+    for metric in base_metrics:
+        current_points = timeseries.get(metric, [])
+        previous_points = timeseries.get(f"{metric}_previous", [])
+
+        if not current_points:
+            continue
+
+        # If we have previous period data, create an overlaid comparison line chart
+        if previous_points:
+            # Normalize X-axis to "Day 1", "Day 2", etc. for proper overlay
+            # (The dates are different between periods, so we use relative days)
+            current_data = [
+                {"x": f"Day {i+1}", "y": p.get("value")}
+                for i, p in enumerate(current_points)
+            ]
+            previous_data = [
+                {"x": f"Day {i+1}", "y": p.get("value")}
+                for i, p in enumerate(previous_points)
+            ]
+
+            spec = {
+                "id": f"comparison-timeseries-{metric}",
+                "type": "line",
+                "title": f"{metric.upper()} Comparison",
+                "valueFormat": metric,
+                "isComparison": True,
+                "series": [
+                    {
+                        "name": "This Period",
+                        "data": current_data,
+                    },
+                    {
+                        "name": "Previous Period",
+                        "data": previous_data,
+                    },
+                ],
+            }
+            visuals["viz_specs"].append(spec)
+        else:
+            # Single period - use area chart
             spec = {
                 "id": f"timeseries-{metric}",
                 "type": "area",
@@ -573,21 +622,27 @@ def _build_visuals_from_data(
                 "valueFormat": metric,
                 "series": [{
                     "name": metric.upper(),
-                    "data": [{"x": p.get("date"), "y": p.get("value")} for p in points],
+                    "data": [{"x": p.get("date"), "y": p.get("value")} for p in current_points],
                 }],
             }
             visuals["viz_specs"].append(spec)
 
     # Comparison bar chart (this period vs last period)
+    # Only create bar chart if we don't have a timeseries comparison for this metric
     summary = data.get("summary", {})
+    metrics_with_timeseries_comparison = previous_metrics  # Already has line chart
     if summary:
         for metric, values in summary.items():
             if isinstance(values, dict) and values.get("previous") is not None:
+                # Skip bar chart if we already have a line chart for this metric
+                if f"{metric}_previous" in metrics_with_timeseries_comparison:
+                    continue
+
                 current_val = values.get("value", 0)
                 previous_val = values.get("previous", 0)
                 delta_pct = values.get("delta_pct", 0)
 
-                # Create comparison bar chart
+                # Create comparison bar chart (fallback when no timeseries)
                 spec = {
                     "id": f"comparison-bar-{metric}",
                     "type": "bar",
