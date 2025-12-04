@@ -1,0 +1,31 @@
+# robots.txt for metricx
+# AI-Powered Ad Analytics Platform
+# https://www.metricx.ai
+#
+# This file tells search engine crawlers which pages to index.
+# We allow all pages except private/authenticated routes.
+
+# Allow all crawlers
+User-agent: *
+
+# Allow indexing of public pages
+Allow: /
+
+# Block authenticated/private areas
+Disallow: /dashboard/
+Disallow: /analytics/
+Disallow: /copilot/
+Disallow: /finance/
+Disallow: /campaigns/
+Disallow: /settings/
+Disallow: /api/
+
+# Block Next.js internal routes
+Disallow: /_next/
+Disallow: /static/
+
+# Sitemap location
+Sitemap: https://www.metricx.ai/sitemap.xml
+
+# Crawl-delay suggestion (be nice to the server)
+Crawl-delay: 1
