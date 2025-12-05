@@ -36,6 +36,7 @@ from app.deps import get_current_user
 from app.models import User, Connection, ProviderEnum, Workspace, ShopifyShop
 from app.services.token_service import store_connection_token
 from app.services.pixel_activation_service import activate_pixel_for_connection
+from app.telemetry import track_connected_shopify
 
 logger = logging.getLogger(__name__)
 
@@ -673,6 +674,14 @@ async def connect_shop(
             f"[SHOPIFY_OAUTH] Successfully {action} Shopify connection for {shop_domain} "
             f"in workspace {workspace_id}"
         )
+
+        # Track connection event for new connections (flows to Google Analytics)
+        if is_new:
+            track_connected_shopify(
+                user_id=str(current_user.id),
+                workspace_id=workspace_id,
+                shop_domain=shop_domain,
+            )
 
         return {
             "success": True,

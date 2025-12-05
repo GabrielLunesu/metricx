@@ -1,6 +1,19 @@
 "use client";
+/**
+ * AdNaviInsight Component
+ * -----------------------
+ * WHAT: Displays AI-generated insights for analytics filters
+ * WHY: Provides quick, contextual analysis without heavy QA pipeline
+ *
+ * REFACTORED: Uses fetchInsights (lightweight, text-only) instead of fetchQA
+ * (which uses the full LLM pipeline with 30-60s polling).
+ *
+ * REFERENCES:
+ * - ui/lib/api.js (fetchInsights)
+ * - backend/app/routers/qa.py (POST /qa/insights)
+ */
 import { useEffect, useState } from "react";
-import { fetchQA } from "@/lib/api";
+import { fetchInsights } from "@/lib/api";
 import { renderMarkdownLite } from "@/lib/markdown";
 import { Sparkles } from "lucide-react";
 
@@ -44,7 +57,7 @@ export default function metricxInsight({
 
     const question = generateQuestion();
 
-    fetchQA({ workspaceId, question })
+    fetchInsights({ workspaceId, question })
       .then((data) => {
         if (!mounted) return;
         setInsight(data);

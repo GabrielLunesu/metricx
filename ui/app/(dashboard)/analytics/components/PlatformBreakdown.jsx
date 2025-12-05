@@ -1,6 +1,19 @@
 "use client";
+/**
+ * PlatformBreakdown Component
+ * ---------------------------
+ * WHAT: Displays revenue breakdown by ad platform (Google, Meta, TikTok, etc.)
+ * WHY: Users need to see which platforms drive their revenue
+ *
+ * REFACTORED: Uses direct KPI endpoint instead of fetchQA (30-60s polling).
+ * Now fetches providers list and queries KPIs per provider in parallel.
+ *
+ * REFERENCES:
+ * - ui/lib/api.js (fetchWorkspaceProviders, fetchWorkspaceKpis)
+ * - backend/app/routers/kpis.py (POST /workspaces/{id}/kpis)
+ */
 import { useEffect, useState } from "react";
-import { fetchQA } from "@/lib/api";
+import { fetchWorkspaceProviders, fetchWorkspaceKpis } from "@/lib/api";
 
 const PROVIDER_COLORS = {
   google: { bg: 'rgba(234, 67, 53, 0.8)', border: '#EA4335' },
@@ -20,62 +33,73 @@ export default function PlatformBreakdown({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const normalizeProviderLabel = (label) => {
-    if (!label) return label;
-    const lowered = String(label).toLowerCase();
-    // Common case: "ProviderEnum.meta" → "meta"
-    if (lowered.includes("providerenum")) {
-      return lowered.split(".").pop();
-    }
-    // Fallback: take last segment if any dotted string
-    if (lowered.includes(".")) {
-      return lowered.split(".").pop();
-    }
-    return lowered;
-  };
-
   useEffect(() => {
     if (!workspaceId) return;
 
     let mounted = true;
     setLoading(true);
 
-    // Generate question for platform breakdown
-    const timeframeText = customStartDate && customEndDate
-      ? `from ${customStartDate} to ${customEndDate}`
-      : `last ${rangeDays} days`;
-    
-    const providerText = selectedProvider === 'all'
-      ? 'all platforms'
-      : selectedProvider;
-    
-    const question = `Show me revenue by platform for ${providerText} for the ${timeframeText}`;
+    // Fetch breakdown by querying KPIs per provider
+    async function fetchBreakdown() {
+      try {
+        // Step 1: Get list of providers in this workspace
+        const { providers } = await fetchWorkspaceProviders({ workspaceId });
 
-    fetchQA({ workspaceId, question })
-      .then((data) => {
-        if (!mounted) return;
-        
-        // Extract breakdown data from QA response
-        if (data.data && data.data.breakdown) {
-          const normalized = data.data.breakdown.map((item) => ({
-            ...item,
-            label: normalizeProviderLabel(item.label),
-          }));
-          setBreakdown(normalized);
-        } else {
-          setBreakdown([]);
+        if (!providers || providers.length === 0) {
+          if (mounted) {
+            setBreakdown([]);
+            setLoading(false);
+          }
+          return;
         }
-        
-        setError(null);
-        setLoading(false);
-      })
-      .catch((err) => {
+
+        // Filter providers if a specific one is selected
+        const targetProviders = selectedProvider === 'all'
+          ? providers
+          : providers.filter(p => p === selectedProvider);
+
+        // Step 2: Fetch revenue for each provider in parallel
+        const kpiPromises = targetProviders.map(provider =>
+          fetchWorkspaceKpis({
+            workspaceId,
+            metrics: ['revenue'],
+            lastNDays: rangeDays,
+            customStartDate,
+            customEndDate,
+            provider,
+            compareToPrevious: false,
+            sparkline: false
+          }).then(kpis => ({
+            label: provider,
+            value: kpis.find(k => k.key === 'revenue')?.value || 0
+          })).catch(() => ({
+            label: provider,
+            value: 0
+          }))
+        );
+
+        const results = await Promise.all(kpiPromises);
+
+        if (mounted) {
+          // Sort by value descending and filter out zero values
+          const sortedResults = results
+            .filter(item => item.value > 0)
+            .sort((a, b) => b.value - a.value);
+
+          setBreakdown(sortedResults);
+          setError(null);
+          setLoading(false);
+        }
+      } catch (err) {
         console.error('Failed to fetch platform breakdown:', err);
         if (mounted) {
           setError(err.message);
           setLoading(false);
         }
-      });
+      }
+    }
+
+    fetchBreakdown();
 
     return () => { mounted = false; };
   }, [workspaceId, selectedProvider, rangeDays, customStartDate, customEndDate]);

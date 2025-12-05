@@ -45,6 +45,13 @@ from app.schemas import QARequest, QAJobResponse, QAJobStatusResponse
 from app.database import get_db
 from app.deps import get_current_user, get_settings
 from app import state  # Shared Redis pool
+from app.telemetry import (
+    track_copilot_query_sent,
+    create_copilot_trace,
+    complete_copilot_trace,
+    log_generation,
+    set_user_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -177,8 +184,40 @@ class InsightsResponse(BaseModel):
     intent: Optional[str] = None
 
 
+def _normalize_question(question: str) -> str:
+    """Normalize question for cache key.
+
+    WHY: Questions like "What is my biggest drop today?" and
+         "what is my biggest drop today" should hit same cache.
+    """
+    import re
+    # Lowercase, remove extra spaces, remove punctuation
+    normalized = question.lower().strip()
+    normalized = re.sub(r'\s+', ' ', normalized)
+    normalized = re.sub(r'[^\w\s]', '', normalized)
+    return normalized
+
+
+def _get_insight_cache_key(workspace_id: str, question: str) -> str:
+    """Generate cache key for insight.
+
+    Cache is scoped by:
+    - workspace_id: Different workspaces have different data
+    - question: Normalized question text
+    - date: Insights refresh daily (data changes)
+    """
+    from datetime import date
+    import hashlib
+
+    normalized = _normalize_question(question)
+    question_hash = hashlib.md5(normalized.encode()).hexdigest()[:12]
+    date_str = date.today().isoformat()
+
+    return f"insight:{workspace_id}:{question_hash}:{date_str}"
+
+
 @router.post("/insights", response_model=InsightsResponse)
-async def get_insights(
+def get_insights(
     req: InsightsRequest,
     workspace_id: str = Query(..., description="Workspace UUID"),
     db: Session = Depends(get_db),
@@ -193,10 +232,16 @@ async def get_insights(
         Returns AI-generated text insights WITHOUT visual generation.
         Optimized for widget integration where visuals are already rendered.
 
+    CACHING:
+        Insights are cached in Redis for 30 minutes per workspace + question.
+        Cache key: insight:{workspace_id}:{question_hash}:{date}
+        This prevents expensive Claude API calls on every dashboard load.
+
     WHY:
         - Dashboard/analytics pages already have their own charts
         - Faster response (skips visual building)
         - Lower token usage (no visual specs in response)
+        - Caching reduces API costs and latency
 
     INPUT:
         {
@@ -222,6 +267,27 @@ async def get_insights(
 
     user_id = str(current_user.id)
     question = req.question
+
+    # ==========================================================================
+    # CACHE CHECK: Return cached insight if available
+    # ==========================================================================
+    cache_key = _get_insight_cache_key(workspace_id, question)
+    CACHE_TTL_SECONDS = 1800  # 30 minutes
+
+    if state.redis_client:
+        try:
+            cached = state.redis_client.get(cache_key)
+            if cached:
+                logger.info(f"[QA_INSIGHTS] Cache HIT for {cache_key}")
+                cached_data = json_module.loads(cached)
+                return InsightsResponse(
+                    success=cached_data.get("success", True),
+                    answer=cached_data.get("answer", ""),
+                    intent=cached_data.get("intent")
+                )
+        except Exception as e:
+            logger.warning(f"[QA_INSIGHTS] Cache read failed: {e}")
+            # Continue without cache - don't fail the request
 
     try:
         client = get_claude_client()
@@ -311,6 +377,22 @@ Provide a brief insight."""
         )
 
         answer = insight_response.content[0].text
+
+        # ==========================================================================
+        # CACHE WRITE: Store result for future requests
+        # ==========================================================================
+        if state.redis_client:
+            try:
+                cache_data = json_module.dumps({
+                    "success": True,
+                    "answer": answer,
+                    "intent": intent
+                })
+                state.redis_client.setex(cache_key, CACHE_TTL_SECONDS, cache_data)
+                logger.info(f"[QA_INSIGHTS] Cache WRITE for {cache_key} (TTL: {CACHE_TTL_SECONDS}s)")
+            except Exception as e:
+                logger.warning(f"[QA_INSIGHTS] Cache write failed: {e}")
+                # Don't fail the request if cache write fails
 
         return InsightsResponse(
             success=True,
@@ -891,12 +973,39 @@ async def ask_question_agent_sse(
     from app.agent.nodes import get_claude_client, UNDERSTAND_PROMPT, RESPOND_PROMPT, _build_visuals_from_data
     from app.agent.tools import SemanticTools
     import json as json_module
+    import time as time_module
 
     user_id = str(current_user.id)
     question = req.question
 
+    # Set Sentry user context for error tracking
+    set_user_context(
+        user_id=user_id,
+        email=current_user.email,
+        workspace_id=workspace_id,
+    )
+
+    # Create Langfuse trace for LLM observability
+    trace = create_copilot_trace(
+        user_id=user_id,
+        workspace_id=workspace_id,
+        question=question,
+    )
+
+    # Track copilot query event (flows to Google Analytics)
+    track_copilot_query_sent(
+        user_id=user_id,
+        workspace_id=workspace_id,
+        question_length=len(question),
+        has_context=False,  # TODO: Add context tracking
+    )
+
     async def generate():
         """Generator that yields SSE events."""
+        start_time = time_module.time()
+        total_tokens = 0
+        success = False
+
         try:
             # Stage 1: Understanding
             yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Understanding your question...'})}\n\n"
@@ -910,6 +1019,22 @@ async def ask_question_agent_sse(
                 system=UNDERSTAND_PROMPT,
                 messages=[{"role": "user", "content": question}],
             )
+
+            # Log understand generation to Langfuse
+            if trace and response.usage:
+                log_generation(
+                    trace=trace,
+                    name="understand",
+                    model="claude-sonnet-4-20250514",
+                    input_messages=[{"role": "user", "content": question}],
+                    output=response.content[0].text,
+                    usage={
+                        "input": response.usage.input_tokens,
+                        "output": response.usage.output_tokens,
+                        "total": response.usage.input_tokens + response.usage.output_tokens,
+                    },
+                )
+                total_tokens += response.usage.input_tokens + response.usage.output_tokens
 
             content = response.content[0].text
             if "```json" in content:
@@ -983,12 +1108,30 @@ Please write a helpful, conversational response based on this data."""
                     yield f"data: {json_module.dumps({'type': 'token', 'data': text})}\n\n"
                     await asyncio.sleep(0)  # Allow other tasks to run
 
+                # Log respond generation to Langfuse (after stream completes)
+                final_message = stream.get_final_message()
+                if trace and final_message.usage:
+                    log_generation(
+                        trace=trace,
+                        name="respond",
+                        model="claude-sonnet-4-20250514",
+                        input_messages=messages,
+                        output=full_answer,
+                        usage={
+                            "input": final_message.usage.input_tokens,
+                            "output": final_message.usage.output_tokens,
+                            "total": final_message.usage.input_tokens + final_message.usage.output_tokens,
+                        },
+                    )
+                    total_tokens += final_message.usage.input_tokens + final_message.usage.output_tokens
+
             # Stage 4: Send visuals
             visuals = _build_visuals_from_data(data, semantic_query)
             if visuals:
                 yield f"data: {json_module.dumps({'type': 'visual', 'data': visuals}, default=str)}\n\n"
 
             # Stage 5: Done
+            success = True
             final_result = {
                 "success": True,
                 "answer": full_answer,
@@ -999,9 +1142,29 @@ Please write a helpful, conversational response based on this data."""
             }
             yield f"data: {json_module.dumps({'type': 'done', 'data': final_result}, default=str)}\n\n"
 
+            # Complete Langfuse trace
+            latency_ms = int((time_module.time() - start_time) * 1000)
+            complete_copilot_trace(
+                trace=trace,
+                success=True,
+                answer=full_answer,
+                latency_ms=latency_ms,
+                total_tokens=total_tokens,
+            )
+
         except Exception as e:
             logger.exception(f"[QA_AGENT_SSE] Failed: {e}")
             yield f"data: {json_module.dumps({'type': 'error', 'data': str(e)})}\n\n"
+
+            # Complete Langfuse trace with error
+            latency_ms = int((time_module.time() - start_time) * 1000)
+            complete_copilot_trace(
+                trace=trace,
+                success=False,
+                error=str(e),
+                latency_ms=latency_ms,
+                total_tokens=total_tokens,
+            )
 
     return StreamingResponse(
         generate(),

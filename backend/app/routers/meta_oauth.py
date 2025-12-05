@@ -31,6 +31,7 @@ from app.deps import get_current_user
 from app.models import User, Connection, ProviderEnum
 from app.services.token_service import store_connection_token
 from app.utils.env import require_env  # utility to fetch env vars with mandatory check
+from app.telemetry import track_connected_meta_ads
 
 logger = logging.getLogger(__name__)
 
@@ -522,7 +523,16 @@ async def connect_selected_accounts(
             f"[META_OAUTH] Successfully connected {total_connections} Meta ad account(s) "
             f"({len(created_connections)} new, {len(updated_connections)} updated) to workspace {workspace_id}"
         )
-        
+
+        # Track connection events for each new account (flows to Google Analytics)
+        for conn in created_connections:
+            track_connected_meta_ads(
+                user_id=str(current_user.id),
+                workspace_id=workspace_id,
+                account_id=conn.external_account_id,
+                account_name=conn.name,
+            )
+
         return {
             "success": True,
             "connections_created": len(created_connections),
@@ -530,7 +540,7 @@ async def connect_selected_accounts(
             "total": total_connections,
             "connection_ids": [str(c.id) for c in created_connections + updated_connections],
         }
-        
+
     except Exception as e:
         db.rollback()
         logger.exception(f"[META_OAUTH] Failed to create/update connections: {str(e)}")

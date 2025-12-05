@@ -16,6 +16,9 @@ services:
       # Admin Panel Secret
       ADMIN_SECRET_KEY:
       
+      # Anthropic API Key
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      
       # OpenAI API Key
       OPENAI_API_KEY: 
 
@@ -33,9 +36,14 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
 
+      # Shopify OAuth Configuration
+      SHOPIFY_API_KEY: ${SHOPIFY_API_KEY:-}
+      SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET:-}
+
        # OAuth Redirect URIs
       META_OAUTH_REDIRECT_URI:
       GOOGLE_REDIRECT_URI: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/google/callback"
+      SHOPIFY_OAUTH_REDIRECT_URI: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/shopify/callback"
       FRONTEND_URL: "https://www.metricx.ai"
       BACKEND_URL: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
 
@@ -48,6 +56,26 @@ services:
       
       # CORS Configuration - allow production frontend, localhost, and defang domains
       BACKEND_CORS_ORIGINS: "https://www.metricx.ai,http://localhost:3000,https://t8zgrthold5r2-backend--8000.prod2.defang.dev,https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
+
+      # ===========================================
+      # Observability Stack
+      # ===========================================
+
+      # Environment (production, staging, development)
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+
+      # Sentry - Error Tracking
+      SENTRY_DSN: ${SENTRY_DSN:-}
+
+      # RudderStack - User Analytics → GA4
+      RUDDERSTACK_WRITE_KEY: ${RUDDERSTACK_WRITE_KEY:-}
+      RUDDERSTACK_DATA_PLANE_URL: ${RUDDERSTACK_DATA_PLANE_URL:-}
+
+      # Langfuse - LLM Observability
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -57,7 +85,10 @@ services:
     deploy:
       resources:
         reservations:
-          memory: 512M
+          # Increased from 512M to 1024M to handle concurrent users
+          # WHY: App was crashing with multiple users due to OOM
+          # REF: docs/PERFORMANCE_INVESTIGATION.md
+          memory: 1024M
 
   # RQ Worker - processes sync jobs AND QA jobs from Redis queue
   worker:
@@ -74,6 +105,7 @@ services:
 
       # Required for QA processing
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
 
       # Google SDK config (required for SDK, not user tokens)
       GOOGLE_DEVELOPER_TOKEN: ${GOOGLE_DEVELOPER_TOKEN:-}
@@ -85,10 +117,19 @@ services:
       META_AD_ACCOUNT_ID: ${META_AD_ACCOUNT_ID:-}
       GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN:-}
       GOOGLE_CUSTOMER_ID: ${GOOGLE_CUSTOMER_ID:-}
+
+      # Observability (worker also processes LLM calls)
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
     deploy:
       resources:
         reservations:
-          memory: 256M
+          # Increased from 256M to 512M for Claude API processing
+          # WHY: Workers handle LLM calls which have larger memory footprint
+          memory: 512M
     restart: always
 
   # Scheduler - enqueues sync jobs based on connection frequency settings
@@ -99,6 +140,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+      # Error tracking
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     deploy:
       resources:
         reservations:

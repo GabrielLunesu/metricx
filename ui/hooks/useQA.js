@@ -97,7 +97,6 @@ export function useQA({
       // Check if same request is already in-flight (deduplication)
       const inFlight = qaCache.getInFlight(workspaceId, question);
       if (inFlight) {
-        console.log('[useQA] Waiting for in-flight request:', question.substring(0, 40) + '...');
         try {
           const result = await inFlight;
           if (mountedRef.current && requestIdRef.current === currentRequestId) {
@@ -141,10 +140,8 @@ export function useQA({
         qaCache.set(workspaceId, question, result, cacheTTL);
 
         return result;
-      } catch (agentError) {
+      } catch {
         // Fallback to Semantic Layer if agent fails
-        console.warn('[useQA] Agent failed, falling back to semantic layer:', agentError.message);
-
         try {
           const result = await fetchQASemantic({
             workspaceId,
@@ -160,10 +157,8 @@ export function useQA({
 
           qaCache.set(workspaceId, question, result, cacheTTL);
           return result;
-        } catch (semanticError) {
+        } catch {
           // Fallback to legacy SSE streaming if semantic layer fails
-          console.warn('[useQA] Semantic layer failed, falling back to streaming:', semanticError.message);
-
           try {
             const result = await fetchQAStream({
               workspaceId,
@@ -179,10 +174,8 @@ export function useQA({
 
             qaCache.set(workspaceId, question, result, cacheTTL);
             return result;
-          } catch (streamError) {
+          } catch {
             // Final fallback to polling
-            console.warn('[useQA] Streaming also failed, falling back to polling:', streamError.message);
-
             const result = await fetchQA({
               workspaceId,
               question,
@@ -213,7 +206,6 @@ export function useQA({
     } catch (err) {
       // Only update state if still mounted and this is the latest request
       if (mountedRef.current && requestIdRef.current === currentRequestId) {
-        console.error('[useQA] Fetch failed:', err.message);
         setError(err.message);
         setLoading(false);
         setStage(null);

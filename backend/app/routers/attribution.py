@@ -297,7 +297,7 @@ def _calculate_health_score(
     - Any detected issues
     """
 )
-async def get_pixel_health(
+def get_pixel_health(
     workspace_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -573,7 +573,7 @@ async def reinstall_pixel(
     - Attribution rate (% of orders attributed)
     """
 )
-async def get_attribution_summary(
+def get_attribution_summary(
     workspace_id: UUID,
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: Session = Depends(get_db),
@@ -696,7 +696,7 @@ async def get_attribution_summary(
     - Confidence level
     """
 )
-async def get_attributed_campaigns(
+def get_attributed_campaigns(
     workspace_id: UUID,
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     limit: int = Query(20, ge=1, le=100, description="Number of campaigns to return"),
@@ -793,7 +793,7 @@ async def get_attributed_campaigns(
     - Match type and confidence level
     """
 )
-async def get_attribution_feed(
+def get_attribution_feed(
     workspace_id: UUID,
     limit: int = Query(20, ge=1, le=100, description="Number of items to return"),
     db: Session = Depends(get_db),
@@ -880,7 +880,7 @@ async def get_attribution_feed(
     - Missing UTM tracking
     """
 )
-async def get_campaign_warnings(
+def get_campaign_warnings(
     workspace_id: UUID,
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: Session = Depends(get_db),

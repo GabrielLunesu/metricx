@@ -368,12 +368,9 @@ class SecurityValidator:
 
         # Log result
         if not result.valid:
+            error_messages = [e.message for e in result.errors]
             logger.warning(
-                f"Security validation failed",
-                extra={
-                    "error_count": len(result.errors),
-                    "errors": [e.to_dict() for e in result.errors]
-                }
+                f"Security validation failed: {error_messages}"
             )
 
         return result

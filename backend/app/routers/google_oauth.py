@@ -29,6 +29,7 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.models import User, Connection, ProviderEnum
 from app.services.token_service import store_connection_token
+from app.telemetry import track_connected_google_ads
 
 logger = logging.getLogger(__name__)
 
@@ -607,7 +608,16 @@ async def connect_selected_accounts(
             f"[GOOGLE_OAUTH] Successfully connected {total_connections} Google Ads account(s) "
             f"({len(created_connections)} new, {len(updated_connections)} updated) to workspace {workspace_id}"
         )
-        
+
+        # Track connection events for each new account (flows to Google Analytics)
+        for conn in created_connections:
+            track_connected_google_ads(
+                user_id=str(current_user.id),
+                workspace_id=workspace_id,
+                account_id=conn.external_account_id,
+                account_name=conn.name,
+            )
+
         return {
             "success": True,
             "connections_created": len(created_connections),

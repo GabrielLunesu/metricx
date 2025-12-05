@@ -11,8 +11,20 @@ from starlette.middleware.sessions import SessionMiddleware
 import os
 import logging
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-logging.basicConfig(level=logging.INFO)
+
+# Production logging: only warnings and errors to console
+# Detailed logs go to observability tools (Sentry, Langfuse)
+log_level = os.environ.get("LOG_LEVEL", "WARNING").upper()
+logging.basicConfig(level=getattr(logging, log_level, logging.WARNING))
 logger = logging.getLogger(__name__)
+
+# Initialize observability stack (Sentry, RudderStack, Langfuse)
+# IMPORTANT: Must be done before FastAPI app is created for Sentry to capture all errors
+from .telemetry import init_observability, shutdown_observability
+_observability_status = init_observability()
+if any(_observability_status.values()):
+    enabled = [k for k, v in _observability_status.items() if v]
+    logger.warning(f"[STARTUP] Observability: {', '.join(enabled)}")
 
 from .authentication import SimpleAuth
 from .database import engine
@@ -40,6 +52,7 @@ from .routers import shopify_webhooks as shopify_webhooks_router  # Shopify comp
 from .routers import pixel_events as pixel_events_router  # Attribution pixel events
 from .routers import attribution as attribution_router  # Attribution and pixel health
 from .routers import dashboard_kpis as dashboard_kpis_router  # Dashboard KPIs with Shopify fallback
+from .routers import dashboard as dashboard_router  # Unified dashboard endpoint
 from . import schemas
 
 # Import models so Alembic can discover metadata
@@ -460,6 +473,7 @@ def create_app() -> FastAPI:
     app.include_router(pixel_events_router.router)  # Attribution pixel events
     app.include_router(attribution_router.router)  # Attribution and pixel health
     app.include_router(dashboard_kpis_router.router)  # Dashboard KPIs with Shopify fallback
+    app.include_router(dashboard_router.router)  # Unified dashboard endpoint
 
     @app.get(
         "/health",
@@ -489,6 +503,13 @@ def create_app() -> FastAPI:
             logging.warning("[STARTUP] Check REDIS_URL environment variable - currently: " + str(settings.REDIS_URL))
             # Don't raise - allow app to start even if Redis is temporarily unavailable
             # Individual requests will handle Redis failures gracefully
+
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """Clean shutdown of observability tools."""
+        logging.info("[SHUTDOWN] Flushing observability events...")
+        shutdown_observability()
+        logging.info("[SHUTDOWN] Observability shutdown complete")
 
     # Initialize authentication backend for admin panel
     authentication_backend = SimpleAuth(secret_key=settings.ADMIN_SECRET_KEY)

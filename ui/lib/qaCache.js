@@ -70,7 +70,6 @@ function get(workspaceId, question) {
     return null;
   }
 
-  console.log('[QA_CACHE] Hit:', question.substring(0, 50) + '...');
   return entry.data;
 }
 
@@ -90,8 +89,6 @@ function set(workspaceId, question, data, ttlMs = DEFAULT_TTL_MS) {
     expiresAt: Date.now() + ttlMs,
     cachedAt: Date.now()
   });
-
-  console.log('[QA_CACHE] Stored:', question.substring(0, 50) + '...', `(TTL: ${ttlMs / 1000}s)`);
 }
 
 /**
@@ -116,7 +113,6 @@ function invalidateWorkspace(workspaceId) {
       cache.delete(key);
     }
   }
-  console.log('[QA_CACHE] Invalidated all entries for workspace:', workspaceId);
 }
 
 /**
@@ -125,7 +121,6 @@ function invalidateWorkspace(workspaceId) {
 function clear() {
   cache.clear();
   inFlightRequests.clear();
-  console.log('[QA_CACHE] Cleared all entries');
 }
 
 /**
