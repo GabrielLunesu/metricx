@@ -36,9 +36,14 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
 
+      # Shopify OAuth Configuration
+      SHOPIFY_API_KEY: ${SHOPIFY_API_KEY:-}
+      SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET:-}
+
        # OAuth Redirect URIs
       META_OAUTH_REDIRECT_URI:
       GOOGLE_REDIRECT_URI: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/google/callback"
+      SHOPIFY_OAUTH_REDIRECT_URI: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/shopify/callback"
       FRONTEND_URL: "https://www.metricx.ai"
       BACKEND_URL: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
 
@@ -80,7 +85,10 @@ services:
     deploy:
       resources:
         reservations:
-          memory: 512M
+          # Increased from 512M to 1024M to handle concurrent users
+          # WHY: App was crashing with multiple users due to OOM
+          # REF: docs/PERFORMANCE_INVESTIGATION.md
+          memory: 1024M
 
   # RQ Worker - processes sync jobs AND QA jobs from Redis queue
   worker:
@@ -119,7 +127,9 @@ services:
     deploy:
       resources:
         reservations:
-          memory: 256M
+          # Increased from 256M to 512M for Claude API processing
+          # WHY: Workers handle LLM calls which have larger memory footprint
+          memory: 512M
     restart: always
 
   # Scheduler - enqueues sync jobs based on connection frequency settings

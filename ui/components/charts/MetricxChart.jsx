@@ -20,6 +20,12 @@ export function MetricxChart({
     className,
     isSingleDay = false
 }) {
+    // Guard: if config is missing, show placeholder
+    if (!config || typeof config !== 'object') {
+        console.warn('MetricxChart: config prop is required');
+        return <div style={{ height }} className={className} />;
+    }
+
     // Extract series keys from config
     const seriesKeys = Object.keys(config).filter(key => key !== 'label' && key !== 'color');
 

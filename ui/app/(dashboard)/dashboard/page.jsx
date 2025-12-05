@@ -4,56 +4,53 @@
  * WHAT: Main dashboard showing ad performance metrics, charts, and insights
  * WHY: Users need a single place to see how their ads are performing
  *
+ * PERFORMANCE OPTIMIZATION (v2):
+ *   - Uses unified dashboard endpoint (1 request instead of 8+)
+ *   - AI insights are lazy loaded (not blocking initial render)
+ *   - Data is fetched once and passed to child components
+ *
  * CONDITIONAL RENDERING:
  *   - Attribution section only shows if Shopify is connected (has_shopify)
  *   - KPI source indicators show connected platforms dynamically
  *
  * REFERENCES:
+ *   - docs/PERFORMANCE_INVESTIGATION.md
  *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
  *   - Strategic vision: Ad Analytics First, Attribution Second
  */
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import { currentUser } from "../../../lib/auth";
-import { fetchWorkspaceStatus } from "../../../lib/api";
+import { fetchUnifiedDashboard } from "../../../lib/api";
 import HeroHeader from "./components/HeroHeader";
-import KpiStrip from "./components/KpiStrip";
-import MoneyPulseChart from "./components/MoneyPulseChart";
-import AiInsightsPanel from "./components/AiInsightsPanel";
-import TopCreative from "./components/TopCreative";
-import PlatformSpendMix from "./components/PlatformSpendMix";
+import KpiStripUnified from "./components/KpiStripUnified";
+import MoneyPulseChartUnified from "./components/MoneyPulseChartUnified";
+import TopCreativeUnified from "./components/TopCreativeUnified";
+import SpendMixUnified from "./components/SpendMixUnified";
+import AttributionCardUnified from "./components/AttributionCardUnified";
+import LiveAttributionFeedUnified from "./components/LiveAttributionFeedUnified";
 import UnitEconomicsTable from "./components/UnitEconomicsTable";
 import TimeframeSelector from "./components/TimeframeSelector";
-import AttributionCard from "./components/AttributionCard";
-import LiveAttributionFeed from "./components/LiveAttributionFeed";
+
+// Lazy load AI insights - they're slow and not critical for initial render
+const AiInsightsPanel = lazy(() => import("./components/AiInsightsPanel"));
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState('last_7_days');
 
-  // Workspace status for conditional rendering
-  // WHY: Only show attribution widgets if Shopify is connected
-  const [status, setStatus] = useState(null);
+  // Unified dashboard data - fetched in ONE request
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  // Fetch user on mount
   useEffect(() => {
     let mounted = true;
     currentUser()
       .then((u) => {
-        if (!mounted) return;
-        setUser(u);
-
-        // Fetch workspace status for conditional UI rendering
-        if (u?.workspace_id) {
-          fetchWorkspaceStatus({ workspaceId: u.workspace_id })
-            .then((s) => {
-              if (mounted) setStatus(s);
-            })
-            .catch((err) => {
-              console.error("Failed to fetch workspace status:", err);
-              // Don't block dashboard if status fetch fails
-            });
-        }
+        if (mounted) setUser(u);
       })
       .catch((err) => {
         console.error("Failed to get user:", err);
@@ -62,10 +59,36 @@ export default function DashboardPage() {
       .finally(() => {
         if (mounted) setLoading(false);
       });
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
+
+  // Fetch unified dashboard data when user/timeframe changes
+  useEffect(() => {
+    if (!user?.workspace_id) return;
+
+    let mounted = true;
+    setDataLoading(true);
+    setError(null);
+
+    fetchUnifiedDashboard({
+      workspaceId: user.workspace_id,
+      timeframe
+    })
+      .then((data) => {
+        if (mounted) {
+          setDashboardData(data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch dashboard:", err);
+        if (mounted) setError(err.message);
+      })
+      .finally(() => {
+        if (mounted) setDataLoading(false);
+      });
+
+    return () => { mounted = false; };
+  }, [user?.workspace_id, timeframe]);
 
   if (loading) {
     return <div className="p-6 text-slate-500">Loading dashboard...</div>;
@@ -82,6 +105,9 @@ export default function DashboardPage() {
     );
   }
 
+  // Show skeleton while data is loading
+  const showSkeleton = dataLoading || !dashboardData;
+
   return (
     <div>
       {/* Hero Header */}
@@ -90,40 +116,69 @@ export default function DashboardPage() {
         actions={<TimeframeSelector value={timeframe} onChange={setTimeframe} />}
       />
 
-      {/* KPI Strip */}
+      {/* Error Banner */}
+      {error && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          Failed to load dashboard: {error}
+        </div>
+      )}
+
+      {/* KPI Strip - uses unified data */}
       <div className="mt-8">
-        <KpiStrip
-          workspaceId={user.workspace_id}
-          timeframe={timeframe}
-          connectedPlatforms={status?.connected_platforms}
+        <KpiStripUnified
+          data={dashboardData}
+          loading={showSkeleton}
         />
       </div>
 
       {/* Middle Section: Money Pulse & AI Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-        <MoneyPulseChart workspaceId={user.workspace_id} timeframe={timeframe} />
-        <AiInsightsPanel workspaceId={user.workspace_id} timeframe={timeframe} />
+        <MoneyPulseChartUnified
+          data={dashboardData}
+          loading={showSkeleton}
+        />
+        {/* AI Insights - lazy loaded, not blocking */}
+        <Suspense fallback={
+          <div className="glass-panel rounded-2xl p-4 animate-pulse h-64">
+            <div className="h-4 bg-slate-200 rounded w-1/3 mb-4"></div>
+            <div className="space-y-3">
+              <div className="h-16 bg-slate-100 rounded"></div>
+              <div className="h-16 bg-slate-100 rounded"></div>
+            </div>
+          </div>
+        }>
+          <AiInsightsPanel workspaceId={user.workspace_id} timeframe={timeframe} />
+        </Suspense>
       </div>
 
       {/* Attribution Section - Only show if Shopify is connected */}
-      {/* WHY: Attribution requires Shopify for order data. Without it, these widgets
-          would show empty states, making the product feel incomplete.
-          Reference: docs/living-docs/FRONTEND_REFACTOR_PLAN.md */}
-      {status?.has_shopify && (
+      {dashboardData?.has_shopify && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
-          <AttributionCard workspaceId={user.workspace_id} timeframe={timeframe} />
-          <LiveAttributionFeed workspaceId={user.workspace_id} />
+          <AttributionCardUnified
+            data={dashboardData}
+            loading={showSkeleton}
+          />
+          <LiveAttributionFeedUnified
+            data={dashboardData}
+            loading={showSkeleton}
+          />
         </div>
       )}
 
-      {/* Bottom Section: Top Ads & Product Table */}
+      {/* Bottom Section: Top Ads & Platform Mix */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8 pb-8">
-        <TopCreative workspaceId={user.workspace_id} timeframe={timeframe} />
+        <TopCreativeUnified
+          data={dashboardData}
+          loading={showSkeleton}
+        />
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium text-slate-800 tracking-tight">Platform Spend Mix</h3>
           </div>
-          <PlatformSpendMix workspaceId={user.workspace_id} timeframe={timeframe} />
+          <SpendMixUnified
+            data={dashboardData}
+            loading={showSkeleton}
+          />
           <UnitEconomicsTable workspaceId={user.workspace_id} timeframe={timeframe} />
         </div>
       </div>

@@ -338,7 +338,7 @@ def _get_platform_sparkline(
     platform-reported numbers.
     """
 )
-async def get_dashboard_kpis(
+def get_dashboard_kpis(
     workspace_id: UUID,
     timeframe: str = Query(
         default="last_7_days",
@@ -349,6 +349,12 @@ async def get_dashboard_kpis(
 ):
     """
     Get dashboard KPIs with Shopify-first data source.
+
+    NOTE: Changed from async def to def to prevent blocking the event loop.
+    FastAPI will automatically run this in a thread pool.
+
+    WHY: Sync SQLAlchemy in async endpoints blocks ALL concurrent requests.
+    When User A runs a slow query, User B's requests are queued → crashes.
 
     Logic:
     1. Check if workspace has Shopify connection

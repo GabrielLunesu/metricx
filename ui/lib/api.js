@@ -1125,3 +1125,46 @@ export async function fetchCampaignWarnings({ workspaceId, days = 30 }) {
   }
   return res.json();
 }
+
+
+// =============================================================================
+// UNIFIED DASHBOARD ENDPOINT
+// =============================================================================
+//
+// WHAT: Fetches ALL dashboard data in a single request
+// WHY: Reduces 8+ API calls to 1, dramatically improving dashboard load time
+//
+// RETURNS:
+// - kpis: Array of KPI data (revenue, ROAS, spend, conversions)
+// - chart_data: Merged sparkline data for charts
+// - top_creatives: Top 3 performing ads
+// - spend_mix: Spend breakdown by platform
+// - attribution_summary: Attribution by channel (if Shopify connected)
+// - attribution_feed: Recent attribution events (if Shopify connected)
+//
+// USAGE:
+//   const data = await fetchUnifiedDashboard({
+//     workspaceId: '...',
+//     timeframe: 'last_7_days'  // today, yesterday, last_7_days, last_30_days
+//   });
+//
+// REFERENCES:
+// - backend/app/routers/dashboard.py (GET /workspaces/{id}/dashboard/unified)
+// - docs/PERFORMANCE_INVESTIGATION.md
+export async function fetchUnifiedDashboard({ workspaceId, timeframe = 'last_7_days' }) {
+  const params = new URLSearchParams();
+  params.set("timeframe", timeframe);
+
+  const res = await fetch(`${BASE}/workspaces/${workspaceId}/dashboard/unified?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch unified dashboard: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
