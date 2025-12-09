@@ -224,13 +224,29 @@ class GAdsClient:
             yield from getattr(batch, 'results', [])
 
     # --- Convenience listings ------------------------------------------
-    def list_campaigns(self, customer_id: str) -> List[Dict[str, Any]]:
-        """Return campaigns with delivery/status fields and channel type."""
+    def list_campaigns(self, customer_id: str, active_only: bool = False) -> List[Dict[str, Any]]:
+        """Return campaigns with delivery/status fields and channel type.
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+            active_only: If True, only return ENABLED campaigns.
+                        Default is False to include PAUSED campaigns so metrics
+                        totals match Google Ads dashboard (paused campaigns still
+                        have historical data that counts toward totals).
+
+        NOTE: REMOVED campaigns are always excluded as they have no data.
+        """
+        # Build query - include PAUSED by default to match Google Ads totals
+        # REMOVED campaigns are excluded as they have no useful data
+        if active_only:
+            status_filter = "WHERE campaign.status = 'ENABLED'"
+        else:
+            status_filter = "WHERE campaign.status IN ('ENABLED', 'PAUSED')"
         q = (
             "SELECT campaign.id, campaign.name, campaign.status, "
             "campaign.serving_status, campaign.primary_status, "
             "campaign.primary_status_reasons, campaign.advertising_channel_type "
-            "FROM campaign ORDER BY campaign.name"
+            f"FROM campaign {status_filter} ORDER BY campaign.name"
         )
         rows = self.search(customer_id, q)
         out: List[Dict[str, Any]] = []
@@ -407,9 +423,186 @@ class GAdsClient:
         cust = rows[0].customer
         return {"time_zone": getattr(cust, "time_zone", None), "currency_code": getattr(cust, "currency_code", None)}
 
+    # --- Shopping / Product Performance --------------------------------
+    def fetch_shopping_performance(
+        self, customer_id: str, start: date, end: date
+    ) -> List[Dict[str, Any]]:
+        """Fetch product-level metrics from shopping_performance_view.
+
+        WHAT:
+            Retrieves daily product metrics for Shopping campaigns.
+            Returns product_item_id, product_title, brand, and metrics.
+
+        WHY:
+            Shopping campaigns don't have ad_group_ad entities - they use
+            product groups from Merchant Center. This is the source of truth
+            for Shopping campaign performance at the product level.
+
+        REFERENCES:
+            - Google Ads API: shopping_performance_view resource
+            - https://developers.google.com/google-ads/api/docs/shopping-ads/reporting
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+            start: Start date (inclusive)
+            end: End date (inclusive)
+
+        Returns:
+            List of dicts with product metrics including:
+            - campaign_id, ad_group_id: For hierarchy linking
+            - product_item_id, product_title, product_brand: Product info
+            - impressions, clicks, spend, conversions, revenue: Metrics
+            - resource_id: Unique ID for entity creation
+        """
+        q = f"""
+            SELECT
+                campaign.id,
+                campaign.name,
+                ad_group.id,
+                segments.product_item_id,
+                segments.product_title,
+                segments.product_brand,
+                segments.date,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM shopping_performance_view
+            WHERE segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'
+        """
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            m = r.metrics
+            d = r.segments.date
+            spend = (m.cost_micros or 0) / 1_000_000.0
+
+            # Extract IDs for hierarchy linking
+            campaign_id = getattr(r.campaign, "id", None)
+            ad_group_id = getattr(r.ad_group, "id", None)
+            product_item_id = getattr(r.segments, "product_item_id", None) or "unknown"
+            product_title = getattr(r.segments, "product_title", None)
+            product_brand = getattr(r.segments, "product_brand", None)
+
+            # Build unique external ID: product-{campaign_id}-{product_item_id}
+            # This ensures uniqueness per product per campaign
+            resource_id = f"product-{campaign_id}-{product_item_id}"
+
+            out.append({
+                "date": str(d),
+                "campaign_id": campaign_id,
+                "ad_group_id": ad_group_id,
+                "product_item_id": product_item_id,
+                "product_title": product_title or f"Product {product_item_id}",
+                "product_brand": product_brand,
+                "impressions": int(m.impressions or 0),
+                "clicks": int(m.clicks or 0),
+                "spend": float(spend),
+                "conversions": float(m.conversions or 0.0),
+                "revenue": float(m.conversions_value or 0.0),
+                "resource_id": resource_id,
+                "_raw": r,
+            })
+        return out
+
+    def fetch_pmax_product_performance(
+        self, customer_id: str, start: date, end: date
+    ) -> List[Dict[str, Any]]:
+        """Fetch product-level metrics from asset_group_product_group_view.
+
+        WHAT:
+            Retrieves product metrics for Performance Max retail campaigns.
+            Returns asset_group linkage and aggregated product metrics.
+
+        WHY:
+            PMax retail campaigns have product-level performance data that
+            rolls up to asset groups. This enables top product analysis
+            for PMax campaigns connected to Merchant Center.
+
+        REFERENCES:
+            - Google Ads API: asset_group_product_group_view resource
+            - https://developers.google.com/google-ads/api/docs/performance-max/retail
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+            start: Start date (inclusive)
+            end: End date (inclusive)
+
+        Returns:
+            List of dicts with product group metrics including:
+            - asset_group_id: For hierarchy linking
+            - impressions, clicks, spend, conversions, revenue: Metrics
+            - resource_id: Unique ID for entity creation
+        """
+        q = f"""
+            SELECT
+                asset_group.id,
+                asset_group.name,
+                asset_group.campaign,
+                segments.date,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM asset_group_product_group_view
+            WHERE segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'
+        """
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            m = r.metrics
+            d = r.segments.date
+            spend = (m.cost_micros or 0) / 1_000_000.0
+
+            asset_group_id = getattr(r.asset_group, "id", None)
+            asset_group_name = getattr(r.asset_group, "name", None)
+            # Extract campaign_id from resource name: customers/123/campaigns/456
+            campaign_resource = getattr(r.asset_group, "campaign", None)
+            campaign_id = None
+            if campaign_resource:
+                parts = str(campaign_resource).split("/")
+                if len(parts) >= 4:
+                    campaign_id = parts[-1]
+
+            # Unique ID for product group within asset group
+            resource_id = f"pmax-product-{asset_group_id}"
+
+            out.append({
+                "date": str(d),
+                "asset_group_id": asset_group_id,
+                "asset_group_name": asset_group_name,
+                "campaign_id": campaign_id,
+                "impressions": int(m.impressions or 0),
+                "clicks": int(m.clicks or 0),
+                "spend": float(spend),
+                "conversions": float(m.conversions or 0.0),
+                "revenue": float(m.conversions_value or 0.0),
+                "resource_id": resource_id,
+                "_raw": r,
+            })
+        return out
+
     # --- Metrics --------------------------------------------------------
-    def fetch_daily_metrics(self, customer_id: str, start: date, end: date, level: str = "campaign") -> List[Dict[str, Any]]:
+    def fetch_daily_metrics(
+        self,
+        customer_id: str,
+        start: date,
+        end: date,
+        level: str = "campaign",
+        active_only: bool = False
+    ) -> List[Dict[str, Any]]:
         """Fetch daily metrics for a given level (campaign/ad_group/ad).
+
+        Args:
+            customer_id: Google Ads customer ID
+            start: Start date (inclusive)
+            end: End date (inclusive)
+            level: Entity level to fetch (campaign/ad_group/ad/asset_group)
+            active_only: If True, only fetch metrics for ENABLED campaigns.
+                        Default is False to include PAUSED campaigns so totals
+                        match Google Ads dashboard.
 
         NOTE: No segmentation other than date to include zero rows.
         """
@@ -427,12 +620,19 @@ class GAdsClient:
             "asset_group": "asset_group.id, asset_group.name, asset_group.campaign",
             "asset_group_asset": "asset_group_asset.asset, asset_group_asset.field_type, asset_group_asset.asset_group",
         }[level]
+
+        # Build WHERE clause
+        where_parts = [f"segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'"]
+        if active_only:
+            where_parts.append("campaign.status = 'ENABLED'")
+        where_clause = " AND ".join(where_parts)
+
         q = (
             f"SELECT {select_id}, "
             "metrics.impressions, metrics.clicks, metrics.cost_micros, "
             "metrics.conversions, metrics.conversions_value, segments.date "
             f"FROM {resource} "
-            f"WHERE segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'"
+            f"WHERE {where_clause}"
         )
         rows = self.search(customer_id, q)
         out: List[Dict[str, Any]] = []

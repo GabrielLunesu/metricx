@@ -1,33 +1,26 @@
 """
-Agent Worker - RQ Job Handler
-=============================
+Agent Worker - LangGraph Agent Functions
+=========================================
 
-**Version**: 1.0.0
-**Created**: 2025-12-03
+**Version**: 2.0.0
+**Updated**: 2025-12-08
 
-RQ worker that processes agent jobs.
-Runs the LangGraph agent with Redis Pub/Sub streaming.
+Agent job processing functions for QA system.
 
 WHY THIS FILE EXISTS
 --------------------
-The agent runs in a background worker (not the API process) because:
-1. LLM calls can take 5-30 seconds
-2. We don't want to block HTTP requests
-3. RQ provides reliable job processing with retries
+Provides synchronous agent execution for:
+1. /qa/agent/sync - Direct synchronous endpoint
+2. /qa/agent/sse - SSE streaming endpoint
 
-This worker:
-1. Receives job from RQ queue
-2. Creates StreamPublisher for real-time updates
-3. Runs LangGraph agent
-4. Publishes results via Redis Pub/Sub
-5. Stores final result in job.meta
+Note: The RQ-based async job system has been deprecated.
+All QA endpoints now run synchronously or via SSE streaming.
 
 RELATED FILES
 -------------
 - app/agent/graph.py: The agent that gets run
 - app/agent/stream.py: Redis pub/sub streaming
-- app/routers/qa.py: API that enqueues jobs
-- app/workers/qa_worker.py: Pattern reference (existing QA worker)
+- app/routers/qa.py: API endpoints
 """
 
 from __future__ import annotations
@@ -46,25 +39,23 @@ from app import state as app_state
 logger = logging.getLogger(__name__)
 
 
-def _update_stage(job, stage: str) -> None:
+def _update_stage(job_id: str, stage: str, publisher=None) -> None:
     """
-    Update job metadata with current processing stage.
-
-    WHY: Enables SSE endpoint to report progress even without Redis Pub/Sub.
-    This is a fallback for environments where pub/sub isn't available.
+    Log processing stage for debugging.
 
     STAGES:
-        - queued: Job enqueued, not started
         - understanding: Classifying user intent
         - fetching: Getting data from semantic layer
         - responding: Generating natural language answer
         - complete: Job finished
         - error: Job failed
     """
-    if job:
-        job.meta['stage'] = stage
-        job.save_meta()
-        logger.debug(f"[AGENT_WORKER] Stage updated: {stage}")
+    logger.debug(f"[AGENT_WORKER] Job {job_id} stage: {stage}")
+    if publisher:
+        try:
+            publisher.thinking(f"Stage: {stage}")
+        except Exception:
+            pass
 
 
 def process_agent_job(
@@ -72,19 +63,19 @@ def process_agent_job(
     workspace_id: str,
     user_id: str,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
+    job_id: str = "direct",
 ) -> Dict[str, Any]:
     """
-    RQ job handler for agent questions.
+    Process an agent question.
 
     WHAT: Main entry point for processing a question.
-
-    WHY: Called by RQ when a job is dequeued.
 
     PARAMETERS:
         question: User's natural language question
         workspace_id: UUID string for workspace scoping
         user_id: UUID string for user tracking
         conversation_history: Previous Q&A for context
+        job_id: Optional job identifier for logging
 
     RETURNS:
         Dict with:
@@ -93,20 +84,7 @@ def process_agent_job(
             - visuals: Chart/table specs
             - data: Raw data (for debugging)
             - error: Error message (if failed)
-
-    FLOW:
-        1. Get RQ job for stage tracking
-        2. Create database session
-        3. Create Redis publisher for streaming
-        4. Run LangGraph agent
-        5. Return result
     """
-    from rq import get_current_job
-
-    # Get job from RQ context
-    job = get_current_job()
-    job_id = job.id if job else "unknown"
-
     logger.info(f"[AGENT_WORKER] ===== Processing agent job {job_id} =====")
     logger.info(f"[AGENT_WORKER] Question: {question}")
     logger.info(f"[AGENT_WORKER] Workspace: {workspace_id}")
@@ -122,12 +100,9 @@ def process_agent_job(
         logger.info(f"[AGENT_WORKER] Publisher created for job {job_id}")
     except Exception as e:
         logger.warning(f"[AGENT_WORKER] Failed to create publisher: {e}")
-        # Continue without publisher - will just not stream
 
     try:
-        # Stage 1: Understanding
-        _update_stage(job, "understanding")
-        logger.info("[AGENT_WORKER] Stage: understanding")
+        _update_stage(job_id, "understanding", publisher)
 
         # Run the agent
         result = run_agent(
@@ -139,8 +114,7 @@ def process_agent_job(
             conversation_history=conversation_history,
         )
 
-        # Stage 2: Complete
-        _update_stage(job, "complete")
+        _update_stage(job_id, "complete", publisher)
         logger.info(f"[AGENT_WORKER] Job {job_id} completed: success={result.get('success')}")
 
         # Store context for follow-ups
@@ -171,7 +145,7 @@ def process_agent_job(
         error_msg = str(e)
         logger.exception(f"[AGENT_WORKER] Job {job_id} failed: {e}")
 
-        _update_stage(job, "error")
+        _update_stage(job_id, "error", publisher)
 
         if publisher:
             publisher.error(error_msg)

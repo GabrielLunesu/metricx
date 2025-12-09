@@ -2,6 +2,7 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 SQLAlchemy==2.0.34
 psycopg2-binary==2.9.9
+asyncpg>=0.29.0  # Async PostgreSQL driver for async SQLAlchemy
 pydantic[email]==2.9.2
 pydantic-settings==2.5.2
 python-jose==3.3.0
@@ -16,7 +17,7 @@ wtforms==3.1.1
 itsdangerous==2.2.0
 redis==5.0.1
 fakeredis==2.21.1
-rq==1.15.1
+arq>=0.26.0  # Async job queue - handles all background jobs + built-in cron scheduling
 facebook-business==19.0.0
 cryptography==43.0.1
 google-ads>=28.0.0  # Min version - Google deprecates old API versions regularly

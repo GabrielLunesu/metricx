@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar, Clock, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { fetchConnections, deleteConnection, updateSyncFrequency } from '@/lib/api';
+import { fetchConnections, deleteConnection } from '@/lib/api';
 import MetaSyncButton from '@/components/MetaSyncButton';
 import GoogleSyncButton from '@/components/GoogleSyncButton';
 import GoogleConnectButton from '@/components/GoogleConnectButton';
@@ -19,7 +19,13 @@ export default function ConnectionsTab({ user }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [deletingConnectionId, setDeletingConnectionId] = useState(null);
-    const [frequencySavingId, setFrequencySavingId] = useState(null);
+    const [now, setNow] = useState(new Date());
+
+    // Update "now" every 30 seconds for next sync countdown
+    useEffect(() => {
+        const interval = setInterval(() => setNow(new Date()), 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const refreshConnectionsList = async (workspaceId, mounted = true) => {
         const connectionsData = await fetchConnections({ workspaceId });
@@ -82,18 +88,14 @@ export default function ConnectionsTab({ user }) {
         }
     };
 
-    const handleFrequencyChange = async (connectionId, value) => {
-        if (!user?.workspace_id) return;
-        setFrequencySavingId(connectionId);
-        try {
-            await updateSyncFrequency({ connectionId, syncFrequency: value });
-            await refreshConnectionsList(user.workspace_id);
-            toast.success("Sync frequency updated");
-        } catch (err) {
-            toast.error(err?.message || 'Failed to update sync frequency');
-        } finally {
-            setFrequencySavingId(null);
-        }
+    /**
+     * Calculate minutes until next automatic sync (runs at :00, :15, :30, :45)
+     */
+    const getMinutesUntilNextSync = () => {
+        const minutes = now.getMinutes();
+        const nextSlot = Math.ceil((minutes + 1) / 15) * 15;
+        const minutesUntil = nextSlot - minutes;
+        return minutesUntil === 0 ? 15 : minutesUntil;
     };
 
     const formatDate = (dateString) => {
@@ -274,53 +276,73 @@ export default function ConnectionsTab({ user }) {
 
                                 {connection.status === 'active' && (
                                     <div className="mt-4 pt-4 border-t border-neutral-200 space-y-4">
-                                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-neutral-900">Sync Frequency</p>
-                                                <p className="text-xs text-neutral-500">
-                                                    Choose how often metricx automatically syncs this account.
+                                        {/* Sync Status Row */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                {connection.sync_status === 'syncing' ? (
+                                                    <div className="flex items-center gap-2 text-cyan-600">
+                                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                                        <span className="text-sm font-medium">Syncing now...</span>
+                                                    </div>
+                                                ) : connection.last_sync_error ? (
+                                                    <div className="flex items-center gap-2 text-amber-600">
+                                                        <AlertCircle className="w-4 h-4" />
+                                                        <span className="text-sm font-medium">Last sync had issues</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 text-emerald-600">
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                        <span className="text-sm font-medium">Syncing automatically</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-neutral-500 text-sm">
+                                                <Clock className="w-4 h-4" />
+                                                <span>Next sync in {getMinutesUntilNextSync()} min</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Sync Stats */}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                            <div className="bg-neutral-50 rounded-lg p-3">
+                                                <p className="text-neutral-500 mb-1">Last Synced</p>
+                                                <p className="font-medium text-neutral-900">
+                                                    {connection.last_sync_attempted_at
+                                                        ? new Date(connection.last_sync_attempted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                        : 'Never'}
                                                 </p>
                                             </div>
-                                            <select
-                                                value={connection.sync_frequency || 'manual'}
-                                                disabled={frequencySavingId === connection.id}
-                                                onChange={(e) => handleFrequencyChange(connection.id, e.target.value)}
-                                                className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-200"
-                                            >
-                                                <option value="manual">Manual</option>
-                                                <option value="5min">Every 5 min</option>
-                                                <option value="10min">Every 10 min</option>
-                                                <option value="30min">Every 30 min</option>
-                                                <option value="hourly">Hourly</option>
-                                                <option value="daily">Daily</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-neutral-600">
-                                            <div>
-                                                <p className="text-neutral-500 uppercase tracking-wide text-[10px]">Status</p>
-                                                <p className="font-medium text-neutral-900">{connection.sync_status || 'idle'}</p>
+                                            <div className="bg-neutral-50 rounded-lg p-3">
+                                                <p className="text-neutral-500 mb-1">Last Data Change</p>
+                                                <p className="font-medium text-neutral-900">
+                                                    {connection.last_metrics_changed_at
+                                                        ? new Date(connection.last_metrics_changed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                        : 'Never'}
+                                                </p>
                                             </div>
-                                            <div>
-                                                <p className="text-neutral-500 uppercase tracking-wide text-[10px]">Last Attempt</p>
-                                                <p className="font-medium">{formatDate(connection.last_sync_attempted_at)}</p>
+                                            <div className="bg-neutral-50 rounded-lg p-3">
+                                                <p className="text-neutral-500 mb-1">Total Syncs</p>
+                                                <p className="font-medium text-neutral-900">{connection.total_syncs_attempted || 0}</p>
                                             </div>
-                                            <div>
-                                                <p className="text-neutral-500 uppercase tracking-wide text-[10px]">Last Change</p>
-                                                <p className="font-medium">{formatDate(connection.last_metrics_changed_at)}</p>
+                                            <div className="bg-neutral-50 rounded-lg p-3">
+                                                <p className="text-neutral-500 mb-1">With Changes</p>
+                                                <p className="font-medium text-neutral-900">{connection.total_syncs_with_changes || 0}</p>
                                             </div>
                                         </div>
 
+                                        {/* Error Message */}
                                         {connection.last_sync_error && (
-                                            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">
-                                                Last error: {connection.last_sync_error}
+                                            <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <p className="font-medium mb-1">Last sync issue:</p>
+                                                    <p>{connection.last_sync_error}</p>
+                                                </div>
                                             </div>
                                         )}
 
-                                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                            <div className="text-xs text-neutral-500 flex-1">
-                                                Attempts: {connection.total_syncs_attempted} · With Changes: {connection.total_syncs_with_changes}
-                                            </div>
+                                        {/* Manual Sync Button */}
+                                        <div className="flex justify-end">
                                             {connection.provider === 'meta' ? (
                                                 <MetaSyncButton
                                                     workspaceId={user.workspace_id}

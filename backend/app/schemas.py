@@ -412,7 +412,7 @@ class ConnectionOut(BaseModel):
     status: str = Field(description="Connection status")
     connected_at: datetime = Field(description="Connection timestamp")
     workspace_id: UUID = Field(description="Associated workspace ID")
-    sync_frequency: str = Field(description="Sync cadence", default="manual")
+    sync_frequency: str = Field(description="Sync cadence", default="15min")
     sync_status: str = Field(description="Sync state", default="idle")
     last_sync_attempted_at: Optional[datetime] = None
     last_sync_completed_at: Optional[datetime] = None

@@ -44,11 +44,12 @@ router = APIRouter()
 def ingest_metrics_internal(
     workspace_id: UUID,
     facts: List[MetricFactCreate],
-    db: Session
+    db: Session,
+    batch_size: int = 50
 ) -> dict:
     """
     Internal ingestion function for use by other services.
-    
+
     WHY:
     - meta_sync needs to call ingestion without HTTP/FastAPI dependencies
     - Reuses all ingestion logic (deduplication, entity creation, etc.)
@@ -56,17 +57,19 @@ def ingest_metrics_internal(
     WHAT:
     - Same logic as ingest_metrics endpoint but without auth/HTTP layer
     - Returns dict instead of response model
-    - Commits transaction
+    - Processes facts in batches to avoid timeout issues
+    - Commits after each batch for resilience
 
     WHERE:
     - Called by meta_sync.py during metrics synchronization
     - Can be called by other internal services
-    
+
     Args:
         workspace_id: Workspace UUID
         facts: List of metrics to ingest
         db: Database session
-        
+        batch_size: Number of facts to process before committing (default 50)
+
     Returns:
         Dict with ingested/skipped/errors counts
     """
@@ -74,15 +77,18 @@ def ingest_metrics_internal(
     workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
     if not workspace:
         raise ValueError(f"Workspace {workspace_id} not found")
-    
+
     ingested = 0
     skipped = 0
     errors = []
-    
+
     # Get or create import record for this batch
     import_record = _get_or_create_import(db, workspace_id)
-    
+
     logger.info(f"[INGEST] Processing {len(facts)} facts for workspace {workspace_id}")
+
+    # Track batch progress for intermediate commits
+    batch_count = 0
     
     for idx, fact in enumerate(facts):
         try:
@@ -165,28 +171,59 @@ def ingest_metrics_internal(
                 db.add(metric_fact)
                 ingested += 1
             
-            try:
-                db.flush()
-            except IntegrityError as e:
-                db.rollback()
-                error_msg = f"Fact {idx}: Database error - {str(e)}"
-                logger.error(f"[INGEST] {error_msg}")
-                errors.append(error_msg)
-                ingested -= 1  # Rollback the count
-        
+            batch_count += 1
+
+            # Commit every batch_size facts to avoid timeout
+            if batch_count >= batch_size:
+                try:
+                    db.commit()
+                    logger.debug(f"[INGEST] Committed batch at index {idx}")
+                    batch_count = 0
+                except Exception as e:
+                    db.rollback()
+                    error_msg = f"Batch commit failed at {idx}: {str(e)}"
+                    logger.error(f"[INGEST] {error_msg}")
+                    errors.append(error_msg)
+                    batch_count = 0
+                    # Re-create import record after rollback
+                    import_record = _get_or_create_import(db, workspace_id)
+
+        except IntegrityError as e:
+            db.rollback()
+            error_msg = f"Fact {idx}: Database error - {str(e)}"
+            logger.error(f"[INGEST] {error_msg}")
+            errors.append(error_msg)
+            batch_count = 0
+            # Re-create import record after rollback
+            import_record = _get_or_create_import(db, workspace_id)
+
         except Exception as e:
+            # Rollback on any error to clear the session state
+            try:
+                db.rollback()
+            except Exception:
+                pass  # Session might already be rolled back
             error_msg = f"Fact {idx}: {type(e).__name__} - {str(e)}"
             logger.error(f"[INGEST] {error_msg}")
             errors.append(error_msg)
-    
-    # Commit all successful inserts
-    try:
-        db.commit()
-        logger.info(f"[INGEST] Complete: {ingested} ingested, {skipped} skipped, {len(errors)} errors")
-    except Exception as e:
-        db.rollback()
-        logger.error(f"[INGEST] Commit failed: {e}")
-        raise ValueError(f"Failed to commit ingestion: {str(e)}")
+            batch_count = 0
+            # Re-create import record after rollback
+            try:
+                import_record = _get_or_create_import(db, workspace_id)
+            except Exception:
+                pass  # Best effort
+
+    # Commit any remaining facts
+    if batch_count > 0:
+        try:
+            db.commit()
+            logger.debug(f"[INGEST] Committed final batch")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"[INGEST] Final commit failed: {e}")
+            errors.append(f"Final commit failed: {str(e)}")
+
+    logger.info(f"[INGEST] Complete: {ingested} ingested, {skipped} skipped, {len(errors)} errors")
     
     return {
         "success": len(errors) == 0,

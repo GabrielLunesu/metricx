@@ -618,6 +618,19 @@ async def connect_selected_accounts(
                 account_name=conn.name,
             )
 
+        # Trigger initial sync for all new/updated connections (non-blocking)
+        # If Redis available: enqueues to background worker
+        # If Redis unavailable: skips (connection will be picked up on next 15-min train)
+        try:
+            from app.services.sync_scheduler import enqueue_initial_sync
+            for conn in created_connections + updated_connections:
+                # run_sync=False means don't block if Redis unavailable
+                enqueue_initial_sync(str(conn.id), run_sync=False)
+                logger.info(f"[GOOGLE_OAUTH] Enqueued initial sync for connection {conn.id}")
+        except Exception as e:
+            # Don't fail the connection if sync enqueue fails
+            logger.warning(f"[GOOGLE_OAUTH] Could not enqueue initial sync: {e}")
+
         return {
             "success": True,
             "connections_created": len(created_connections),

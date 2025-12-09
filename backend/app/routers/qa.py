@@ -37,9 +37,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from redis import Redis
-from rq import Queue
-from rq.job import Job
 
 from app.schemas import QARequest, QAJobResponse, QAJobStatusResponse
 from app.database import get_db
@@ -68,43 +65,8 @@ SSE_POLL_MAX_MS = 300   # Max polling interval 300ms
 SSE_POLL_BACKOFF = 1.5  # Multiply interval by 1.5 each iteration
 
 
-def _generate_dedup_key(user_id: str, workspace_id: str, question: str) -> str:
-    """
-    Generate a unique deduplication key for a QA job.
-
-    Same user asking the same question in the same workspace within
-    DEDUP_WINDOW_SECONDS will get the same job instead of creating a new one.
-    """
-    # Normalize question (lowercase, strip whitespace)
-    normalized_q = question.lower().strip()
-    raw = f"{user_id}:{workspace_id}:{normalized_q}"
-    return f"qa_dedup:{hashlib.md5(raw.encode()).hexdigest()}"
-
-
-def _find_existing_job(redis_conn: Redis, queue: Queue, dedup_key: str) -> Job | None:
-    """
-    Check if a job with this dedup key already exists and is still valid.
-
-    Returns the existing job if found and not failed/finished, else None.
-    """
-    # Check if we have a recent job ID stored for this dedup key
-    existing_job_id = redis_conn.get(dedup_key)
-    if not existing_job_id:
-        return None
-
-    existing_job_id = existing_job_id.decode() if isinstance(existing_job_id, bytes) else existing_job_id
-
-    try:
-        job = Job.fetch(existing_job_id, connection=redis_conn)
-        # Return job only if it's still pending or running
-        if job.is_queued or job.is_started:
-            logger.info(f"[QA_ROUTER] Found existing job {existing_job_id} for dedup key")
-            return job
-    except Exception:
-        # Job doesn't exist or expired
-        pass
-
-    return None
+# Legacy dedup functions removed - RQ job system deprecated
+# All QA endpoints now use synchronous or SSE streaming (no background jobs)
 
 
 @router.post("", response_model=QAJobResponse, deprecated=True)
@@ -960,6 +922,7 @@ async def ask_question_agent_sse(
     WHAT:
         Streams agent response token-by-token via Server-Sent Events.
         Provides real-time typing effect in the frontend.
+        Uses ASYNC Claude client to avoid blocking the event loop.
 
     EVENTS:
         - thinking: Agent is processing
@@ -967,10 +930,12 @@ async def ask_question_agent_sse(
         - visual: Chart/table specification
         - done: Final result with all data
         - error: Something went wrong
+
+    NON-BLOCKING:
+        This endpoint uses AsyncAnthropic and asyncio.to_thread() for DB queries
+        to avoid blocking the event loop. Multiple concurrent requests can be handled.
     """
-    from app.agent.graph import create_agent_graph
-    from app.agent.state import create_initial_state
-    from app.agent.nodes import get_claude_client, UNDERSTAND_PROMPT, RESPOND_PROMPT, _build_visuals_from_data
+    from app.agent.nodes import get_async_claude_client, UNDERSTAND_PROMPT, RESPOND_PROMPT, _build_visuals_from_data
     from app.agent.tools import SemanticTools
     import json as json_module
     import time as time_module
@@ -1001,19 +966,22 @@ async def ask_question_agent_sse(
     )
 
     async def generate():
-        """Generator that yields SSE events."""
+        """Generator that yields SSE events.
+
+        Uses async Claude client and thread pool for DB to avoid blocking.
+        """
         start_time = time_module.time()
         total_tokens = 0
         success = False
 
         try:
-            # Stage 1: Understanding
+            # Stage 1: Understanding (ASYNC - non-blocking)
             yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Understanding your question...'})}\n\n"
 
-            client = get_claude_client()
+            client = get_async_claude_client()
 
-            # Understand the question
-            response = client.messages.create(
+            # Understand the question - ASYNC call
+            response = await client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1024,
                 system=UNDERSTAND_PROMPT,
@@ -1063,16 +1031,19 @@ async def ask_question_agent_sse(
 
             yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Fetching your data...'})}\n\n"
 
-            # Stage 2: Fetch data
-            tools = SemanticTools(db, workspace_id, user_id)
-            result = tools.query_metrics(
-                metrics=semantic_query["metrics"],
-                time_range=semantic_query["time_range"],
-                breakdown_level=semantic_query.get("breakdown_level"),
-                compare_to_previous=semantic_query.get("compare_to_previous", False),
-                include_timeseries=semantic_query.get("include_timeseries", False),
-                filters=semantic_query.get("filters"),
-            )
+            # Stage 2: Fetch data - run in thread pool to avoid blocking
+            def fetch_data_sync():
+                tools = SemanticTools(db, workspace_id, user_id)
+                return tools.query_metrics(
+                    metrics=semantic_query["metrics"],
+                    time_range=semantic_query["time_range"],
+                    breakdown_level=semantic_query.get("breakdown_level"),
+                    compare_to_previous=semantic_query.get("compare_to_previous", False),
+                    include_timeseries=semantic_query.get("include_timeseries", False),
+                    filters=semantic_query.get("filters"),
+                )
+
+            result = await asyncio.to_thread(fetch_data_sync)
 
             if result.get("error"):
                 yield f"data: {json_module.dumps({'type': 'error', 'data': result['error']})}\n\n"
@@ -1082,7 +1053,7 @@ async def ask_question_agent_sse(
 
             yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Preparing your answer...'})}\n\n"
 
-            # Stage 3: Stream the response
+            # Stage 3: Stream the response - ASYNC streaming
             data_summary = json_module.dumps(data, indent=2, default=str)
             messages = [{
                 "role": "user",
@@ -1097,19 +1068,18 @@ Please write a helpful, conversational response based on this data."""
             }]
 
             full_answer = ""
-            with client.messages.stream(
+            async with client.messages.stream(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1024,
                 system=RESPOND_PROMPT,
                 messages=messages,
             ) as stream:
-                for text in stream.text_stream:
+                async for text in stream.text_stream:
                     full_answer += text
                     yield f"data: {json_module.dumps({'type': 'token', 'data': text})}\n\n"
-                    await asyncio.sleep(0)  # Allow other tasks to run
 
                 # Log respond generation to Langfuse (after stream completes)
-                final_message = stream.get_final_message()
+                final_message = await stream.get_final_message()
                 if trace and final_message.usage:
                     log_generation(
                         trace=trace,

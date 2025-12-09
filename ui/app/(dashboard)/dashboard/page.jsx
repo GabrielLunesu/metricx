@@ -6,7 +6,7 @@
  *
  * PERFORMANCE OPTIMIZATION (v2):
  *   - Uses unified dashboard endpoint (1 request instead of 8+)
- *   - AI insights are lazy loaded (not blocking initial render)
+ *   - AI insights use dashboard data directly (no separate API calls)
  *   - Data is fetched once and passed to child components
  *
  * CONDITIONAL RENDERING:
@@ -19,7 +19,7 @@
  *   - Strategic vision: Ad Analytics First, Attribution Second
  */
 "use client";
-import { useEffect, useState, Suspense, lazy } from "react";
+import { useEffect, useState } from "react";
 import { currentUser } from "../../../lib/auth";
 import { fetchUnifiedDashboard } from "../../../lib/api";
 import HeroHeader from "./components/HeroHeader";
@@ -29,11 +29,9 @@ import TopCreativeUnified from "./components/TopCreativeUnified";
 import SpendMixUnified from "./components/SpendMixUnified";
 import AttributionCardUnified from "./components/AttributionCardUnified";
 import LiveAttributionFeedUnified from "./components/LiveAttributionFeedUnified";
-import UnitEconomicsTable from "./components/UnitEconomicsTable";
+// import UnitEconomicsTable from "./components/UnitEconomicsTable";
 import TimeframeSelector from "./components/TimeframeSelector";
-
-// Lazy load AI insights - they're slow and not critical for initial render
-const AiInsightsPanel = lazy(() => import("./components/AiInsightsPanel"));
+import AiInsightsPanel from "./components/AiInsightsPanel";
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
@@ -114,6 +112,7 @@ export default function DashboardPage() {
       <HeroHeader
         user={user}
         actions={<TimeframeSelector value={timeframe} onChange={setTimeframe} />}
+        lastSyncedAt={dashboardData?.last_synced_at}
       />
 
       {/* Error Banner */}
@@ -136,19 +135,10 @@ export default function DashboardPage() {
         <MoneyPulseChartUnified
           data={dashboardData}
           loading={showSkeleton}
+          timeframe={timeframe}
         />
-        {/* AI Insights - lazy loaded, not blocking */}
-        <Suspense fallback={
-          <div className="glass-panel rounded-2xl p-4 animate-pulse h-64">
-            <div className="h-4 bg-slate-200 rounded w-1/3 mb-4"></div>
-            <div className="space-y-3">
-              <div className="h-16 bg-slate-100 rounded"></div>
-              <div className="h-16 bg-slate-100 rounded"></div>
-            </div>
-          </div>
-        }>
-          <AiInsightsPanel workspaceId={user.workspace_id} timeframe={timeframe} />
-        </Suspense>
+        {/* AI Insights - uses dashboard data directly (no API calls) */}
+        <AiInsightsPanel data={dashboardData} loading={showSkeleton} workspaceId={user?.workspace_id} />
       </div>
 
       {/* Attribution Section - Only show if Shopify is connected */}
@@ -179,7 +169,7 @@ export default function DashboardPage() {
             data={dashboardData}
             loading={showSkeleton}
           />
-          <UnitEconomicsTable workspaceId={user.workspace_id} timeframe={timeframe} />
+          {/* <UnitEconomicsTable workspaceId={user.workspace_id} timeframe={timeframe} /> */}
         </div>
       </div>
     </div>
