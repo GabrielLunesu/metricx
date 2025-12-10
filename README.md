@@ -1,6 +1,5 @@
 # metricx — AI-Powered Marketing Analytics
 
-## Quick Start
 
 ```bash
 # Infrastructure

@@ -316,22 +316,28 @@ export default function HeroSectionNew() {
               </a>
             </motion.div>
 
-            {/* Trusted By Section */}
+            {/* Deployed with Defang */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.8 }}
               className="border-gray-200 border-t mt-auto pt-8"
-              style={{ maskImage: "linear-gradient(90deg, transparent, black 5%, black 70%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, black 5%, black 70%, transparent)" }}
             >
-              <p className="uppercase md:text-left text-xs font-semibold text-gray-400 tracking-widest text-center mb-6 ml-4">
-                Trusted by growth teams at
-              </p>
-              <div className="flex flex-wrap md:justify-start gap-8 md:gap-10 opacity-40 ml-4 grayscale gap-x-8 gap-y-8 items-center justify-center hover:opacity-60 hover:grayscale-0 transition-all duration-500">
-                <MetaIcon className="w-8 h-8 text-gray-900" />
-                <GoogleIcon className="w-8 h-8" />
-                <ShopifyIcon className="w-8 h-8 text-gray-900" />
-              </div>
+              <a
+                href="https://defang.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 ml-4 group"
+              >
+                <span className="text-lg text-black font-medium">Deployed with</span>
+                <Image
+                  src="/defang.png"
+                  alt="Defang"
+                  width={70}
+                  height={20}
+                  className="h-7 w-auto group-hover:opacity-80 transition-opacity"
+                />
+              </a>
             </motion.div>
           </div>
         </div>
