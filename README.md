@@ -1,199 +1,318 @@
 # metricx — AI-Powered Marketing Analytics
 
 
-## 🌟 Vision
-
-metricx eliminates the gap between data and decision-making in marketing analytics. Instead of learning dashboards, memorizing metrics, or writing SQL, marketers ask questions in plain English and get instant, accurate answers from their data.
-
-**The North Star:** Natural language → Precise insights. No learning curve.
-
-## 🎯 What We're Building
-
-A **marketing analytics platform** that understands questions like:
-- "What's my ROAS this week?"
-- "Which campaign had the highest CPC?"
-- "Compare my Meta and Google spend last month"
-- "Why is my CPA volatile?"
-
-And returns **accurate, contextual answers** powered by real-time data.
-
-## ⚡ Safe AI Querying
-
-Traditional AI + databases = **dangerous** (SQL injection, hallucinations, security leaks).
-
-**Our approach:**
-1. **User asks question** → "What's my ROAS?"
-2. **LLM translates to DSL** → Structured JSON query (not SQL)
-3. **DSL validated** → Pydantic schema catches errors
-4. **Safe execution** → Workspace-scoped queries via SQLAlchemy ORM
-5. **Intent-aware answer** → GPT rephrases facts into natural language
-
-**Why this matters:**
-- ✅ **Secure**: No SQL injection possible (JSON → ORM, never raw SQL)
-- ✅ **Accurate**: Facts come from validated database queries
-- ✅ **Natural**: Answers feel conversational, not robotic
-- ✅ **Contextual**: Follow-up questions work ("and yesterday?")
-- ✅ **Consistent**: Single source of truth ensures data matches across UI
-
-## 📊 Data Flow: Question → Answer
-
-```
-User: "What's my ROAS this week?"
-   ↓
-[GPT-4-turbo translates to DSL]
-   ↓
-{
-  "metric": "roas",
-  "time_range": {"last_n_days": 7},
-  "filters": {}
-}
-   ↓
-[DSL validated & planned]
-   ↓
-[UnifiedMetricService queries database]
-   ↓
-[Derived metrics calculated: revenue ÷ spend]
-   ↓
-[Intent classifier: SIMPLE answer needed]
-   ↓
-[GPT-4o-mini rephrases fact into natural language]
-   ↓
-User: "Your ROAS this week is 2.45×"
-```
-
-**Key Innovation**: DSL acts as a **safe intermediary** between natural language and database queries.
-
-## 🎨 System Architecture
-
-### The DSL Layer (Domain-Specific Language)
-
-**Problem:** LLMs hallucinate. Direct SQL generation = security risk.
-
-**Solution:** Define a safe JSON schema that maps natural language → structured queries.
-
-```json
-{
-  "query_type": "metrics",
-  "metric": "roas",
-  "time_range": {"last_n_days": 7},
-  "compare_to_previous": true,
-  "breakdown": "campaign",
-  "top_n": 5
-}
-```
-
-### Multi-Stage Pipeline
-
-1. **Canonicalization**: Removes variance ("return on ad spend" → "roas")
-2. **Translation**: GPT-4-turbo generates DSL from user question
-3. **Validation**: Pydantic ensures DSL is valid and safe
-4. **Planning**: Resolves dates, maps metrics to base measures
-5. **Execution**: Workspace-scoped queries via ORM (no raw SQL)
-6. **Answer Building**: Intent-aware natural language generation
-
-### Conversation Context
-
-**Challenge:** Follow-up questions lose context ("and yesterday?" needs to know previous metric)
-
-**Solution:** Redis-backed context manager stores last 5 queries per user+workspace.
-
-```
-Q1: "What's my ROAS?" → stores "roas" metric
-Q2: "And yesterday?" → inherits "roas" from context
-```
-
-## 🚀 Features
-
-**24 Metrics Supported:**
-- Cost: CPC, CPM, CPA, CPL, CPI, CPP
-- Value: ROAS, POAS, ARPV, AOV  
-- Engagement: CTR, CVR
-- Base: Spend, Revenue, Clicks, Impressions, Conversions, Leads, Installs, Purchases, Visitors, Profit
-
-**Query Capabilities:**
-- Simple metrics: "What's my CPC?"
-- Comparisons: "Compare Meta vs Google spend"
-- Breakdowns: "Which campaign had highest ROAS?"
-- Multi-metric: "Show me spend and revenue"
-- Temporal: "Which day had lowest CPC?"
-- Follow-ups: "And yesterday?"
-
-**UI Dashboards:**
-- Real-time KPIs with time range filtering
-- Campaign performance drill-down (campaign → ad set → ad)
-- Finance P&L with manual cost tracking
-- AI Copilot chat interface
-
-## 🛠️ Tech Stack
-
-**AI & Backend:**
-- FastAPI + Python 3.11
-- PostgreSQL 16 + Redis
-- OpenAI GPT-4-turbo (DSL translation)
-- OpenAI GPT-4o-mini (answer generation)
-- SQLAlchemy ORM (safe queries)
-
-**Frontend:**
-- Next.js 15.5.4 + React 19
-- Tailwind CSS v4
-- Recharts for visualizations
-
-**Security:**
-- JWT authentication (HTTP-only cookies)
-- Workspace-scoped multi-tenancy
-- Bcrypt password hashing
-- No raw SQL execution
-
-## 🧪 Technical Highlights
-
-**130+ Unit Tests** covering DSL validation, translator mocking, context manager, and metric calculations.
-
-**Success Rate:** 99%+ on production queries
-
-**Performance:** <1.5s end-to-end latency (LLM translation + DB query + answer generation)
-
-**Security:** Zero SQL injection possible (JSON → Pydantic → ORM)
-
-## 🚦 Quick Start
-
 ```bash
 # Infrastructure
 docker compose up -d
 
 # Backend
 cd backend
-python -m venv venv && source bin/activate
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 alembic upgrade head
-python -m app.seed_mock
 python start_api.py
 
-# to start worker
-python -m app.workers.start_arq_worker
+# ARQ Worker (background jobs)
+arq app.workers.arq_worker.WorkerSettings
 
-# Frontend  
+# ARQ Scheduler (cron jobs)
+python -m app.services.sync_scheduler
+
+# Frontend
 cd ui
 npm install && npm run dev
 ```
 
 Access: http://localhost:3000
 
-## 📖 Learn More
+---
 
-- **Build Log**: `docs/metricx_BUILD_LOG.md` - Development history
-- **Architecture**: `backend/docs/QA_SYSTEM_ARCHITECTURE.md` - DSL specification & AI pipeline
-- **Context**: `backend/docs/REDIS_CONTEXT_MANAGER.md` - Conversation history system
+## Vision
 
-## 🎯 Technical Innovation Summary
+metricx eliminates the gap between data and decision-making in marketing analytics. Instead of learning dashboards, memorizing metrics, or writing SQL, marketers ask questions in plain English and get instant, accurate answers from their data.
 
+**The North Star:** Natural language → Precise insights. No learning curve.
 
-1. **Safe DSL Layer**: JSON schema prevents SQL injection and hallucinations
-2. **Intent Classification**: Answers match question complexity (simple vs analytical)
-3. **Unified Metrics**: Single source of truth eliminates data mismatches
-4. **Context Awareness**: Redis-backed multi-turn conversations
-5. **Workspace Scoping**: SQL-level multi-tenancy prevents data leaks
+---
 
-**Result:** A production-ready AI analytics system that's both powerful and safe.
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              METRICX PLATFORM                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────────────┐
+│    Frontend     │     │     Backend     │     │      Background Jobs        │
+│   (Next.js)     │────▶│   (FastAPI)     │────▶│      (ARQ Workers)          │
+│                 │     │                 │     │                             │
+│ • Dashboard     │     │ • REST API      │     │ • 15-min metric sync        │
+│ • Analytics     │     │ • Clerk Auth    │     │ • Daily attribution sync    │
+│ • Copilot       │     │ • Semantic QA   │     │ • Snapshot compaction       │
+│ • Campaigns     │     │ • Unified API   │     │ • Shopify sync              │
+└─────────────────┘     └────────┬────────┘     └─────────────────────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+        ▼                        ▼                        ▼
+┌───────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│  PostgreSQL   │      │     Redis       │      │  External APIs  │
+│               │      │                 │      │                 │
+│ • Users       │      │ • ARQ queues    │      │ • Meta Ads      │
+│ • Workspaces  │      │ • Job results   │      │ • Google Ads    │
+│ • Entities    │      │ • JWKS cache    │      │ • Shopify       │
+│ • Snapshots   │      │ • SSE streams   │      │ • Anthropic     │
+│ • Attribution │      │                 │      │ • Clerk         │
+└───────────────┘      └─────────────────┘      └─────────────────┘
+```
+
+---
+
+## Key Features
+
+### AI-Powered Copilot
+- **Claude Sonnet 4** — Anthropic's latest model for understanding & response
+- **Semantic Layer** — Composable queries (breakdown + comparison + timeseries)
+- **SSE Streaming** — Token-by-token responses with typing effect
+- **LangGraph Agent** — Structured flow: understand → fetch_data → respond
+
+### Dashboard & Performance
+- **Unified Dashboard API** — Single request returns all data (8+ calls → 1)
+- **15-Minute Metric Snapshots** — Real-time intraday analytics
+- **Multi-Provider Charts** — Per-platform breakdown (Meta, Google)
+
+### Authentication & Security
+- **Clerk Authentication** — OAuth, email/password, webhooks
+- **Workspace Isolation** — SQL-level multi-tenancy
+- **Token Encryption** — AES-256-GCM for OAuth tokens
+
+### Background Processing
+- **ARQ Workers** — Async job processing with Redis
+- **Scheduled Syncs** — Every 15 min (realtime), daily (attribution)
+- **Automatic Compaction** — 15-min → hourly after 2 days
+
+### Observability
+- **Sentry** — Error tracking & performance monitoring
+- **Langfuse** — LLM call tracing (Claude usage, latency, costs)
+- **Structured Logging** — `[ARQ]`, `[SYNC]`, `[SEMANTIC]` markers
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Next.js 15, React 19, Tailwind v4, Recharts |
+| **Auth** | Clerk (RS256 JWT, JWKS) |
+| **Backend** | FastAPI, SQLAlchemy 2.x, Pydantic |
+| **AI** | Claude Sonnet 4 (Anthropic), LangGraph |
+| **Database** | PostgreSQL 16 |
+| **Cache/Queue** | Redis (Upstash), ARQ |
+| **Observability** | Sentry, Langfuse, RudderStack |
+
+---
+
+## AI Copilot Architecture
+
+### Question → Answer Flow
+
+```
+User: "Compare CPC this week vs last week for top 3 ads"
+       ↓
+[understand_node] Claude extracts intent → SemanticQuery
+       ↓
+[fetch_data_node] Semantic Layer → UnifiedMetricService
+       ↓
+[respond_node] Claude generates answer + visuals
+       ↓
+SSE Stream: tokens + chart spec + done event
+```
+
+### Semantic Layer (Composable Queries)
+
+Unlike rigid DSL, the semantic layer allows **composition**:
+
+```python
+SemanticQuery(
+    metrics=["cpc"],
+    breakdown=Breakdown(dimension="entity", level="ad", limit=3),
+    comparison=Comparison(type=ComparisonType.PREVIOUS_PERIOD),
+    include_timeseries=True
+)
+```
+
+This enables complex questions that were previously impossible.
+
+### Streaming (Non-Blocking)
+
+```python
+# Async Claude client for non-blocking streaming
+async with client.messages.stream(...) as stream:
+    async for text in stream.text_stream:
+        yield f"data: {json.dumps({'type': 'token', 'data': text})}\n\n"
+
+# DB queries run in thread pool (SQLAlchemy is sync)
+result = await asyncio.to_thread(fetch_data_sync)
+```
+
+---
+
+## Data Flows
+
+### Dashboard Load (Unified API)
+
+```
+GET /dashboard/unified?timeframe=last_7_days
+       ↓
+┌─────────────────────────────┐
+│  Single query returns:      │
+│  • KPIs (revenue, ROAS...)  │
+│  • Chart data               │
+│  • Top campaigns            │
+│  • Spend mix                │
+│  • Attribution (if Shopify) │
+└─────────────────────────────┘
+       ↓
+Response: ~200ms (was 4+ seconds)
+```
+
+### Metric Sync (ARQ)
+
+```
+Scheduler (every 15 min)
+       ↓
+Enqueue jobs for all connections
+       ↓
+Workers process in parallel
+       ↓
+MetricSnapshot table updated
+```
+
+---
+
+## Environment Variables
+
+```bash
+# Database
+DATABASE_URL=postgresql://...
+
+# Redis
+REDIS_URL=rediss://...
+
+# Clerk Auth
+CLERK_SECRET_KEY=sk_...
+CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_WEBHOOK_SECRET=whsec_...
+
+# AI (Anthropic)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Observability
+SENTRY_DSN=https://...
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+
+# Ad Platforms
+META_APP_ID=...
+META_APP_SECRET=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+```
+
+---
+
+## API Endpoints
+
+### Copilot (QA)
+| Endpoint | Description |
+|----------|-------------|
+| `POST /qa/agent/sse` | **SSE streaming** (recommended) |
+| `POST /qa/agent/sync` | Synchronous (no streaming) |
+| `POST /qa/semantic` | Direct semantic layer access |
+| `POST /qa/insights` | Lightweight insights for widgets |
+
+### Dashboard
+| Endpoint | Description |
+|----------|-------------|
+| `GET /dashboard/unified` | All dashboard data in one call |
+
+---
+
+## Metrics Supported
+
+**24 Metrics:**
+
+| Category | Metrics |
+|----------|---------|
+| **Cost** | CPC, CPM, CPA, CPL, CPI, CPP |
+| **Value** | ROAS, POAS, ARPV, AOV |
+| **Engagement** | CTR, CVR |
+| **Base** | Spend, Revenue, Clicks, Impressions, Conversions, Leads, Installs, Purchases, Visitors, Profit |
+
+---
+
+## Query Examples
+
+```
+"What's my CPC?"
+"Compare Meta vs Google spend"
+"Which campaign had highest ROAS?"
+"Compare CPC this week vs last week for top 3 ads"
+"Why did my ROAS drop?"
+```
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](docs/living-docs/ARCHITECTURE.md) | System overview, tech stack |
+| [AUTH.md](docs/living-docs/AUTH.md) | Clerk authentication |
+| [ARQ_WORKERS.md](docs/living-docs/ARQ_WORKERS.md) | Background job processing |
+| [UNIFIED_DASHBOARD.md](docs/living-docs/UNIFIED_DASHBOARD.md) | Dashboard API |
+| [METRIC_SNAPSHOTS.md](docs/living-docs/METRIC_SNAPSHOTS.md) | 15-min metrics system |
+| [QA_SYSTEM_ARCHITECTURE.md](docs/living-docs/QA_SYSTEM_ARCHITECTURE.md) | AI Copilot architecture |
+| [OBSERVABILITY.md](docs/living-docs/OBSERVABILITY.MD) | Monitoring stack |
+
+---
+
+## Recent Updates (v2.0.0 - December 2025)
+
+| Feature | Change |
+|---------|--------|
+| **AI** | Migrated from OpenAI to Claude (Anthropic) |
+| **QA System** | Semantic layer with composable queries |
+| **Streaming** | SSE with AsyncAnthropic (non-blocking) |
+| **Authentication** | Migrated from custom JWT to Clerk |
+| **Dashboard** | New unified API (8+ calls → 1) |
+| **Metrics** | 15-min snapshots (was daily) |
+| **Background Jobs** | ARQ workers + scheduler |
+
+---
+
+## Project Structure
+
+```
+metricx/
+├── backend/
+│   ├── app/
+│   │   ├── routers/        # API endpoints
+│   │   ├── services/       # Business logic
+│   │   ├── workers/        # ARQ jobs
+│   │   ├── semantic/       # Semantic layer (query, compiler, validator)
+│   │   ├── agent/          # LangGraph agent (nodes, tools, state)
+│   │   ├── telemetry/      # Observability
+│   │   └── models.py       # Database models
+│   └── alembic/            # Migrations
+├── ui/
+│   ├── app/                # Next.js pages
+│   ├── components/         # React components
+│   └── lib/                # API clients
+├── docs/
+│   └── living-docs/        # Documentation
+└── compose.yaml            # Docker setup
+```
 
 ---
 

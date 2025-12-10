@@ -481,17 +481,14 @@ async def startup(ctx: Dict) -> None:
     import platform
 
     logger.info("=" * 60)
-    logger.info("[ARQ] Worker starting up")
+    logger.info("[ARQ] Worker starting up (job processor)")
     logger.info("=" * 60)
     logger.info(f"[ARQ] Python: {platform.python_version()}")
     logger.info(f"[ARQ] Host: {platform.node()}")
     logger.info(f"[ARQ] Queue: arq:queue")
     logger.info(f"[ARQ] Max concurrent jobs: 10")
     logger.info(f"[ARQ] Job timeout: 600s (10 min)")
-    logger.info("[ARQ] Cron schedule:")
-    logger.info("[ARQ]   - Realtime sync: every 15 min (:00, :15, :30, :45)")
-    logger.info("[ARQ]   - Compaction: daily at 01:00 UTC")
-    logger.info("[ARQ]   - Attribution: daily at 03:00 UTC")
+    logger.info("[ARQ] Note: Cron scheduling handled by scheduler service")
     logger.info("=" * 60)
 
     ctx['startup_time'] = datetime.now(timezone.utc)
@@ -520,7 +517,16 @@ async def on_job_end(ctx: Dict) -> None:
 # =============================================================================
 
 class WorkerSettings:
-    """ARQ worker configuration.
+    """ARQ worker configuration - processes jobs only.
+
+    WHAT:
+        Worker that processes sync jobs enqueued by the scheduler.
+        Does NOT run cron jobs (that's the scheduler's responsibility).
+
+    WHY:
+        - Separation of concerns: scheduler runs cron, worker processes jobs
+        - Workers can scale independently (multiple workers, one scheduler)
+        - Prevents duplicate cron execution
 
     Production-ready settings:
     - max_jobs=10: Process up to 10 connections concurrently
@@ -530,6 +536,7 @@ class WorkerSettings:
     """
 
     # Job functions (what can be executed)
+    # NOTE: scheduled_* functions are included so they can be called by the scheduler
     functions = [
         process_sync_job,
         process_shopify_sync_job,
@@ -538,17 +545,9 @@ class WorkerSettings:
         scheduled_compaction,
     ]
 
-    # Cron jobs (built-in scheduling)
-    cron_jobs = [
-        # Every 15 minutes: realtime sync for today's data
-        cron(scheduled_realtime_sync, minute={0, 15, 30, 45}, run_at_startup=False),
-
-        # Daily at 01:00 UTC: compact 2-day-old snapshots to hourly
-        cron(scheduled_compaction, hour=1, minute=0, run_at_startup=False),
-
-        # Daily at 03:00 UTC: re-fetch last 7 days for attribution
-        cron(scheduled_attribution_sync, hour=3, minute=0, run_at_startup=False),
-    ]
+    # NO cron_jobs here - the scheduler handles cron scheduling
+    # This worker ONLY processes jobs from the queue
+    cron_jobs = []
 
     # Lifecycle hooks
     on_startup = startup

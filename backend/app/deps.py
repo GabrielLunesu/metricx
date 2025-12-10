@@ -71,12 +71,15 @@ _clerk_jwks_cache: Optional[dict] = None
 _clerk_jwks_cache_time: float = 0
 
 
-async def _fetch_clerk_jwks() -> dict:
+async def _fetch_clerk_jwks(issuer: Optional[str] = None) -> dict:
     """Fetch Clerk's JWKS for JWT signature validation.
 
     WHAT: Retrieves public keys from Clerk's well-known endpoint
     WHY: Required to verify JWT signatures (RS256 algorithm)
     CACHING: Results cached for 1 hour to reduce latency
+
+    Parameters:
+        issuer: Optional JWT issuer URL to derive JWKS endpoint from
 
     Returns:
         dict: JWKS containing public keys
@@ -91,38 +94,43 @@ async def _fetch_clerk_jwks() -> dict:
     if _clerk_jwks_cache and (time.time() - _clerk_jwks_cache_time) < 3600:
         return _clerk_jwks_cache
 
-    settings = get_settings()
-    if not settings.CLERK_PUBLISHABLE_KEY:
+    # Determine JWKS URL from issuer (best) or publishable key (fallback)
+    jwks_url = None
+
+    if issuer:
+        # Use issuer from JWT - most reliable method
+        # Issuer is like: https://your-instance.clerk.accounts.dev
+        jwks_url = f"{issuer.rstrip('/')}/.well-known/jwks.json"
+        logger.debug(f"[CLERK] Using issuer-based JWKS URL: {jwks_url}")
+    else:
+        # Fallback: try to derive from publishable key
+        settings = get_settings()
+        if not settings.CLERK_PUBLISHABLE_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Clerk not configured"
+            )
+
+        try:
+            import base64
+            key_parts = settings.CLERK_PUBLISHABLE_KEY.split('_')
+            if len(key_parts) >= 3:
+                encoded_domain = key_parts[-1]
+                padding = 4 - len(encoded_domain) % 4
+                if padding != 4:
+                    encoded_domain += '=' * padding
+                frontend_api = base64.b64decode(encoded_domain).decode('utf-8').rstrip('$')
+                jwks_url = f"https://{frontend_api}/.well-known/jwks.json"
+        except Exception as e:
+            logger.warning(f"[CLERK] Could not decode frontend API from key: {e}")
+
+    if not jwks_url:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Clerk not configured"
+            detail="Could not determine Clerk JWKS URL"
         )
 
-    # Extract frontend API domain from publishable key
-    # Format: pk_test_xxx or pk_live_xxx where xxx is base64 encoded domain
-    try:
-        # The publishable key contains the frontend API in the last segment
-        # e.g., pk_test_Y2xlcmsuZXhhbXBsZS5jb20k -> clerk.example.com
-        import base64
-        key_parts = settings.CLERK_PUBLISHABLE_KEY.split('_')
-        if len(key_parts) >= 3:
-            # Try to decode the domain from the key
-            encoded_domain = key_parts[-1]
-            # Add padding if needed
-            padding = 4 - len(encoded_domain) % 4
-            if padding != 4:
-                encoded_domain += '=' * padding
-            frontend_api = base64.b64decode(encoded_domain).decode('utf-8').rstrip('$')
-        else:
-            raise ValueError("Invalid key format")
-    except Exception:
-        # Fallback: use Clerk's standard domain format
-        # For development keys, this is typically clerk.xxx.lcl.dev
-        logger.warning("[CLERK] Could not decode frontend API from key, using fallback")
-        frontend_api = "clerk.metricx.ai"
-
-    jwks_url = f"https://{frontend_api}/.well-known/jwks.json"
-    logger.debug(f"[CLERK] Fetching JWKS from {jwks_url}")
+    logger.info(f"[CLERK] Fetching JWKS from {jwks_url}")
 
     try:
         async with httpx.AsyncClient() as client:
@@ -130,10 +138,10 @@ async def _fetch_clerk_jwks() -> dict:
             resp.raise_for_status()
             _clerk_jwks_cache = resp.json()
             _clerk_jwks_cache_time = time.time()
-            logger.info("[CLERK] JWKS cache refreshed")
+            logger.info("[CLERK] JWKS cache refreshed successfully")
             return _clerk_jwks_cache
     except httpx.HTTPError as e:
-        logger.error(f"[CLERK] Failed to fetch JWKS: {e}")
+        logger.error(f"[CLERK] Failed to fetch JWKS from {jwks_url}: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication service unavailable"
@@ -198,12 +206,17 @@ async def get_current_user(
         )
 
     try:
-        # Get Clerk's JWKS for signature verification
-        jwks = await _fetch_clerk_jwks()
-
-        # Get the key ID from token header
+        # First decode without verification to get issuer and key ID
         unverified_header = jwt.get_unverified_header(token)
+        unverified_claims = jwt.get_unverified_claims(token)
+
         kid = unverified_header.get("kid")
+        issuer = unverified_claims.get("iss")
+
+        logger.debug(f"[CLERK] Token kid={kid}, issuer={issuer}")
+
+        # Get Clerk's JWKS for signature verification (use issuer for correct URL)
+        jwks = await _fetch_clerk_jwks(issuer=issuer)
 
         # Find matching key in JWKS
         rsa_key = None
@@ -213,11 +226,24 @@ async def get_current_user(
                 break
 
         if not rsa_key:
-            logger.warning(f"[CLERK] No matching key found for kid={kid}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
+            logger.warning(f"[CLERK] No matching key found for kid={kid} in JWKS")
+            # Clear cache and retry once (key might have rotated)
+            global _clerk_jwks_cache, _clerk_jwks_cache_time
+            _clerk_jwks_cache = None
+            _clerk_jwks_cache_time = 0
+            jwks = await _fetch_clerk_jwks(issuer=issuer)
+
+            for key in jwks.get("keys", []):
+                if key.get("kid") == kid:
+                    rsa_key = key
+                    break
+
+            if not rsa_key:
+                logger.error(f"[CLERK] Key {kid} not found even after refresh")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token"
+                )
 
         # Decode and validate JWT
         payload = jwt.decode(
