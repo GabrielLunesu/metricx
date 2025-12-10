@@ -119,7 +119,11 @@ function generateInsights(data) {
     // =========================================================================
     // 2. SPEND SHIFTS - Budget reallocation based on campaign performance
     // =========================================================================
-    const campaigns = data.top_campaigns || [];
+    // Handle both old format (array) and new format ({items, disclaimer})
+    const topCampaignsData = data.top_campaigns || {};
+    const campaigns = Array.isArray(topCampaignsData)
+        ? topCampaignsData
+        : topCampaignsData.items || [];
 
     if (campaigns.length >= 2) {
         // Sort by ROAS to find best and worst
@@ -324,7 +328,10 @@ export default function AiInsightsPanel({ data, loading, workspaceId }) {
 
     if (insights.length === 0) {
         // Determine why there are no insights
-        const hasData = data?.kpis?.some(k => k.value > 0) || data?.top_campaigns?.length > 0;
+        const campaignsForCheck = Array.isArray(data?.top_campaigns)
+            ? data.top_campaigns
+            : data?.top_campaigns?.items || [];
+        const hasData = data?.kpis?.some(k => k.value > 0) || campaignsForCheck.length > 0;
         const message = hasData
             ? "Your campaigns are performing within normal ranges. No alerts at this time."
             : "Sync your ad accounts to generate insights.";

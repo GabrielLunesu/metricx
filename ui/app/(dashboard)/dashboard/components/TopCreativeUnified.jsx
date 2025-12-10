@@ -5,9 +5,11 @@
  *
  * WHAT: Shows top performing campaigns using unified dashboard data
  * WHY: Uses pre-fetched top_campaigns instead of making its own API call
+ *
+ * NOTE: top_campaigns is now wrapped in {items: [], disclaimer: string}
  */
 
-import { Facebook, Youtube, Globe } from "lucide-react";
+import { Facebook, Youtube, Globe, Info } from "lucide-react";
 
 const platformIcons = {
     meta: <Facebook className="w-4 h-4 text-blue-600" />,
@@ -29,7 +31,12 @@ export default function TopCreativeUnified({ data, loading }) {
         );
     }
 
-    const campaigns = data.top_campaigns || [];
+    // Handle both old format (array) and new format ({items, disclaimer})
+    const topCampaignsData = data.top_campaigns || {};
+    const campaigns = Array.isArray(topCampaignsData)
+        ? topCampaignsData
+        : topCampaignsData.items || [];
+    const disclaimer = topCampaignsData.disclaimer;
 
     if (campaigns.length === 0) {
         return (
@@ -64,6 +71,12 @@ export default function TopCreativeUnified({ data, loading }) {
                     </div>
                 ))}
             </div>
+            {disclaimer && (
+                <div className="mt-4 flex items-start gap-2 text-xs text-slate-400">
+                    <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <p>{disclaimer}</p>
+                </div>
+            )}
         </div>
     );
 }

@@ -99,6 +99,12 @@ class AttributionFeedItem(BaseModel):
     attributed_at: str
 
 
+class TopCampaignsData(BaseModel):
+    """Top campaigns with disclaimer."""
+    items: List[TopCampaignItem]
+    disclaimer: Optional[str] = None
+
+
 class UnifiedDashboardResponse(BaseModel):
     """Complete dashboard data in one response."""
     # KPIs
@@ -115,8 +121,8 @@ class UnifiedDashboardResponse(BaseModel):
     # Chart data (same as KPIs but guaranteed sparklines)
     chart_data: List[Dict[str, Any]]
 
-    # Top campaigns
-    top_campaigns: List[TopCampaignItem]
+    # Top campaigns - wrapped with disclaimer
+    top_campaigns: TopCampaignsData
 
     # Spend mix by platform
     spend_mix: List[SpendMixItem]
@@ -220,7 +226,10 @@ def _get_kpis_and_chart_data(
     prev_start_date = prev_start.date() if isinstance(prev_start, datetime) else prev_start
     prev_end_date = prev_end.date() if isinstance(prev_end, datetime) else prev_end
 
-    # Current period metrics - get latest snapshot per entity per day, then sum
+    # Current period metrics - get latest snapshot per CAMPAIGN entity per day, then sum
+    # WHY: Campaign-level metrics are SOURCE OF TRUTH for KPI totals.
+    # PMax campaigns don't attribute all spend to asset_groups, Shopping campaigns
+    # may have spend not fully attributed to ads. Campaign-level ensures accuracy.
     # Using raw SQL with DISTINCT ON for efficiency
     current_metrics_sql = text("""
         SELECT
@@ -234,7 +243,11 @@ def _get_kpis_and_chart_data(
                 revenue,
                 conversions
             FROM metric_snapshots
-            WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
+            WHERE entity_id IN (
+                SELECT id FROM entities
+                WHERE workspace_id = :workspace_id
+                AND level = 'campaign'
+            )
               AND date_trunc('day', captured_at) >= :start_date
               AND date_trunc('day', captured_at) <= :end_date
             ORDER BY entity_id, date_trunc('day', captured_at), captured_at DESC
@@ -260,6 +273,7 @@ def _get_kpis_and_chart_data(
     if use_intraday:
         # 15-minute breakdown for intraday charts (matches our sync frequency)
         # Now includes per-provider breakdown for multi-line charts
+        # WHY: Uses campaign-level entities for accurate KPI totals
         chart_data_sql = text("""
             WITH actual_data AS (
                 SELECT
@@ -279,7 +293,11 @@ def _get_kpis_and_chart_data(
                         revenue,
                         conversions
                     FROM metric_snapshots
-                    WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
+                    WHERE entity_id IN (
+                        SELECT id FROM entities
+                        WHERE workspace_id = :workspace_id
+                        AND level = 'campaign'
+                    )
                       AND captured_at >= :start_ts
                       AND captured_at <= :end_ts
                     ORDER BY entity_id,
@@ -304,8 +322,9 @@ def _get_kpis_and_chart_data(
             use_intraday = False
 
     if not use_intraday:
-        # Daily breakdown for sparklines - latest snapshot per entity per day
+        # Daily breakdown for sparklines - latest snapshot per CAMPAIGN entity per day
         # Now includes per-provider breakdown for multi-line charts
+        # WHY: Uses campaign-level entities for accurate KPI totals
         chart_data_sql = text("""
             SELECT
                 day as time_bucket,
@@ -322,7 +341,11 @@ def _get_kpis_and_chart_data(
                     revenue,
                     conversions
                 FROM metric_snapshots
-                WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
+                WHERE entity_id IN (
+                    SELECT id FROM entities
+                    WHERE workspace_id = :workspace_id
+                    AND level = 'campaign'
+                )
                   AND date_trunc('day', captured_at) >= :start_date
                   AND date_trunc('day', captured_at) <= :end_date
                 ORDER BY entity_id, date_trunc('day', captured_at), captured_at DESC
@@ -486,46 +509,33 @@ def _get_top_campaigns(
     start_date = (datetime.now(timezone.utc) - timedelta(days=2)).date()
 
 
-    # Roll up child entity metrics (asset_group, adset, ad) to their parent campaigns
-    # WHY: Google PMax syncs metrics at asset_group level, not campaign level
-    # This query aggregates all child metrics up to the campaign level
+    # Get campaign metrics directly from campaign-level snapshots
+    # WHY: We now sync campaign-level metrics as SOURCE OF TRUTH
+    # No need to roll up from children - campaign metrics are accurate
     top_campaigns_sql = text("""
-        WITH campaign_metrics AS (
-            -- Get latest snapshot per entity per day, then sum
-            SELECT
-                -- Use parent_id for child entities, or entity's own id if it's a campaign
-                COALESCE(e.parent_id, e.id) as campaign_id,
-                sub.spend,
-                sub.revenue
-            FROM entities e
-            JOIN (
-                SELECT DISTINCT ON (ms.entity_id, date_trunc('day', ms.captured_at))
-                    ms.entity_id,
-                    ms.spend,
-                    ms.revenue
-                FROM metric_snapshots ms
-                JOIN entities e2 ON e2.id = ms.entity_id
-                WHERE e2.workspace_id = :workspace_id
-                  AND date_trunc('day', ms.captured_at) >= :start_date
-                  AND date_trunc('day', ms.captured_at) <= :end_date
-                ORDER BY ms.entity_id, date_trunc('day', ms.captured_at), ms.captured_at DESC
-            ) sub ON sub.entity_id = e.id
-            WHERE e.workspace_id = :workspace_id
-        )
         SELECT
             camp.id,
             camp.name,
             c.provider,
-            COALESCE(SUM(cm.spend), 0) as spend,
-            COALESCE(SUM(cm.revenue), 0) as revenue
+            COALESCE(SUM(sub.spend), 0) as spend,
+            COALESCE(SUM(sub.revenue), 0) as revenue
         FROM entities camp
         JOIN connections c ON c.id = camp.connection_id
-        JOIN campaign_metrics cm ON cm.campaign_id = camp.id
+        JOIN (
+            SELECT DISTINCT ON (ms.entity_id, date_trunc('day', ms.captured_at))
+                ms.entity_id,
+                ms.spend,
+                ms.revenue
+            FROM metric_snapshots ms
+            WHERE date_trunc('day', ms.captured_at) >= :start_date
+              AND date_trunc('day', ms.captured_at) <= :end_date
+            ORDER BY ms.entity_id, date_trunc('day', ms.captured_at), ms.captured_at DESC
+        ) sub ON sub.entity_id = camp.id
         WHERE camp.workspace_id = :workspace_id
           AND camp.level = 'campaign'
           AND camp.status = 'active'
         GROUP BY camp.id, camp.name, c.provider
-        HAVING SUM(cm.spend) > 0
+        HAVING SUM(sub.spend) > 0
         ORDER BY spend DESC
         LIMIT :limit
     """)
@@ -573,7 +583,8 @@ def _get_spend_mix(
     start_date = start.date() if isinstance(start, datetime) else start
     end_date = end.date() if isinstance(end, datetime) else end
 
-    # Get spend by provider - latest snapshot per entity per day
+    # Get spend by provider - latest snapshot per CAMPAIGN entity per day
+    # WHY: Campaign-level for accurate totals (same logic as KPIs)
     spend_mix_sql = text("""
         SELECT
             provider,
@@ -585,6 +596,7 @@ def _get_spend_mix(
             FROM metric_snapshots ms
             JOIN entities e ON e.id = ms.entity_id
             WHERE e.workspace_id = :workspace_id
+              AND e.level = 'campaign'
               AND date_trunc('day', ms.captured_at) >= :start_date
               AND date_trunc('day', ms.captured_at) <= :end_date
             ORDER BY ms.entity_id, date_trunc('day', ms.captured_at), ms.captured_at DESC
@@ -801,6 +813,12 @@ def get_unified_dashboard(
     if workspace and workspace.last_synced_at:
         last_synced_at_str = workspace.last_synced_at.isoformat()
 
+    # Wrap top campaigns with disclaimer for drill-down ≠ KPI totals clarity
+    top_campaigns_data = TopCampaignsData(
+        items=top_campaigns,
+        disclaimer="Campaign metrics shown are based on campaign-level data. For Performance Max and Shopping campaigns, individual asset or ad metrics may not sum to campaign totals."
+    )
+
     return UnifiedDashboardResponse(
         kpis=kpis,
         data_source=data_source,
@@ -808,7 +826,7 @@ def get_unified_dashboard(
         connected_platforms=connected_platforms,
         currency=primary_currency,
         chart_data=chart_data,
-        top_campaigns=top_campaigns,
+        top_campaigns=top_campaigns_data,
         spend_mix=spend_mix,
         attribution_summary=attribution_summary,
         attribution_feed=attribution_feed,

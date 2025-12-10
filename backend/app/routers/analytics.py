@@ -92,6 +92,7 @@ class ChartMetadata(BaseModel):
     generated_at: str
     platforms_available: List[str]
     campaigns_count: int
+    disclaimer: Optional[str] = None  # Shown when drill-down ≠ KPI totals
 
 
 class AnalyticsChartResponse(BaseModel):
@@ -632,6 +633,15 @@ def get_analytics_chart(
                 )
             ]
 
+    # Add disclaimer when grouping by campaign to explain potential total mismatches
+    disclaimer = None
+    if group_by == "campaign":
+        disclaimer = (
+            "Campaign breakdowns show attributed metrics from child entities. "
+            "For Performance Max and Shopping campaigns, individual campaign totals "
+            "may not sum to workspace KPIs."
+        )
+
     metadata = ChartMetadata(
         granularity=granularity,
         period_start=start.date().isoformat(),
@@ -639,6 +649,7 @@ def get_analytics_chart(
         generated_at=datetime.now(timezone.utc).isoformat(),
         platforms_available=platforms_available,
         campaigns_count=campaigns_count,
+        disclaimer=disclaimer,
     )
 
     logger.info(

@@ -27,6 +27,7 @@
 import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Legend } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Info } from "lucide-react";
 
 /**
  * Metric tabs configuration.
@@ -327,6 +328,14 @@ export default function AnalyticsGraphEngine({
                     </ChartContainer>
                 )}
             </div>
+
+            {/* Disclaimer for campaign-level breakdowns */}
+            {metadata?.disclaimer && (
+                <div className="mt-3 flex items-start gap-2 text-xs text-slate-400">
+                    <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <p>{metadata.disclaimer}</p>
+                </div>
+            )}
         </div>
     );
 }
