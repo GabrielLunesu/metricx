@@ -398,8 +398,17 @@ def _sync_meta_snapshots(
 ) -> SnapshotSyncResult:
     """Sync Meta Ads metrics to snapshots using ACCOUNT-LEVEL insights.
 
-    CRITICAL: Uses account-level insights with ad breakdown, NOT per-ad calls.
-    This reduces API calls from N (one per ad) to 1 (one per account).
+    WHAT:
+        Fetches metrics at two levels:
+        1. Campaign-level (SOURCE OF TRUTH for dashboard KPIs)
+        2. Ad-level (for drill-down analytics)
+
+    WHY:
+        Campaign-level is authoritative - ensures totals match Meta Ads dashboard.
+        Ad-level is kept for drill-down into individual creative performance.
+
+    CRITICAL: Uses account-level insights with breakdown, NOT per-entity calls.
+    This reduces API calls from N (one per entity) to ~2 (campaign + ad breakdown).
 
     Args:
         db: Database session
@@ -445,6 +454,75 @@ def _sync_meta_snapshots(
             microsecond=0
         )
 
+        # ===================================================================
+        # PART 0: Sync campaign-level metrics (SOURCE OF TRUTH for KPI totals)
+        # ===================================================================
+        # WHY: Campaign-level metrics are the authoritative source for dashboard KPIs.
+        # Meta campaigns may have discrepancies between campaign totals and the sum
+        # of child entities (ads). Using campaign-level ensures our totals match
+        # Meta Ads dashboard exactly.
+        campaign_entities = db.query(Entity).filter(
+            Entity.connection_id == connection.id,
+            Entity.level == LevelEnum.campaign
+        ).all()
+        campaign_map = {str(e.external_id): e for e in campaign_entities}
+
+        if campaign_map:
+            logger.info(
+                "[SNAPSHOT_SYNC] Fetching Meta CAMPAIGN-level insights for %d campaigns, %s to %s",
+                len(campaign_map), start_date, end_date
+            )
+
+            campaign_insights = _fetch_meta_campaign_insights_with_retry(
+                client=client,
+                ad_account_id=ad_account_id,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            for insight in campaign_insights:
+                campaign_id = insight.get("campaign_id")
+                if not campaign_id:
+                    result.skipped += 1
+                    continue
+
+                entity = campaign_map.get(str(campaign_id))
+                if not entity:
+                    result.skipped += 1
+                    continue
+
+                # Determine timestamp
+                if mode == "realtime":
+                    snap_time = captured_at
+                else:
+                    date_str = insight.get("date_stop")
+                    if date_str:
+                        snap_time = datetime.combine(
+                            date.fromisoformat(date_str), datetime.max.time()
+                        ).replace(tzinfo=timezone.utc)
+                    else:
+                        snap_time = captured_at
+
+                snapshot_result = _upsert_meta_snapshot(
+                    db=db,
+                    entity=entity,
+                    insight=insight,
+                    captured_at=snap_time
+                )
+
+                if snapshot_result == "inserted":
+                    result.inserted += 1
+                else:
+                    result.updated += 1
+
+            logger.info(
+                "[SNAPSHOT_SYNC] Meta campaign-level sync: %d entities processed",
+                result.inserted + result.updated
+            )
+
+        # ===================================================================
+        # PART 1: Sync ad-level metrics (for drill-down analytics)
+        # ===================================================================
         # Build entity map for quick lookup
         ad_entities = db.query(Entity).filter(
             Entity.connection_id == connection.id,
@@ -453,10 +531,15 @@ def _sync_meta_snapshots(
         entity_map = {str(e.external_id): e for e in ad_entities}
 
         if not entity_map:
-            logger.warning("[SNAPSHOT_SYNC] No ad entities for connection %s", connection.id)
+            logger.info("[SNAPSHOT_SYNC] No ad entities for connection %s, skipping ad-level sync", connection.id)
+            # Don't return early - we may have campaign data already
+            if not campaign_map:
+                return result
+            db.commit()
+            result.synced_at = datetime.now(timezone.utc)
             return result
 
-        # SINGLE API CALL: Get insights at ACCOUNT level with ad breakdown
+        # Get insights at ACCOUNT level with ad breakdown
         # This returns all ads' metrics in one call
         insights = _fetch_meta_account_insights_with_retry(
             client=client,
@@ -580,6 +663,62 @@ def _fetch_meta_account_insights_with_retry(
     return []
 
 
+def _fetch_meta_campaign_insights_with_retry(
+    client: MetaAdsClient,
+    ad_account_id: str,
+    start_date: date,
+    end_date: date
+) -> List[Dict[str, Any]]:
+    """Fetch Meta CAMPAIGN-level insights with retry and backoff.
+
+    WHAT:
+        Fetches metrics at campaign level (SOURCE OF TRUTH for dashboard KPIs).
+
+    WHY:
+        Campaign-level ensures totals match Meta Ads dashboard exactly.
+        Ad-level metrics may not sum to campaign totals in all cases.
+
+    Args:
+        client: Meta Ads client
+        ad_account_id: Ad account ID
+        start_date: Start date
+        end_date: End date
+
+    Returns:
+        List of insight dictionaries with campaign_id field
+    """
+    for attempt in range(MAX_RETRIES):
+        try:
+            # Use account-level insights with CAMPAIGN breakdown
+            insights = client.get_account_insights(
+                ad_account_id=ad_account_id,
+                level="campaign",  # Campaign-level for accurate totals
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                time_increment=1,  # Daily
+                fields=[
+                    "campaign_id", "campaign_name", "spend", "impressions", "clicks",
+                    "actions", "action_values", "account_currency"
+                ]
+            )
+            return insights or []
+
+        except MetaAdsClientError as e:
+            error_msg = str(e).lower()
+            if "rate limit" in error_msg or "too many" in error_msg:
+                if attempt < MAX_RETRIES - 1:
+                    wait_time = RETRY_BACKOFF_SECONDS[attempt]
+                    logger.warning(
+                        "[SNAPSHOT_SYNC] Rate limited on campaign insights, waiting %d seconds (attempt %d/%d)",
+                        wait_time, attempt + 1, MAX_RETRIES
+                    )
+                    time.sleep(wait_time)
+                    continue
+            raise
+
+    return []
+
+
 def _upsert_meta_snapshot(
     db: Session,
     entity: Entity,
@@ -658,13 +797,18 @@ def _sync_google_snapshots(
     """Sync Google Ads metrics to snapshots.
 
     WHAT:
-        Fetches metrics at both ad-level (traditional campaigns) and
-        asset_group-level (Performance Max campaigns) to capture all spend.
+        Fetches metrics at three levels:
+        1. Campaign-level (SOURCE OF TRUTH for dashboard KPIs)
+        2. Ad-level (for drill-down into traditional campaigns)
+        3. Asset_group-level (for drill-down into PMax campaigns)
 
     WHY:
-        Traditional campaigns report metrics at ad level.
-        PMax campaigns report metrics at asset_group level only.
-        We need both to match Google Ads dashboard totals.
+        Campaign-level is authoritative because:
+        - PMax campaigns don't attribute all spend to asset_groups
+        - Shopping campaigns may have spend not fully attributed to ads
+        - Campaign-level ensures totals match Google Ads dashboard exactly
+
+        Child-level (ad, asset_group) is kept for drill-down analytics.
 
     Args:
         db: Database session
@@ -703,7 +847,61 @@ def _sync_google_snapshots(
         )
 
         # ===================================================================
-        # PART 1: Sync ad-level metrics (traditional campaigns)
+        # PART 0: Sync campaign-level metrics (SOURCE OF TRUTH for KPI totals)
+        # ===================================================================
+        # WHY: Campaign-level metrics are the authoritative source for dashboard KPIs.
+        # PMax campaigns don't attribute all spend to asset_groups - some spend exists
+        # only at campaign level. Similarly, Shopping campaigns may have spend not
+        # fully attributed to ads. Using campaign-level ensures our totals match
+        # Google Ads dashboard exactly.
+        campaign_entities = db.query(Entity).filter(
+            Entity.connection_id == connection.id,
+            Entity.level == LevelEnum.campaign
+        ).all()
+        campaign_map = {str(e.external_id): e for e in campaign_entities}
+
+        if campaign_map:
+            logger.info(
+                "[SNAPSHOT_SYNC] Fetching Google CAMPAIGN-level metrics for %d campaigns, %s to %s",
+                len(campaign_map), start_date, end_date
+            )
+
+            rows = _fetch_google_metrics_with_retry(client, customer_id, start_date, end_date, level="campaign")
+
+            for row in rows:
+                try:
+                    raw = row.get("_raw")
+                    if not raw:
+                        result.skipped += 1
+                        continue
+
+                    ext_id = str(raw.campaign.id)
+                    entity = campaign_map.get(ext_id)
+
+                    if not entity:
+                        result.skipped += 1
+                        continue
+
+                    # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
+                    snap_time = captured_at if mode == "realtime" else datetime.combine(
+                        date.fromisoformat(row["date"]), datetime.max.time()
+                    ).replace(tzinfo=timezone.utc)
+
+                    _upsert_google_snapshot(
+                        db=db,
+                        entity=entity,
+                        row=row,
+                        captured_at=snap_time,
+                        currency=connection.currency_code or "USD"
+                    )
+                    result.updated += 1
+
+                except Exception as e:
+                    logger.error("[SNAPSHOT_SYNC] Error processing campaign row: %s", e)
+                    result.errors.append(str(e))
+
+        # ===================================================================
+        # PART 1: Sync ad-level metrics (for drill-down into traditional campaigns)
         # ===================================================================
         ad_entities = db.query(Entity).filter(
             Entity.connection_id == connection.id,
@@ -754,7 +952,7 @@ def _sync_google_snapshots(
                     result.errors.append(str(e))
 
         # ===================================================================
-        # PART 2: Sync asset_group-level metrics (Performance Max campaigns)
+        # PART 2: Sync asset_group-level metrics (for drill-down into PMax campaigns)
         # ===================================================================
         asset_group_entities = db.query(Entity).filter(
             Entity.connection_id == connection.id,
@@ -802,8 +1000,8 @@ def _sync_google_snapshots(
                     logger.error("[SNAPSHOT_SYNC] Error processing asset_group row: %s", e)
                     result.errors.append(str(e))
 
-        if not ad_entity_map and not asset_group_map:
-            logger.warning("[SNAPSHOT_SYNC] No ad or asset_group entities for Google connection %s", connection.id)
+        if not campaign_map and not ad_entity_map and not asset_group_map:
+            logger.warning("[SNAPSHOT_SYNC] No campaign, ad, or asset_group entities for Google connection %s", connection.id)
 
         db.commit()
         result.synced_at = datetime.now(timezone.utc)

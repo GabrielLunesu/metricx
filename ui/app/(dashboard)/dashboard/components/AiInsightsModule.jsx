@@ -103,7 +103,11 @@ function generateInsights(data) {
   }
 
   // Campaign performance
-  const campaigns = data.top_campaigns || [];
+  // Handle both old format (array) and new format ({items, disclaimer})
+  const topCampaignsData = data.top_campaigns || {};
+  const campaigns = Array.isArray(topCampaignsData)
+    ? topCampaignsData
+    : topCampaignsData.items || [];
   if (campaigns.length >= 2) {
     const sortedByRoas = [...campaigns].sort((a, b) => (b.roas || 0) - (a.roas || 0));
     const best = sortedByRoas[0];
