@@ -1,10 +1,5 @@
 # metricx — AI-Powered Marketing Analytics
 
-**Test Login Credentials**
-```
-owner@defanglabs.com
-password123
-```
 
 ## 🌟 Vision
 
