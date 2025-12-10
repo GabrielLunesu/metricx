@@ -1,39 +1,29 @@
 /**
- * Dashboard Page - Primary ad analytics view.
+ * Dashboard Page - 2x2 Grid Layout
  *
- * WHAT: Main dashboard showing ad performance metrics, charts, and insights
- * WHY: Users need a single place to see how their ads are performing
+ * WHAT: Main dashboard with 4 glassmorphic modules in a 2x2 grid
+ * WHY: Clean, focused view of key metrics with Apple-inspired design
  *
- * PERFORMANCE OPTIMIZATION (v2):
- *   - Uses unified dashboard endpoint (1 request instead of 8+)
- *   - AI insights are lazy loaded (not blocking initial render)
- *   - Data is fetched once and passed to child components
- *
- * CONDITIONAL RENDERING:
- *   - Attribution section only shows if Shopify is connected (has_shopify)
- *   - KPI source indicators show connected platforms dynamically
+ * MODULES:
+ *   1. Blended Metrics - Main chart with metric selector (Revenue, ROAS, Spend, Conversions)
+ *   2. AI Insights - Data-driven actionable insights
+ *   3. KPI Cards - 4 clickable metric cards that update the main chart
+ *   4. Revenue Bar Chart - Last 7 days revenue visualization
  *
  * REFERENCES:
- *   - docs/PERFORMANCE_INVESTIGATION.md
+ *   - Design inspiration: Apple glassmorphism with blue tints
  *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
- *   - Strategic vision: Ad Analytics First, Attribution Second
  */
 "use client";
-import { useEffect, useState, Suspense, lazy } from "react";
-import { currentUser } from "../../../lib/auth";
+import { useEffect, useState } from "react";
+import { currentUser } from "../../../lib/workspace";
 import { fetchUnifiedDashboard } from "../../../lib/api";
 import HeroHeader from "./components/HeroHeader";
-import KpiStripUnified from "./components/KpiStripUnified";
-import MoneyPulseChartUnified from "./components/MoneyPulseChartUnified";
-import TopCreativeUnified from "./components/TopCreativeUnified";
-import SpendMixUnified from "./components/SpendMixUnified";
-import AttributionCardUnified from "./components/AttributionCardUnified";
-import LiveAttributionFeedUnified from "./components/LiveAttributionFeedUnified";
-import UnitEconomicsTable from "./components/UnitEconomicsTable";
 import TimeframeSelector from "./components/TimeframeSelector";
-
-// Lazy load AI insights - they're slow and not critical for initial render
-const AiInsightsPanel = lazy(() => import("./components/AiInsightsPanel"));
+import BlendedMetricsModule from "./components/BlendedMetricsModule";
+import AiInsightsModule from "./components/AiInsightsModule";
+import KpiCardsModule from "./components/KpiCardsModule";
+import RevenueBarModule from "./components/RevenueBarModule";
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
@@ -44,6 +34,9 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Selected metric for the main chart (controlled by KPI cards)
+  const [selectedMetric, setSelectedMetric] = useState('revenue');
 
   // Fetch user on mount
   useEffect(() => {
@@ -91,7 +84,14 @@ export default function DashboardPage() {
   }, [user?.workspace_id, timeframe]);
 
   if (loading) {
-    return <div className="p-6 text-slate-500">Loading dashboard...</div>;
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-slate-500 text-sm">Loading dashboard...</span>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -99,7 +99,7 @@ export default function DashboardPage() {
       <div className="p-6">
         <div className="max-w-2xl mx-auto glass-panel rounded-3xl p-6">
           <h2 className="text-xl font-medium mb-2 text-slate-900">You must be signed in.</h2>
-          <a href="/login" className="text-cyan-600 hover:text-cyan-700 underline">Go to sign in</a>
+          <a href="/sign-in" className="text-cyan-600 hover:text-cyan-700 underline">Go to sign in</a>
         </div>
       </div>
     );
@@ -109,11 +109,12 @@ export default function DashboardPage() {
   const showSkeleton = dataLoading || !dashboardData;
 
   return (
-    <div>
+    <div className="pb-8">
       {/* Hero Header */}
       <HeroHeader
         user={user}
         actions={<TimeframeSelector value={timeframe} onChange={setTimeframe} />}
+        lastSyncedAt={dashboardData?.last_synced_at}
       />
 
       {/* Error Banner */}
@@ -123,64 +124,37 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* KPI Strip - uses unified data */}
-      <div className="mt-8">
-        <KpiStripUnified
+      {/* 2x2 Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
+        {/* Module 1: KPI Cards - Performance Overview (Top Left) */}
+        <KpiCardsModule
           data={dashboardData}
           loading={showSkeleton}
+          selectedMetric={selectedMetric}
+          onMetricClick={setSelectedMetric}
         />
-      </div>
 
-      {/* Middle Section: Money Pulse & AI Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-        <MoneyPulseChartUnified
+        {/* Module 2: Blended Metrics Chart (Top Right) */}
+        <BlendedMetricsModule
           data={dashboardData}
           loading={showSkeleton}
+          timeframe={timeframe}
+          selectedMetric={selectedMetric}
+          onMetricChange={setSelectedMetric}
         />
-        {/* AI Insights - lazy loaded, not blocking */}
-        <Suspense fallback={
-          <div className="glass-panel rounded-2xl p-4 animate-pulse h-64">
-            <div className="h-4 bg-slate-200 rounded w-1/3 mb-4"></div>
-            <div className="space-y-3">
-              <div className="h-16 bg-slate-100 rounded"></div>
-              <div className="h-16 bg-slate-100 rounded"></div>
-            </div>
-          </div>
-        }>
-          <AiInsightsPanel workspaceId={user.workspace_id} timeframe={timeframe} />
-        </Suspense>
-      </div>
 
-      {/* Attribution Section - Only show if Shopify is connected */}
-      {dashboardData?.has_shopify && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
-          <AttributionCardUnified
-            data={dashboardData}
-            loading={showSkeleton}
-          />
-          <LiveAttributionFeedUnified
-            data={dashboardData}
-            loading={showSkeleton}
-          />
-        </div>
-      )}
-
-      {/* Bottom Section: Top Ads & Platform Mix */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8 pb-8">
-        <TopCreativeUnified
+        {/* Module 3: AI Insights (Bottom Left) */}
+        <AiInsightsModule
           data={dashboardData}
           loading={showSkeleton}
+          workspaceId={user?.workspace_id}
         />
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-slate-800 tracking-tight">Platform Spend Mix</h3>
-          </div>
-          <SpendMixUnified
-            data={dashboardData}
-            loading={showSkeleton}
-          />
-          <UnitEconomicsTable workspaceId={user.workspace_id} timeframe={timeframe} />
-        </div>
+
+        {/* Module 4: Revenue Bar Chart (Bottom Right) */}
+        <RevenueBarModule
+          workspaceId={user?.workspace_id}
+          loading={showSkeleton}
+        />
       </div>
     </div>
   );

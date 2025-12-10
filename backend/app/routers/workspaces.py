@@ -71,12 +71,59 @@ def _require_membership(
 
 
 @router.get(
+    "/active",
+    response_model=schemas.ActiveWorkspaceResponse,
+    summary="Get active workspace",
+    description="""
+    Get the current user's active workspace context.
+
+    This endpoint is called immediately after login to hydrate the frontend
+    with workspace context. The user's active workspace is stored in users.workspace_id.
+
+    REFERENCES:
+        - ui/lib/workspace.js (getActiveWorkspace, currentUser)
+        - backend/app/deps.py (get_current_user validates Clerk JWT)
+    """
+)
+async def get_active_workspace(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user's active workspace for frontend context.
+
+    WHAT: Returns workspace_id, workspace_name, and user info
+    WHY: Frontend needs this to hydrate after Clerk login
+
+    Returns:
+        ActiveWorkspaceResponse with workspace and user details
+    """
+    # Get the workspace details
+    workspace = db.query(Workspace).filter(
+        Workspace.id == current_user.workspace_id
+    ).first()
+
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Active workspace not found. Please contact support."
+        )
+
+    return schemas.ActiveWorkspaceResponse(
+        workspace_id=str(workspace.id),
+        workspace_name=workspace.name,
+        user_id=str(current_user.id),
+        user_name=current_user.name,
+        user_email=current_user.email,
+    )
+
+
+@router.get(
     "",
     response_model=schemas.WorkspaceListResponse,
     summary="List workspaces",
     description="""
     Get a list of all workspaces accessible to the current user.
-    
+
     Currently, users can only access their own workspace, but this will be
     extended in the future to support multi-workspace access.
     """
@@ -107,6 +154,7 @@ def list_workspaces(
                 created_at=m.workspace.created_at,
                 role=m.role,
                 status=m.status,
+                is_active=(m.workspace.id == current_user.workspace_id),
             )
         )
 

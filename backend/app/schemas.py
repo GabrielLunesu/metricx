@@ -267,13 +267,19 @@ class WorkspaceOut(BaseModel):
 
 
 class WorkspaceWithRole(BaseModel):
-    """Workspace summary with membership role/status."""
+    """Workspace summary with membership role/status.
+
+    Attributes:
+        is_active: True if this is the user's currently active workspace.
+                   Used by frontend to highlight the active workspace in switcher.
+    """
 
     id: UUID
     name: str
     created_at: datetime
     role: RoleEnum
     status: str = "active"
+    is_active: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -412,7 +418,7 @@ class ConnectionOut(BaseModel):
     status: str = Field(description="Connection status")
     connected_at: datetime = Field(description="Connection timestamp")
     workspace_id: UUID = Field(description="Associated workspace ID")
-    sync_frequency: str = Field(description="Sync cadence", default="manual")
+    sync_frequency: str = Field(description="Sync cadence", default="15min")
     sync_status: str = Field(description="Sync state", default="idle")
     last_sync_attempted_at: Optional[datetime] = None
     last_sync_completed_at: Optional[datetime] = None
@@ -575,9 +581,27 @@ class PnlOut(BaseModel):
 # List Response Schemas
 class WorkspaceListResponse(BaseModel):
     """Response schema for workspace list."""
-    
+
     workspaces: List[WorkspaceWithRole] = Field(description="List of workspaces with roles")
     total: int = Field(description="Total number of workspaces")
+
+
+class ActiveWorkspaceResponse(BaseModel):
+    """Response schema for GET /workspaces/active.
+
+    WHAT: Returns current user's active workspace context
+    WHY: Frontend needs this after Clerk login to hydrate workspace state
+
+    REFERENCES:
+        - ui/lib/workspace.js (getActiveWorkspace, currentUser)
+        - backend/app/routers/workspaces.py (get_active_workspace)
+    """
+
+    workspace_id: str = Field(description="Active workspace UUID")
+    workspace_name: str = Field(description="Workspace display name")
+    user_id: str = Field(description="Current user UUID")
+    user_name: str = Field(description="User's display name")
+    user_email: str = Field(description="User's email address")
 
 
 class ConnectionListResponse(BaseModel):

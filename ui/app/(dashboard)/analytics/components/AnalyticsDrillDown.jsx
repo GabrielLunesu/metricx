@@ -1,7 +1,13 @@
 /**
+ * @deprecated This component has been replaced by AnalyticsEntitySelector and AnalyticsPlatformView.
+ * The drill-down functionality is now handled by the new entity selector with hierarchical navigation.
+ * Top Meta Creatives section was removed per the revamp requirements.
+ *
+ * Keeping this file for reference - can be safely deleted.
+ *
  * AnalyticsDrillDown Component
  * ==============================
- * 
+ *
  * WHAT:
  *   A dynamic drill-down interface for campaign performance analytics.
  *   Shows campaigns by default, and switches to ad sets when a campaign is selected.

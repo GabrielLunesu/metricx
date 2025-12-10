@@ -15,9 +15,6 @@ from ..deps import get_current_user
 from ..models import User, Connection, Workspace, ProviderEnum, WorkspaceMember, RoleEnum
 from ..services.token_service import store_connection_token
 from ..services.google_ads_client import GAdsClient
-from redis import Redis
-from rq import Queue
-import os
 from datetime import datetime
 
 
@@ -276,11 +273,16 @@ def _get_connection_for_workspace(
     response_model=schemas.SyncJobResponse,
     summary="Enqueue an immediate sync job for this connection",
 )
-def enqueue_sync_job(
+async def enqueue_sync_job(
     connection_id: UUID,
+    force_refresh: bool = Query(
+        default=False,
+        description="If True, re-syncs all data from scratch (ignores last sync date)"
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Enqueue sync job to ARQ async worker."""
     _require_connection_permission(db, current_user, current_user.workspace_id)
     connection = _get_connection_for_workspace(
         db=db,
@@ -288,19 +290,22 @@ def enqueue_sync_job(
         connection_id=connection_id,
     )
 
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    queue = Queue("sync_jobs", connection=Redis.from_url(redis_url))
-    job = queue.enqueue(
-        "app.workers.sync_worker.process_sync_job",
+    # Enqueue to ARQ
+    from app.workers.arq_enqueue import enqueue_sync_job as arq_enqueue
+
+    result = await arq_enqueue(
         str(connection.id),
         str(connection.workspace_id),
+        force_refresh,
     )
+    job_id = result.get("job_id", "unknown")
+    logger.info("[CONNECTIONS] Enqueued sync job %s for connection %s", job_id, connection_id)
 
     connection.sync_status = "queued"
     connection.last_sync_error = None
     db.commit()
 
-    return schemas.SyncJobResponse(job_id=job.id, status="queued")
+    return schemas.SyncJobResponse(job_id=job_id, status="queued")
 
 
 VALID_SYNC_FREQUENCIES = {
@@ -497,7 +502,7 @@ def delete_connection(
     """Delete connection and all associated data."""
     import logging
     from app.models import (
-        Entity, MetricFact, Token, Fetch, Import, Pnl,
+        Entity, MetricFact, MetricSnapshot, Token, Fetch, Import, Pnl,
         ShopifyShop, ShopifyProduct, ShopifyCustomer, ShopifyOrder, ShopifyOrderLineItem,
         PixelEvent, CustomerJourney, JourneyTouchpoint, Attribution,
     )
@@ -604,21 +609,28 @@ def delete_connection(
         # so we only delete them if this was the only Shopify connection)
         # For now, leave pixel_events and journeys - they're workspace-level data
 
-        # 2. Delete metric facts that reference these entities OR imports
-        # MetricFact has FK to both Entity and Import, so delete all facts related to this connection
+        # 2. Delete metric snapshots (primary data source)
+        snapshot_count = 0
+        if entity_ids:
+            snapshot_count = db.query(MetricSnapshot).filter(
+                MetricSnapshot.entity_id.in_(entity_ids)
+            ).delete(synchronize_session=False)
+        if snapshot_count > 0:
+            logger.info(f"[DELETE_CONNECTION] Deleted {snapshot_count} metric snapshots")
+            db.flush()
+
+        # 2b. Delete legacy metric facts (if any remain during transition)
         fact_count = 0
         if entity_ids:
-            # Delete facts by entity_id
             fact_count += db.query(MetricFact).filter(
                 MetricFact.entity_id.in_(entity_ids)
             ).delete(synchronize_session=False)
         if import_ids:
-            # Delete facts by import_id (in case some facts don't have entity_id)
             fact_count += db.query(MetricFact).filter(
                 MetricFact.import_id.in_(import_ids)
             ).delete(synchronize_session=False)
         if fact_count > 0:
-            logger.info(f"[DELETE_CONNECTION] Deleted {fact_count} metric facts")
+            logger.info(f"[DELETE_CONNECTION] Deleted {fact_count} legacy metric facts")
             db.flush()
         
         # 3. Delete entities (no longer referenced by metric facts or P&L)

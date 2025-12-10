@@ -6,10 +6,10 @@ relationships. Authentication secrets are stored in a separate
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 
-from sqlalchemy import Column, String, DateTime, Enum, Integer, ForeignKey, Numeric, JSON, Text, Boolean, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, Enum, Integer, BigInteger, ForeignKey, Numeric, JSON, Text, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -43,9 +43,11 @@ class ProviderEnum(str, enum.Enum):
 class LevelEnum(str, enum.Enum):
     account = "account"
     campaign = "campaign"
-    adset = "adset"
+    adset = "adset"  # Google calls this "ad_group"
     ad = "ad"
+    asset_group = "asset_group"  # PMax campaigns use asset_groups instead of ads
     creative = "creative"
+    product = "product"  # Shopping/PMax product-level data
     unknown = "unknown"
 
 
@@ -85,11 +87,11 @@ class GoalEnum(str, enum.Enum):
 
 class Workspace(Base):
     """Workspace represents a company/organization account.
-    
+
     A workspace is the top-level container that groups all resources
     for a specific company. All data (connections, entities, metrics)
     belongs to a workspace.
-    
+
     Current relationship: One workspace can have many users (ONE-to-MANY)
     TODO: Should be MANY-to-MANY (users can belong to multiple workspaces)
     """
@@ -98,6 +100,11 @@ class Workspace(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Sync tracking - updated by snapshot_sync_service
+    # WHAT: Timestamp of last successful sync for any connection in this workspace
+    # WHY: Shows "Last updated X min ago" in dashboard UI
+    last_synced_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships - these create reverse lookups
     users = relationship("User", back_populates="workspace")  # Active workspace for the user (legacy single workspace)
@@ -108,7 +115,7 @@ class Workspace(Base):
     compute_runs = relationship("ComputeRun", back_populates="workspace")  # All compute runs
     queries = relationship("QaQueryLog", back_populates="workspace")  # All queries made in workspace
     manual_costs = relationship("ManualCost", back_populates="workspace")  # All manual costs (non-ad costs)
-    
+
     # This is used to display the model in the admin interface.
     def __str__(self):
         return self.name
@@ -116,16 +123,22 @@ class Workspace(Base):
 
 class User(Base):
     """User represents a person who can access the system.
-    
-    Users authenticate via email/password and belong to workspaces.
+
+    Users authenticate via Clerk (OAuth, password) and belong to workspaces.
     Each user has a role (Owner, Admin, Viewer) within their workspace.
-    
+
     CURRENT ISSUE: User can only belong to ONE workspace (via workspace_id)
     This should be changed to MANY-to-MANY relationship.
     """
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Clerk authentication - links to Clerk user ID (e.g., "user_2abc123...")
+    # WHY: Clerk handles auth, we store clerk_id to map JWT sub claim to local user
+    # REFERENCES: backend/app/deps.py (get_current_user), backend/app/routers/clerk_webhooks.py
+    clerk_id = Column(String, unique=True, index=True, nullable=True)
+
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
@@ -244,8 +257,8 @@ class Connection(Base):
     # REFERENCES: docs/living-docs/REALTIME_SYNC_STATUS.md
     sync_frequency = Column(
         String,
-        default="manual",
-    )  # manual, 5min, 10min, 30min, hourly, daily (realtime reserved via docs/REALTIME_SYNC_IMPLEMENTATION_SUMMARY.md)
+        default="15min",
+    )  # 15min (default), 5min, 10min, 30min, hourly, daily, manual
     last_sync_attempted_at = Column(DateTime, nullable=True)  # Last sync start (success or failure)
     last_sync_completed_at = Column(DateTime, nullable=True)  # Last successful completion
     last_metrics_changed_at = Column(DateTime, nullable=True)  # Last actual data change (freshness)
@@ -417,27 +430,38 @@ class Entity(Base):
 
 class MetricFact(Base):
     """MetricFact stores RAW BASE MEASURES from ad platforms.
-    
+
+    ⚠️ DEPRECATED: Use MetricSnapshot instead.
+
+    This table is deprecated as of 2025-12-07. New code should use MetricSnapshot
+    which provides 15-minute granularity syncing instead of daily.
+
+    Migration path:
+    1. New data is written to MetricSnapshot (via snapshot_sync_service.py)
+    2. Historical data migrated via alembic/versions/20251207_000002
+    3. This table will be dropped in a future release
+
+    For queries, use unified_metric_service.py which supports both tables.
+
+    ---
+
+    ORIGINAL DOCSTRING (for reference):
+
     Derived Metrics v1 philosophy:
     - Store ONLY base measures (raw facts from platforms)
     - Compute derived metrics on-demand (executor) or during snapshots (Pnl)
     - Never store computed values here → avoids formula drift over time
-    
+
     Base measures (original):
     - spend, impressions, clicks, conversions, revenue
-    
+
     Base measures (added in Derived Metrics v1):
     - leads: Lead form submissions (Meta Lead Ads, Google Lead Form Extensions)
     - installs: App installations (App Install campaigns)
     - purchases: Purchase events (Conversions API, pixel tracking)
     - visitors: Landing page visitors (from analytics platforms)
     - profit: Net profit (revenue - COGS/costs)
-    
-    WHY these additions:
-    - Enables computing CPL, CPI, CPP, ARPV, POAS, AOV
-    - Maintains fact table as wide "base" table (no joins needed)
-    - Platform APIs provide these metrics → we store them raw
-    
+
     Related:
     - app/metrics/registry.py: Lists all base measures
     - app/dsl/executor.py: Aggregates these for ad-hoc queries
@@ -477,6 +501,71 @@ class MetricFact(Base):
     
     def __str__(self):
         return f"{self.event_date.strftime('%Y-%m-%d')} - {self.provider.value} - ${self.spend}"
+
+
+class MetricSnapshot(Base):
+    """MetricSnapshot stores 15-min granularity ad metrics.
+
+    WHAT:
+        Replaces MetricFact with finer time resolution for real-time analytics.
+        Stores the same base measures but at 15-minute intervals.
+
+    WHY:
+        - 15-min sync matches Meta's data refresh rate
+        - Enables real-time rules engine (stop-losses, alerts)
+        - Compacted to hourly after 2 days for storage efficiency
+        - Daily re-fetch of last 7 days catches attribution corrections
+
+    LIFECYCLE:
+        - Today/Yesterday: 15-min granularity (96 snapshots/day)
+        - Day 2+: Hourly granularity (24 snapshots/day, compacted)
+        - All data retained (no deletion)
+
+    SYNC SCHEDULE:
+        - Every 15 min: Sync today's data
+        - Daily 1am: Compact day-2 from 15-min to hourly
+        - Daily 3am: Re-fetch last 7 days for attribution corrections
+
+    Related:
+        - Migration: alembic/versions/20251207_000001_add_metric_snapshots.py
+        - Service: app/services/snapshot_sync_service.py
+    """
+    __tablename__ = "metric_snapshots"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
+    provider = Column(String(20), nullable=False)  # 'meta', 'google', 'tiktok'
+    captured_at = Column(DateTime(timezone=True), nullable=False)
+
+    # Base measures (same as MetricFact)
+    spend = Column(Numeric(18, 4), nullable=True)
+    impressions = Column(BigInteger, nullable=True)
+    clicks = Column(BigInteger, nullable=True)
+    conversions = Column(Numeric(18, 4), nullable=True)
+    revenue = Column(Numeric(18, 4), nullable=True)
+    leads = Column(Numeric(18, 4), nullable=True)
+    purchases = Column(Integer, nullable=True)
+    installs = Column(Integer, nullable=True)
+    visitors = Column(Integer, nullable=True)
+    profit = Column(Numeric(18, 4), nullable=True)
+
+    # Currency
+    currency = Column(String(10), default='USD')
+
+    # Audit timestamp
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    entity = relationship("Entity", backref="snapshots")
+
+    # Unique constraint for UPSERT
+    __table_args__ = (
+        UniqueConstraint('entity_id', 'provider', 'captured_at',
+                         name='uq_metric_snapshots_entity_provider_time'),
+    )
+
+    def __str__(self):
+        return f"{self.captured_at.strftime('%Y-%m-%d %H:%M')} - {self.provider} - ${self.spend}"
 
 
 class ComputeRun(Base):

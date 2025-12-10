@@ -1,14 +1,41 @@
 'use client';
 
-import { Search, SendHorizontal } from "lucide-react";
+import { Search, SendHorizontal, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
-export default function HeroHeader({ user, actions }) {
+/**
+ * Format relative time (e.g., "2 min ago", "1 hour ago")
+ */
+function formatRelativeTime(isoString) {
+    if (!isoString) return null;
+
+    try {
+        const date = new Date(isoString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHours = Math.floor(diffMin / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffSec < 60) return "just now";
+        if (diffMin < 60) return `${diffMin} min ago`;
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        if (diffDays === 1) return "yesterday";
+        return `${diffDays} days ago`;
+    } catch {
+        return null;
+    }
+}
+
+export default function HeroHeader({ user, actions, lastSyncedAt }) {
     const name = user?.name || "there";
     const displayName = name.charAt(0).toUpperCase() + name.slice(1);
     const router = useRouter();
     const [question, setQuestion] = useState("");
+
+    const relativeTime = useMemo(() => formatRelativeTime(lastSyncedAt), [lastSyncedAt]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -53,8 +80,16 @@ export default function HeroHeader({ user, actions }) {
                     </div>
                 </form>
 
-                {/* Timeframe Selector */}
-                {actions}
+                {/* Timeframe Selector + Sync Status */}
+                <div className="flex items-center gap-3">
+                    {relativeTime && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Updated {relativeTime}</span>
+                        </div>
+                    )}
+                    {actions}
+                </div>
             </div>
         </header>
     );

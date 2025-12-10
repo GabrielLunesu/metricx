@@ -1,27 +1,29 @@
 /**
- * Root Layout - Global app shell with HTML metadata and SEO configuration.
+ * Root Layout - Global app shell with Clerk authentication and SEO configuration.
  *
- * This is the top-level layout for the entire application. It provides:
- * - Comprehensive SEO metadata for Google indexing and social sharing
- * - Favicon and icon configuration
- * - Global CSS imports
- * - Background visual effects
+ * WHAT: Top-level layout wrapping entire application
+ * WHY: Provides authentication context, SEO metadata, and global styles
+ *
+ * Key Features:
+ * - ClerkProvider: Authentication context for all pages
+ * - SEO metadata for Google indexing and social sharing
+ * - Background visual effects (Cyan Aura)
  *
  * Note: Dashboard-specific chrome (sidebar, header) lives in (dashboard)/layout.jsx
  *
- * @see https://nextjs.org/docs/app/api-reference/functions/generate-metadata
+ * REFERENCES:
+ *   - https://clerk.com/docs/references/nextjs/clerk-provider
+ *   - https://nextjs.org/docs/app/api-reference/functions/generate-metadata
  */
+
+import { ClerkProvider } from '@clerk/nextjs';
 import "./globals.css";
 import AppProviders from "./providers";
 
 /**
  * Site-wide metadata configuration for SEO and social sharing.
- * This metadata helps with:
- * - Google Search ranking and indexing
- * - Social media link previews (Open Graph, Twitter Cards)
- * - Browser tab display (title, favicon)
  *
- * @see https://nextjs.org/docs/app/api-reference/functions/generate-metadata
+ * WHY: Helps with Google Search ranking, social media previews, and browser display.
  */
 export const metadata = {
   // Basic metadata
@@ -111,13 +113,6 @@ export const metadata = {
     },
   },
 
-  // Verification tags (add your actual verification codes when available)
-  // verification: {
-  //   google: "your-google-verification-code",
-  //   yandex: "your-yandex-verification-code",
-  //   bing: "your-bing-verification-code",
-  // },
-
   // App-specific metadata
   applicationName: "metricx",
   category: "Business",
@@ -125,19 +120,21 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className="bg-white antialiased overflow-x-hidden">
-        {/* Cyan Aura Background Effects */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-400 rounded-full blur-[120px] opacity-15 aura-glow"></div>
-          <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-cyan-300 rounded-full blur-[100px] opacity-10 float-orb" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute bottom-1/4 right-1/3 w-[350px] h-[350px] bg-cyan-500 rounded-full blur-[90px] opacity-10 float-orb" style={{ animationDelay: '2.5s' }}></div>
-        </div>
+    <ClerkProvider>
+      <html lang="en">
+        <body className="bg-white antialiased overflow-x-hidden">
+          {/* Cyan Aura Background Effects */}
+          <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-400 rounded-full blur-[120px] opacity-15 aura-glow"></div>
+            <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-cyan-300 rounded-full blur-[100px] opacity-10 float-orb" style={{ animationDelay: '1s' }}></div>
+            <div className="absolute bottom-1/4 right-1/3 w-[350px] h-[350px] bg-cyan-500 rounded-full blur-[90px] opacity-10 float-orb" style={{ animationDelay: '2.5s' }}></div>
+          </div>
 
-        <AppProviders>
-          {children}
-        </AppProviders>
-      </body>
-    </html>
+          <AppProviders>
+            {children}
+          </AppProviders>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

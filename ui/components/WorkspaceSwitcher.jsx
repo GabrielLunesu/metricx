@@ -3,11 +3,18 @@
 import { useEffect, useState, useTransition } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { currentUser } from "@/lib/auth";
+import { authFetch, currentUser } from "@/lib/workspace";
+import { getApiBase } from "@/lib/config";
 
 /**
  * Workspace switcher dropdown.
- * Pulls memberships from currentUser(). Switch calls backend /workspaces/{id}/switch.
+ *
+ * WHAT: Allows users to switch between workspaces they have access to
+ * WHY: Users may belong to multiple workspaces (own + invited)
+ *
+ * FIXES (2025-12-10):
+ *   - Use authFetch instead of bare fetch to include Clerk Bearer token
+ *   - This fixes auth failures when cookies aren't properly set
  */
 export default function WorkspaceSwitcher({ user }) {
   const [memberships, setMemberships] = useState(user?.memberships || []);
@@ -22,10 +29,9 @@ export default function WorkspaceSwitcher({ user }) {
   const handleSwitch = (workspaceId) => {
     if (!workspaceId || workspaceId === activeId) return;
     startTransition(() => {
-      fetch(`${process.env.NEXT_PUBLIC_API_BASE}/workspaces/${workspaceId}/switch`, {
+      // Use authFetch to include Clerk Bearer token for proper authentication
+      authFetch(`${getApiBase()}/workspaces/${workspaceId}/switch`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
       })
         .then((res) => {
           if (!res.ok) return res.text().then((t) => Promise.reject(t));

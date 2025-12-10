@@ -41,7 +41,7 @@ export default function CTASectionNew() {
 
             {/* Secondary button */}
             <a
-              href="/login"
+              href="/sign-in"
               className="inline-flex h-14 items-center justify-center rounded-full border border-gray-200 bg-white px-8 font-semibold text-gray-700 transition-all hover:bg-gray-50 hover:border-gray-300"
             >
               Sign in

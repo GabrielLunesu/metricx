@@ -23,7 +23,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { currentUser } from "@/lib/auth";
+import { currentUser } from "@/lib/workspace";
 import TopBar from "./components/TopBar";
 import FinancialSummaryCards from "./components/FinancialSummaryCards";
 import PLTable from "./components/PLTable";

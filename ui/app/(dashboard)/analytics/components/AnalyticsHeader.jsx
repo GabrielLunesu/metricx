@@ -5,13 +5,13 @@
  * WHAT: Analytics page header with filters and AI search bar
  * WHY: Provides filtering controls and quick access to Copilot
  *
- * REFACTORED: Removed fire-and-forget fetchQA call that was wasting
- * backend resources. The question is passed to Copilot via URL param.
+ * REVAMPED: Removed Status filter, excluded Shopify from providers,
+ * simplified for platform-first analytics approach.
  *
  * REFERENCES:
  * - app/(dashboard)/copilot/page.jsx (receives question via ?q= param)
  */
-import { Sparkles, ArrowRight, Calendar, X, Filter, ChevronDown } from "lucide-react";
+import { Sparkles, ArrowRight, Calendar, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -134,8 +134,8 @@ export default function AnalyticsHeader({
         }, 300);
     };
 
-    // Merge 'all' with fetched providers
-    const displayProviders = ['all', ...providers];
+    // Merge 'all' with fetched providers, excluding Shopify (analytics is for ad platforms only)
+    const displayProviders = ['all', ...providers.filter(p => p.toLowerCase() !== 'shopify')];
 
     return (
         <header className="flex flex-col gap-6 animate-slide-up relative z-20">
@@ -175,33 +175,19 @@ export default function AnalyticsHeader({
 
                 {/* Active Filters */}
                 <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2">Active Filters:</span>
-
-                    {/* Campaign Chip */}
-                    {selectedCampaign ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-cyan-200 rounded-full shadow-sm group animate-fade-in">
-                            <span className="text-xs font-medium text-slate-600">Campaign: <span className="text-cyan-700">{selectedCampaign.name}</span></span>
-                            <button onClick={onClearCampaign} className="p-0.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors">
-                                <X className="w-3 h-3" />
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={onFilterClick}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-dashed border-slate-300 rounded-full hover:border-cyan-400 hover:text-cyan-600 text-slate-500 transition-all group"
-                        >
-                            <Filter className="w-3 h-3" />
-                            <span className="text-xs font-medium">Filter Campaign</span>
-                        </button>
+                    {selectedCampaign && (
+                        <>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2">Viewing:</span>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-cyan-200 rounded-full shadow-sm group animate-fade-in">
+                                <span className="text-xs font-medium text-slate-600">
+                                    <span className="text-cyan-700">{selectedCampaign.name}</span>
+                                </span>
+                                <button onClick={onClearCampaign} className="p-0.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors">
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
+                        </>
                     )}
-
-                    {/* Status Chip (Static for now) */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm">
-                        <span className="text-xs font-medium text-slate-600">Status: <span className="text-slate-900">Active</span></span>
-                        <button className="p-0.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-                            <X className="w-3 h-3" />
-                        </button>
-                    </div>
                 </div>
 
                 {/* Right Controls: Provider & Date */}

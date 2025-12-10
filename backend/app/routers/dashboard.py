@@ -41,8 +41,8 @@ from sqlalchemy import func, desc
 
 from app.database import get_db
 from app.models import (
-    Connection, ShopifyOrder, Attribution, MetricFact, Entity,
-    ProviderEnum, User, LevelEnum
+    Connection, ShopifyOrder, Attribution, MetricSnapshot, Entity,
+    ProviderEnum, User, LevelEnum, Workspace
 )
 from app.deps import get_current_user
 from app.schemas import SparkPoint
@@ -65,8 +65,8 @@ class KpiData(BaseModel):
     sparkline: Optional[List[SparkPoint]] = None
 
 
-class TopCreativeItem(BaseModel):
-    """Top performing ad/creative."""
+class TopCampaignItem(BaseModel):
+    """Top performing campaign."""
     id: str
     name: str
     platform: str
@@ -107,11 +107,16 @@ class UnifiedDashboardResponse(BaseModel):
     has_shopify: bool
     connected_platforms: List[str]
 
+    # Currency - derived from the primary connection's currency
+    # WHAT: ISO 4217 currency code for all monetary values in this response
+    # WHY: Frontend needs to display correct currency symbol (€ vs $)
+    currency: str = "USD"
+
     # Chart data (same as KPIs but guaranteed sparklines)
     chart_data: List[Dict[str, Any]]
 
-    # Top creatives
-    top_creatives: List[TopCreativeItem]
+    # Top campaigns
+    top_campaigns: List[TopCampaignItem]
 
     # Spend mix by platform
     spend_mix: List[SpendMixItem]
@@ -119,6 +124,9 @@ class UnifiedDashboardResponse(BaseModel):
     # Attribution (only if Shopify connected)
     attribution_summary: Optional[List[AttributionSummaryItem]] = None
     attribution_feed: Optional[List[AttributionFeedItem]] = None
+
+    # Sync status - ISO timestamp of last successful sync for this workspace
+    last_synced_at: Optional[str] = None
 
 
 # =============================================================================
@@ -141,6 +149,9 @@ def _get_date_range(timeframe: str) -> tuple[datetime, datetime]:
         return start, now
     elif timeframe == "last_30_days":
         start = today_start - timedelta(days=29)
+        return start, now
+    elif timeframe == "last_90_days":
+        start = today_start - timedelta(days=89)
         return start, now
     else:
         start = today_start - timedelta(days=6)
@@ -175,9 +186,27 @@ def _get_kpis_and_chart_data(
     end: datetime,
     prev_start: datetime,
     prev_end: datetime,
-    has_shopify: bool
+    has_shopify: bool,
+    timeframe: str = "last_7_days"
 ) -> tuple[List[KpiData], List[Dict], str]:
-    """Get KPIs and chart data in one query batch."""
+    """Get KPIs and chart data from MetricSnapshot.
+
+    WHAT:
+        Aggregates metrics from MetricSnapshot table (15-min granularity).
+        Uses latest snapshot per entity per time bucket for cumulative metrics.
+        For today/yesterday: hourly granularity for detailed charts.
+        For longer periods: daily granularity.
+
+    WHY:
+        MetricSnapshot captures point-in-time cumulative daily totals.
+        The latest snapshot of each bucket has the complete picture.
+        Hourly data for intraday views matches Google Ads UX.
+
+    NOTE:
+        We use DISTINCT ON to get the latest snapshot per entity-bucket,
+        then sum across entities for the period total.
+    """
+    from sqlalchemy import text
 
     # Get entity IDs for this workspace
     entity_ids = (
@@ -191,46 +220,145 @@ def _get_kpis_and_chart_data(
     prev_start_date = prev_start.date() if isinstance(prev_start, datetime) else prev_start
     prev_end_date = prev_end.date() if isinstance(prev_end, datetime) else prev_end
 
-    # Current period metrics
-    current_metrics = db.query(
-        func.coalesce(func.sum(MetricFact.spend), 0).label("spend"),
-        func.coalesce(func.sum(MetricFact.revenue), 0).label("revenue"),
-        func.coalesce(func.sum(MetricFact.conversions), 0).label("conversions")
-    ).filter(
-        MetricFact.entity_id.in_(entity_ids),
-        func.date(MetricFact.event_date) >= start_date,
-        func.date(MetricFact.event_date) <= end_date
-    ).first()
+    # Current period metrics - get latest snapshot per entity per day, then sum
+    # Using raw SQL with DISTINCT ON for efficiency
+    current_metrics_sql = text("""
+        SELECT
+            COALESCE(SUM(spend), 0) as spend,
+            COALESCE(SUM(revenue), 0) as revenue,
+            COALESCE(SUM(conversions), 0) as conversions
+        FROM (
+            SELECT DISTINCT ON (entity_id, date_trunc('day', captured_at))
+                entity_id,
+                spend,
+                revenue,
+                conversions
+            FROM metric_snapshots
+            WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
+              AND date_trunc('day', captured_at) >= :start_date
+              AND date_trunc('day', captured_at) <= :end_date
+            ORDER BY entity_id, date_trunc('day', captured_at), captured_at DESC
+        ) latest_snapshots
+    """)
+
+    current_metrics = db.execute(current_metrics_sql, {
+        "workspace_id": str(workspace_id),
+        "start_date": start_date,
+        "end_date": end_date
+    }).first()
 
     # Previous period metrics
-    prev_metrics = db.query(
-        func.coalesce(func.sum(MetricFact.spend), 0).label("spend"),
-        func.coalesce(func.sum(MetricFact.revenue), 0).label("revenue"),
-        func.coalesce(func.sum(MetricFact.conversions), 0).label("conversions")
-    ).filter(
-        MetricFact.entity_id.in_(entity_ids),
-        func.date(MetricFact.event_date) >= prev_start_date,
-        func.date(MetricFact.event_date) <= prev_end_date
-    ).first()
+    prev_metrics = db.execute(current_metrics_sql, {
+        "workspace_id": str(workspace_id),
+        "start_date": prev_start_date,
+        "end_date": prev_end_date
+    }).first()
 
-    # Daily breakdown for sparklines
-    daily_data = db.query(
-        func.date(MetricFact.event_date).label("day"),
-        func.coalesce(func.sum(MetricFact.spend), 0).label("spend"),
-        func.coalesce(func.sum(MetricFact.revenue), 0).label("revenue")
-    ).filter(
-        MetricFact.entity_id.in_(entity_ids),
-        func.date(MetricFact.event_date) >= start_date,
-        func.date(MetricFact.event_date) <= end_date
-    ).group_by(
-        func.date(MetricFact.event_date)
-    ).order_by(
-        func.date(MetricFact.event_date)
-    ).all()
+    # Determine granularity: 15-min for today/yesterday (matches sync frequency), daily for longer periods
+    use_intraday = timeframe in ("today", "yesterday")
 
-    # Build sparklines
-    revenue_sparkline = [SparkPoint(date=str(d.day), value=float(d.revenue or 0)) for d in daily_data]
-    spend_sparkline = [SparkPoint(date=str(d.day), value=float(d.spend or 0)) for d in daily_data]
+    if use_intraday:
+        # 15-minute breakdown for intraday charts (matches our sync frequency)
+        # Now includes per-provider breakdown for multi-line charts
+        chart_data_sql = text("""
+            WITH actual_data AS (
+                SELECT
+                    time_bucket,
+                    provider,
+                    COALESCE(SUM(spend), 0) as spend,
+                    COALESCE(SUM(revenue), 0) as revenue,
+                    COALESCE(SUM(conversions), 0) as conversions
+                FROM (
+                    SELECT DISTINCT ON (entity_id, date_trunc('hour', captured_at) +
+                           INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15))
+                        date_trunc('hour', captured_at) +
+                        INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15) as time_bucket,
+                        entity_id,
+                        provider,
+                        spend,
+                        revenue,
+                        conversions
+                    FROM metric_snapshots
+                    WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
+                      AND captured_at >= :start_ts
+                      AND captured_at <= :end_ts
+                    ORDER BY entity_id,
+                             date_trunc('hour', captured_at) + INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15),
+                             captured_at DESC
+                ) latest_snapshots
+                GROUP BY time_bucket, provider
+            )
+            SELECT time_bucket, provider, spend, revenue, conversions
+            FROM actual_data
+            ORDER BY time_bucket, provider
+        """)
+
+        chart_data_result = db.execute(chart_data_sql, {
+            "workspace_id": str(workspace_id),
+            "start_ts": start,
+            "end_ts": end
+        }).fetchall()
+
+        # Fallback to daily if no intraday data
+        if not chart_data_result:
+            use_intraday = False
+
+    if not use_intraday:
+        # Daily breakdown for sparklines - latest snapshot per entity per day
+        # Now includes per-provider breakdown for multi-line charts
+        chart_data_sql = text("""
+            SELECT
+                day as time_bucket,
+                provider,
+                COALESCE(SUM(spend), 0) as spend,
+                COALESCE(SUM(revenue), 0) as revenue,
+                COALESCE(SUM(conversions), 0) as conversions
+            FROM (
+                SELECT DISTINCT ON (entity_id, date_trunc('day', captured_at))
+                    date_trunc('day', captured_at)::date as day,
+                    entity_id,
+                    provider,
+                    spend,
+                    revenue,
+                    conversions
+                FROM metric_snapshots
+                WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
+                  AND date_trunc('day', captured_at) >= :start_date
+                  AND date_trunc('day', captured_at) <= :end_date
+                ORDER BY entity_id, date_trunc('day', captured_at), captured_at DESC
+            ) latest_snapshots
+            GROUP BY day, provider
+            ORDER BY time_bucket, provider
+        """)
+
+        chart_data_result = db.execute(chart_data_sql, {
+            "workspace_id": str(workspace_id),
+            "start_date": start_date,
+            "end_date": end_date
+        }).fetchall()
+
+    # Build sparklines with appropriate date format
+    # Note: For intraday, some slots may have NULL values (no sync at that time)
+    if use_intraday:
+        # Format as ISO timestamp for intraday data (e.g., "2025-12-08T14:00:00")
+        # Only include slots that have data for sparklines
+        revenue_sparkline = [
+            SparkPoint(date=d.time_bucket.isoformat(), value=float(d.revenue or 0))
+            for d in chart_data_result if d.revenue is not None
+        ]
+        spend_sparkline = [
+            SparkPoint(date=d.time_bucket.isoformat(), value=float(d.spend or 0))
+            for d in chart_data_result if d.spend is not None
+        ]
+        conversions_sparkline = [
+            SparkPoint(date=d.time_bucket.isoformat(), value=float(d.conversions or 0))
+            for d in chart_data_result if d.conversions is not None
+        ]
+    else:
+        # Format as date string for daily data (e.g., "2025-12-08")
+        revenue_sparkline = [SparkPoint(date=str(d.time_bucket), value=float(d.revenue or 0)) for d in chart_data_result]
+        spend_sparkline = [SparkPoint(date=str(d.time_bucket), value=float(d.spend or 0)) for d in chart_data_result]
+        conversions_sparkline = [SparkPoint(date=str(d.time_bucket), value=float(d.conversions or 0)) for d in chart_data_result]
 
     # Calculate ROAS
     spend_current = float(current_metrics.spend or 0)
@@ -243,11 +371,17 @@ def _get_kpis_and_chart_data(
     roas_current = revenue_current / spend_current if spend_current > 0 else 0
     roas_prev = revenue_prev / spend_prev if spend_prev > 0 else 0
 
-    # ROAS sparkline
+    # ROAS sparkline - use same time format as other sparklines
     roas_sparkline = []
-    for d in daily_data:
-        day_roas = float(d.revenue or 0) / float(d.spend) if float(d.spend) > 0 else 0
-        roas_sparkline.append(SparkPoint(date=str(d.day), value=day_roas))
+    for d in chart_data_result:
+        # Skip slots without data for sparklines
+        if d.spend is None or d.revenue is None:
+            continue
+        bucket_roas = float(d.revenue or 0) / float(d.spend) if float(d.spend or 0) > 0 else 0
+        if use_intraday:
+            roas_sparkline.append(SparkPoint(date=d.time_bucket.isoformat(), value=bucket_roas))
+        else:
+            roas_sparkline.append(SparkPoint(date=str(d.time_bucket), value=bucket_roas))
 
     kpis = [
         KpiData(
@@ -276,66 +410,148 @@ def _get_kpis_and_chart_data(
             value=conversions_current,
             prev=conversions_prev,
             delta_pct=_calculate_delta_pct(conversions_current, conversions_prev),
-            sparkline=None
+            sparkline=conversions_sparkline
         ),
     ]
 
-    # Chart data (merged for Recharts)
-    chart_data = [
-        {"date": str(d.day), "revenue": float(d.revenue or 0), "spend": float(d.spend or 0)}
-        for d in daily_data
-    ]
+    # Chart data (merged for Recharts) - include ALL 4 metrics per provider
+    # Data format: {date, google_revenue, meta_revenue, google_spend, meta_spend, ...}
+    # Also includes totals: {revenue, spend, conversions, roas}
+
+    # Pivot provider data by date
+    chart_data_by_date = {}
+    for d in chart_data_result:
+        if use_intraday:
+            date_key = d.time_bucket.isoformat()
+        else:
+            date_key = str(d.time_bucket)
+
+        if date_key not in chart_data_by_date:
+            chart_data_by_date[date_key] = {
+                "date": date_key,
+                "revenue": 0,
+                "spend": 0,
+                "conversions": 0,
+            }
+
+        provider = d.provider or "unknown"
+        spend_val = float(d.spend or 0)
+        revenue_val = float(d.revenue or 0)
+        conversions_val = float(d.conversions or 0)
+
+        # Per-provider metrics
+        chart_data_by_date[date_key][f"{provider}_revenue"] = revenue_val
+        chart_data_by_date[date_key][f"{provider}_spend"] = spend_val
+        chart_data_by_date[date_key][f"{provider}_conversions"] = conversions_val
+        # Per-provider ROAS
+        chart_data_by_date[date_key][f"{provider}_roas"] = (revenue_val / spend_val) if spend_val > 0 else 0
+
+        # Aggregate totals
+        chart_data_by_date[date_key]["revenue"] += revenue_val
+        chart_data_by_date[date_key]["spend"] += spend_val
+        chart_data_by_date[date_key]["conversions"] += conversions_val
+
+    # Calculate total ROAS for each date
+    chart_data = []
+    for date_key in sorted(chart_data_by_date.keys()):
+        entry = chart_data_by_date[date_key]
+        entry["roas"] = (entry["revenue"] / entry["spend"]) if entry["spend"] > 0 else 0
+        chart_data.append(entry)
 
     data_source = "shopify" if has_shopify else "platform"
 
     return kpis, chart_data, data_source
 
 
-def _get_top_creatives(
+def _get_top_campaigns(
     db: Session,
     workspace_id: UUID,
-    start: datetime,
-    end: datetime,
-    limit: int = 3
-) -> List[TopCreativeItem]:
-    """Get top performing ads by revenue."""
+    limit: int = 5
+) -> List[TopCampaignItem]:
+    """Get top performing ACTIVE campaigns by spend from last 48 hours.
 
-    start_date = start.date() if isinstance(start, datetime) else start
-    end_date = end.date() if isinstance(end, datetime) else end
+    WHAT:
+        Finds active campaigns with highest spend in the last 48 hours.
+        Uses latest snapshot per entity per day for accurate totals.
 
-    # Get ads with their metrics
-    results = db.query(
-        Entity.id,
-        Entity.name,
-        Connection.provider,
-        func.coalesce(func.sum(MetricFact.spend), 0).label("spend"),
-        func.coalesce(func.sum(MetricFact.revenue), 0).label("revenue")
-    ).join(
-        MetricFact, MetricFact.entity_id == Entity.id
-    ).outerjoin(
-        Connection, Connection.id == Entity.connection_id
-    ).filter(
-        Entity.workspace_id == workspace_id,
-        Entity.level == LevelEnum.ad,
-        func.date(MetricFact.event_date) >= start_date,
-        func.date(MetricFact.event_date) <= end_date
-    ).group_by(
-        Entity.id, Entity.name, Connection.provider
-    ).order_by(
-        desc("revenue")
-    ).limit(limit).all()
+    WHY:
+        Top campaigns help merchants see where their budget is going RIGHT NOW.
+        Fixed 48-hour window ensures we show current activity, not historical.
+        Only active campaigns - paused/completed campaigns are excluded.
+    """
+    from sqlalchemy import text
 
-    return [
-        TopCreativeItem(
-            id=str(r.id),
-            name=r.name or "Unknown",
-            platform=r.provider.value if r.provider else "unknown",
-            spend=float(r.spend or 0),
-            revenue=float(r.revenue or 0),
-            roas=float(r.revenue or 0) / float(r.spend) if float(r.spend) > 0 else 0
+    # Fixed 48-hour lookback window (not affected by dashboard timeframe)
+    end_date = datetime.now(timezone.utc).date()
+    start_date = (datetime.now(timezone.utc) - timedelta(days=2)).date()
+
+
+    # Roll up child entity metrics (asset_group, adset, ad) to their parent campaigns
+    # WHY: Google PMax syncs metrics at asset_group level, not campaign level
+    # This query aggregates all child metrics up to the campaign level
+    top_campaigns_sql = text("""
+        WITH campaign_metrics AS (
+            -- Get latest snapshot per entity per day, then sum
+            SELECT
+                -- Use parent_id for child entities, or entity's own id if it's a campaign
+                COALESCE(e.parent_id, e.id) as campaign_id,
+                sub.spend,
+                sub.revenue
+            FROM entities e
+            JOIN (
+                SELECT DISTINCT ON (ms.entity_id, date_trunc('day', ms.captured_at))
+                    ms.entity_id,
+                    ms.spend,
+                    ms.revenue
+                FROM metric_snapshots ms
+                JOIN entities e2 ON e2.id = ms.entity_id
+                WHERE e2.workspace_id = :workspace_id
+                  AND date_trunc('day', ms.captured_at) >= :start_date
+                  AND date_trunc('day', ms.captured_at) <= :end_date
+                ORDER BY ms.entity_id, date_trunc('day', ms.captured_at), ms.captured_at DESC
+            ) sub ON sub.entity_id = e.id
+            WHERE e.workspace_id = :workspace_id
         )
-        for r in results
-    ]
+        SELECT
+            camp.id,
+            camp.name,
+            c.provider,
+            COALESCE(SUM(cm.spend), 0) as spend,
+            COALESCE(SUM(cm.revenue), 0) as revenue
+        FROM entities camp
+        JOIN connections c ON c.id = camp.connection_id
+        JOIN campaign_metrics cm ON cm.campaign_id = camp.id
+        WHERE camp.workspace_id = :workspace_id
+          AND camp.level = 'campaign'
+          AND camp.status = 'active'
+        GROUP BY camp.id, camp.name, c.provider
+        HAVING SUM(cm.spend) > 0
+        ORDER BY spend DESC
+        LIMIT :limit
+    """)
+
+    try:
+        results = db.execute(top_campaigns_sql, {
+            "workspace_id": str(workspace_id),
+            "start_date": start_date,
+            "end_date": end_date,
+            "limit": limit
+        }).fetchall()
+
+        return [
+            TopCampaignItem(
+                id=str(r.id),
+                name=r.name or "Unknown",
+                platform=r.provider if r.provider else "unknown",
+                spend=float(r.spend or 0),
+                revenue=float(r.revenue or 0),
+                roas=float(r.revenue or 0) / float(r.spend) if float(r.spend) > 0 else 0
+            )
+            for r in results
+        ]
+    except Exception as e:
+        logger.error(f"[TOP_CAMPAIGNS] ERROR: {type(e).__name__}: {e}")
+        return []
 
 
 def _get_spend_mix(
@@ -344,33 +560,49 @@ def _get_spend_mix(
     start: datetime,
     end: datetime
 ) -> List[SpendMixItem]:
-    """Get spend breakdown by platform."""
+    """Get spend breakdown by platform from MetricSnapshot.
+
+    WHAT:
+        Aggregates spend by provider (meta, google) for the period.
+
+    WHY:
+        Helps merchants understand their ad spend distribution.
+    """
+    from sqlalchemy import text
 
     start_date = start.date() if isinstance(start, datetime) else start
     end_date = end.date() if isinstance(end, datetime) else end
 
-    entity_ids = (
-        db.query(Entity.id)
-        .filter(Entity.workspace_id == workspace_id)
-        .scalar_subquery()
-    )
+    # Get spend by provider - latest snapshot per entity per day
+    spend_mix_sql = text("""
+        SELECT
+            provider,
+            COALESCE(SUM(spend), 0) as spend
+        FROM (
+            SELECT DISTINCT ON (ms.entity_id, date_trunc('day', ms.captured_at))
+                ms.provider,
+                ms.spend
+            FROM metric_snapshots ms
+            JOIN entities e ON e.id = ms.entity_id
+            WHERE e.workspace_id = :workspace_id
+              AND date_trunc('day', ms.captured_at) >= :start_date
+              AND date_trunc('day', ms.captured_at) <= :end_date
+            ORDER BY ms.entity_id, date_trunc('day', ms.captured_at), ms.captured_at DESC
+        ) latest_snapshots
+        GROUP BY provider
+    """)
 
-    results = db.query(
-        MetricFact.provider,
-        func.coalesce(func.sum(MetricFact.spend), 0).label("spend")
-    ).filter(
-        MetricFact.entity_id.in_(entity_ids),
-        func.date(MetricFact.event_date) >= start_date,
-        func.date(MetricFact.event_date) <= end_date
-    ).group_by(
-        MetricFact.provider
-    ).all()
+    results = db.execute(spend_mix_sql, {
+        "workspace_id": str(workspace_id),
+        "start_date": start_date,
+        "end_date": end_date
+    }).fetchall()
 
     total_spend = sum(float(r.spend or 0) for r in results)
 
     return [
         SpendMixItem(
-            provider=r.provider.value if r.provider else "unknown",
+            provider=r.provider if r.provider else "unknown",
             spend=float(r.spend or 0),
             pct=(float(r.spend or 0) / total_spend * 100) if total_spend > 0 else 0
         )
@@ -472,7 +704,15 @@ def get_unified_dashboard(
     workspace_id: UUID,
     timeframe: str = Query(
         default="last_7_days",
-        description="Time period: today, yesterday, last_7_days, last_30_days"
+        description="Time period: today, yesterday, last_7_days, last_30_days, last_90_days"
+    ),
+    start_date: str = Query(
+        default=None,
+        description="Custom start date (YYYY-MM-DD). Overrides timeframe if provided with end_date."
+    ),
+    end_date: str = Query(
+        default=None,
+        description="Custom end date (YYYY-MM-DD). Overrides timeframe if provided with start_date."
     ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -487,8 +727,27 @@ def get_unified_dashboard(
     if current_user.workspace_id != workspace_id:
         raise HTTPException(status_code=403, detail="Access denied to this workspace")
 
-    # Get date ranges
-    start, end = _get_date_range(timeframe)
+    # Fetch workspace for last_synced_at
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+
+    # Get date ranges - use custom dates if provided, else use timeframe preset
+    if start_date and end_date:
+        try:
+            from datetime import date as date_type
+            start = datetime.combine(
+                date_type.fromisoformat(start_date),
+                datetime.min.time()
+            ).replace(tzinfo=timezone.utc)
+            end = datetime.combine(
+                date_type.fromisoformat(end_date),
+                datetime.max.time()
+            ).replace(tzinfo=timezone.utc)
+        except ValueError:
+            # Invalid date format - fall back to timeframe
+            start, end = _get_date_range(timeframe)
+    else:
+        start, end = _get_date_range(timeframe)
+
     prev_start, prev_end = _get_previous_period(start, end)
 
     # Check Shopify connection
@@ -499,20 +758,28 @@ def get_unified_dashboard(
     ).first()
     has_shopify = shopify_conn is not None
 
-    # Get connected platforms
-    connections = db.query(Connection.provider).filter(
+    # Get connected platforms and determine primary currency
+    ad_connections = db.query(Connection).filter(
         Connection.workspace_id == workspace_id,
         Connection.status == "active",
         Connection.provider != ProviderEnum.shopify
-    ).distinct().all()
-    connected_platforms = [c.provider.value for c in connections if c.provider]
+    ).all()
+    connected_platforms = [c.provider.value for c in ad_connections if c.provider]
+
+    # Use currency from first ad connection (typically all same currency)
+    # WHY: Most workspaces have ad accounts in a single currency
+    primary_currency = "USD"
+    for conn in ad_connections:
+        if conn.currency_code:
+            primary_currency = conn.currency_code
+            break
 
     # Fetch all data
     kpis, chart_data, data_source = _get_kpis_and_chart_data(
-        db, workspace_id, start, end, prev_start, prev_end, has_shopify
+        db, workspace_id, start, end, prev_start, prev_end, has_shopify, timeframe
     )
 
-    top_creatives = _get_top_creatives(db, workspace_id, start, end)
+    top_campaigns = _get_top_campaigns(db, workspace_id)
     spend_mix = _get_spend_mix(db, workspace_id, start, end)
 
     # Attribution only if Shopify connected
@@ -525,18 +792,25 @@ def get_unified_dashboard(
 
     logger.info(
         f"[DASHBOARD_UNIFIED] workspace={workspace_id} timeframe={timeframe} "
-        f"kpis={len(kpis)} creatives={len(top_creatives)} "
+        f"kpis={len(kpis)} campaigns={len(top_campaigns)} "
         f"spend_mix={len(spend_mix)} has_shopify={has_shopify}"
     )
+
+    # Format last_synced_at as ISO string
+    last_synced_at_str = None
+    if workspace and workspace.last_synced_at:
+        last_synced_at_str = workspace.last_synced_at.isoformat()
 
     return UnifiedDashboardResponse(
         kpis=kpis,
         data_source=data_source,
         has_shopify=has_shopify,
         connected_platforms=connected_platforms,
+        currency=primary_currency,
         chart_data=chart_data,
-        top_creatives=top_creatives,
+        top_campaigns=top_campaigns,
         spend_mix=spend_mix,
         attribution_summary=attribution_summary,
-        attribution_feed=attribution_feed
+        attribution_feed=attribution_feed,
+        last_synced_at=last_synced_at_str
     )

@@ -1,4 +1,10 @@
 /**
+ * @deprecated This component has been removed from the Analytics page revamp.
+ * The AI Intelligence Zone was removed to simplify the analytics experience
+ * and focus on data visualization. Users can use the Copilot for AI insights.
+ *
+ * Keeping this file for reference - can be safely deleted.
+ *
  * Analytics Intelligence Zone
  * ===========================
  *

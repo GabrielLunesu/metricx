@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Settings, Loader2 } from 'lucide-react';
-import { currentUser } from '@/lib/auth';
+import { currentUser } from '@/lib/workspace';
 import SettingsTabs from './components/SettingsTabs';
 import ConnectionsTab from './components/ConnectionsTab';
 import AttributionTab from './components/AttributionTab';

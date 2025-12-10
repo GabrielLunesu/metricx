@@ -601,7 +601,100 @@ class MetaAdsClient:
             
         except FacebookRequestError as e:
             return self._handle_api_error(e, f"fetching insights for {entity_id}")
-    
+
+    @rate_limit(calls_per_hour=200)
+    def get_account_insights(
+        self,
+        ad_account_id: str,
+        level: str = "ad",
+        start_date: str = None,
+        end_date: str = None,
+        time_increment: int = 1,
+        fields: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Fetch insights at ACCOUNT level with breakdown by ad/adset/campaign.
+
+        WHAT:
+            Retrieves performance metrics for ALL ads in an account in a SINGLE API call.
+            Much more efficient than calling get_insights per entity.
+
+        WHY:
+            - Reduces API calls from N (one per entity) to 1 (one per account)
+            - Avoids rate limit issues (200 calls/hour per account)
+            - Faster sync times for accounts with many ads
+
+        Args:
+            ad_account_id: Meta ad account ID (format: "act_123456789")
+            level: Breakdown level - "ad", "adset", or "campaign"
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format
+            time_increment: 1=daily breakdown
+            fields: List of fields to fetch (defaults to standard metrics)
+
+        Returns:
+            List of insight dictionaries, one per ad per day, with fields:
+                - ad_id: Ad ID (when level="ad")
+                - date_start/date_stop: Date range
+                - spend, impressions, clicks, actions, action_values
+
+        Raises:
+            MetaAdsClientError: On API errors
+        """
+        try:
+            logger.info(
+                f"[META_CLIENT] Fetching ACCOUNT-LEVEL insights: {ad_account_id}, "
+                f"level={level}, {start_date} to {end_date}"
+            )
+
+            account = AdAccount(ad_account_id)
+
+            # Default fields if not specified
+            if fields is None:
+                fields = [
+                    AdsInsights.Field.date_start,
+                    AdsInsights.Field.date_stop,
+                    AdsInsights.Field.spend,
+                    AdsInsights.Field.impressions,
+                    AdsInsights.Field.clicks,
+                    AdsInsights.Field.actions,
+                    AdsInsights.Field.action_values,
+                    AdsInsights.Field.account_currency,
+                ]
+
+            # Add level-specific ID field
+            if level == "ad":
+                fields.append(AdsInsights.Field.ad_id)
+                fields.append(AdsInsights.Field.ad_name)
+            elif level == "adset":
+                fields.append(AdsInsights.Field.adset_id)
+                fields.append(AdsInsights.Field.adset_name)
+            elif level == "campaign":
+                fields.append(AdsInsights.Field.campaign_id)
+                fields.append(AdsInsights.Field.campaign_name)
+
+            params = {
+                'level': level,
+                'time_increment': time_increment,
+            }
+
+            if start_date and end_date:
+                params['time_range'] = {
+                    'since': start_date,
+                    'until': end_date
+                }
+
+            insights = account.get_insights(fields=fields, params=params)
+
+            result = []
+            for insight in insights:
+                result.append(dict(insight))
+
+            logger.info(f"[META_CLIENT] Fetched {len(result)} insights (account-level)")
+            return result
+
+        except FacebookRequestError as e:
+            return self._handle_api_error(e, f"fetching account insights for {ad_account_id}")
+
     def _handle_api_error(self, error: FacebookRequestError, context: str) -> None:
         """Handle Facebook API errors with specific exceptions.
         

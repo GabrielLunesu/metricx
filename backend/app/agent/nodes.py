@@ -42,7 +42,7 @@ import logging
 import os
 from typing import Optional, Dict, Any, List, Literal
 
-from anthropic import Anthropic
+from anthropic import Anthropic, AsyncAnthropic
 from sqlalchemy.orm import Session
 
 from app.agent.state import AgentState, Message, MessageRole
@@ -57,11 +57,24 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 def get_claude_client() -> Anthropic:
-    """Get Anthropic client."""
+    """Get synchronous Anthropic client."""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise ValueError("ANTHROPIC_API_KEY environment variable not set")
     return Anthropic(api_key=api_key)
+
+
+def get_async_claude_client() -> AsyncAnthropic:
+    """Get async Anthropic client for non-blocking API calls.
+
+    WHY: The sync client blocks the event loop, preventing FastAPI
+    from handling other requests during the 5+ second Claude API calls.
+    The async client allows concurrent request handling.
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY environment variable not set")
+    return AsyncAnthropic(api_key=api_key)
 
 
 # =============================================================================

@@ -538,3 +538,60 @@ body {
 .snap-center {
   scroll-snap-align: center;
 }
+
+/* ==========================================
+   Dashboard 2x2 Grid Module Styles
+   Apple-inspired glassmorphism with blue primary
+   ========================================== */
+
+/* Base module card - glassmorphic with blue primary tint */
+.dashboard-module {
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.9) 40%,
+    rgba(248, 250, 252, 0.85) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow:
+    0 4px 32px -4px rgba(59, 130, 246, 0.06),
+    0 8px 16px -8px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard-module:hover {
+  box-shadow:
+    0 12px 48px -8px rgba(59, 130, 246, 0.1),
+    0 16px 24px -12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  border-color: rgba(191, 219, 254, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Slide up animation for dashboard modules */
+@keyframes slideUpModule {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  opacity: 0;
+  animation: slideUpModule 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Animation delays for staggered entrance */
+.dashboard-module:nth-child(1) { animation-delay: 0s; }
+.dashboard-module:nth-child(2) { animation-delay: 0.1s; }
+.dashboard-module:nth-child(3) { animation-delay: 0.2s; }
+.dashboard-module:nth-child(4) { animation-delay: 0.3s; }

@@ -5,7 +5,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { fetchWorkspaceInfo } from "../lib/api";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
-import { currentUser } from "../lib/auth";
+import { currentUser } from "../lib/workspace";
 
 export default function WorkspaceSummary({ workspaceId }) {
   const [info, setInfo] = useState(null);

@@ -1,16 +1,25 @@
-"""Dependency providers and settings management."""
+"""Dependency providers and settings management.
 
-import os
+WHAT: FastAPI dependencies for auth, database sessions, and configuration
+WHY: Centralized dependency injection for consistent auth and settings access
+REFERENCES: backend/app/routers/* (all routers use these dependencies)
+"""
+
+import logging
 from functools import lru_cache
 from typing import Optional
 
-from fastapi import Cookie, Depends, HTTPException, status
+import httpx
+from fastapi import Cookie, Depends, HTTPException, Request, status
+from jose import jwt, JWTError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import User
 from .security import decode_token
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -20,9 +29,8 @@ class Settings(BaseSettings):
     # Cookie domain must NOT include protocol (https://)
     # Set to None for same-origin cookies (works for both localhost and production)
     COOKIE_DOMAIN: Optional[str] = None
-    ADMIN_SECRET_KEY: str = "supersecretkey-change-this-in-production"
     OPENAI_API_KEY: str | None = None
-    
+
     # Redis Configuration
     REDIS_URL: str = "redis://localhost:6379/0"
     CONTEXT_MAX_HISTORY: int = 5
@@ -37,6 +45,14 @@ class Settings(BaseSettings):
     SHOPIFY_SCOPES: str = "read_orders,read_all_orders,read_products,read_customers,read_analytics,read_inventory,read_marketing_events"
     SHOPIFY_REDIRECT_URI: Optional[str] = None  # e.g., https://api.yourapp.com/shopify/callback
 
+    # Clerk Authentication Configuration
+    # WHAT: Clerk API keys for JWT validation and webhook verification
+    # WHY: Migrated from custom JWT to Clerk for auth (Google OAuth, password reset, etc.)
+    # REFERENCES: https://clerk.com/docs
+    CLERK_SECRET_KEY: Optional[str] = None
+    CLERK_PUBLISHABLE_KEY: Optional[str] = None
+    CLERK_WEBHOOK_SECRET: Optional[str] = None
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
@@ -46,39 +62,244 @@ def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]
 
 
-def get_current_user(
-    db: Session = Depends(get_db),
-    access_token: Optional[str] = Cookie(default=None, alias="access_token"),
-) -> User:
-    """Resolve the current user from the `access_token` cookie.
+# -----------------------------------------------------------------------------
+# Clerk JWKS Cache
+# -----------------------------------------------------------------------------
+# WHAT: Cache for Clerk's JSON Web Key Set (public keys for JWT verification)
+# WHY: Avoids fetching JWKS on every request (performance)
+_clerk_jwks_cache: Optional[dict] = None
+_clerk_jwks_cache_time: float = 0
 
-    The cookie value is expected to be in the form: "Bearer <jwt>".
+
+async def _fetch_clerk_jwks() -> dict:
+    """Fetch Clerk's JWKS for JWT signature validation.
+
+    WHAT: Retrieves public keys from Clerk's well-known endpoint
+    WHY: Required to verify JWT signatures (RS256 algorithm)
+    CACHING: Results cached for 1 hour to reduce latency
+
+    Returns:
+        dict: JWKS containing public keys
+
+    Raises:
+        HTTPException: If JWKS fetch fails
     """
+    global _clerk_jwks_cache, _clerk_jwks_cache_time
+    import time
+
+    # Return cached JWKS if still valid (1 hour TTL)
+    if _clerk_jwks_cache and (time.time() - _clerk_jwks_cache_time) < 3600:
+        return _clerk_jwks_cache
+
+    settings = get_settings()
+    if not settings.CLERK_PUBLISHABLE_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Clerk not configured"
+        )
+
+    # Extract frontend API domain from publishable key
+    # Format: pk_test_xxx or pk_live_xxx where xxx is base64 encoded domain
+    try:
+        # The publishable key contains the frontend API in the last segment
+        # e.g., pk_test_Y2xlcmsuZXhhbXBsZS5jb20k -> clerk.example.com
+        import base64
+        key_parts = settings.CLERK_PUBLISHABLE_KEY.split('_')
+        if len(key_parts) >= 3:
+            # Try to decode the domain from the key
+            encoded_domain = key_parts[-1]
+            # Add padding if needed
+            padding = 4 - len(encoded_domain) % 4
+            if padding != 4:
+                encoded_domain += '=' * padding
+            frontend_api = base64.b64decode(encoded_domain).decode('utf-8').rstrip('$')
+        else:
+            raise ValueError("Invalid key format")
+    except Exception:
+        # Fallback: use Clerk's standard domain format
+        # For development keys, this is typically clerk.xxx.lcl.dev
+        logger.warning("[CLERK] Could not decode frontend API from key, using fallback")
+        frontend_api = "clerk.metricx.ai"
+
+    jwks_url = f"https://{frontend_api}/.well-known/jwks.json"
+    logger.debug(f"[CLERK] Fetching JWKS from {jwks_url}")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(jwks_url, timeout=10.0)
+            resp.raise_for_status()
+            _clerk_jwks_cache = resp.json()
+            _clerk_jwks_cache_time = time.time()
+            logger.info("[CLERK] JWKS cache refreshed")
+            return _clerk_jwks_cache
+    except httpx.HTTPError as e:
+        logger.error(f"[CLERK] Failed to fetch JWKS: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable"
+        )
+
+
+# -----------------------------------------------------------------------------
+# Clerk Authentication Dependency
+# -----------------------------------------------------------------------------
+
+async def get_current_user(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> User:
+    """Resolve current user from Clerk session token.
+
+    WHAT: Validates Clerk JWT and returns local User record
+    WHY: Clerk handles authentication, we handle authorization and data ownership
+
+    Security:
+    - Validates JWT signature against Clerk's JWKS (RS256)
+    - Checks token expiration
+    - Looks up user by clerk_id (not email, which can change)
+
+    Token Sources (in order of preference):
+    1. Authorization header: "Bearer <token>"
+    2. __session cookie (Clerk's default)
+
+    Parameters:
+        request: FastAPI Request object
+        db: Database session
+
+    Returns:
+        User: Local user record
+
+    Raises:
+        HTTPException 401: If not authenticated or token invalid
+        HTTPException 404: If user not found in local database
+    """
+    settings = get_settings()
+
+    # Check if Clerk is configured
+    if not settings.CLERK_SECRET_KEY:
+        # Fallback to legacy JWT auth for backwards compatibility
+        return await _get_current_user_legacy(request, db)
+
+    token = None
+
+    # Try Authorization header first (Bearer token)
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+
+    # Fall back to __session cookie (Clerk's default)
+    if not token:
+        token = request.cookies.get("__session")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
+    try:
+        # Get Clerk's JWKS for signature verification
+        jwks = await _fetch_clerk_jwks()
+
+        # Get the key ID from token header
+        unverified_header = jwt.get_unverified_header(token)
+        kid = unverified_header.get("kid")
+
+        # Find matching key in JWKS
+        rsa_key = None
+        for key in jwks.get("keys", []):
+            if key.get("kid") == kid:
+                rsa_key = key
+                break
+
+        if not rsa_key:
+            logger.warning(f"[CLERK] No matching key found for kid={kid}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+
+        # Decode and validate JWT
+        payload = jwt.decode(
+            token,
+            rsa_key,
+            algorithms=["RS256"],
+            options={"verify_aud": False}  # Clerk doesn't require audience
+        )
+
+        clerk_user_id = payload.get("sub")
+        if not clerk_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+
+    except JWTError as e:
+        logger.warning(f"[CLERK] JWT validation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+
+    # Look up user by clerk_id
+    user = db.query(User).filter(User.clerk_id == clerk_user_id).first()
+
+    if not user:
+        # User exists in Clerk but not in our DB
+        # This shouldn't happen if webhooks are working correctly
+        logger.error(f"[CLERK] User not found for clerk_id={clerk_user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found. Please try signing out and back in."
+        )
+
+    return user
+
+
+async def _get_current_user_legacy(
+    request: Request,
+    db: Session,
+) -> User:
+    """Legacy JWT authentication (fallback when Clerk not configured).
+
+    WHAT: Original JWT cookie-based auth
+    WHY: Backwards compatibility during migration
+    DEPRECATED: Will be removed after Clerk migration is complete
+    """
+    access_token = request.cookies.get("access_token")
+
     if not access_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
 
     # Remove optional "Bearer " prefix
     if access_token.startswith("Bearer "):
-        token = access_token[len("Bearer ") :]
+        token = access_token[len("Bearer "):]
     else:
         token = access_token
 
     try:
         payload = decode_token(token)
     except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
 
     subject = payload.get("sub")
     if not subject:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
 
-    user = (
-        db.query(User)
-        .filter(User.email == subject)
-        .first()
-    )
+    user = db.query(User).filter(User.email == subject).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+
     return user
-
-

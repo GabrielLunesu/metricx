@@ -6,6 +6,53 @@ import { getApiBase } from './config';
 
 const BASE = getApiBase();
 
+/**
+ * Get the Clerk session token for API requests.
+ * Waits for Clerk to be ready if needed.
+ */
+async function getClerkToken() {
+  if (typeof window === 'undefined') return null;
+
+  // Wait for Clerk to be ready (max 5 seconds)
+  let attempts = 0;
+  while (!window.Clerk?.session && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+
+  if (window.Clerk?.session) {
+    try {
+      return await window.Clerk.session.getToken();
+    } catch (e) {
+      console.error('Failed to get Clerk token:', e);
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Make an authenticated API request using Clerk token.
+ */
+async function authFetch(url, options = {}) {
+  const token = await getClerkToken();
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
+}
+
 
 
 export async function fetchWorkspaceKpis({
@@ -63,7 +110,7 @@ export async function fetchWorkspaceKpis({
     timeRange = { last_n_days: lastNDays };
   }
 
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/kpis?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/kpis?${params.toString()}`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -94,7 +141,7 @@ export async function fetchWorkspaceKpis({
  * @returns {Promise<{kpis: Array, data_source: string, has_shopify: boolean}>}
  */
 export async function fetchDashboardKpis({ workspaceId, timeframe = 'last_7_days' }) {
-  const res = await fetch(
+  const res = await authFetch(
     `${BASE}/workspaces/${workspaceId}/dashboard/kpis?timeframe=${timeframe}`,
     {
       method: 'GET',
@@ -145,12 +192,10 @@ export async function fetchQA({ workspaceId, question, context = {}, maxRetries 
   }
 
   // Step 1: Enqueue the job
-  const enqueueRes = await fetch(
+  const enqueueRes = await authFetch(
     `${BASE}/qa/?workspace_id=${workspaceId}`,
     {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: finalQuestion })
     }
   );
@@ -164,12 +209,10 @@ export async function fetchQA({ workspaceId, question, context = {}, maxRetries 
   for (let i = 0; i < maxRetries; i++) {
     await new Promise(resolve => setTimeout(resolve, pollInterval));
 
-    const statusRes = await fetch(
+    const statusRes = await authFetch(
       `${BASE}/qa/jobs/${job_id}`,
       {
         method: "GET",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" }
       }
     );
 
@@ -224,7 +267,7 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
   // Notify stage
   onStage?.('understanding');
 
-  const res = await fetch(`${BASE}/qa/agent/sse?workspace_id=${workspaceId}`, {
+  const res = await authFetch(`${BASE}/qa/agent/sse?workspace_id=${workspaceId}`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -336,7 +379,7 @@ export async function fetchQASemantic({ workspaceId, question, context = {}, onS
   // Notify stage (semantic is synchronous, so just show "processing")
   onStage?.('processing');
 
-  const res = await fetch(`${BASE}/qa/semantic?workspace_id=${workspaceId}`, {
+  const res = await authFetch(`${BASE}/qa/semantic?workspace_id=${workspaceId}`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -391,7 +434,7 @@ export async function fetchInsights({ workspaceId, question, metricsData = null 
     body.metrics_data = metricsData;
   }
 
-  const res = await fetch(`${BASE}/qa/insights?workspace_id=${workspaceId}`, {
+  const res = await authFetch(`${BASE}/qa/insights?workspace_id=${workspaceId}`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -444,11 +487,24 @@ export async function fetchQAStream({ workspaceId, question, context = {}, onSta
     finalQuestion = `${question} (Context: ${contextStr})`;
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    // Get Clerk token for auth
+    let token = null;
+    if (typeof window !== 'undefined' && window.Clerk?.session) {
+      try {
+        token = await window.Clerk.session.getToken();
+      } catch (e) {
+        console.error('Failed to get Clerk token:', e);
+      }
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     // POST to SSE endpoint
     fetch(`${BASE}/qa/stream?workspace_id=${workspaceId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       credentials: 'include',
       body: JSON.stringify({ question: finalQuestion })
     })
@@ -530,7 +586,7 @@ export async function fetchQAStream({ workspaceId, question, context = {}, onSta
 // Fetch workspace summary for sidebar.
 // WHY: one tiny endpoint keeps sidebar up to date without heavy joins.
 export async function fetchWorkspaceInfo(workspaceId) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/info`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/info`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -567,7 +623,7 @@ export async function fetchWorkspaceInfo(workspaceId) {
  *   }
  */
 export async function fetchWorkspaceStatus({ workspaceId }) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/status`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/status`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -580,7 +636,7 @@ export async function fetchWorkspaceStatus({ workspaceId }) {
 }
 
 export async function fetchWorkspaces() {
-  const res = await fetch(`${BASE}/workspaces`, {
+  const res = await authFetch(`${BASE}/workspaces`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -593,7 +649,7 @@ export async function fetchWorkspaces() {
 }
 
 export async function switchWorkspace(workspaceId) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/switch`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/switch`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -606,7 +662,7 @@ export async function switchWorkspace(workspaceId) {
 }
 
 export async function createWorkspace({ name }) {
-  const res = await fetch(`${BASE}/workspaces`, {
+  const res = await authFetch(`${BASE}/workspaces`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -620,7 +676,7 @@ export async function createWorkspace({ name }) {
 }
 
 export async function deleteWorkspace(workspaceId) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}`, {
     method: "DELETE",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -632,7 +688,7 @@ export async function deleteWorkspace(workspaceId) {
   return res.json();
 }
 export async function renameWorkspace({ workspaceId, name }) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -646,7 +702,7 @@ export async function renameWorkspace({ workspaceId, name }) {
 }
 
 export async function fetchQaLog(workspaceId) {
-  const res = await fetch(`${BASE}/qa-log/${workspaceId}`, {
+  const res = await authFetch(`${BASE}/qa-log/${workspaceId}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -659,7 +715,7 @@ export async function fetchQaLog(workspaceId) {
 }
 
 export async function createQaLog(workspaceId, { question_text, answer_text, dsl_json }) {
-  const res = await fetch(`${BASE}/qa-log/${workspaceId}`, {
+  const res = await authFetch(`${BASE}/qa-log/${workspaceId}`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -676,7 +732,7 @@ export async function createQaLog(workspaceId, { question_text, answer_text, dsl
 // WHY: Dynamic provider filter buttons in Analytics page.
 // Returns: { providers: ["google", "meta", "tiktok", "other"] }
 export async function fetchWorkspaceProviders({ workspaceId }) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/providers`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/providers`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -700,7 +756,7 @@ export async function fetchWorkspaceCampaigns({
   if (provider) params.set('provider', provider);
   if (status) params.set('entity_status', status);
 
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/campaigns?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/campaigns?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -720,7 +776,7 @@ export async function fetchConnections({ workspaceId, provider = null, status = 
   if (provider) params.set('provider', provider);
   if (status) params.set('status', status);
 
-  const res = await fetch(`${BASE}/connections?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/connections?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -736,7 +792,7 @@ export async function fetchConnections({ workspaceId, provider = null, status = 
  * Delete a connection
  */
 export async function deleteConnection(connectionId) {
-  const res = await fetch(`${BASE}/connections/${connectionId}`, {
+  const res = await authFetch(`${BASE}/connections/${connectionId}`, {
     method: 'DELETE',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' }
@@ -754,7 +810,7 @@ export async function deleteConnection(connectionId) {
 // WHAT: Creates or updates a Google connection and stores encrypted refresh token.
 // WHY: Temporary path before OAuth UI; enables sync button to appear.
 export async function ensureGoogleConnectionFromEnv() {
-  const res = await fetch(`${BASE}/connections/google/from-env`, {
+  const res = await authFetch(`${BASE}/connections/google/from-env`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -770,7 +826,7 @@ export async function ensureGoogleConnectionFromEnv() {
 // WHAT: Creates or updates a Meta connection and stores encrypted access token.
 // WHY: Temporary path before OAuth UI; enables sync button to appear.
 export async function ensureMetaConnectionFromEnv() {
-  const res = await fetch(`${BASE}/connections/meta/from-env`, {
+  const res = await authFetch(`${BASE}/connections/meta/from-env`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -785,7 +841,7 @@ export async function ensureMetaConnectionFromEnv() {
 // Enqueue async sync job for a connection.
 // Returns: { job_id, status }
 export async function enqueueSyncJob({ connectionId }) {
-  const res = await fetch(`${BASE}/connections/${connectionId}/sync-now`, {
+  const res = await authFetch(`${BASE}/connections/${connectionId}/sync-now`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -799,7 +855,7 @@ export async function enqueueSyncJob({ connectionId }) {
 
 // Update sync frequency.
 export async function updateSyncFrequency({ connectionId, syncFrequency }) {
-  const res = await fetch(`${BASE}/connections/${connectionId}/sync-frequency`, {
+  const res = await authFetch(`${BASE}/connections/${connectionId}/sync-frequency`, {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -814,7 +870,7 @@ export async function updateSyncFrequency({ connectionId, syncFrequency }) {
 
 // Fetch sync status for a connection.
 export async function getSyncStatus({ connectionId }) {
-  const res = await fetch(`${BASE}/connections/${connectionId}/sync-status`, {
+  const res = await authFetch(`${BASE}/connections/${connectionId}/sync-status`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -826,92 +882,21 @@ export async function getSyncStatus({ connectionId }) {
   return res.json();
 }
 
-// Delete user account and all associated data
-// WHAT: GDPR/CCPA compliant data deletion
-// WHY: Users have the right to delete their data
-// REFERENCES: Privacy Policy section 7.3
-export async function deleteUserAccount() {
-  const res = await fetch(`${BASE}/auth/delete-account`, {
-    method: "DELETE",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" }
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Failed to delete account: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-export async function updateProfile({ name, email, avatar_url }) {
-  const res = await fetch(`${BASE}/auth/me`, {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, avatar_url })
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Failed to update profile: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-export async function changePassword({ old_password, new_password }) {
-  const res = await fetch(`${BASE}/auth/change-password`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ old_password, new_password })
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Failed to change password: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-export async function requestPasswordReset({ email }) {
-  const res = await fetch(`${BASE}/auth/forgot-password`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email })
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Failed to request password reset: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-export async function confirmPasswordReset({ token, new_password }) {
-  const res = await fetch(`${BASE}/auth/reset-password`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, new_password })
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Failed to reset password: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-export async function verifyEmail({ token }) {
-  const res = await fetch(`${BASE}/auth/verify-email`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token })
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Failed to verify email: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
+// =============================================================================
+// AUTH FUNCTIONS REMOVED (2025-12-09)
+// =============================================================================
+// The following functions were removed as part of Clerk migration:
+// - deleteUserAccount (now handled via Clerk webhook user.deleted)
+// - updateProfile (now handled by Clerk UserProfile component)
+// - changePassword (now handled by Clerk)
+// - requestPasswordReset (now handled by Clerk)
+// - confirmPasswordReset (now handled by Clerk)
+// - verifyEmail (now handled by Clerk)
+//
+// REFERENCES:
+// - backend/app/routers/clerk_webhooks.py (handles user lifecycle)
+// - https://clerk.com/docs/components/user/user-profile
+// =============================================================================
 
 export async function fetchEntityPerformance({
   workspaceId,
@@ -961,7 +946,7 @@ export async function fetchEntityPerformance({
     }
   }
 
-  const res = await fetch(`${BASE}/entity-performance/list?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/entity-performance/list?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -991,7 +976,7 @@ export async function fetchEntityPerformance({
  * @returns {Promise<Object>} Pixel health data
  */
 export async function fetchPixelHealth({ workspaceId }) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/pixel/health`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/pixel/health`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -1012,7 +997,7 @@ export async function fetchPixelHealth({ workspaceId }) {
  * @returns {Promise<Object>} Reinstall result with old/new pixel IDs
  */
 export async function reinstallPixel({ workspaceId }) {
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/pixel/reinstall`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/pixel/reinstall`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -1037,7 +1022,7 @@ export async function fetchAttributionSummary({ workspaceId, days = 30 }) {
   const params = new URLSearchParams();
   params.set("days", days.toString());
 
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/summary?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/attribution/summary?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -1064,7 +1049,7 @@ export async function fetchAttributedCampaigns({ workspaceId, days = 30, limit =
   params.set("days", days.toString());
   params.set("limit", limit.toString());
 
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/campaigns?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/attribution/campaigns?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -1089,7 +1074,7 @@ export async function fetchAttributionFeed({ workspaceId, limit = 20 }) {
   const params = new URLSearchParams();
   params.set("limit", limit.toString());
 
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/feed?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/attribution/feed?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -1114,7 +1099,7 @@ export async function fetchCampaignWarnings({ workspaceId, days = 30 }) {
   const params = new URLSearchParams();
   params.set("days", days.toString());
 
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/attribution/warnings?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/attribution/warnings?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -1151,11 +1136,20 @@ export async function fetchCampaignWarnings({ workspaceId, days = 30 }) {
 // REFERENCES:
 // - backend/app/routers/dashboard.py (GET /workspaces/{id}/dashboard/unified)
 // - docs/PERFORMANCE_INVESTIGATION.md
-export async function fetchUnifiedDashboard({ workspaceId, timeframe = 'last_7_days' }) {
+export async function fetchUnifiedDashboard({
+  workspaceId,
+  timeframe = 'last_7_days',
+  startDate = null,
+  endDate = null
+}) {
   const params = new URLSearchParams();
   params.set("timeframe", timeframe);
 
-  const res = await fetch(`${BASE}/workspaces/${workspaceId}/dashboard/unified?${params.toString()}`, {
+  // Use custom dates if provided (for custom date range selection)
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/dashboard/unified?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: { "Content-Type": "application/json" }
@@ -1167,4 +1161,153 @@ export async function fetchUnifiedDashboard({ workspaceId, timeframe = 'last_7_d
   }
 
   return res.json();
+}
+
+
+// =============================================================================
+// DAILY REVENUE BAR CHART ENDPOINT
+// =============================================================================
+//
+// WHAT: Fetches daily revenue data for bar chart visualization
+// WHY: Server-side aggregation - one bar per day, frontend just renders
+//
+// USAGE:
+//   const data = await fetchDailyRevenue({
+//     workspaceId: '...',
+//     days: 7  // 7 for week, 30 for month
+//   });
+//
+// RESPONSE:
+//   { bars: [{date, day_name, revenue, is_today}], total_revenue, average_revenue, highest_day }
+//
+// REFERENCES:
+// - backend/app/routers/analytics.py (GET /analytics/daily-revenue)
+export async function fetchDailyRevenue({ workspaceId, days = 7 }) {
+  const params = new URLSearchParams();
+  params.set('workspace_id', workspaceId);
+  params.set('days', days.toString());
+
+  const res = await authFetch(`${BASE}/analytics/daily-revenue?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Daily revenue fetch failed: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+
+// =============================================================================
+// ANALYTICS CHART ENDPOINT (Production - Server-side filtering)
+// =============================================================================
+//
+// WHAT: Fetches chart data with server-side platform/campaign filtering
+// WHY: Frontend should be dumb - backend handles all filtering for performance
+//
+// RESPONSE FORMAT:
+// {
+//   series: [{ key, label, color, data: [{date, revenue, spend, roas, ...}] }],
+//   totals: { revenue, spend, roas, conversions, ... },
+//   metadata: { granularity, period_start, period_end, platforms_available, ... }
+// }
+//
+// USAGE:
+//   const data = await fetchAnalyticsChart({
+//     workspaceId: '...',
+//     timeframe: 'last_7_days',
+//     platforms: ['google', 'meta'],  // Optional filter
+//     campaignIds: ['uuid1', 'uuid2'],  // Optional filter
+//     groupBy: 'platform'  // total | platform | campaign
+//   });
+//
+// REFERENCES:
+// - backend/app/routers/analytics.py (GET /analytics/chart)
+export async function fetchAnalyticsChart({
+  workspaceId,
+  timeframe = 'last_7_days',
+  startDate = null,
+  endDate = null,
+  platforms = null,
+  campaignIds = null,
+  groupBy = 'total'
+}) {
+  const params = new URLSearchParams();
+  params.set('workspace_id', workspaceId);
+  params.set('timeframe', timeframe);
+  params.set('group_by', groupBy);
+
+  if (startDate) params.set('start_date', startDate);
+  if (endDate) params.set('end_date', endDate);
+  if (platforms && platforms.length > 0) {
+    params.set('platforms', platforms.join(','));
+  }
+  if (campaignIds && campaignIds.length > 0) {
+    params.set('campaign_ids', campaignIds.join(','));
+  }
+
+  const res = await authFetch(`${BASE}/analytics/chart?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Analytics chart fetch failed: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+
+// =============================================================================
+// ENTITY TIMESERIES
+// =============================================================================
+//
+// WHAT: Fetches timeseries data for a specific entity (campaign/adset/ad)
+// WHY: Analytics drill-down needs chart data at any hierarchy level
+//
+// USAGE:
+//   const data = await fetchEntityTimeseries({
+//     workspaceId: '...',
+//     entityId: 'campaign-uuid',
+//     entityLevel: 'campaign',  // campaign, adset, ad
+//     metrics: ['spend', 'revenue', 'roas'],
+//     timeRange: { last_n_days: 30 }  // or { start: '2024-01-01', end: '2024-01-31' }
+//   });
+//
+// REFERENCES:
+// - backend/app/routers/entity_performance.py
+export async function fetchEntityTimeseries({
+  workspaceId,
+  entityId,
+  entityLevel = 'campaign',
+  metrics = ['spend', 'revenue', 'roas'],
+  timeRange = { last_n_days: 7 }
+}) {
+  // For now, we use the existing fetchWorkspaceKpis with campaignId parameter
+  // The backend aggregates child entity metrics up to the selected entity
+  // Future enhancement: dedicated endpoint for entity-level timeseries
+
+  const params = {
+    workspaceId,
+    metrics,
+    sparkline: true,
+    compareToPrevious: false,
+    campaignId: entityId
+  };
+
+  if (timeRange.start && timeRange.end) {
+    params.customStartDate = timeRange.start;
+    params.customEndDate = timeRange.end;
+  } else if (timeRange.last_n_days) {
+    params.lastNDays = timeRange.last_n_days;
+  }
+
+  return fetchWorkspaceKpis(params);
 }

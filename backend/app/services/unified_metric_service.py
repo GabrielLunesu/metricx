@@ -30,7 +30,7 @@ Usage:
 References:
 - app/metrics/registry.py: Metric formulas and dependencies
 - app/metrics/formulas.py: Pure calculation functions
-- app/models.py: Database models (MetricFact, Entity)
+- app/models.py: Database models (MetricSnapshot, Entity)
 """
 
 from __future__ import annotations
@@ -127,14 +127,30 @@ class MetricBreakdownItem:
 class UnifiedMetricService:
     """
     Unified metric aggregation service.
-    
+
     Single source of truth for all metric calculations across the system.
     Ensures consistent filtering, calculations, and results.
+
+    NOTE: As of 2025-12-07, this service queries from metric_snapshots table
+    (15-min granularity) instead of metric_facts (daily granularity).
+    The snapshot table uses 'captured_at' instead of 'event_date'.
     """
-    
-    def __init__(self, db: Session):
+
+    def __init__(self, db: Session, use_snapshots: bool = True):
+        """Initialize the service.
+
+        Args:
+            db: Database session
+            use_snapshots: Always True - uses MetricSnapshot table (15-min granularity).
+                          MetricFact is deprecated.
+        """
         self.db = db
-        self.MF = models.MetricFact
+        self.use_snapshots = use_snapshots
+
+        # Always use MetricSnapshot (MetricFact is deprecated)
+        self.MF = models.MetricSnapshot
+        self.date_field = models.MetricSnapshot.captured_at
+
         self.E = models.Entity
     
     def get_summary(
@@ -264,9 +280,9 @@ class UnifiedMetricService:
             # But to be safe across DBs (and since seed data is clean), let's try grouping by event_date directly
             # if it's hourly. Or better, use a conditional.
             # Let's stick to simple grouping for now.
-            time_bucket = self.MF.event_date
+            time_bucket = self.date_field
         else:
-            time_bucket = cast(self.MF.event_date, Date)
+            time_bucket = cast(self.date_field, Date)
 
         # Build timeseries query
         # For hourly granularity, we need to handle datetime filtering differently
@@ -292,7 +308,7 @@ class UnifiedMetricService:
                 )
                 .join(self.E, self.E.id == self.MF.entity_id)
                 .filter(self.E.workspace_id == workspace_id)
-                .filter(self.MF.event_date.between(start_datetime, end_datetime))
+                .filter(self.date_field.between(start_datetime, end_datetime))
                 .group_by(time_bucket)
                 .order_by(time_bucket)
             )
@@ -313,7 +329,7 @@ class UnifiedMetricService:
                 )
                 .join(self.E, self.E.id == self.MF.entity_id)
                 .filter(self.E.workspace_id == workspace_id)
-                .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+                .filter(cast(self.date_field, Date).between(start_date, end_date))
                 .group_by(time_bucket)
                 .order_by(time_bucket)
             )
@@ -354,7 +370,7 @@ class UnifiedMetricService:
                 prev_end_datetime = dt.combine(prev_end_date, time.max)
                 prev_query = (
                     self.db.query(
-                        self.MF.event_date.label("date"),
+                        self.date_field.label("date"),
                         func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
                         func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
                         func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
@@ -368,14 +384,14 @@ class UnifiedMetricService:
                     )
                     .join(self.E, self.E.id == self.MF.entity_id)
                     .filter(self.E.workspace_id == workspace_id)
-                    .filter(self.MF.event_date.between(prev_start_datetime, prev_end_datetime))
-                    .group_by(self.MF.event_date)
-                    .order_by(self.MF.event_date)
+                    .filter(self.date_field.between(prev_start_datetime, prev_end_datetime))
+                    .group_by(self.date_field)
+                    .order_by(self.date_field)
                 )
             else:
                 prev_query = (
                     self.db.query(
-                        cast(self.MF.event_date, Date).label("date"),
+                        cast(self.date_field, Date).label("date"),
                         func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
                         func.coalesce(func.sum(self.MF.revenue), 0).label("revenue"),
                         func.coalesce(func.sum(self.MF.clicks), 0).label("clicks"),
@@ -389,9 +405,9 @@ class UnifiedMetricService:
                     )
                     .join(self.E, self.E.id == self.MF.entity_id)
                     .filter(self.E.workspace_id == workspace_id)
-                    .filter(cast(self.MF.event_date, Date).between(prev_start_date, prev_end_date))
-                    .group_by(cast(self.MF.event_date, Date))
-                    .order_by(cast(self.MF.event_date, Date))
+                    .filter(cast(self.date_field, Date).between(prev_start_date, prev_end_date))
+                    .group_by(cast(self.date_field, Date))
+                    .order_by(cast(self.date_field, Date))
                 )
 
             prev_query = self._apply_filters(prev_query, filters, workspace_id)
@@ -450,7 +466,7 @@ class UnifiedMetricService:
         start_date, end_date = self._resolve_time_range(time_range)
 
         # Determine time bucket expression
-        time_bucket = cast(self.MF.event_date, Date) if granularity == "day" else self.MF.event_date
+        time_bucket = cast(self.date_field, Date) if granularity == "day" else self.date_field
 
         # Build query that groups by BOTH entity_id AND date
         query = (
@@ -471,7 +487,7 @@ class UnifiedMetricService:
             .join(self.E, self.E.id == self.MF.entity_id)
             .filter(self.E.workspace_id == workspace_id)
             .filter(self.MF.entity_id.in_(entity_ids))
-            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+            .filter(cast(self.date_field, Date).between(start_date, end_date))
             .group_by(self.MF.entity_id, time_bucket)
             .order_by(self.MF.entity_id, time_bucket)
         )
@@ -677,7 +693,7 @@ class UnifiedMetricService:
             )
             .join(self.E, self.E.id == self.MF.entity_id)
             .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+            .filter(cast(self.date_field, Date).between(start_date, end_date))
         )
         
         # Execute query
@@ -733,7 +749,7 @@ class UnifiedMetricService:
             )
             .join(self.E, self.E.id == self.MF.entity_id)
             .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+            .filter(cast(self.date_field, Date).between(start_date, end_date))
         )
         
         # Apply filters
@@ -944,7 +960,7 @@ class UnifiedMetricService:
                 .join(adset_cte, adset_cte.c.leaf_id == self.E.id)
                 .join(adset_alias, adset_alias.id == adset_cte.c.ancestor_id)
                 .filter(self.E.workspace_id == workspace_id)
-                .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+                .filter(cast(self.date_field, Date).between(start_date, end_date))
                 .group_by(adset_alias.name)
             )
             
@@ -973,7 +989,7 @@ class UnifiedMetricService:
                 .select_from(self.MF)
                 .join(self.E, self.E.id == self.MF.entity_id)
                 .filter(self.E.workspace_id == workspace_id)
-                .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+                .filter(cast(self.date_field, Date).between(start_date, end_date))
                 .group_by(self.E.name)
             )
             
@@ -1003,7 +1019,7 @@ class UnifiedMetricService:
                 .join(self.E, self.E.id == self.MF.entity_id)
                 .filter(self.E.id == named_entity.id)
                 .filter(self.E.workspace_id == workspace_id)
-                .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+                .filter(cast(self.date_field, Date).between(start_date, end_date))
                 .group_by(self.E.name)
             )
         else:
@@ -1029,7 +1045,7 @@ class UnifiedMetricService:
             )
             .join(self.E, self.E.id == self.MF.entity_id)
             .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+            .filter(cast(self.date_field, Date).between(start_date, end_date))
             .group_by(self.MF.provider)
         )
         
@@ -1066,7 +1082,7 @@ class UnifiedMetricService:
             .join(self.E, self.E.id == self.MF.entity_id)
             .filter(self.E.workspace_id == workspace_id)
             .filter(self.E.level == level)
-            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+            .filter(cast(self.date_field, Date).between(start_date, end_date))
             .group_by(
                 self.E.id, self.E.name,
                 self.E.thumbnail_url, self.E.image_url, self.E.media_type
@@ -1187,8 +1203,8 @@ class UnifiedMetricService:
         """
         logger.info(f"[UNIFIED_METRICS] Getting entity list for level: {level}")
         
-        # Build base query starting from Entity, LEFT JOIN MetricFact to get provider
-        # Also join Connection to get provider when MetricFact is missing
+        # Build base query starting from Entity, LEFT JOIN MetricSnapshot to get provider
+        # Also join Connection to get provider when MetricSnapshot is missing
         Connection = models.Connection
         query = (
             self.db.query(
@@ -1197,12 +1213,12 @@ class UnifiedMetricService:
                 self.E.status,
                 self.E.level,
                 func.coalesce(
-                    func.max(models.MetricFact.provider), 
+                    func.max(self.MF.provider),
                     Connection.provider
                 ).label("provider")
             )
             .join(Connection, Connection.id == self.E.connection_id)
-            .outerjoin(models.MetricFact, models.MetricFact.entity_id == self.E.id)
+            .outerjoin(self.MF, self.MF.entity_id == self.E.id)
             .filter(self.E.workspace_id == workspace_id)
             .group_by(
                 self.E.id,
@@ -1386,14 +1402,14 @@ class UnifiedMetricService:
     def _build_time_breakdown_query(self, workspace_id: str, start_date: date, end_date: date, filters: MetricFilters, breakdown_dimension: str):
         """Build query for time-based breakdown."""
         if breakdown_dimension == "day":
-            group_expr = cast(self.MF.event_date, Date)
-            label_expr = cast(self.MF.event_date, Date)
+            group_expr = cast(self.date_field, Date)
+            label_expr = cast(self.date_field, Date)
         elif breakdown_dimension == "week":
-            group_expr = func.date_trunc('week', self.MF.event_date)
-            label_expr = func.date_trunc('week', self.MF.event_date)
+            group_expr = func.date_trunc('week', self.date_field)
+            label_expr = func.date_trunc('week', self.date_field)
         elif breakdown_dimension == "month":
-            group_expr = func.date_trunc('month', self.MF.event_date)
-            label_expr = func.date_trunc('month', self.MF.event_date)
+            group_expr = func.date_trunc('month', self.date_field)
+            label_expr = func.date_trunc('month', self.date_field)
         else:
             raise ValueError(f"Unsupported time breakdown dimension: {breakdown_dimension}")
         
@@ -1413,7 +1429,7 @@ class UnifiedMetricService:
             )
             .join(self.E, self.E.id == self.MF.entity_id)
             .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.MF.event_date, Date).between(start_date, end_date))
+            .filter(cast(self.date_field, Date).between(start_date, end_date))
             .group_by(group_expr)
         )
         

@@ -1,15 +1,19 @@
 """Finance & P&L endpoints.
 
 WHAT: REST API for Finance page data (P&L aggregation + manual costs CRUD)
-WHY: Combines ad spend (MetricFact) with manual costs for complete P&L view
+WHY: Combines ad spend (MetricSnapshot) with manual costs for complete P&L view
+
+DATA SOURCE:
+  Uses MetricSnapshot table (15-min granularity) instead of deprecated MetricFact.
+
 REFERENCES:
-  - app/models.py: MetricFact, ManualCost, Entity
+  - app/models.py: MetricSnapshot, ManualCost, Entity
   - app/schemas.py: Finance schemas
   - app/services/cost_allocation.py: Pro-rating logic
   - ui/lib/financeApiClient.js: Frontend consumer
 
 Design decisions:
-  - Aggregates from MetricFact (real-time) not Pnl (future optimization)
+  - Aggregates from MetricSnapshot (real-time) not Pnl (future optimization)
   - Supports monthly granularity now, daily in contract (future-proof)
   - All queries workspace-scoped at SQL level (security)
 """
@@ -43,11 +47,11 @@ router = APIRouter(
     summary="Get P&L statement",
     description="""
     Get complete P&L statement combining ad spend and manual costs.
-    
+
     Data sources:
-      - Ad spend: Aggregated from MetricFact (real-time)
+      - Ad spend: Aggregated from MetricSnapshot (real-time, 15-min granularity)
       - Manual costs: From manual_costs table with date allocation
-      
+
     Future support: Can switch to daily granularity without breaking contract.
     """
 )
@@ -61,12 +65,12 @@ def get_pnl_statement(
     current_user: models.User = Depends(get_current_user)
 ):
     """Get P&L statement for a period.
-    
+
     WHAT: Aggregates ad spend + manual costs into P&L rows
     WHY: Finance page needs complete cost picture
-    
+
     Process:
-      1. Aggregate ad spend by provider from MetricFact
+      1. Aggregate ad spend by provider from MetricSnapshot
       2. Aggregate manual costs by category (pro-rated)
       3. Compute summary KPIs (revenue, spend, profit, ROAS)
       4. Build P&L rows (one per provider + one per manual category)
@@ -79,7 +83,7 @@ def get_pnl_statement(
     # ========================================================================
     # 1. AGGREGATE AD SPEND BY PROVIDER
     # ========================================================================
-    # WHAT: Sum all base measures from MetricFact, group by provider
+    # WHAT: Sum all base measures from MetricSnapshot, group by provider
     # WHY: Each ad platform becomes one P&L row
     # REFACTORED: Now uses UnifiedMetricService for consistent calculations
     
@@ -215,17 +219,20 @@ def get_pnl_statement(
         period_length = (period_end - period_start).days
         prev_start = period_start - timedelta(days=period_length)
         prev_end = period_start
-        
+
+        # Use MetricSnapshot instead of deprecated MetricFact
+        MS = models.MetricSnapshot
+
         # Aggregate previous ad spend
         prev_ad_query = (
             db.query(
-                func.sum(models.MetricFact.spend).label("spend"),
-                func.sum(models.MetricFact.revenue).label("revenue"),
+                func.sum(MS.spend).label("spend"),
+                func.sum(MS.revenue).label("revenue"),
             )
-            .join(models.Entity, models.Entity.id == models.MetricFact.entity_id)
+            .join(models.Entity, models.Entity.id == MS.entity_id)
             .filter(models.Entity.workspace_id == workspace_id)
-            .filter(models.MetricFact.event_date >= prev_start)
-            .filter(models.MetricFact.event_date < prev_end)
+            .filter(func.date(MS.captured_at) >= prev_start)
+            .filter(func.date(MS.captured_at) < prev_end)
         ).one()
         
         prev_ad_spend = float(prev_ad_query.spend or 0)
@@ -254,20 +261,21 @@ def get_pnl_statement(
     # WHAT: Daily revenue data for the period
     # WHY: Frontend needs this for the Revenue bar chart
     
-    # Query daily revenue data
+    # Query daily revenue data from MetricSnapshot
+    MS = models.MetricSnapshot
     daily_data = (
         db.query(
-            func.date(models.MetricFact.event_date).label("date"),
-            func.sum(models.MetricFact.revenue).label("revenue"),
-            func.sum(models.MetricFact.spend).label("spend")
+            func.date(MS.captured_at).label("date"),
+            func.sum(MS.revenue).label("revenue"),
+            func.sum(MS.spend).label("spend")
         )
-        .join(models.Entity, models.MetricFact.entity_id == models.Entity.id)
+        .join(models.Entity, MS.entity_id == models.Entity.id)
         .filter(models.Entity.workspace_id == workspace_id)
         # Note: Finance includes ALL entities (active + inactive) because inactive campaigns still generated revenue
-        .filter(models.MetricFact.event_date >= period_start)
-        .filter(models.MetricFact.event_date < period_end)
-        .group_by(func.date(models.MetricFact.event_date))
-        .order_by(func.date(models.MetricFact.event_date))
+        .filter(func.date(MS.captured_at) >= period_start)
+        .filter(func.date(MS.captured_at) < period_end)
+        .group_by(func.date(MS.captured_at))
+        .order_by(func.date(MS.captured_at))
         .all()
     )
     

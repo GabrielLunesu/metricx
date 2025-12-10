@@ -24,6 +24,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.models import (
     Connection,
@@ -672,7 +673,12 @@ def _upsert_entity(
     media_type: Optional[MediaTypeEnum] = None,
     tracking_params: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Entity, bool]:
-    """UPSERT entity by external_id + connection_id (idempotent).
+    """UPSERT entity by external_id + connection_id using PostgreSQL ON CONFLICT.
+
+    WHAT: Creates new Entity or updates existing one atomically.
+    WHY:
+        - Idempotent synchronization across re-runs
+        - Race-condition safe for concurrent sync jobs
 
     Args:
         db: Database session
@@ -691,61 +697,75 @@ def _upsert_entity(
     Returns:
         Tuple of (entity, was_created)
     """
-    entity = (
-        db.query(Entity)
-        .filter(
-            Entity.connection_id == connection.id,
-            Entity.external_id == external_id,
-        )
-        .first()
+    now = datetime.utcnow()
+    new_id = uuid.uuid4()
+
+    # Build insert values
+    insert_values = {
+        "id": new_id,
+        "workspace_id": connection.workspace_id,
+        "connection_id": connection.id,
+        "level": level,
+        "external_id": external_id,
+        "name": name,
+        "status": status,
+        "parent_id": parent_id,
+        "goal": goal,
+        "thumbnail_url": thumbnail_url,
+        "image_url": image_url,
+        "media_type": media_type,
+        "tracking_params": tracking_params,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    # Build update values (exclude id, created_at, workspace_id, connection_id, external_id)
+    update_values = {
+        "name": name,
+        "status": status,
+        "parent_id": parent_id,
+        "goal": goal,
+        "level": level,
+        "updated_at": now,
+    }
+    # Only update optional fields if provided (not None)
+    if thumbnail_url is not None:
+        update_values["thumbnail_url"] = thumbnail_url
+    if image_url is not None:
+        update_values["image_url"] = image_url
+    if media_type is not None:
+        update_values["media_type"] = media_type
+    if tracking_params is not None:
+        update_values["tracking_params"] = tracking_params
+
+    # Use PostgreSQL ON CONFLICT DO UPDATE for atomic upsert
+    # This handles race conditions at the database level
+    stmt = pg_insert(Entity).values(**insert_values)
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_entities_connection_external",  # Unique constraint on (connection_id, external_id)
+        set_=update_values,
     )
 
-    was_created = False
+    # Execute and determine if created or updated
+    stmt = stmt.returning(Entity.id, Entity.created_at)
+    result = db.execute(stmt)
+    row = result.fetchone()
 
-    if entity:
-        entity.name = name
-        entity.status = status
-        entity.parent_id = parent_id
-        entity.goal = goal
-        # Update creative fields if provided (only for ads)
-        if thumbnail_url is not None:
-            entity.thumbnail_url = thumbnail_url
-        if image_url is not None:
-            entity.image_url = image_url
-        if media_type is not None:
-            entity.media_type = media_type
-        # Update tracking params for UTM detection
-        if tracking_params is not None:
-            entity.tracking_params = tracking_params
-        entity.updated_at = datetime.utcnow()
-        logger.debug(
-            "[META_SYNC] Updated entity: %s (%s)", external_id, level.value
-        )
-    else:
-        entity = Entity(
-            id=uuid.uuid4(),
-            workspace_id=connection.workspace_id,
-            connection_id=connection.id,
-            level=level,
-            external_id=external_id,
-            name=name,
-            status=status,
-            parent_id=parent_id,
-            goal=goal,
-            thumbnail_url=thumbnail_url,
-            image_url=image_url,
-            media_type=media_type,
-            tracking_params=tracking_params,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-        )
-        db.add(entity)
-        was_created = True
-        logger.debug(
-            "[META_SYNC] Created entity: %s (%s)", external_id, level.value
-        )
-
+    # Flush to sync session state
     db.flush()
+
+    # Fetch the entity from session to return proper ORM object
+    entity = db.query(Entity).filter(Entity.id == row.id).first()
+
+    # Determine if this was a create or update
+    # If created_at matches our 'now' value (within tolerance), it was created
+    was_created = abs((entity.created_at - now).total_seconds()) < 1
+
+    if was_created:
+        logger.debug("[META_SYNC] Created entity: %s (%s)", external_id, level.value)
+    else:
+        logger.debug("[META_SYNC] Updated entity: %s (%s)", external_id, level.value)
+
     return entity, was_created
 
 

@@ -1,164 +1,96 @@
 "use client";
-import { useEffect, useState } from "react";
-import { fetchWorkspaceKpis } from "@/lib/api";
-import { ArrowUpRight, ArrowDownRight, Minus, TrendingUp } from "lucide-react";
+/**
+ * AnalyticsKpiStrip Component
+ * ============================
+ *
+ * WHAT: 4 KPI cards showing key metrics (Spend, Revenue, ROAS, Conversions)
+ * WHY: Quick overview of key performance metrics at a glance
+ *
+ * DESIGN: Glassmorphic cards matching dashboard-module styling
+ *
+ * RELATED:
+ *   - lib/utils.js (formatMetricValue, formatDelta)
+ *   - dashboard/components/KpiCardsModule.jsx (styling reference)
+ *
+ * NOTE: Reduced from 7 metrics to 4 core metrics that match chart_data.
+ * CPA, CPC, CTR, CVR not available in unified dashboard endpoint.
+ */
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { formatMetricValue, formatDelta } from "@/lib/utils";
 
-const METRICS_CONFIG = [
+/**
+ * KPI metric definitions.
+ * NOTE: Must match keys available in kpis array from dashboard API.
+ */
+const METRICS = [
     { key: 'spend', label: 'Spend', format: 'currency', inverse: true },
     { key: 'revenue', label: 'Revenue', format: 'currency', inverse: false },
-    { key: 'roas', label: 'ROAS', format: 'number', suffix: 'x', inverse: false },
-    { key: 'cpa', label: 'CPA', format: 'currency', inverse: true, decimals: 2 },
-    { key: 'ctr', label: 'CTR', format: 'percentage', inverse: false },
-    { key: 'cpc', label: 'CPC', format: 'currency', inverse: true, decimals: 2 },
-    { key: 'cvr', label: 'Conv. Rate', format: 'percentage', inverse: false },
+    { key: 'roas', label: 'ROAS', format: 'multiplier', inverse: false, highlight: true },
+    { key: 'conversions', label: 'Conversions', format: 'number', inverse: false },
 ];
 
-export default function AnalyticsKpiStrip({
-    workspaceId,
-    selectedProvider,
-    timeFilters,
-    campaignId = null
-}) {
-    const [kpis, setKpis] = useState({});
-    const [loading, setLoading] = useState(true);
+export default function AnalyticsKpiStrip({ data, loading }) {
+    // Convert kpis array to map for O(1) lookups
+    const kpis = {};
+    data?.kpis?.forEach(item => {
+        kpis[item.key] = item;
+    });
 
-    useEffect(() => {
-        if (!workspaceId) return;
-
-        let mounted = true;
-        setLoading(true);
-
-        // Build params based on timeFilters type
-        const params = {
-            workspaceId,
-            metrics: METRICS_CONFIG.map(m => m.key),
-            provider: selectedProvider === 'all' ? null : selectedProvider,
-            compareToPrevious: true,
-            campaignId: campaignId || undefined
-        };
-
-        // Add time range params
-        if (timeFilters.type === 'custom' && timeFilters.customStart && timeFilters.customEnd) {
-            // Custom date range - only pass custom dates
-            params.customStartDate = timeFilters.customStart;
-            params.customEndDate = timeFilters.customEnd;
-            params.lastNDays = timeFilters.rangeDays; // for backend compatibility
-        } else {
-            // Preset range - only pass lastNDays
-            params.lastNDays = timeFilters.rangeDays;
-        }
-
-        fetchWorkspaceKpis(params)
-            .then((data) => {
-                if (!mounted) return;
-                // Convert array to object for easier access
-                const kpiMap = {};
-                data.forEach(item => {
-                    kpiMap[item.key] = item;
-                });
-                setKpis(kpiMap);
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error('Failed to fetch KPIs:', err);
-                if (mounted) setLoading(false);
-            });
-
-        return () => { mounted = false; };
-    }, [workspaceId, selectedProvider, timeFilters.type, timeFilters.rangeDays, timeFilters.customStart, timeFilters.customEnd, campaignId]);
-
-    const formatValue = (value, config) => {
-        if (value === null || value === undefined) return "—";
-
-        if (config.format === 'currency') {
-            const decimals = config.decimals ?? 0;
-            return `$${value.toLocaleString(undefined, {
-                minimumFractionDigits: decimals,
-                maximumFractionDigits: decimals
-            })}`;
-        }
-        if (config.format === 'percentage') {
-            return `${value.toFixed(2)}%`;
-        }
-        if (config.format === 'number') {
-            return `${value.toFixed(2)}${config.suffix || ''}`;
-        }
-        return value;
-    };
-
-    const getTrendIcon = (delta, inverse) => {
-        if (!delta) return <Minus className="w-3 h-3 text-slate-400" />;
-
-        const isPositive = delta > 0;
-        const isGood = inverse ? !isPositive : isPositive;
-
-        if (isPositive) {
-            return <ArrowUpRight className={`w-3 h-3 ${isGood ? 'text-emerald-500' : 'text-red-500'}`} />;
-        } else {
-            return <ArrowDownRight className={`w-3 h-3 ${isGood ? 'text-emerald-500' : 'text-red-500'}`} />;
-        }
-    };
-
-    const getTrendColor = (delta, inverse) => {
-        if (!delta) return 'text-slate-400';
-        const isPositive = delta > 0;
-        const isGood = inverse ? !isPositive : isPositive;
-        return isGood ? 'text-emerald-600' : 'text-red-600';
-    };
-
-    const getBarColor = (metricKey) => {
-        switch (metricKey) {
-            case 'revenue': return 'bg-emerald-500';
-            case 'spend': return 'bg-slate-800';
-            case 'roas': return 'bg-cyan-400';
-            case 'cpa': return 'bg-slate-400';
-            case 'ctr': return 'bg-yellow-400';
-            case 'cpc': return 'bg-red-400';
-            case 'cvr': return 'bg-blue-400';
-            default: return 'bg-slate-400';
-        }
-    };
+    // Get currency from API response (defaults to USD)
+    const currency = data?.currency || "USD";
 
     if (loading) {
         return (
-            <section className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 xl:gap-4 animate-pulse">
-                {[...Array(7)].map((_, i) => (
-                    <div key={i} className="glass-panel rounded-2xl p-4 h-24"></div>
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+                {METRICS.map((_, i) => (
+                    <div key={i} className="dashboard-module h-28"></div>
                 ))}
             </section>
         );
     }
 
     return (
-        <section className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 xl:gap-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            {METRICS_CONFIG.map((config) => {
-                const data = kpis[config.key] || {};
-                const value = data.value;
-                const delta = data.delta_pct;
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up">
+            {METRICS.map((metric) => {
+                const kpiData = kpis[metric.key] || {};
+                const value = kpiData.value;
+                const deltaInfo = formatDelta(kpiData.delta_pct, metric.inverse);
+                const isPositive = deltaInfo?.isGood;
 
                 return (
                     <div
-                        key={config.key}
-                        className="glass-panel rounded-2xl p-4 hover:-translate-y-1 transition-transform duration-300 cursor-pointer group relative overflow-hidden border-t border-white/80"
+                        key={metric.key}
+                        className={`
+                            dashboard-module transition-all duration-300 cursor-pointer group
+                            ${metric.highlight ? 'ring-1 ring-cyan-200/50' : ''}
+                        `}
                     >
-                        {/* Hover Gradient Line */}
-                        <div className={`absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+                        {/* Label */}
+                        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500 mb-1">
+                            {metric.label}
+                        </p>
 
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">{config.label}</span>
-                            {getTrendIcon(delta, config.inverse)}
+                        {/* Value */}
+                        <div className="text-2xl font-bold tracking-tight text-slate-900 mb-1">
+                            {formatMetricValue(value, metric.format, { decimals: metric.decimals ?? 0, currency })}
                         </div>
 
-                        <div className="text-lg xl:text-xl font-bold text-slate-800 tracking-tight">
-                            {formatValue(value, config)}
-                        </div>
-
-                        <div className="flex items-center gap-1 mt-2">
-                            <span className={`text-[10px] font-medium ${getTrendColor(delta, config.inverse)} bg-opacity-10 px-1.5 py-0.5 rounded-full ${delta > 0 ? (config.inverse ? 'bg-red-100' : 'bg-emerald-100') : (config.inverse ? 'bg-emerald-100' : 'bg-red-100')}`}>
-                                {delta ? `${delta > 0 ? '+' : ''}${(delta * 100).toFixed(1)}%` : '—'}
-                            </span>
-                            <span className="text-[10px] text-slate-400">vs prev.</span>
-                        </div>
+                        {/* Delta */}
+                        {deltaInfo ? (
+                            <div className={`flex items-center gap-1 text-xs font-medium ${
+                                isPositive ? 'text-emerald-600' : 'text-red-500'
+                            }`}>
+                                {isPositive ? (
+                                    <TrendingUp className="w-3 h-3" />
+                                ) : (
+                                    <TrendingDown className="w-3 h-3" />
+                                )}
+                                <span>{deltaInfo.text}</span>
+                                <span className="text-slate-400 font-normal">vs prev</span>
+                            </div>
+                        ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                        )}
                     </div>
                 );
             })}

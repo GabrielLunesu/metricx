@@ -25,6 +25,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.models import Connection, Entity, MetricFact, LevelEnum, GoalEnum, ProviderEnum
 from app.schemas import (
@@ -94,46 +95,76 @@ def _upsert_entity(
     goal: Optional[GoalEnum] = None,
     tracking_params: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Entity, bool]:
-    """UPSERT entity by external_id + connection_id.
+    """UPSERT entity by external_id + connection_id using PostgreSQL ON CONFLICT.
 
-    WHAT: Creates new Entity or updates existing one.
-    WHY: Idempotent synchronization across re-runs.
+    WHAT: Creates new Entity or updates existing one atomically.
+    WHY:
+        - Idempotent synchronization across re-runs
+        - Race-condition safe for concurrent sync jobs
 
     Args:
         tracking_params: Optional URL tracking configuration (utm_source, etc.)
-    """
-    entity = db.query(Entity).filter(
-        Entity.connection_id == connection.id,
-        Entity.external_id == external_id,
-    ).first()
 
-    created = False
-    if entity:
-        entity.name = name
-        entity.status = status
-        entity.parent_id = parent_id
-        entity.goal = goal
-        # Update tracking params for UTM detection
-        if tracking_params is not None:
-            entity.tracking_params = tracking_params
-        entity.updated_at = datetime.utcnow()
-    else:
-        entity = Entity(
-            level=level,
-            external_id=external_id,
-            name=name,
-            status=status,
-            parent_id=parent_id,
-            goal=goal,
-            tracking_params=tracking_params,
-            workspace_id=connection.workspace_id,
-            connection_id=connection.id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-        )
-        db.add(entity)
-        created = True
+    Returns:
+        Tuple of (Entity, was_created)
+    """
+    import uuid
+    now = datetime.utcnow()
+    new_id = uuid.uuid4()
+
+    # Build insert values
+    insert_values = {
+        "id": new_id,
+        "level": level,
+        "external_id": external_id,
+        "name": name,
+        "status": status,
+        "parent_id": parent_id,
+        "goal": goal,
+        "tracking_params": tracking_params,
+        "workspace_id": connection.workspace_id,
+        "connection_id": connection.id,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    # Build update values (exclude id, created_at, workspace_id, connection_id)
+    update_values = {
+        "name": name,
+        "status": status,
+        "parent_id": parent_id,
+        "goal": goal,
+        "level": level,  # Update level in case it changed (e.g., adset -> asset_group)
+        "updated_at": now,
+    }
+    # Only update tracking_params if provided (not None)
+    if tracking_params is not None:
+        update_values["tracking_params"] = tracking_params
+
+    # Use PostgreSQL ON CONFLICT DO UPDATE for atomic upsert
+    # This handles race conditions at the database level
+    stmt = pg_insert(Entity).values(**insert_values)
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_entities_connection_external",  # Unique constraint on (connection_id, external_id)
+        set_=update_values,
+    )
+
+    # Execute and determine if created or updated
+    # We use RETURNING to get the actual row
+    stmt = stmt.returning(Entity.id, Entity.created_at)
+    result = db.execute(stmt)
+    row = result.fetchone()
+
+    # Flush to sync session state
     db.flush()
+
+    # Fetch the entity from session to return proper ORM object
+    entity = db.query(Entity).filter(Entity.id == row.id).first()
+
+    # Determine if this was a create or update
+    # If created_at matches our 'now' value (within tolerance), it was created
+    created = abs((entity.created_at - now).total_seconds()) < 1
+
     return entity, created
 
 
@@ -288,52 +319,42 @@ def sync_google_entities(
 
             # Route by channel type: STANDARD (ad groups/ads) vs PMax (asset groups/assets)
             chan = c.get("advertising_channel_type") or ""
+            logger.info("[GOOGLE_SYNC] Campaign %s (%s) has channel_type=%s", c.get("id"), c.get("name"), chan)
             if str(chan).upper() == "PERFORMANCE_MAX":
-                # Asset Groups → map to adset level
+                # Asset Groups for PMax campaigns - these are the leaf entities for metrics
+                # Asset Groups are similar to ads in traditional campaigns
                 try:
                     agroups = client.list_asset_groups(customer_id, str(c["id"]))
+                    logger.info("[GOOGLE_SYNC] PMax campaign %s has %d asset_groups", c.get("id"), len(agroups))
                     for grp in agroups:
-                        adset, ag_created = _upsert_entity(
+                        asset_group_entity, ag_created = _upsert_entity(
                             db=db,
                             connection=connection,
                             external_id=str(grp["id"]),
-                            level=LevelEnum.adset,
+                            level=LevelEnum.asset_group,  # Use proper asset_group level
                             name=grp.get("name") or f"Asset Group {grp['id']}",
                             status=_normalize_status(grp.get("status")),
                             parent_id=camp.id,
                         )
                         if ag_created:
-                            stats.adsets_created += 1
+                            stats.adsets_created += 1  # Count as adsets for UI totals
                         else:
                             stats.adsets_updated += 1
 
-                        # Asset Group Assets → map to creative level
-                        try:
-                            assets = client.list_asset_group_assets(customer_id, str(grp["id"]))
-                            for asset in assets:
-                                _, created_cre = _upsert_entity(
-                                    db=db,
-                                    connection=connection,
-                                    external_id=str(asset["id"]),
-                                    level=LevelEnum.creative,
-                                    name=asset.get("name") or f"Asset {asset['id']}",
-                                    status=_normalize_status(asset.get("status")),
-                                    parent_id=adset.id,
-                                )
-                                if created_cre:
-                                    stats.ads_created += 1  # count under ads for UI totals
-                                else:
-                                    stats.ads_updated += 1
-                        except Exception as e:
-                            logger.exception("[GOOGLE_SYNC] Asset group assets fetch failed for %s: %s", grp.get("id"), e)
-                            errors.append(f"asset_group {grp.get('id')}: {e}")
+                        # Note: We don't sync individual assets as they don't have metrics
+                        # The asset_group level is where metrics are reported for PMax
                 except Exception as e:
                     logger.exception("[GOOGLE_SYNC] Asset groups fetch failed for campaign %s: %s", c.get("id"), e)
                     errors.append(f"campaign {c.get('id')}: {e}")
             else:
                 # Standard campaigns: Ad groups and ads
+                # Note: Shopping campaigns have ad_groups but NO ad_group_ad entities
+                chan_upper = str(chan).upper()
+                is_shopping = chan_upper == "SHOPPING"
+
                 try:
                     ad_groups = client.list_ad_groups(customer_id, str(c["id"]))
+                    logger.info("[GOOGLE_SYNC] Campaign %s has %d ad_groups", c.get("id"), len(ad_groups))
                     for ag in ad_groups:
                         adset, ag_created = _upsert_entity(
                             db=db,
@@ -349,7 +370,8 @@ def sync_google_entities(
                         else:
                             stats.adsets_updated += 1
 
-                        # Ads
+                        # Ads - try to fetch for all campaign types including Shopping
+                        # Some Shopping campaigns may have ad_group_ad records with metrics
                         try:
                             ads = client.list_ads(customer_id, str(ag["id"]))
                             for ad in ads:
@@ -413,8 +435,9 @@ def sync_google_metrics(
         request = MetricsSyncRequest()
 
     # Determine date range
+    # Note: Include today's data for real-time reflection of Google Ads dashboard
     today = date.today()
-    default_end = today - timedelta(days=1)
+    default_end = today
     # Last ingested date for this connection/provider
     last_date = db.query(func.max(MetricFact.event_date)).join(Entity, Entity.id == MetricFact.entity_id).filter(
         Entity.connection_id == connection.id,
@@ -493,6 +516,29 @@ def sync_google_metrics(
         .all()
     )
     creative_map: Dict[str, UUID] = {str(ext): eid for ext, eid in creative_rows}
+    # Campaign map for linking products to campaigns (Shopping/PMax)
+    campaign_rows = (
+        db.query(Entity.external_id, Entity.id)
+        .filter(Entity.connection_id == connection.id)
+        .filter(Entity.level == LevelEnum.campaign)
+        .all()
+    )
+    campaign_map: Dict[str, UUID] = {str(ext): eid for ext, eid in campaign_rows}
+    # Product map for existing product entities
+    product_rows = (
+        db.query(Entity.external_id, Entity.id)
+        .filter(Entity.connection_id == connection.id)
+        .filter(Entity.level == LevelEnum.product)
+        .all()
+    )
+    product_map: Dict[str, UUID] = {str(ext): eid for ext, eid in product_rows}
+
+    # Diagnostic logging to understand entity state
+    logger.info(
+        "[GOOGLE_SYNC] Entity maps: ads=%d, adsets=%d, creatives=%d, campaigns=%d, products=%d",
+        len(ad_map), len(asset_group_map), len(creative_map), len(campaign_map), len(product_map)
+    )
+
     if not ad_map and not asset_group_map and not creative_map:
         # Mirror Meta behavior: allow metrics sync to succeed with zero work
         stats = MetricsSyncStats(
@@ -511,8 +557,10 @@ def sync_google_metrics(
     missing_entity_count = 0
 
     for s, e in chunks:
+        logger.info("[GOOGLE_SYNC] Processing chunk %s to %s", s, e)
         try:
             rows = client.fetch_daily_metrics(customer_id, s, e, level="ad")
+            logger.info("[GOOGLE_SYNC] Ad-level query returned %d rows", len(rows))
             facts: List[MetricFactCreate] = []
             for row in rows:
                 # Identify external entity id depending on level
@@ -610,6 +658,77 @@ def sync_google_metrics(
         except Exception as ex:
             logger.exception("[GOOGLE_SYNC] Asset group asset metrics fetch failed for %s to %s: %s", s, e, ex)
             errors.append(f"asset_group_asset {s}..{e}: {ex}")
+
+        # Shopping: product-level metrics from shopping_performance_view
+        # WHY: Shopping campaigns don't have ad_group_ad, they have product data
+        try:
+            rows_prod = client.fetch_shopping_performance(customer_id, s, e)
+            logger.info("[GOOGLE_SYNC] Shopping query returned %d rows for %s to %s", len(rows_prod), s, e)
+            facts_prod: List[MetricFactCreate] = []
+            products_created = 0
+            products_skipped_no_parent = 0
+            for row in rows_prod:
+                # Build unique product identifier: product_item_id within ad_group
+                product_item_id = row.get("product_item_id", "")
+                ad_group_id = str(row.get("ad_group_id", ""))
+                campaign_id = str(row.get("campaign_id", ""))
+
+                if not product_item_id:
+                    continue
+
+                # Unique external_id = product_item_id:ad_group_id (product may appear in multiple ad groups)
+                product_ext_id = f"{product_item_id}:{ad_group_id}"
+
+                # Find parent: prefer ad_group, fallback to campaign
+                parent_entity_id = asset_group_map.get(ad_group_id) or campaign_map.get(campaign_id)
+                if not parent_entity_id:
+                    # No parent found - skip to avoid orphaned product
+                    products_skipped_no_parent += 1
+                    missing_entity_count += 1
+                    continue
+
+                # Upsert product entity on-demand
+                entity_id = product_map.get(product_ext_id)
+                if not entity_id:
+                    product_name = row.get("product_title") or product_item_id
+                    product_entity, created = _upsert_entity(
+                        db=db,
+                        connection=connection,
+                        external_id=product_ext_id,
+                        level=LevelEnum.product,
+                        name=product_name,
+                        status="active",
+                        parent_id=parent_entity_id,
+                    )
+                    entity_id = product_entity.id
+                    product_map[product_ext_id] = entity_id
+                    if created:
+                        products_created += 1
+
+                ev_date = datetime.combine(date.fromisoformat(row["date"]), datetime.min.time())
+                facts_prod.append(MetricFactCreate(
+                    entity_id=entity_id,
+                    provider=ProviderEnum.google,
+                    level=LevelEnum.product,
+                    event_at=ev_date,
+                    spend=row.get("spend", 0.0),
+                    impressions=row.get("impressions", 0),
+                    clicks=row.get("clicks", 0),
+                    conversions=row.get("conversions", 0.0),
+                    revenue=row.get("revenue", 0.0),
+                    currency=connection.currency_code or "USD",
+                ))
+            if facts_prod:
+                res = ingest_metrics_internal(workspace_id=workspace_id, facts=facts_prod, db=db)
+                total_ingested += res.get("ingested", 0)
+                total_skipped += res.get("skipped", 0)
+            logger.info(
+                "[GOOGLE_SYNC] Shopping products: %d rows, %d facts created, %d entities created, %d skipped (no parent)",
+                len(rows_prod), len(facts_prod), products_created, products_skipped_no_parent
+            )
+        except Exception as ex:
+            logger.exception("[GOOGLE_SYNC] Shopping product metrics fetch failed for %s to %s: %s", s, e, ex)
+            errors.append(f"shopping_products {s}..{e}: {ex}")
 
     stats = MetricsSyncStats(
         facts_ingested=total_ingested,

@@ -355,13 +355,13 @@ export default function HeroSection() {
           className="flex items-center gap-4 mb-16"
         >
           <a
-            href="/login"
+            href="/sign-in"
             className="px-8 py-3 text-gray-700 text-sm font-medium rounded-full border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
           >
             Login
           </a>
           <a
-            href="/register"
+            href="/sign-up"
             className="px-8 py-3 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-all duration-200 shadow-lg shadow-gray-900/20"
           >
             Register

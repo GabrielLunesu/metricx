@@ -60,17 +60,35 @@ export function MetricxChart({
                         ))}
                     </defs>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
+                    <YAxis
+                        domain={[0, 'auto']}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        width={60}
+                        tickFormatter={(value) => {
+                            if (value >= 1000) {
+                                return `$${(value / 1000).toFixed(1)}k`;
+                            }
+                            return `$${value}`;
+                        }}
+                    />
                     <XAxis
                         dataKey={xAxisKey}
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
-                        minTickGap={32}
+                        minTickGap={isSingleDay ? 20 : 32}
                         tickFormatter={(value) => {
                             const date = new Date(value);
                             if (!isNaN(date.getTime())) {
                                 if (isSingleDay) {
-                                    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                                    // Show HH:MM in user's local timezone for intraday (15-min intervals)
+                                    return date.toLocaleTimeString('en-US', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        hour12: false
+                                    });
                                 }
                                 return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                             }
@@ -104,13 +122,14 @@ export function MetricxChart({
                             <Area
                                 key={key}
                                 dataKey={key}
-                                type="natural"
+                                type="monotone"
                                 fill={`url(#fill${key})`}
                                 fillOpacity={0.4}
                                 stroke={`var(--color-${key})`}
                                 strokeWidth={2}
                                 stackId={config[key]?.stackId} // Optional stacking
-                                dot={false} // Ensure no data points are shown
+                                dot={isSingleDay} // Show dots for intraday to mark actual data points
+                                connectNulls={true} // Connect across null gaps to show continuous line
                             />
                         ))
                     ) : (

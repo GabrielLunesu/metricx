@@ -5,7 +5,7 @@
 
 import React, { Suspense, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { currentUser } from "@/lib/auth";
+import { currentUser } from "@/lib/workspace";
 import features from "@/lib/features";
 import { useRouter } from "next/navigation";
 

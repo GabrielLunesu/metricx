@@ -136,7 +136,7 @@ MIN_TIME_RANGE_DAYS = 1      # Minimum time range
 MAX_TIME_RANGE_DAYS = 365    # Maximum time range
 MIN_BREAKDOWN_LIMIT = 1      # Minimum items in breakdown
 MAX_BREAKDOWN_LIMIT = 50     # Maximum items in breakdown
-MAX_METRICS_COUNT = 10       # Maximum metrics per query
+MAX_METRICS_COUNT = 15       # Maximum metrics per query (11 standard metrics: spend, revenue, roas, cpc, ctr, cpa, clicks, impressions, conversions, profit, cvr)
 MAX_FILTERS_COUNT = 10       # Maximum filters per query
 
 
