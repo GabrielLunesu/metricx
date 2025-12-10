@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { Users, Loader2, Shield, Trash2, UserPlus, Mail, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { currentUser } from '@/lib/auth';
+import { currentUser } from '@/lib/workspace';
 import { getApiBase } from '@/lib/config';
 
 const ROLE_OPTIONS = [

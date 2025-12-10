@@ -17,7 +17,8 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -32,6 +33,7 @@ from app.services.google_sync_service import (
     sync_google_entities,
     sync_google_metrics,
 )
+from app.services.snapshot_sync_service import sync_snapshots_for_connection
 
 logger = logging.getLogger(__name__)
 
@@ -80,5 +82,59 @@ async def sync_metrics(
         workspace_id=workspace_id,
         connection_id=connection_id,
         request=request,
+    )
+
+
+class SnapshotSyncResponse(BaseModel):
+    """Response for snapshot sync."""
+    success: bool
+    inserted: int
+    updated: int
+    skipped: int
+    errors: list[str]
+
+
+@router.post("/sync-google-snapshots", response_model=SnapshotSyncResponse)
+def sync_snapshots(
+    workspace_id: UUID,
+    connection_id: UUID,
+    mode: str = Query(default="backfill", description="Sync mode: realtime, attribution, or backfill (90 days)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SnapshotSyncResponse:
+    """Sync Google Ads metrics to MetricSnapshot table.
+
+    WHAT:
+        Syncs metrics to the metric_snapshots table used by the unified dashboard.
+
+    WHY:
+        The dashboard uses MetricSnapshot for charts, not MetricFact.
+        This endpoint provides 90-day backfill for new connections.
+
+    MODES:
+        - realtime: Sync today's data only (called by 15-min scheduler)
+        - attribution: Sync last 7 days (called by daily scheduler)
+        - backfill: Sync last 90 days (called on new connection)
+    """
+    logger.info(
+        "[GOOGLE_SYNC] HTTP snapshot sync requested: workspace=%s connection=%s mode=%s",
+        workspace_id,
+        connection_id,
+        mode,
+    )
+
+    result = sync_snapshots_for_connection(
+        db=db,
+        connection_id=connection_id,
+        mode=mode,
+        sync_entities=True,  # Also sync entity status
+    )
+
+    return SnapshotSyncResponse(
+        success=result.success,
+        inserted=result.inserted,
+        updated=result.updated,
+        skipped=result.skipped,
+        errors=result.errors,
     )
 

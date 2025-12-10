@@ -2,7 +2,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { fetchQA, fetchQAStream, fetchQASemantic, fetchQAAgent } from "@/lib/api";
-import { currentUser } from "@/lib/auth";
+import { currentUser } from "@/lib/workspace";
 import ConversationThread from "./components/ConversationThread";
 import { renderMarkdownLite } from "@/lib/markdown";
 import ChatConsole from "./components/ChatConsole";

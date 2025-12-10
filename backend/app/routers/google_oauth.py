@@ -618,15 +618,15 @@ async def connect_selected_accounts(
                 account_name=conn.name,
             )
 
-        # Trigger initial sync for all new/updated connections (non-blocking)
-        # If Redis available: enqueues to background worker
+        # Trigger initial sync with 90-day backfill for all new/updated connections (non-blocking)
+        # If Redis available: enqueues to background worker with backfill=True
         # If Redis unavailable: skips (connection will be picked up on next 15-min train)
         try:
-            from app.services.sync_scheduler import enqueue_initial_sync
+            from app.workers.arq_enqueue import enqueue_sync_job
             for conn in created_connections + updated_connections:
-                # run_sync=False means don't block if Redis unavailable
-                enqueue_initial_sync(str(conn.id), run_sync=False)
-                logger.info(f"[GOOGLE_OAUTH] Enqueued initial sync for connection {conn.id}")
+                # Use backfill=True to fetch 90 days of historical data
+                await enqueue_sync_job(str(conn.id), workspace_id, force_refresh=False, backfill=True)
+                logger.info(f"[GOOGLE_OAUTH] Enqueued 90-day backfill sync for connection {conn.id}")
         except Exception as e:
             # Don't fail the connection if sync enqueue fails
             logger.warning(f"[GOOGLE_OAUTH] Could not enqueue initial sync: {e}")

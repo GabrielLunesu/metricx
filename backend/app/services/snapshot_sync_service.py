@@ -169,6 +169,15 @@ def sync_snapshots_for_connection(
                 "connection_id": str(connection_id),
                 "provider": connection.provider.value,
             })
+            # CRITICAL: Rollback the failed session to allow subsequent operations
+            # Without this, the session remains in PendingRollback state and all
+            # subsequent queries/commits will fail
+            db.rollback()
+            # Re-query connection since it was detached by rollback
+            connection = db.query(Connection).filter(Connection.id == connection_id).first()
+            if not connection:
+                result.errors.append(f"Connection {connection_id} not found after rollback")
+                return result
             # Don't fail the whole sync if entity sync fails
 
     # STEP 2: Sync metrics
@@ -412,6 +421,10 @@ def _sync_meta_snapshots(
         if mode == "realtime":
             start_date = today
             end_date = today
+        elif mode == "backfill":
+            # 90-day historical backfill for new connections
+            start_date = today - timedelta(days=89)
+            end_date = today
         else:  # attribution
             start_date = today - timedelta(days=7)
             end_date = today
@@ -469,10 +482,19 @@ def _sync_meta_snapshots(
                 continue
 
             # Determine timestamp
+            # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
+            # This ensures DISTINCT ON ... ORDER BY captured_at DESC picks the backfill data
+            # over any partial realtime snapshots from earlier in the day
             if mode == "realtime":
                 snap_time = captured_at
             else:
-                snap_time = _date_to_hourly_timestamp(insight.get("date_stop"))
+                date_str = insight.get("date_stop")
+                if date_str:
+                    snap_time = datetime.combine(
+                        date.fromisoformat(date_str), datetime.max.time()
+                    ).replace(tzinfo=timezone.utc)
+                else:
+                    snap_time = captured_at
 
             snapshot_result = _upsert_meta_snapshot(
                 db=db,
@@ -647,7 +669,7 @@ def _sync_google_snapshots(
     Args:
         db: Database session
         connection: Google connection to sync
-        mode: "realtime" (today) or "attribution" (last 7 days)
+        mode: "realtime" (today), "attribution" (last 7 days), or "backfill" (last 90 days)
 
     Returns:
         SnapshotSyncResult
@@ -659,10 +681,14 @@ def _sync_google_snapshots(
         client = _get_google_ads_client(connection)
         customer_id = _normalize_customer_id(connection.external_account_id)
 
-        # Determine date range
+        # Determine date range based on mode
         today = date.today()
         if mode == "realtime":
             start_date = today
+            end_date = today
+        elif mode == "backfill":
+            # 90-day historical backfill for new connections
+            start_date = today - timedelta(days=89)
             end_date = today
         else:  # attribution
             start_date = today - timedelta(days=7)
@@ -707,11 +733,20 @@ def _sync_google_snapshots(
                         result.skipped += 1
                         continue
 
+                    # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
+                    # This ensures DISTINCT ON ... ORDER BY captured_at DESC picks the backfill data
+                    # over any partial realtime snapshots from earlier in the day
                     snap_time = captured_at if mode == "realtime" else datetime.combine(
-                        date.fromisoformat(row["date"]), datetime.min.time()
+                        date.fromisoformat(row["date"]), datetime.max.time()
                     ).replace(tzinfo=timezone.utc)
 
-                    _upsert_google_snapshot(db=db, entity=entity, row=row, captured_at=snap_time)
+                    _upsert_google_snapshot(
+                        db=db,
+                        entity=entity,
+                        row=row,
+                        captured_at=snap_time,
+                        currency=connection.currency_code or "USD"
+                    )
                     result.updated += 1
 
                 except Exception as e:
@@ -749,11 +784,18 @@ def _sync_google_snapshots(
                         result.skipped += 1
                         continue
 
+                    # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
                     snap_time = captured_at if mode == "realtime" else datetime.combine(
-                        date.fromisoformat(row["date"]), datetime.min.time()
+                        date.fromisoformat(row["date"]), datetime.max.time()
                     ).replace(tzinfo=timezone.utc)
 
-                    _upsert_google_snapshot(db=db, entity=entity, row=row, captured_at=snap_time)
+                    _upsert_google_snapshot(
+                        db=db,
+                        entity=entity,
+                        row=row,
+                        captured_at=snap_time,
+                        currency=connection.currency_code or "USD"
+                    )
                     result.updated += 1
 
                 except Exception as e:
@@ -828,9 +870,18 @@ def _upsert_google_snapshot(
     db: Session,
     entity: Entity,
     row: Dict[str, Any],
-    captured_at: datetime
+    captured_at: datetime,
+    currency: str = "USD"
 ) -> str:
-    """Upsert a single Google snapshot."""
+    """Upsert a single Google snapshot.
+
+    Args:
+        db: Database session
+        entity: The entity to attach the snapshot to
+        row: Metric data from Google Ads API
+        captured_at: Timestamp for the snapshot
+        currency: Currency code from the connection (e.g., "EUR", "USD")
+    """
 
     snapshot_data = {
         "entity_id": entity.id,
@@ -841,7 +892,7 @@ def _upsert_google_snapshot(
         "clicks": int(row.get("clicks", 0) or 0),
         "conversions": Decimal(str(row.get("conversions", 0) or 0)),
         "revenue": Decimal(str(row.get("revenue", 0) or 0)),
-        "currency": "USD",
+        "currency": currency,
     }
 
     stmt = insert(MetricSnapshot).values(**snapshot_data)

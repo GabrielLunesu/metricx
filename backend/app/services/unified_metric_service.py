@@ -30,7 +30,7 @@ Usage:
 References:
 - app/metrics/registry.py: Metric formulas and dependencies
 - app/metrics/formulas.py: Pure calculation functions
-- app/models.py: Database models (MetricFact, Entity)
+- app/models.py: Database models (MetricSnapshot, Entity)
 """
 
 from __future__ import annotations
@@ -136,24 +136,20 @@ class UnifiedMetricService:
     The snapshot table uses 'captured_at' instead of 'event_date'.
     """
 
-    def __init__(self, db: Session, use_snapshots: bool = False):
+    def __init__(self, db: Session, use_snapshots: bool = True):
         """Initialize the service.
 
         Args:
             db: Database session
-            use_snapshots: If True, use MetricSnapshot table (new 15-min granularity).
-                          If False, use MetricFact table (legacy daily granularity).
+            use_snapshots: Always True - uses MetricSnapshot table (15-min granularity).
+                          MetricFact is deprecated.
         """
         self.db = db
         self.use_snapshots = use_snapshots
 
-        # Choose the metric table based on configuration
-        if use_snapshots:
-            self.MF = models.MetricSnapshot
-            self.date_field = models.MetricSnapshot.captured_at
-        else:
-            self.MF = models.MetricFact
-            self.date_field = models.MetricFact.event_date
+        # Always use MetricSnapshot (MetricFact is deprecated)
+        self.MF = models.MetricSnapshot
+        self.date_field = models.MetricSnapshot.captured_at
 
         self.E = models.Entity
     
@@ -1207,8 +1203,8 @@ class UnifiedMetricService:
         """
         logger.info(f"[UNIFIED_METRICS] Getting entity list for level: {level}")
         
-        # Build base query starting from Entity, LEFT JOIN MetricFact to get provider
-        # Also join Connection to get provider when MetricFact is missing
+        # Build base query starting from Entity, LEFT JOIN MetricSnapshot to get provider
+        # Also join Connection to get provider when MetricSnapshot is missing
         Connection = models.Connection
         query = (
             self.db.query(
@@ -1217,12 +1213,12 @@ class UnifiedMetricService:
                 self.E.status,
                 self.E.level,
                 func.coalesce(
-                    func.max(models.MetricFact.provider), 
+                    func.max(self.MF.provider),
                     Connection.provider
                 ).label("provider")
             )
             .join(Connection, Connection.id == self.E.connection_id)
-            .outerjoin(models.MetricFact, models.MetricFact.entity_id == self.E.id)
+            .outerjoin(self.MF, self.MF.entity_id == self.E.id)
             .filter(self.E.workspace_id == workspace_id)
             .group_by(
                 self.E.id,

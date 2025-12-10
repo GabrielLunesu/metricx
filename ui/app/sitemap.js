@@ -33,7 +33,13 @@ export default function sitemap() {
     },
     // Authentication pages
     {
-      url: `${baseUrl}/login`,
+      url: `${baseUrl}/sign-in`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/sign-up`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.5,

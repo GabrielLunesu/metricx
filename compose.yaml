@@ -8,14 +8,16 @@ services:
         target: 8000
     environment:
       # Database Configuration
-      DATABASE_URL: 
-      # JWT Configuration
-      JWT_SECRET: 
+      DATABASE_URL:
+      # JWT Configuration (legacy, kept for backwards compatibility)
+      JWT_SECRET:
       JWT_EXPIRES_MINUTES: "10080"
-      
-      # Admin Panel Secret
-      ADMIN_SECRET_KEY:
-      
+
+      # Clerk Authentication (required for production)
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET}
+
       # Anthropic API Key
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       
@@ -95,7 +97,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: python -m app.workers.start_worker
+    command: python -m app.workers.start_arq_worker
     environment:
       # Required for worker
       DATABASE_URL: ${DATABASE_URL}

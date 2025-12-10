@@ -33,7 +33,7 @@ export default function HeroMinimal() {
                     {/* <img src="/logo-white.png" alt="AdNavi" className="h-8" /> */}
                 </div>
                 <div className="flex items-center gap-6">
-                    <a href="/login" className="text-sm font-medium text-black hover:text-white transition-colors">Log in</a>
+                    <a href="/sign-in" className="text-sm font-medium text-black hover:text-white transition-colors">Log in</a>
                     <a href="/dashboard" className="px-4 py-2 bg-white text-black text-sm font-medium rounded-full hover:bg-gray-200 transition-colors">
                         Get Started
                     </a>

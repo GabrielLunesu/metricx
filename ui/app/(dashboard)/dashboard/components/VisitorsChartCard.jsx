@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchWorkspaceKpis } from "../../../../lib/api";
-import { currentUser } from "../../../../lib/auth";
+import { currentUser } from "../../../../lib/workspace";
 
 export default function VisitorsChartCard() {
   const [revenueData, setRevenueData] = useState(null);

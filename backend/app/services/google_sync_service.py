@@ -25,6 +25,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.models import Connection, Entity, MetricFact, LevelEnum, GoalEnum, ProviderEnum
 from app.schemas import (
@@ -94,47 +95,76 @@ def _upsert_entity(
     goal: Optional[GoalEnum] = None,
     tracking_params: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Entity, bool]:
-    """UPSERT entity by external_id + connection_id.
+    """UPSERT entity by external_id + connection_id using PostgreSQL ON CONFLICT.
 
-    WHAT: Creates new Entity or updates existing one.
-    WHY: Idempotent synchronization across re-runs.
+    WHAT: Creates new Entity or updates existing one atomically.
+    WHY:
+        - Idempotent synchronization across re-runs
+        - Race-condition safe for concurrent sync jobs
 
     Args:
         tracking_params: Optional URL tracking configuration (utm_source, etc.)
-    """
-    entity = db.query(Entity).filter(
-        Entity.connection_id == connection.id,
-        Entity.external_id == external_id,
-    ).first()
 
-    created = False
-    if entity:
-        entity.name = name
-        entity.status = status
-        entity.parent_id = parent_id
-        entity.goal = goal
-        entity.level = level  # Update level in case it changed (e.g., adset -> asset_group)
-        # Update tracking params for UTM detection
-        if tracking_params is not None:
-            entity.tracking_params = tracking_params
-        entity.updated_at = datetime.utcnow()
-    else:
-        entity = Entity(
-            level=level,
-            external_id=external_id,
-            name=name,
-            status=status,
-            parent_id=parent_id,
-            goal=goal,
-            tracking_params=tracking_params,
-            workspace_id=connection.workspace_id,
-            connection_id=connection.id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-        )
-        db.add(entity)
-        created = True
+    Returns:
+        Tuple of (Entity, was_created)
+    """
+    import uuid
+    now = datetime.utcnow()
+    new_id = uuid.uuid4()
+
+    # Build insert values
+    insert_values = {
+        "id": new_id,
+        "level": level,
+        "external_id": external_id,
+        "name": name,
+        "status": status,
+        "parent_id": parent_id,
+        "goal": goal,
+        "tracking_params": tracking_params,
+        "workspace_id": connection.workspace_id,
+        "connection_id": connection.id,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    # Build update values (exclude id, created_at, workspace_id, connection_id)
+    update_values = {
+        "name": name,
+        "status": status,
+        "parent_id": parent_id,
+        "goal": goal,
+        "level": level,  # Update level in case it changed (e.g., adset -> asset_group)
+        "updated_at": now,
+    }
+    # Only update tracking_params if provided (not None)
+    if tracking_params is not None:
+        update_values["tracking_params"] = tracking_params
+
+    # Use PostgreSQL ON CONFLICT DO UPDATE for atomic upsert
+    # This handles race conditions at the database level
+    stmt = pg_insert(Entity).values(**insert_values)
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_entities_connection_external",  # Unique constraint on (connection_id, external_id)
+        set_=update_values,
+    )
+
+    # Execute and determine if created or updated
+    # We use RETURNING to get the actual row
+    stmt = stmt.returning(Entity.id, Entity.created_at)
+    result = db.execute(stmt)
+    row = result.fetchone()
+
+    # Flush to sync session state
     db.flush()
+
+    # Fetch the entity from session to return proper ORM object
+    entity = db.query(Entity).filter(Entity.id == row.id).first()
+
+    # Determine if this was a create or update
+    # If created_at matches our 'now' value (within tolerance), it was created
+    created = abs((entity.created_at - now).total_seconds()) < 1
+
     return entity, created
 
 
@@ -340,16 +370,8 @@ def sync_google_entities(
                         else:
                             stats.adsets_updated += 1
 
-                        # Skip ads for Shopping campaigns - they don't have ad_group_ad
-                        # Shopping products are synced separately via shopping_performance_view
-                        if is_shopping:
-                            logger.debug(
-                                "[GOOGLE_SYNC] Skipping ads for Shopping campaign %s ad_group %s (no ad_group_ad)",
-                                c.get("id"), ag.get("id")
-                            )
-                            continue
-
-                        # Ads (only for non-Shopping campaigns)
+                        # Ads - try to fetch for all campaign types including Shopping
+                        # Some Shopping campaigns may have ad_group_ad records with metrics
                         try:
                             ads = client.list_ads(customer_id, str(ag["id"]))
                             for ad in ads:

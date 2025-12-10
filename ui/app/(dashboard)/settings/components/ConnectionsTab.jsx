@@ -292,7 +292,7 @@ export default function ConnectionsTab({ user }) {
                                                 ) : (
                                                     <div className="flex items-center gap-2 text-emerald-600">
                                                         <CheckCircle2 className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">Syncing automatically</span>
+                                                        <span className="text-sm font-medium">Syncing automatically (first sync can take a while)</span>
                                                     </div>
                                                 )}
                                             </div>

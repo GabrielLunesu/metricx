@@ -123,16 +123,22 @@ class Workspace(Base):
 
 class User(Base):
     """User represents a person who can access the system.
-    
-    Users authenticate via email/password and belong to workspaces.
+
+    Users authenticate via Clerk (OAuth, password) and belong to workspaces.
     Each user has a role (Owner, Admin, Viewer) within their workspace.
-    
+
     CURRENT ISSUE: User can only belong to ONE workspace (via workspace_id)
     This should be changed to MANY-to-MANY relationship.
     """
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Clerk authentication - links to Clerk user ID (e.g., "user_2abc123...")
+    # WHY: Clerk handles auth, we store clerk_id to map JWT sub claim to local user
+    # REFERENCES: backend/app/deps.py (get_current_user), backend/app/routers/clerk_webhooks.py
+    clerk_id = Column(String, unique=True, index=True, nullable=True)
+
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)

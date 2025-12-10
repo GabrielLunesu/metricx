@@ -85,6 +85,10 @@ def get_redis_settings() -> RedisSettings:
         database=database,
         ssl=use_ssl,
         ssl_cert_reqs='none' if use_ssl else None,
+        # Connection stability settings for Upstash/cloud Redis
+        conn_timeout=30,        # Connection timeout (seconds)
+        conn_retries=5,         # Retry connection attempts
+        conn_retry_delay=1,     # Delay between retries (seconds)
     )
 
 
@@ -96,7 +100,8 @@ async def process_sync_job(
     ctx: Dict,
     connection_id: str,
     workspace_id: str,
-    force_refresh: bool = False
+    force_refresh: bool = False,
+    backfill: bool = False
 ) -> Dict:
     """Process a single connection sync job.
 
@@ -112,11 +117,12 @@ async def process_sync_job(
         connection_id: Connection UUID string
         workspace_id: Workspace UUID string
         force_refresh: If True, use attribution mode (last 7 days)
+        backfill: If True, use backfill mode (90 days for new connections)
 
     Returns:
         Dict with success status and sync results
     """
-    logger.info("[ARQ] Starting sync job for connection %s", connection_id)
+    logger.info("[ARQ] Starting sync job for connection %s (backfill=%s)", connection_id, backfill)
 
     db = SessionLocal()
     try:
@@ -147,7 +153,19 @@ async def process_sync_job(
         # Delegate to snapshot_sync_service (run in thread pool for sync code)
         from app.services.snapshot_sync_service import sync_snapshots_for_connection
 
-        mode = "attribution" if force_refresh else "realtime"
+        # Determine sync mode:
+        # - backfill: 90 days (for new connections)
+        # - attribution: 7 days (force refresh)
+        # - realtime: today only (regular 15-min sync)
+        if backfill:
+            mode = "backfill"
+        elif force_refresh:
+            mode = "attribution"
+        else:
+            mode = "realtime"
+
+        logger.info("[ARQ] Using sync mode '%s' for connection %s", mode, connection_id)
+
         result = await asyncio.to_thread(
             sync_snapshots_for_connection,
             db,

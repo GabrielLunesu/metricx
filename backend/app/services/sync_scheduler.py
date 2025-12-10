@@ -273,8 +273,46 @@ def run_scheduler() -> None:
 # INITIAL SYNC (for new connections)
 # =============================================================================
 
+async def enqueue_initial_sync_async(connection_id: str, workspace_id: str) -> bool:
+    """Async version of enqueue_initial_sync for use in async contexts (FastAPI).
+
+    WHAT:
+        Triggers an immediate sync job via ARQ so users see data right away
+        instead of waiting up to 15 minutes for the next scheduled sync.
+
+    Args:
+        connection_id: UUID of the new connection
+        workspace_id: UUID of the workspace
+
+    Returns:
+        True if job was enqueued successfully, False otherwise
+    """
+    if not ARQ_AVAILABLE:
+        logger.error("[SCHEDULER] ARQ not available - install with: pip install arq")
+        return False
+
+    try:
+        from app.workers.arq_enqueue import enqueue_sync_job as arq_enqueue
+
+        result = await arq_enqueue(connection_id, workspace_id, force_refresh=False)
+        job_id = result.get("job_id")
+        if job_id:
+            logger.info("[SCHEDULER] Enqueued initial sync for connection %s, job_id=%s", connection_id, job_id)
+            return True
+        else:
+            logger.warning("[SCHEDULER] Failed to enqueue job for %s", connection_id)
+            return False
+    except Exception as e:
+        logger.exception("[SCHEDULER] Failed to enqueue initial sync for %s: %s", connection_id, e)
+        capture_exception(e, extra={
+            "operation": "enqueue_initial_sync",
+            "connection_id": connection_id,
+        })
+        return False
+
+
 def enqueue_initial_sync(connection_id: str, workspace_id: str, run_sync: bool = True) -> bool:
-    """Enqueue an immediate sync for a newly created connection.
+    """Enqueue an immediate sync for a newly created connection (sync version).
 
     WHAT:
         Triggers an immediate sync job via ARQ so users see data right away
@@ -282,6 +320,7 @@ def enqueue_initial_sync(connection_id: str, workspace_id: str, run_sync: bool =
 
     WHEN:
         Called immediately after a new connection is created via OAuth.
+        NOTE: For async contexts (FastAPI), use enqueue_initial_sync_async instead.
 
     Args:
         connection_id: UUID of the new connection
@@ -299,7 +338,18 @@ def enqueue_initial_sync(connection_id: str, workspace_id: str, run_sync: bool =
         import asyncio
         from app.workers.arq_enqueue import enqueue_sync_job as arq_enqueue
 
-        result = asyncio.run(arq_enqueue(connection_id, workspace_id, force_refresh=False))
+        # Check if we're in an existing event loop
+        try:
+            loop = asyncio.get_running_loop()
+            # We're in an async context - schedule as a task
+            logger.warning("[SCHEDULER] Called sync enqueue_initial_sync from async context. Use enqueue_initial_sync_async instead.")
+            # Create task and return immediately - can't await from sync function
+            asyncio.create_task(enqueue_initial_sync_async(connection_id, workspace_id))
+            return True
+        except RuntimeError:
+            # No running loop - safe to use asyncio.run()
+            result = asyncio.run(arq_enqueue(connection_id, workspace_id, force_refresh=False))
+
         job_id = result.get("job_id")
         if job_id:
             logger.info("[SCHEDULER] Enqueued initial sync for connection %s, job_id=%s", connection_id, job_id)
@@ -316,18 +366,23 @@ def enqueue_initial_sync(connection_id: str, workspace_id: str, run_sync: bool =
         return False
 
 
-def run_connection_sync(connection_id: str) -> None:
+def run_connection_sync(connection_id: str, mode: str = "backfill") -> None:
     """Run a sync for a single connection (called by RQ worker).
 
     WHAT:
         Syncs entities and metrics for a specific connection.
         Used for initial sync after OAuth and manual sync triggers.
 
+    WHY:
+        - "backfill" mode (default): 90-day historical data for new connections
+        - "realtime" mode: Today's data only for manual refreshes
+
     Args:
         connection_id: UUID of the connection to sync
+        mode: Sync mode - "backfill" (90 days) or "realtime" (today)
     """
     from uuid import UUID
-    logger.info("[SCHEDULER] Running initial sync for connection %s", connection_id)
+    logger.info("[SCHEDULER] Running %s sync for connection %s", mode, connection_id)
 
     db: Session = SessionLocal()
     try:
@@ -336,26 +391,27 @@ def run_connection_sync(connection_id: str) -> None:
         result = sync_snapshots_for_connection(
             db=db,
             connection_id=UUID(connection_id),
-            mode="realtime",
+            mode=mode,  # Use backfill for initial sync to get 90 days of data
             sync_entities=True  # Always sync entities on initial
         )
 
         if result.success:
             logger.info(
-                "[SCHEDULER] Initial sync complete for %s: inserted=%d, updated=%d",
-                connection_id, result.inserted, result.updated
+                "[SCHEDULER] %s sync complete for %s: inserted=%d, updated=%d",
+                mode.title(), connection_id, result.inserted, result.updated
             )
         else:
             logger.error(
-                "[SCHEDULER] Initial sync failed for %s: %s",
-                connection_id, result.errors
+                "[SCHEDULER] %s sync failed for %s: %s",
+                mode.title(), connection_id, result.errors
             )
 
     except Exception as e:
-        logger.error("[SCHEDULER] Initial sync failed for %s: %s", connection_id, e)
+        logger.error("[SCHEDULER] %s sync failed for %s: %s", mode.title(), connection_id, e)
         capture_exception(e, extra={
             "operation": "run_connection_sync",
             "connection_id": connection_id,
+            "mode": mode,
         })
     finally:
         db.close()
@@ -372,9 +428,9 @@ def trigger_sync_for_connection(connection_id: str, workspace_id: str) -> None:
 
     Args:
         connection_id: UUID of the connection
-        workspace_id: UUID of the workspace (unused, kept for compatibility)
+        workspace_id: UUID of the workspace
     """
-    enqueue_initial_sync(connection_id)
+    enqueue_initial_sync(connection_id, workspace_id)
 
 
 if __name__ == "__main__":

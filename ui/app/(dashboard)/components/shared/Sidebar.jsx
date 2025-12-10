@@ -4,60 +4,55 @@
  * WHAT: Main navigation sidebar for the dashboard
  * WHY: Users need consistent navigation across all pages
  *
+ * CHANGES (2025-12-10):
+ *   - Fixed workspace detection to use is_active field from API
+ *   - Added toast notifications for switch errors
+ *
+ * CHANGES (2025-12-09):
+ *   - Migrated from custom auth to Clerk authentication
+ *   - Replaced custom logout with Clerk's UserButton
+ *
  * CHANGES (2025-12-02):
  *   - Removed standalone Attribution nav item (moved under Analytics)
  *   - Attribution is now accessed via Analytics page unlock widget
  *
  * REFERENCES:
  *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+ *   - https://clerk.com/docs/components/user/user-button
  */
 'use client'
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut } from "lucide-react";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import { currentUser, logout } from "../../../../lib/auth";
-import features from "../../../../lib/features";
-import { fetchWorkspaceInfo, fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
+import { UserButton } from "@clerk/nextjs";
+import { toast } from "sonner";
+import { fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
 import NavItem from "./NavItem";
-import LogoMark from "./LogoMark";
 
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const [user, setUser] = useState(null);
     const [workspace, setWorkspace] = useState(null);
     const [workspaces, setWorkspaces] = useState([]);
-
 
     useEffect(() => {
         let mounted = true;
 
         const init = async () => {
             try {
-                const u = await currentUser();
-                if (!mounted) return;
-                setUser(u);
-
                 const wsData = await fetchWorkspaces();
                 if (!mounted) return;
 
                 const list = wsData.workspaces || [];
                 setWorkspaces(list);
 
-                // Derive current workspace from list
-                if (u?.workspace_id) {
-                    const current = list.find(w => w.id === u.workspace_id);
-                    if (current) {
-                        setWorkspace(current);
-                    } else if (list.length > 0) {
-                        // Fallback: if active workspace not in list (shouldn't happen), use first
-                        setWorkspace(list[0]);
-                    }
-                } else if (list.length > 0) {
-                    // Fallback: if no active workspace set, use first
-                    setWorkspace(list[0]);
+                // Set current workspace (first one is active by default)
+                if (list.length > 0) {
+                    // Find active workspace or default to first
+                    const active = list.find(w => w.is_active) || list[0];
+                    setWorkspace(active);
                 }
             } catch (err) {
                 console.error("Sidebar init failed:", err);
@@ -75,18 +70,11 @@ export default function Sidebar() {
         if (workspaceId === workspace?.id) return;
         try {
             await switchWorkspace(workspaceId);
+            toast.success("Workspace switched");
             window.location.reload(); // Reload to refresh context
         } catch (err) {
             console.error("Failed to switch workspace:", err);
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            await logout();
-            window.location.href = "/login";
-        } catch (err) {
-            console.error("Failed to logout:", err);
+            toast.error("Failed to switch workspace");
         }
     };
 
@@ -186,33 +174,17 @@ export default function Sidebar() {
                         <Settings className="w-5 h-5" />
                     </a>
 
-                    {/* User Avatar / Profile Link */}
-                    {user && (
-                        <div className="relative group/profile">
-                            <Link
-                                href="/settings?tab=profile"
-                                className="block"
-                                title="User Profile"
-                            >
-                                <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-cyan-300 to-blue-400 hover:shadow-lg hover:shadow-cyan-200/50 transition-all duration-300">
-                                    <div className="w-full h-full rounded-full border-2 border-white bg-slate-50 flex items-center justify-center text-slate-500 group-hover/profile:text-cyan-600 transition-colors">
-                                        <User className="w-5 h-5" />
-                                    </div>
-                                </div>
-                            </Link>
-
-                            {/* Logout Dropdown */}
-                            <div className="absolute left-full bottom-0 ml-4 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all duration-200 -translate-x-2 group-hover/profile:translate-x-0 z-50">
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
-                                >
-                                    <LogOut className="w-4 h-4" />
-                                    Logout
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {/* User Profile - Clerk UserButton */}
+                    <UserButton
+                        afterSignOutUrl="/"
+                        appearance={{
+                            elements: {
+                                avatarBox: "w-10 h-10 ring-2 ring-offset-2 ring-cyan-200/50 hover:ring-cyan-300 transition-all",
+                                userButtonPopoverCard: "rounded-2xl shadow-xl border border-slate-100",
+                                userButtonPopoverActionButton: "rounded-lg",
+                            }
+                        }}
+                    />
                 </div>
             </aside>
 

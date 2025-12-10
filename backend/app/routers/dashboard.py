@@ -107,6 +107,11 @@ class UnifiedDashboardResponse(BaseModel):
     has_shopify: bool
     connected_platforms: List[str]
 
+    # Currency - derived from the primary connection's currency
+    # WHAT: ISO 4217 currency code for all monetary values in this response
+    # WHY: Frontend needs to display correct currency symbol (€ vs $)
+    currency: str = "USD"
+
     # Chart data (same as KPIs but guaranteed sparklines)
     chart_data: List[Dict[str, Any]]
 
@@ -144,6 +149,9 @@ def _get_date_range(timeframe: str) -> tuple[datetime, datetime]:
         return start, now
     elif timeframe == "last_30_days":
         start = today_start - timedelta(days=29)
+        return start, now
+    elif timeframe == "last_90_days":
+        start = today_start - timedelta(days=89)
         return start, now
     else:
         start = today_start - timedelta(days=6)
@@ -251,30 +259,25 @@ def _get_kpis_and_chart_data(
 
     if use_intraday:
         # 15-minute breakdown for intraday charts (matches our sync frequency)
-        # Generate ALL 15-min slots for the day and LEFT JOIN with actual data
-        # This shows the full timeline with gaps where we don't have data yet
+        # Now includes per-provider breakdown for multi-line charts
         chart_data_sql = text("""
-            WITH time_slots AS (
-                -- Generate all 15-min slots from start of day until now (or end of yesterday)
-                SELECT generate_series(
-                    date_trunc('day', CAST(:start_ts AS timestamp with time zone)),
-                    LEAST(CAST(:end_ts AS timestamp with time zone), NOW()),
-                    INTERVAL '15 minutes'
-                ) as time_bucket
-            ),
-            actual_data AS (
+            WITH actual_data AS (
                 SELECT
                     time_bucket,
+                    provider,
                     COALESCE(SUM(spend), 0) as spend,
-                    COALESCE(SUM(revenue), 0) as revenue
+                    COALESCE(SUM(revenue), 0) as revenue,
+                    COALESCE(SUM(conversions), 0) as conversions
                 FROM (
                     SELECT DISTINCT ON (entity_id, date_trunc('hour', captured_at) +
                            INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15))
                         date_trunc('hour', captured_at) +
                         INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15) as time_bucket,
                         entity_id,
+                        provider,
                         spend,
-                        revenue
+                        revenue,
+                        conversions
                     FROM metric_snapshots
                     WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
                       AND captured_at >= :start_ts
@@ -283,15 +286,11 @@ def _get_kpis_and_chart_data(
                              date_trunc('hour', captured_at) + INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15),
                              captured_at DESC
                 ) latest_snapshots
-                GROUP BY time_bucket
+                GROUP BY time_bucket, provider
             )
-            SELECT
-                ts.time_bucket,
-                ad.spend,
-                ad.revenue
-            FROM time_slots ts
-            LEFT JOIN actual_data ad ON ad.time_bucket = ts.time_bucket
-            ORDER BY ts.time_bucket
+            SELECT time_bucket, provider, spend, revenue, conversions
+            FROM actual_data
+            ORDER BY time_bucket, provider
         """)
 
         chart_data_result = db.execute(chart_data_sql, {
@@ -306,25 +305,30 @@ def _get_kpis_and_chart_data(
 
     if not use_intraday:
         # Daily breakdown for sparklines - latest snapshot per entity per day
+        # Now includes per-provider breakdown for multi-line charts
         chart_data_sql = text("""
             SELECT
                 day as time_bucket,
+                provider,
                 COALESCE(SUM(spend), 0) as spend,
-                COALESCE(SUM(revenue), 0) as revenue
+                COALESCE(SUM(revenue), 0) as revenue,
+                COALESCE(SUM(conversions), 0) as conversions
             FROM (
                 SELECT DISTINCT ON (entity_id, date_trunc('day', captured_at))
                     date_trunc('day', captured_at)::date as day,
                     entity_id,
+                    provider,
                     spend,
-                    revenue
+                    revenue,
+                    conversions
                 FROM metric_snapshots
                 WHERE entity_id IN (SELECT id FROM entities WHERE workspace_id = :workspace_id)
                   AND date_trunc('day', captured_at) >= :start_date
                   AND date_trunc('day', captured_at) <= :end_date
                 ORDER BY entity_id, date_trunc('day', captured_at), captured_at DESC
             ) latest_snapshots
-            GROUP BY day
-            ORDER BY time_bucket
+            GROUP BY day, provider
+            ORDER BY time_bucket, provider
         """)
 
         chart_data_result = db.execute(chart_data_sql, {
@@ -346,10 +350,15 @@ def _get_kpis_and_chart_data(
             SparkPoint(date=d.time_bucket.isoformat(), value=float(d.spend or 0))
             for d in chart_data_result if d.spend is not None
         ]
+        conversions_sparkline = [
+            SparkPoint(date=d.time_bucket.isoformat(), value=float(d.conversions or 0))
+            for d in chart_data_result if d.conversions is not None
+        ]
     else:
         # Format as date string for daily data (e.g., "2025-12-08")
         revenue_sparkline = [SparkPoint(date=str(d.time_bucket), value=float(d.revenue or 0)) for d in chart_data_result]
         spend_sparkline = [SparkPoint(date=str(d.time_bucket), value=float(d.spend or 0)) for d in chart_data_result]
+        conversions_sparkline = [SparkPoint(date=str(d.time_bucket), value=float(d.conversions or 0)) for d in chart_data_result]
 
     # Calculate ROAS
     spend_current = float(current_metrics.spend or 0)
@@ -401,26 +410,53 @@ def _get_kpis_and_chart_data(
             value=conversions_current,
             prev=conversions_prev,
             delta_pct=_calculate_delta_pct(conversions_current, conversions_prev),
-            sparkline=None
+            sparkline=conversions_sparkline
         ),
     ]
 
-    # Chart data (merged for Recharts) - use appropriate time format
-    # For intraday: include ALL time slots, NULL values will create gaps in chart
-    if use_intraday:
-        chart_data = [
-            {
-                "date": d.time_bucket.isoformat(),
-                "revenue": float(d.revenue) if d.revenue is not None else None,
-                "spend": float(d.spend) if d.spend is not None else None
+    # Chart data (merged for Recharts) - include ALL 4 metrics per provider
+    # Data format: {date, google_revenue, meta_revenue, google_spend, meta_spend, ...}
+    # Also includes totals: {revenue, spend, conversions, roas}
+
+    # Pivot provider data by date
+    chart_data_by_date = {}
+    for d in chart_data_result:
+        if use_intraday:
+            date_key = d.time_bucket.isoformat()
+        else:
+            date_key = str(d.time_bucket)
+
+        if date_key not in chart_data_by_date:
+            chart_data_by_date[date_key] = {
+                "date": date_key,
+                "revenue": 0,
+                "spend": 0,
+                "conversions": 0,
             }
-            for d in chart_data_result
-        ]
-    else:
-        chart_data = [
-            {"date": str(d.time_bucket), "revenue": float(d.revenue or 0), "spend": float(d.spend or 0)}
-            for d in chart_data_result
-        ]
+
+        provider = d.provider or "unknown"
+        spend_val = float(d.spend or 0)
+        revenue_val = float(d.revenue or 0)
+        conversions_val = float(d.conversions or 0)
+
+        # Per-provider metrics
+        chart_data_by_date[date_key][f"{provider}_revenue"] = revenue_val
+        chart_data_by_date[date_key][f"{provider}_spend"] = spend_val
+        chart_data_by_date[date_key][f"{provider}_conversions"] = conversions_val
+        # Per-provider ROAS
+        chart_data_by_date[date_key][f"{provider}_roas"] = (revenue_val / spend_val) if spend_val > 0 else 0
+
+        # Aggregate totals
+        chart_data_by_date[date_key]["revenue"] += revenue_val
+        chart_data_by_date[date_key]["spend"] += spend_val
+        chart_data_by_date[date_key]["conversions"] += conversions_val
+
+    # Calculate total ROAS for each date
+    chart_data = []
+    for date_key in sorted(chart_data_by_date.keys()):
+        entry = chart_data_by_date[date_key]
+        entry["roas"] = (entry["revenue"] / entry["spend"]) if entry["spend"] > 0 else 0
+        chart_data.append(entry)
 
     data_source = "shopify" if has_shopify else "platform"
 
@@ -668,7 +704,15 @@ def get_unified_dashboard(
     workspace_id: UUID,
     timeframe: str = Query(
         default="last_7_days",
-        description="Time period: today, yesterday, last_7_days, last_30_days"
+        description="Time period: today, yesterday, last_7_days, last_30_days, last_90_days"
+    ),
+    start_date: str = Query(
+        default=None,
+        description="Custom start date (YYYY-MM-DD). Overrides timeframe if provided with end_date."
+    ),
+    end_date: str = Query(
+        default=None,
+        description="Custom end date (YYYY-MM-DD). Overrides timeframe if provided with start_date."
     ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -686,8 +730,24 @@ def get_unified_dashboard(
     # Fetch workspace for last_synced_at
     workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
 
-    # Get date ranges
-    start, end = _get_date_range(timeframe)
+    # Get date ranges - use custom dates if provided, else use timeframe preset
+    if start_date and end_date:
+        try:
+            from datetime import date as date_type
+            start = datetime.combine(
+                date_type.fromisoformat(start_date),
+                datetime.min.time()
+            ).replace(tzinfo=timezone.utc)
+            end = datetime.combine(
+                date_type.fromisoformat(end_date),
+                datetime.max.time()
+            ).replace(tzinfo=timezone.utc)
+        except ValueError:
+            # Invalid date format - fall back to timeframe
+            start, end = _get_date_range(timeframe)
+    else:
+        start, end = _get_date_range(timeframe)
+
     prev_start, prev_end = _get_previous_period(start, end)
 
     # Check Shopify connection
@@ -698,13 +758,21 @@ def get_unified_dashboard(
     ).first()
     has_shopify = shopify_conn is not None
 
-    # Get connected platforms
-    connections = db.query(Connection.provider).filter(
+    # Get connected platforms and determine primary currency
+    ad_connections = db.query(Connection).filter(
         Connection.workspace_id == workspace_id,
         Connection.status == "active",
         Connection.provider != ProviderEnum.shopify
-    ).distinct().all()
-    connected_platforms = [c.provider.value for c in connections if c.provider]
+    ).all()
+    connected_platforms = [c.provider.value for c in ad_connections if c.provider]
+
+    # Use currency from first ad connection (typically all same currency)
+    # WHY: Most workspaces have ad accounts in a single currency
+    primary_currency = "USD"
+    for conn in ad_connections:
+        if conn.currency_code:
+            primary_currency = conn.currency_code
+            break
 
     # Fetch all data
     kpis, chart_data, data_source = _get_kpis_and_chart_data(
@@ -738,6 +806,7 @@ def get_unified_dashboard(
         data_source=data_source,
         has_shopify=has_shopify,
         connected_platforms=connected_platforms,
+        currency=primary_currency,
         chart_data=chart_data,
         top_campaigns=top_campaigns,
         spend_mix=spend_mix,

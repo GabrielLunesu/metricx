@@ -10,10 +10,14 @@ WHY:
     performance data (spend, revenue, ROAS, etc.), hierarchy metadata, and
     sparkline trends without re-implementing metrics logic in the frontend.
 
+DATA SOURCE:
+    Uses MetricSnapshot table (15-min granularity) instead of deprecated MetricFact.
+    MetricSnapshot provides real-time data with proper backfill support.
+
 REFERENCES:
     - app/schemas.py::EntityPerformanceResponse (response contract)
     - app/dsl/hierarchy.py (campaign/ad set ancestor CTE helpers)
-    - docs/metricx_BUILD_LOG.md (Campaigns integration section)
+    - app/models.py::MetricSnapshot (data source)
 """
 
 from __future__ import annotations
@@ -104,11 +108,13 @@ def _base_query(
 ):
     """
     Build core aggregate query for entity performance.
-    
+
     WHY: We need totals for spend/revenue/clicks etc. aggregated at requested level.
-    HOW: Start from Entity, LEFT JOIN MetricFact to include entities without metrics.
-    
-    IMPORTANT: Uses LEFT JOIN so entities without metric facts in the date range
+    HOW: Start from Entity, LEFT JOIN MetricSnapshot to include entities without metrics.
+
+    DATA SOURCE: Uses MetricSnapshot (15-min granularity, backfilled 90 days).
+
+    IMPORTANT: Uses LEFT JOIN so entities without snapshots in the date range
     still appear with $0 values. This is critical for newly synced campaigns.
     """
 
@@ -120,12 +126,13 @@ def _base_query(
     ):
         raise HTTPException(status_code=400, detail="Unsupported entity level")
 
-    MF = models.MetricFact
+    # Use MetricSnapshot instead of deprecated MetricFact
+    MS = models.MetricSnapshot
     Connection = models.Connection
-    
+
     connection_alias = None
 
-    # For leaf levels (ads/creatives), start from Entity and LEFT JOIN MetricFact
+    # For leaf levels (ads/creatives), start from Entity and LEFT JOIN MetricSnapshot
     if level in (models.LevelEnum.ad, models.LevelEnum.creative):
         entity = aliased(models.Entity)
         connection_alias = aliased(models.Connection)
@@ -134,27 +141,28 @@ def _base_query(
                 entity.id.label("entity_id"),
                 entity.name.label("entity_name"),
                 entity.status,
-                func.coalesce(func.max(MF.provider), connection_alias.provider).label("provider"),  # Get provider from connection if no facts
-                func.max(MF.ingested_at).label("last_updated"),
-                func.coalesce(func.sum(MF.spend), 0).label("spend"),
-                func.coalesce(func.sum(MF.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(MF.clicks), 0).label("clicks"),
-                func.coalesce(func.sum(MF.impressions), 0).label("impressions"),
-                func.coalesce(func.sum(MF.conversions), 0).label("conversions"),
+                # Use connection.provider directly - it's always populated
+                connection_alias.provider.label("provider"),
+                func.max(MS.created_at).label("last_updated"),
+                func.coalesce(func.sum(MS.spend), 0).label("spend"),
+                func.coalesce(func.sum(MS.revenue), 0).label("revenue"),
+                func.coalesce(func.sum(MS.clicks), 0).label("clicks"),
+                func.coalesce(func.sum(MS.impressions), 0).label("impressions"),
+                func.coalesce(func.sum(MS.conversions), 0).label("conversions"),
             )
             .select_from(entity)
             .join(connection_alias, connection_alias.id == entity.connection_id)
-            .outerjoin(MF, 
-                (MF.entity_id == entity.id) &
-                (func.date(MF.event_date) >= start) &
-                (func.date(MF.event_date) < end)
+            .outerjoin(MS,
+                (MS.entity_id == entity.id) &
+                (func.date(MS.captured_at) >= start) &
+                (func.date(MS.captured_at) < end)
             )
             .filter(entity.workspace_id == workspace_id)
             .filter(entity.level == level)
         )
     else:
         # For campaigns and adsets, use hierarchy CTEs
-        # Start from ancestor entities, LEFT JOIN through hierarchy to MetricFact
+        # Start from ancestor entities, LEFT JOIN through hierarchy to MetricSnapshot
         leaf = aliased(models.Entity)
         ancestor = aliased(models.Entity)
         connection_alias = aliased(models.Connection)
@@ -165,22 +173,23 @@ def _base_query(
                 ancestor.id.label("entity_id"),
                 ancestor.name.label("entity_name"),
                 ancestor.status,
-                func.coalesce(func.max(MF.provider), connection_alias.provider).label("provider"),  # Get provider from connection if no facts
-                func.max(MF.ingested_at).label("last_updated"),
-                func.coalesce(func.sum(MF.spend), 0).label("spend"),
-                func.coalesce(func.sum(MF.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(MF.clicks), 0).label("clicks"),
-                func.coalesce(func.sum(MF.impressions), 0).label("impressions"),
-                func.coalesce(func.sum(MF.conversions), 0).label("conversions"),
+                # Use connection.provider directly - it's always populated
+                connection_alias.provider.label("provider"),
+                func.max(MS.created_at).label("last_updated"),
+                func.coalesce(func.sum(MS.spend), 0).label("spend"),
+                func.coalesce(func.sum(MS.revenue), 0).label("revenue"),
+                func.coalesce(func.sum(MS.clicks), 0).label("clicks"),
+                func.coalesce(func.sum(MS.impressions), 0).label("impressions"),
+                func.coalesce(func.sum(MS.conversions), 0).label("conversions"),
             )
             .select_from(ancestor)
             .join(connection_alias, connection_alias.id == ancestor.connection_id)
             .join(mapping, mapping.c.ancestor_id == ancestor.id)
             .join(leaf, leaf.id == mapping.c.leaf_id)
-            .outerjoin(MF,
-                (MF.entity_id == leaf.id) &
-                (func.date(MF.event_date) >= start) &
-                (func.date(MF.event_date) < end)
+            .outerjoin(MS,
+                (MS.entity_id == leaf.id) &
+                (func.date(MS.captured_at) >= start) &
+                (func.date(MS.captured_at) < end)
             )
             .filter(ancestor.workspace_id == workspace_id)
             .filter(ancestor.level == level)
@@ -229,7 +238,7 @@ def _base_query(
 def _apply_sort(query, sort_by: str, sort_dir: str):
     """
     Apply sorting to aggregated query results.
-    
+
     IMPORTANT: PostgreSQL requires ORDER BY expressions in aggregate queries
     to either be in GROUP BY or be aggregate functions themselves.
     We use the aggregate expressions directly here.
@@ -239,23 +248,26 @@ def _apply_sort(query, sort_by: str, sort_dir: str):
     if sort_by not in ALLOWED_SORT_KEYS:
         sort_by = "roas"
 
+    # Use MetricSnapshot instead of deprecated MetricFact
+    MS = models.MetricSnapshot
+
     # Build order expressions using the same aggregates as in SELECT
     # This matches PostgreSQL's requirement for GROUP BY queries
     if sort_by == "revenue":
-        order_clause = func.coalesce(func.sum(models.MetricFact.revenue), 0)
+        order_clause = func.coalesce(func.sum(MS.revenue), 0)
     elif sort_by == "spend":
-        order_clause = func.coalesce(func.sum(models.MetricFact.spend), 0)
+        order_clause = func.coalesce(func.sum(MS.spend), 0)
     elif sort_by == "conversions":
-        order_clause = func.coalesce(func.sum(models.MetricFact.conversions), 0)
+        order_clause = func.coalesce(func.sum(MS.conversions), 0)
     elif sort_by == "cpc":
         # CPC = spend / clicks (nullsafe)
-        order_clause = func.coalesce(func.sum(models.MetricFact.spend), 0) / func.nullif(func.coalesce(func.sum(models.MetricFact.clicks), 0), 0)
+        order_clause = func.coalesce(func.sum(MS.spend), 0) / func.nullif(func.coalesce(func.sum(MS.clicks), 0), 0)
     elif sort_by == "ctr":
         # CTR = clicks / impressions (nullsafe)
-        order_clause = func.coalesce(func.sum(models.MetricFact.clicks), 0) / func.nullif(func.coalesce(func.sum(models.MetricFact.impressions), 0), 0)
+        order_clause = func.coalesce(func.sum(MS.clicks), 0) / func.nullif(func.coalesce(func.sum(MS.impressions), 0), 0)
     else:  # roas
         # ROAS = revenue / spend (nullsafe)
-        order_clause = func.coalesce(func.sum(models.MetricFact.revenue), 0) / func.nullif(func.coalesce(func.sum(models.MetricFact.spend), 0), 0)
+        order_clause = func.coalesce(func.sum(MS.revenue), 0) / func.nullif(func.coalesce(func.sum(MS.spend), 0), 0)
 
     if sort_dir == "asc":
         return query.order_by(asc(order_clause))
@@ -275,31 +287,34 @@ def _fetch_trend(
 
     WHY: Frontend sparkline expects aligned daily values.
     HOW: Accumulate day totals and normalize to requested metric.
+
+    DATA SOURCE: Uses MetricSnapshot (aggregated by date).
     """
 
     days = (end - start).days
     if days <= 0 or not entity_ids:
         return {}
 
-    MF = models.MetricFact
-    
-    # For ads (leaf level), query MetricFacts directly
+    # Use MetricSnapshot instead of deprecated MetricFact
+    MS = models.MetricSnapshot
+
+    # For ads (leaf level), query MetricSnapshots directly
     if level == models.LevelEnum.ad:
         results = (
             db.query(
-                MF.entity_id.label("entity_id"),
-                func.date(MF.event_date).label("bucket_date"),
-                func.coalesce(func.sum(MF.spend), 0).label("spend"),
-                func.coalesce(func.sum(MF.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(MF.clicks), 0).label("clicks"),
-                func.coalesce(func.sum(MF.impressions), 0).label("impressions"),
-                func.coalesce(func.sum(MF.conversions), 0).label("conversions"),
+                MS.entity_id.label("entity_id"),
+                func.date(MS.captured_at).label("bucket_date"),
+                func.coalesce(func.sum(MS.spend), 0).label("spend"),
+                func.coalesce(func.sum(MS.revenue), 0).label("revenue"),
+                func.coalesce(func.sum(MS.clicks), 0).label("clicks"),
+                func.coalesce(func.sum(MS.impressions), 0).label("impressions"),
+                func.coalesce(func.sum(MS.conversions), 0).label("conversions"),
             )
-            .select_from(MF)
-            .filter(MF.entity_id.in_(entity_ids))
-            .filter(func.date(MF.event_date) >= start)
-            .filter(func.date(MF.event_date) < end)
-            .group_by(MF.entity_id, func.date(MF.event_date))
+            .select_from(MS)
+            .filter(MS.entity_id.in_(entity_ids))
+            .filter(func.date(MS.captured_at) >= start)
+            .filter(func.date(MS.captured_at) < end)
+            .group_by(MS.entity_id, func.date(MS.captured_at))
             .all()
         )
     else:
@@ -310,20 +325,20 @@ def _fetch_trend(
         results = (
             db.query(
                 mapping.c.ancestor_id.label("entity_id"),
-                func.date(MF.event_date).label("bucket_date"),
-                func.coalesce(func.sum(MF.spend), 0).label("spend"),
-                func.coalesce(func.sum(MF.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(MF.clicks), 0).label("clicks"),
-                func.coalesce(func.sum(MF.impressions), 0).label("impressions"),
-                func.coalesce(func.sum(MF.conversions), 0).label("conversions"),
+                func.date(MS.captured_at).label("bucket_date"),
+                func.coalesce(func.sum(MS.spend), 0).label("spend"),
+                func.coalesce(func.sum(MS.revenue), 0).label("revenue"),
+                func.coalesce(func.sum(MS.clicks), 0).label("clicks"),
+                func.coalesce(func.sum(MS.impressions), 0).label("impressions"),
+                func.coalesce(func.sum(MS.conversions), 0).label("conversions"),
             )
-            .select_from(MF)
-            .join(leaf, leaf.id == MF.entity_id)
+            .select_from(MS)
+            .join(leaf, leaf.id == MS.entity_id)
             .join(mapping, mapping.c.leaf_id == leaf.id)
             .filter(mapping.c.ancestor_id.in_(entity_ids))
-            .filter(func.date(MF.event_date) >= start)
-            .filter(func.date(MF.event_date) < end)
-            .group_by(mapping.c.ancestor_id, func.date(MF.event_date))
+            .filter(func.date(MS.captured_at) >= start)
+            .filter(func.date(MS.captured_at) < end)
+            .group_by(mapping.c.ancestor_id, func.date(MS.captured_at))
             .all()
         )
 

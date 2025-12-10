@@ -18,7 +18,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Target, TrendingUp, AlertTriangle, Activity, DollarSign, ShoppingCart, Percent, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { currentUser } from '@/lib/auth';
+import { currentUser } from '@/lib/workspace';
 import { fetchAttributionSummary, fetchAttributedCampaigns, fetchAttributionFeed, fetchCampaignWarnings } from '@/lib/api';
 
 // Provider colors for consistent branding

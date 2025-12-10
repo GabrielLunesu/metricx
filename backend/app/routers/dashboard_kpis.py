@@ -37,7 +37,7 @@ from sqlalchemy import func, and_
 
 from app.database import get_db
 from app.models import (
-    Connection, ShopifyOrder, Attribution, MetricFact, Entity,
+    Connection, ShopifyOrder, Attribution, MetricSnapshot, Entity,
     ProviderEnum, User
 )
 from app.deps import get_current_user
@@ -248,8 +248,8 @@ def _get_platform_metric(
     start: datetime,
     end: datetime
 ) -> float:
-    """Get aggregated metric from MetricFact (platform data)."""
-    # Convert datetime to date for MetricFact which uses event_date
+    """Get aggregated metric from MetricSnapshot (platform data)."""
+    # Convert datetime to date for date filtering
     start_date = start.date() if isinstance(start, datetime) else start
     end_date = end.date() if isinstance(end, datetime) else end
 
@@ -260,16 +260,16 @@ def _get_platform_metric(
         .scalar_subquery()
     )
 
-    column = getattr(MetricFact, metric, None)
+    column = getattr(MetricSnapshot, metric, None)
     if column is None:
         return 0.0
 
     result = (
         db.query(func.coalesce(func.sum(column), 0))
         .filter(
-            MetricFact.entity_id.in_(entity_ids),
-            func.date(MetricFact.event_date) >= start_date,
-            func.date(MetricFact.event_date) <= end_date
+            MetricSnapshot.entity_id.in_(entity_ids),
+            func.date(MetricSnapshot.captured_at) >= start_date,
+            func.date(MetricSnapshot.captured_at) <= end_date
         )
         .scalar()
     )
@@ -283,7 +283,7 @@ def _get_platform_sparkline(
     start: datetime,
     end: datetime
 ) -> List[SparkPoint]:
-    """Get daily metric breakdown from MetricFact for sparkline."""
+    """Get daily metric breakdown from MetricSnapshot for sparkline."""
     start_date = start.date() if isinstance(start, datetime) else start
     end_date = end.date() if isinstance(end, datetime) else end
 
@@ -293,22 +293,22 @@ def _get_platform_sparkline(
         .scalar_subquery()
     )
 
-    column = getattr(MetricFact, metric, None)
+    column = getattr(MetricSnapshot, metric, None)
     if column is None:
         return []
 
     results = (
         db.query(
-            func.date(MetricFact.event_date).label("day"),
+            func.date(MetricSnapshot.captured_at).label("day"),
             func.coalesce(func.sum(column), 0).label("value")
         )
         .filter(
-            MetricFact.entity_id.in_(entity_ids),
-            func.date(MetricFact.event_date) >= start_date,
-            func.date(MetricFact.event_date) <= end_date
+            MetricSnapshot.entity_id.in_(entity_ids),
+            func.date(MetricSnapshot.captured_at) >= start_date,
+            func.date(MetricSnapshot.captured_at) <= end_date
         )
-        .group_by(func.date(MetricFact.event_date))
-        .order_by(func.date(MetricFact.event_date))
+        .group_by(func.date(MetricSnapshot.captured_at))
+        .order_by(func.date(MetricSnapshot.captured_at))
         .all()
     )
 
@@ -331,7 +331,7 @@ def _get_platform_sparkline(
 
     - **E-commerce (Shopify connected)**: Revenue and conversions from Shopify orders
     - **SaaS (no Shopify)**: Revenue and conversions from ad platform metrics
-    - **Ad Spend**: Always from ad platforms (MetricFact)
+    - **Ad Spend**: Always from ad platforms (MetricSnapshot)
     - **ROAS**: Computed from revenue / spend
 
     This ensures merchants see "real" revenue from their store, not inflated

@@ -88,13 +88,15 @@ async def enqueue_sync_job(
     connection_id: str | UUID,
     workspace_id: str | UUID,
     force_refresh: bool = False,
+    backfill: bool = False,
 ) -> Dict[str, Any]:
     """Enqueue a sync job to ARQ.
 
     Args:
         connection_id: Connection UUID
         workspace_id: Workspace UUID
-        force_refresh: If True, re-sync all data from scratch
+        force_refresh: If True, re-sync last 7 days (attribution mode)
+        backfill: If True, sync 90 days of historical data (for new connections)
 
     Returns:
         Dict with job_id and status
@@ -106,11 +108,12 @@ async def enqueue_sync_job(
         str(connection_id),
         str(workspace_id),
         force_refresh,
+        backfill,
         _queue_name="arq:queue",
     )
 
     if job:
-        logger.info("[ARQ] Enqueued sync job %s for connection %s", job.job_id, connection_id)
+        logger.info("[ARQ] Enqueued sync job %s for connection %s (backfill=%s)", job.job_id, connection_id, backfill)
         return {"job_id": job.job_id, "status": "enqueued"}
     else:
         logger.warning("[ARQ] Job might already exist for connection %s", connection_id)

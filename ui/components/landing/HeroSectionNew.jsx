@@ -234,7 +234,7 @@ export default function HeroSectionNew() {
 
         {/* CTA */}
         <a
-          href="/login"
+          href="/sign-in"
           className="hidden sm:flex hover:shadow-lg hover:shadow-blue-500/20 transition-all text-sm font-medium text-white bg-gradient-to-b from-blue-500 to-blue-600 rounded-full py-2.5 px-5 shadow-md gap-2 items-center"
         >
           <span>Get Started</span>
@@ -295,7 +295,7 @@ export default function HeroSectionNew() {
             >
               {/* Primary */}
               <a
-                href="/login"
+                href="/sign-up"
                 className="group inline-flex overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/20 rounded-full items-center justify-center w-full sm:w-auto"
               >
                 <span className="flex items-center justify-center gap-2 text-white text-sm font-medium bg-gradient-to-b from-gray-800 to-gray-950 w-full h-full rounded-full py-3.5 px-8 shadow-md">
