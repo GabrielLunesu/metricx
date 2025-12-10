@@ -134,19 +134,23 @@ services:
           memory: 512M
     restart: always
 
-  # Scheduler - enqueues sync jobs based on connection frequency settings
+  # Scheduler - runs cron jobs that enqueue work to the ARQ worker
+  # Uses same image as worker since it imports from arq_worker module
   scheduler:
     build:
       context: ./backend
-      dockerfile: Dockerfile.scheduler
+      dockerfile: Dockerfile
+    command: python -m app.services.sync_scheduler
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
       # Error tracking
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SENTRY_DSN: ${SENTRY_DSN:-}
     deploy:
       resources:
         reservations:
-          memory: 128M
+          # Increased from 128M - scheduler needs more for full app imports
+          memory: 256M
     restart: always
