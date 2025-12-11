@@ -148,7 +148,8 @@ def _get_date_range(timeframe: str) -> tuple[datetime, datetime]:
         return today_start, now
     elif timeframe == "yesterday":
         yesterday_start = today_start - timedelta(days=1)
-        yesterday_end = today_start - timedelta(seconds=1)
+        # Use microseconds=1 to include snapshots stored at 23:59:59.999999 (attribution sync)
+        yesterday_end = today_start - timedelta(microseconds=1)
         return yesterday_start, yesterday_end
     elif timeframe == "last_7_days":
         start = today_start - timedelta(days=6)
@@ -167,7 +168,8 @@ def _get_date_range(timeframe: str) -> tuple[datetime, datetime]:
 def _get_previous_period(start: datetime, end: datetime) -> tuple[datetime, datetime]:
     """Get the previous period of the same length."""
     period_length = end - start
-    prev_end = start - timedelta(seconds=1)
+    # Use microseconds=1 to include snapshots at 23:59:59.999999
+    prev_end = start - timedelta(microseconds=1)
     prev_start = prev_end - period_length
     return prev_start, prev_end
 
@@ -221,6 +223,7 @@ def _get_kpis_and_chart_data(
         .scalar_subquery()
     )
 
+    # For date-based queries (multi-day ranges), use date objects
     start_date = start.date() if isinstance(start, datetime) else start
     end_date = end.date() if isinstance(end, datetime) else end
     prev_start_date = prev_start.date() if isinstance(prev_start, datetime) else prev_start
@@ -231,6 +234,9 @@ def _get_kpis_and_chart_data(
     # PMax campaigns don't attribute all spend to asset_groups, Shopping campaigns
     # may have spend not fully attributed to ads. Campaign-level ensures accuracy.
     # Using raw SQL with DISTINCT ON for efficiency
+    #
+    # NOTE: Uses timestamp filtering (captured_at) instead of date filtering to ensure
+    # KPIs match chart data exactly. Both queries now use the same time boundaries.
     current_metrics_sql = text("""
         SELECT
             COALESCE(SUM(spend), 0) as spend,
@@ -248,23 +254,23 @@ def _get_kpis_and_chart_data(
                 WHERE workspace_id = :workspace_id
                 AND level = 'campaign'
             )
-              AND date_trunc('day', captured_at) >= :start_date
-              AND date_trunc('day', captured_at) <= :end_date
+              AND captured_at >= :start_ts
+              AND captured_at <= :end_ts
             ORDER BY entity_id, date_trunc('day', captured_at), captured_at DESC
         ) latest_snapshots
     """)
 
     current_metrics = db.execute(current_metrics_sql, {
         "workspace_id": str(workspace_id),
-        "start_date": start_date,
-        "end_date": end_date
+        "start_ts": start,
+        "end_ts": end
     }).first()
 
     # Previous period metrics
     prev_metrics = db.execute(current_metrics_sql, {
         "workspace_id": str(workspace_id),
-        "start_date": prev_start_date,
-        "end_date": prev_end_date
+        "start_ts": prev_start,
+        "end_ts": prev_end
     }).first()
 
     # Determine granularity: 15-min for today/yesterday (matches sync frequency), daily for longer periods
@@ -274,40 +280,64 @@ def _get_kpis_and_chart_data(
         # 15-minute breakdown for intraday charts (matches our sync frequency)
         # Now includes per-provider breakdown for multi-line charts
         # WHY: Uses campaign-level entities for accurate KPI totals
+        #
+        # IMPORTANT: For cumulative metrics (spend, revenue), we show LATEST KNOWN VALUE
+        # for each entity at each time bucket. This means if Entity A synced at 14:45 and
+        # Entity B's last sync was at 14:30, the 14:45 bucket shows:
+        # - Entity A's 14:45 value + Entity B's 14:30 value (carried forward)
+        # This ensures the chart matches the KPI totals at any point in time.
         chart_data_sql = text("""
-            WITH actual_data AS (
+            WITH time_buckets AS (
+                -- Generate all 15-min buckets for the time range
+                SELECT generate_series(
+                    date_trunc('hour', CAST(:start_ts AS timestamp)),
+                    date_trunc('hour', CAST(:end_ts AS timestamp)) +
+                        INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM CAST(:end_ts AS timestamp)) / 15),
+                    INTERVAL '15 minutes'
+                ) as time_bucket
+            ),
+            entity_snapshots AS (
+                -- Get all snapshots with their 15-min bucket
                 SELECT
-                    time_bucket,
+                    entity_id,
                     provider,
-                    COALESCE(SUM(spend), 0) as spend,
-                    COALESCE(SUM(revenue), 0) as revenue,
-                    COALESCE(SUM(conversions), 0) as conversions
-                FROM (
-                    SELECT DISTINCT ON (entity_id, date_trunc('hour', captured_at) +
-                           INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15))
-                        date_trunc('hour', captured_at) +
-                        INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15) as time_bucket,
-                        entity_id,
-                        provider,
-                        spend,
-                        revenue,
-                        conversions
-                    FROM metric_snapshots
-                    WHERE entity_id IN (
-                        SELECT id FROM entities
-                        WHERE workspace_id = :workspace_id
-                        AND level = 'campaign'
-                    )
-                      AND captured_at >= :start_ts
-                      AND captured_at <= :end_ts
-                    ORDER BY entity_id,
-                             date_trunc('hour', captured_at) + INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15),
-                             captured_at DESC
-                ) latest_snapshots
-                GROUP BY time_bucket, provider
+                    date_trunc('hour', captured_at) +
+                        INTERVAL '15 min' * FLOOR(EXTRACT(MINUTE FROM captured_at) / 15) as snap_bucket,
+                    spend,
+                    revenue,
+                    conversions,
+                    captured_at
+                FROM metric_snapshots
+                WHERE entity_id IN (
+                    SELECT id FROM entities
+                    WHERE workspace_id = :workspace_id
+                    AND level = 'campaign'
+                )
+                  AND captured_at >= :start_ts
+                  AND captured_at <= :end_ts
+            ),
+            latest_per_entity_bucket AS (
+                -- For each time bucket, get each entity's LATEST snapshot up to that bucket
+                -- This "carries forward" values so entities don't disappear from totals
+                SELECT DISTINCT ON (tb.time_bucket, es.entity_id)
+                    tb.time_bucket,
+                    es.entity_id,
+                    es.provider,
+                    es.spend,
+                    es.revenue,
+                    es.conversions
+                FROM time_buckets tb
+                JOIN entity_snapshots es ON es.snap_bucket <= tb.time_bucket
+                ORDER BY tb.time_bucket, es.entity_id, es.captured_at DESC
             )
-            SELECT time_bucket, provider, spend, revenue, conversions
-            FROM actual_data
+            SELECT
+                time_bucket,
+                provider,
+                COALESCE(SUM(spend), 0) as spend,
+                COALESCE(SUM(revenue), 0) as revenue,
+                COALESCE(SUM(conversions), 0) as conversions
+            FROM latest_per_entity_bucket
+            GROUP BY time_bucket, provider
             ORDER BY time_bucket, provider
         """)
 

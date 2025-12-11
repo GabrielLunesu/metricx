@@ -270,7 +270,52 @@ async def scheduled_realtime_sync(ctx: Dict) -> Dict:
 
     db = SessionLocal()
     try:
+        now = datetime.now(timezone.utc)
+
+        # =================================================================
+        # PHASE 3: Reset stale "syncing" connections (stuck > 15 minutes)
+        # =================================================================
+        # WHY: Worker crashes mid-sync leave connections stuck in "syncing"
+        # This auto-recovers them so they can be synced again
+        stale_threshold = now - timedelta(minutes=15)
+        stale_connections = db.query(Connection).filter(
+            Connection.sync_status == "syncing",
+            Connection.last_sync_attempted_at < stale_threshold
+        ).all()
+
+        for conn in stale_connections:
+            logger.warning(
+                "[ARQ] Resetting stale connection %s from 'syncing' to 'error' (stuck since %s)",
+                conn.id, conn.last_sync_attempted_at
+            )
+            conn.sync_status = "error"
+            conn.last_sync_error = "Sync timed out or worker crashed. Auto-reset."
+
+        if stale_connections:
+            db.commit()
+            logger.info("[ARQ] Reset %d stale connections", len(stale_connections))
+
+        # =================================================================
+        # PHASE 2: Clear expired rate limits
+        # =================================================================
+        # WHY: Connections past their cooldown should be synced again
+        expired_rate_limits = db.query(Connection).filter(
+            Connection.rate_limited_until.isnot(None),
+            Connection.rate_limited_until < now
+        ).all()
+
+        for conn in expired_rate_limits:
+            logger.info("[ARQ] Clearing expired rate limit for connection %s", conn.id)
+            conn.rate_limited_until = None
+            conn.sync_status = "idle"
+
+        if expired_rate_limits:
+            db.commit()
+            logger.info("[ARQ] Cleared %d expired rate limits", len(expired_rate_limits))
+
+        # =================================================================
         # Get all active ad platform connections
+        # =================================================================
         connections = db.query(Connection).filter(
             Connection.provider.in_([ProviderEnum.meta, ProviderEnum.google]),
             Connection.status == "active",
@@ -279,14 +324,20 @@ async def scheduled_realtime_sync(ctx: Dict) -> Dict:
 
         logger.info("[ARQ] Found %d connections to sync", len(connections))
 
-        # Filter connections with valid tokens
+        # Filter connections with valid tokens and not rate-limited
         valid_connections = []
-        skipped = 0
+        skipped_no_token = 0
+        skipped_rate_limited = 0
         for conn in connections:
+            # Skip rate-limited connections
+            if conn.rate_limited_until and conn.rate_limited_until > now:
+                skipped_rate_limited += 1
+                continue
+
             if _validate_connection_tokens(conn) is None:
                 valid_connections.append(conn)
             else:
-                skipped += 1
+                skipped_no_token += 1
 
         # Enqueue all jobs in PARALLEL using asyncio.gather
         from app.workers.arq_enqueue import enqueue_sync_job
@@ -303,14 +354,15 @@ async def scheduled_realtime_sync(ctx: Dict) -> Dict:
         failed = len(results) - enqueued
 
         logger.info(
-            "[ARQ] Realtime sync: %d enqueued, %d skipped (no token), %d failed",
-            enqueued, skipped, failed
+            "[ARQ] Realtime sync: %d enqueued, %d skipped (no token), %d skipped (rate limited), %d failed",
+            enqueued, skipped_no_token, skipped_rate_limited, failed
         )
 
         return {
             "total_connections": len(connections),
             "enqueued": enqueued,
-            "skipped": skipped,
+            "skipped_no_token": skipped_no_token,
+            "skipped_rate_limited": skipped_rate_limited,
             "failed": failed,
         }
 

@@ -308,7 +308,7 @@ export default function ConnectionsTab({ user }) {
                                                 <p className="text-neutral-500 mb-1">Last Synced</p>
                                                 <p className="font-medium text-neutral-900">
                                                     {connection.last_sync_attempted_at
-                                                        ? new Date(connection.last_sync_attempted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                        ? new Date(connection.last_sync_attempted_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                                         : 'Never'}
                                                 </p>
                                             </div>
@@ -316,7 +316,7 @@ export default function ConnectionsTab({ user }) {
                                                 <p className="text-neutral-500 mb-1">Last Data Change</p>
                                                 <p className="font-medium text-neutral-900">
                                                     {connection.last_metrics_changed_at
-                                                        ? new Date(connection.last_metrics_changed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                        ? new Date(connection.last_metrics_changed_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                                         : 'Never'}
                                                 </p>
                                             </div>

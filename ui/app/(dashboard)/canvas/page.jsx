@@ -125,7 +125,11 @@ export default function CanvasPage() {
 
   const lastSyncDisplay = React.useMemo(() => {
     if (!lastSyncedAt) return "Never";
-    const timestamp = lastSyncedAt instanceof Date ? lastSyncedAt : new Date(lastSyncedAt);
+    // Append 'Z' to indicate UTC if no timezone is present (backend stores UTC)
+    const dateStr = typeof lastSyncedAt === 'string' && !lastSyncedAt.includes('Z') && !lastSyncedAt.includes('+')
+      ? lastSyncedAt + 'Z'
+      : lastSyncedAt;
+    const timestamp = lastSyncedAt instanceof Date ? lastSyncedAt : new Date(dateStr);
     if (Number.isNaN(timestamp.getTime())) return "Never";
     return timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }, [lastSyncedAt]);
