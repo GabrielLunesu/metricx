@@ -45,7 +45,7 @@ from app.models import (
 )
 from app.security import decrypt_secret
 from app.services.meta_ads_client import MetaAdsClient, MetaAdsClientError
-from app.services.google_ads_client import GAdsClient
+from app.services.google_ads_client import GAdsClient, QuotaExhaustedError
 from app.telemetry import capture_exception
 
 logger = logging.getLogger(__name__)
@@ -189,14 +189,28 @@ def sync_snapshots_for_connection(
         result.errors.append(f"Unsupported provider: {connection.provider}")
         return result
 
-    # Update connection last_synced_at
+    # Update connection sync tracking fields
     if result.success:
         result.synced_at = datetime.now(timezone.utc)
         connection.last_sync_completed_at = result.synced_at
         connection.last_sync_attempted_at = result.synced_at
         connection.last_sync_error = None
+        connection.total_syncs_attempted = (connection.total_syncs_attempted or 0) + 1
+
+        # Track data changes: if any rows were inserted or updated with new values
+        # (inserted > 0 indicates new data, updated > 0 with changes indicates changed data)
+        if result.inserted > 0 or result.updated > 0:
+            connection.total_syncs_with_changes = (connection.total_syncs_with_changes or 0) + 1
+            connection.last_metrics_changed_at = result.synced_at
+            logger.info(
+                "[SNAPSHOT_SYNC] Data changed: connection=%s, inserted=%d, updated=%d",
+                connection_id, result.inserted, result.updated
+            )
+
         db.commit()
     else:
+        connection.last_sync_attempted_at = datetime.now(timezone.utc)
+        connection.total_syncs_attempted = (connection.total_syncs_attempted or 0) + 1
         connection.last_sync_error = "; ".join(result.errors[:3])  # Store first 3 errors
         db.commit()
 
@@ -1010,6 +1024,24 @@ def _sync_google_snapshots(
             "[SNAPSHOT_SYNC] Google sync complete: inserted=%d, updated=%d, skipped=%d",
             result.inserted, result.updated, result.skipped
         )
+
+    except QuotaExhaustedError as e:
+        # Circuit breaker: Set rate_limited_until to skip this connection
+        logger.warning(
+            "[SNAPSHOT_SYNC] Google quota exhausted for connection %s, setting cooldown for %ds",
+            connection.id, e.retry_seconds
+        )
+        connection.rate_limited_until = datetime.now(timezone.utc) + timedelta(seconds=e.retry_seconds)
+        connection.sync_status = "rate_limited"
+        connection.last_sync_error = f"Quota exhausted. Cooldown until {connection.rate_limited_until.isoformat()}"
+        db.commit()
+        result.errors.append(str(e))
+        capture_exception(e, extra={
+            "operation": "google_sync_quota_exhausted",
+            "connection_id": str(connection.id),
+            "workspace_id": str(connection.workspace_id),
+            "retry_seconds": e.retry_seconds,
+        })
 
     except Exception as e:
         logger.error("[SNAPSHOT_SYNC] Google sync failed: %s", e)

@@ -1,0 +1,130 @@
+# Workflow Status Template
+
+# This tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
+# Implementation phase is tracked separately in sprint-status.yaml
+
+# STATUS DEFINITIONS:
+# ==================
+# Initial Status (before completion):
+#   - required: Must be completed to progress
+#   - optional: Can be completed but not required
+#   - recommended: Strongly suggested but not required
+#   - conditional: Required only if certain conditions met (e.g., if_has_ui)
+#
+# Completion Status:
+#   - {file-path}: File created/found (e.g., "docs/product-brief.md")
+#   - skipped: Optional/conditional workflow that was skipped
+
+generated: "2025-12-11"
+project: "Metricx"
+project_type: "Ad analytics platform - dashboards, AI analytics, rule engine, user context"
+selected_track: "method"
+field_type: "brownfield"
+workflow_path: "method-brownfield.yaml"
+
+workflow_status:
+  # Prerequisite: Documentation (brownfield requirement)
+  - id: "document-project"
+    phase: "prerequisite"
+    name: "Document Project"
+    agent: "analyst"
+    command: "/bmad:bmm:workflows:document-project"
+    status: "docs/index.md"
+    completed_at: "2025-12-11"
+    outputs:
+      - "docs/index.md"
+      - "docs/architecture.md"
+      - "docs/data-models.md"
+      - "docs/api-reference.md"
+    note: "Codebase analyzed and documented"
+
+  # Phase 0: Discovery (user-selected)
+  - id: "brainstorm"
+    phase: 0
+    name: "Brainstorm"
+    agent: "analyst"
+    command: "/bmad:bmm:workflows:brainstorming-session"
+    status: "optional"
+    selected: true
+    note: "Creative exploration for Rule Engine and User Context features"
+
+  - id: "research"
+    phase: 0
+    name: "Research"
+    agent: "analyst"
+    command: "/bmad:bmm:workflows:research"
+    status: "optional"
+    selected: true
+    note: "Domain/competitive analysis"
+
+  # Phase 1: Planning
+  - id: "create-prd"
+    phase: 1
+    name: "Create PRD"
+    agent: "pm"
+    command: "/bmad:bmm:workflows:create-prd"
+    status: "required"
+    note: "Product requirements for Rule Engine + User Context features"
+
+  - id: "create-ux-design"
+    phase: 1
+    name: "Create UX Design"
+    agent: "ux-designer"
+    command: "/bmad:bmm:workflows:create-ux-design"
+    status: "conditional"
+    condition: "if_has_ui"
+    note: "UX patterns for new features"
+
+  # Phase 2: Solutioning
+  - id: "create-architecture"
+    phase: 2
+    name: "Create Architecture"
+    agent: "architect"
+    command: "/bmad:bmm:workflows:create-architecture"
+    status: "recommended"
+    note: "Integration architecture for new features with existing codebase"
+
+  - id: "create-epics-and-stories"
+    phase: 2
+    name: "Create Epics and Stories"
+    agent: "pm"
+    command: "/bmad:bmm:workflows:create-epics-stories"
+    status: "required"
+    note: "Break down PRD into implementable work"
+
+  - id: "test-design"
+    phase: 2
+    name: "Test Design"
+    agent: "tea"
+    command: "/bmad:bmm:workflows:testarch-test-design"
+    status: "recommended"
+    note: "System-level testability review"
+
+  - id: "implementation-readiness"
+    phase: 2
+    name: "Implementation Readiness Check"
+    agent: "architect"
+    command: "/bmad:bmm:workflows:check-implementation-readiness"
+    status: "required"
+    note: "Gate check before implementation"
+
+  # Phase 3: Implementation
+  - id: "sprint-planning"
+    phase: 3
+    name: "Sprint Planning"
+    agent: "sm"
+    command: "/bmad:bmm:workflows:sprint-planning"
+    status: "required"
+    note: "Creates sprint plan with stories"
+
+# User context captured during init
+user_goals:
+  - "Full analytics platform with store + ad account connections"
+  - "Rule Engine: notifications when conditions met (spend > X, ROAS drops)"
+  - "User Context: capture website, goals, so AI has better context"
+  - "Launch target: next week"
+
+discovery_selections:
+  brainstorm: true
+  research: true
+  product_brief: false

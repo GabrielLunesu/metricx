@@ -19,7 +19,9 @@ REFERENCES:
 
 from __future__ import annotations
 
+import logging
 import os
+import re
 import time
 import random
 from datetime import date
@@ -27,12 +29,68 @@ from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
 
 from app.models import GoalEnum
 
+logger = logging.getLogger(__name__)
+
 try:
     # Import lazily to keep tests fast when the SDK isn't installed.
     from google.ads.googleads.client import GoogleAdsClient as _SdkClient
     from google.ads.googleads.errors import GoogleAdsException
 except Exception:  # pragma: no cover - tests will mock without importing SDK
     _SdkClient = None  # type: ignore
+
+
+# =============================================================================
+# EXCEPTIONS
+# =============================================================================
+
+class QuotaExhaustedError(Exception):
+    """Raised when Google Ads API quota is exhausted.
+
+    WHAT:
+        Custom exception for quota exhaustion (429 errors) that includes
+        the retry delay hint from Google.
+
+    WHY:
+        Allows callers to implement circuit breaker pattern - when this is
+        raised, the connection should be marked as rate-limited and skipped
+        until the cooldown expires.
+
+    REFERENCES:
+        docs/living-docs/plans/fancy-launching-lake.md (quota fix plan)
+    """
+
+    def __init__(self, message: str, retry_seconds: int = 600):
+        """Initialize QuotaExhaustedError.
+
+        Args:
+            message: Error message
+            retry_seconds: Number of seconds Google suggests to wait (default 10 min)
+        """
+        super().__init__(message)
+        self.retry_seconds = retry_seconds
+
+
+def _extract_retry_seconds(error_str: str) -> Optional[int]:
+    """Extract retry delay from Google Ads API error message.
+
+    WHAT:
+        Parses error messages like "Retry in 723 seconds" to extract the delay.
+
+    WHY:
+        Google Ads API embeds retry hints in error messages for quota exhaustion.
+        We must respect these to avoid hammering the API.
+
+    Args:
+        error_str: String representation of the error
+
+    Returns:
+        Number of seconds to wait, or None if not found.
+    """
+    # Match patterns like "Retry in 723 seconds" or "retry in 60 seconds"
+    match = re.search(r'[Rr]etry in (\d+) seconds', error_str)
+    if match:
+        return int(match.group(1))
+    return None
 
 
 class GoogleAdsRateLimiter:
@@ -69,41 +127,96 @@ class GoogleAdsRateLimiter:
 def _with_retries(func):
     """Retry decorator with exponential backoff and jitter.
 
-    Retries on transient errors (RESOURCE_EXHAUSTED/UNAVAILABLE) and SDK
-    transport errors, respecting any retry delay hints when present.
+    WHAT:
+        Retries on transient errors (UNAVAILABLE, INTERNAL, RST_STREAM) with
+        exponential backoff. For quota exhaustion (RESOURCE_EXHAUSTED), raises
+        QuotaExhaustedError with the retry hint to trigger circuit breaker.
+
+    WHY:
+        - Transient errors (network, server) benefit from retries
+        - Quota exhaustion needs circuit breaker, not retries (wastes resources)
+        - Google's "Retry in X seconds" hints can be 700+ seconds - we respect them
+
+    REFERENCES:
+        docs/living-docs/plans/fancy-launching-lake.md (quota fix plan)
     """
 
     def wrapper(self, *args, **kwargs):  # type: ignore
-        max_attempts = 5
-        base = 0.5
+        max_attempts = 3  # Reduced from 5 - faster failure for quota errors
+        base = 1.0
         for attempt in range(1, max_attempts + 1):
             try:
                 return func(self, *args, **kwargs)
             except Exception as e:  # noqa: BLE001
-                # Try to detect GoogleAdsException without importing it in tests
+                error_str = str(e)
+
+                # Check for quota exhaustion (429) - needs circuit breaker, not retries
+                is_quota_exhausted = (
+                    'RESOURCE_EXHAUSTED' in error_str or
+                    '429' in error_str or
+                    'Too many requests' in error_str or
+                    'quota' in error_str.lower()
+                )
+
+                if is_quota_exhausted:
+                    # Extract retry hint from error message
+                    retry_seconds = _extract_retry_seconds(error_str)
+                    if retry_seconds and retry_seconds > 120:
+                        # Long cooldown (> 2 min) - raise QuotaExhaustedError for circuit breaker
+                        logger.warning(
+                            "[GOOGLE_ADS] Quota exhausted, Google suggests retry in %ds. "
+                            "Raising QuotaExhaustedError for circuit breaker.",
+                            retry_seconds
+                        )
+                        raise QuotaExhaustedError(
+                            f"Google Ads quota exhausted. Retry in {retry_seconds} seconds.",
+                            retry_seconds=retry_seconds
+                        )
+                    elif retry_seconds:
+                        # Short cooldown (< 2 min) - wait and retry
+                        logger.info(
+                            "[GOOGLE_ADS] Quota warning (attempt %d/%d), waiting %ds",
+                            attempt, max_attempts, retry_seconds
+                        )
+                        if attempt < max_attempts:
+                            time.sleep(retry_seconds)
+                            continue
+                    # No hint or last attempt - raise QuotaExhaustedError with default
+                    raise QuotaExhaustedError(
+                        f"Google Ads quota exhausted: {error_str[:200]}",
+                        retry_seconds=600  # Default 10 min cooldown
+                    )
+
+                # Try to detect GoogleAdsException for other transient errors
                 code = None
                 retry_after = None
                 if 'GoogleAdsException' in e.__class__.__name__ or e.__class__.__module__.startswith('google'):
-                    # best-effort extraction
                     code = getattr(getattr(e, 'error', None), 'code', None)
                     retry_after = getattr(e, 'retry_after', None)
+
                 # Transient errors → retry
                 transient = False
                 if code:
                     code_str = str(code)
-                    transient = 'RESOURCE_EXHAUSTED' in code_str or 'UNAVAILABLE' in code_str or 'INTERNAL' in code_str
+                    transient = 'UNAVAILABLE' in code_str or 'INTERNAL' in code_str
                 else:
-                    # Transport-level/transient
-                    transient = any(k in str(e) for k in ('RESOURCE_EXHAUSTED', 'UNAVAILABLE', 'RST_STREAM', 'deadline exceeded'))
+                    transient = any(k in error_str for k in ('UNAVAILABLE', 'RST_STREAM', 'deadline exceeded'))
 
                 if not transient or attempt == max_attempts:
                     raise
-                # Backoff with jitter, prefer server hint if present
+
+                # Backoff with jitter for transient errors
                 if retry_after:
                     sleep_s = float(retry_after)
                 else:
                     sleep_s = base * (2 ** (attempt - 1)) * (1 + random.random())
-                time.sleep(min(sleep_s, 10.0))
+                sleep_s = min(sleep_s, 30.0)  # Cap at 30s for transient errors
+
+                logger.info(
+                    "[GOOGLE_ADS] Transient error (attempt %d/%d), retrying in %.1fs: %s",
+                    attempt, max_attempts, sleep_s, error_str[:100]
+                )
+                time.sleep(sleep_s)
         # Unreachable
     return wrapper
 
@@ -328,6 +441,151 @@ class GAdsClient:
             "status": r.asset_group.status,
             "campaign_id": campaign_id,
         } for r in rows]
+
+    # --- Batch Query Methods (Quota Optimization) -----------------------
+    # WHY: Reduce API calls from O(N×M) to O(1) by fetching all entities
+    # in a single GAQL query instead of per-campaign/per-ad_group calls.
+    # REFERENCES: docs/living-docs/plans/fancy-launching-lake.md
+
+    def list_all_ad_groups(self, customer_id: str) -> List[Dict[str, Any]]:
+        """Fetch ALL ad groups across all campaigns in ONE API call.
+
+        WHAT:
+            Returns all ad groups for the customer, including their parent
+            campaign resource name for relationship mapping.
+
+        WHY:
+            Reduces API calls from O(N campaigns) to O(1).
+            Critical for avoiding Google Ads API quota exhaustion.
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+
+        Returns:
+            List of ad group dicts with id, name, status, campaign_resource_name
+        """
+        q = (
+            "SELECT ad_group.id, ad_group.name, ad_group.status, ad_group.campaign "
+            "FROM ad_group "
+            "WHERE campaign.status IN ('ENABLED', 'PAUSED') "
+            "ORDER BY ad_group.name"
+        )
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            ag = r.ad_group
+            # Extract campaign_id from resource name: customers/123/campaigns/456
+            campaign_resource = getattr(ag, "campaign", None)
+            campaign_id = None
+            if campaign_resource:
+                parts = str(campaign_resource).split("/")
+                if len(parts) >= 4:
+                    campaign_id = parts[-1]
+            out.append({
+                "id": getattr(ag, "id", None),
+                "name": getattr(ag, "name", None),
+                "status": getattr(ag, "status", None),
+                "campaign_id": campaign_id,
+                "campaign_resource": str(campaign_resource) if campaign_resource else None,
+            })
+        return out
+
+    def list_all_ads(self, customer_id: str) -> List[Dict[str, Any]]:
+        """Fetch ALL ads across all ad groups in ONE API call.
+
+        WHAT:
+            Returns all ads for the customer, including parent ad_group
+            resource name and UTM tracking info.
+
+        WHY:
+            Reduces API calls from O(N×M) to O(1).
+            Critical for avoiding Google Ads API quota exhaustion.
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+
+        Returns:
+            List of ad dicts with id, name, status, ad_group_id, tracking_params
+        """
+        q = (
+            "SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status, "
+            "ad_group_ad.ad_group, ad_group_ad.ad.tracking_url_template, "
+            "ad_group_ad.ad.final_url_suffix "
+            "FROM ad_group_ad "
+            "WHERE campaign.status IN ('ENABLED', 'PAUSED') "
+            "ORDER BY ad_group_ad.ad.name"
+        )
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            ad = r.ad_group_ad.ad
+            # Extract ad_group_id from resource name: customers/123/adGroups/456
+            ad_group_resource = getattr(r.ad_group_ad, "ad_group", None)
+            ad_group_id = None
+            if ad_group_resource:
+                parts = str(ad_group_resource).split("/")
+                if len(parts) >= 4:
+                    ad_group_id = parts[-1]
+
+            # UTM tracking detection
+            tracking_url_template = getattr(ad, "tracking_url_template", None)
+            final_url_suffix = getattr(ad, "final_url_suffix", None)
+            tracking_params = self._extract_google_tracking_params(
+                tracking_url_template, final_url_suffix
+            )
+
+            out.append({
+                "id": getattr(ad, "id", None),
+                "name": getattr(ad, "name", None),
+                "status": r.ad_group_ad.status,
+                "ad_group_id": ad_group_id,
+                "ad_group_resource": str(ad_group_resource) if ad_group_resource else None,
+                "tracking_params": tracking_params,
+            })
+        return out
+
+    def list_all_asset_groups(self, customer_id: str) -> List[Dict[str, Any]]:
+        """Fetch ALL asset groups (PMax) across all campaigns in ONE API call.
+
+        WHAT:
+            Returns all asset groups for Performance Max campaigns,
+            including parent campaign resource name.
+
+        WHY:
+            Reduces API calls from O(N PMax campaigns) to O(1).
+            Critical for avoiding Google Ads API quota exhaustion.
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+
+        Returns:
+            List of asset group dicts with id, name, status, campaign_id
+        """
+        q = (
+            "SELECT asset_group.id, asset_group.name, asset_group.status, asset_group.campaign "
+            "FROM asset_group "
+            "WHERE campaign.status IN ('ENABLED', 'PAUSED') "
+            "ORDER BY asset_group.name"
+        )
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            ag = r.asset_group
+            # Extract campaign_id from resource name: customers/123/campaigns/456
+            campaign_resource = getattr(ag, "campaign", None)
+            campaign_id = None
+            if campaign_resource:
+                parts = str(campaign_resource).split("/")
+                if len(parts) >= 4:
+                    campaign_id = parts[-1]
+            out.append({
+                "id": getattr(ag, "id", None),
+                "name": getattr(ag, "name", None),
+                "status": getattr(ag, "status", None),
+                "campaign_id": campaign_id,
+                "campaign_resource": str(campaign_resource) if campaign_resource else None,
+            })
+        return out
 
     def list_asset_group_assets(self, customer_id: str, asset_group_id: str) -> List[Dict[str, Any]]:
         q = (

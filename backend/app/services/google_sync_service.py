@@ -237,7 +237,17 @@ def sync_google_entities(
 ) -> EntitySyncResponse:
     """Sync Google Ads entity hierarchy (campaigns → ad groups → ads).
 
-    Mirrors Meta sync endpoint; safe to re-run (UPSERT).
+    WHAT:
+        Fetches all campaigns, ad groups, ads, and asset groups using BATCHED
+        GAQL queries, then builds parent-child relationships in memory.
+
+    WHY:
+        Reduces API calls from O(N×M) to O(4) to avoid Google Ads API quota
+        exhaustion. Previously, we made 1 call per campaign + 1 per ad_group,
+        which could exceed 60+ calls for a typical account.
+
+    REFERENCES:
+        docs/living-docs/plans/fancy-launching-lake.md (quota fix plan)
     """
     start_time = datetime.utcnow()
     stats = EntitySyncStats(
@@ -276,7 +286,7 @@ def sync_google_entities(
         for row in response:
             is_manager = getattr(row.customer, 'manager', False)
             break
-        
+
         if is_manager:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -296,10 +306,26 @@ def sync_google_entities(
     except Exception as e:
         logger.warning("[GOOGLE_SYNC] Failed to fetch customer metadata: %s", e)
 
-    # Campaigns
+    # =========================================================================
+    # BATCHED ENTITY SYNC - O(4) API calls instead of O(N×M)
+    # =========================================================================
+    # Step 1: Fetch ALL campaigns (1 API call)
+    # Step 2: Fetch ALL ad_groups (1 API call)
+    # Step 3: Fetch ALL ads (1 API call)
+    # Step 4: Fetch ALL asset_groups (1 API call)
+    # Then build parent-child relationships in memory.
+    # =========================================================================
+
+    # Maps to track entity relationships: external_id -> Entity
+    campaign_entity_map: Dict[str, Any] = {}  # campaign_id -> (Entity, channel_type)
+    adset_entity_map: Dict[str, Any] = {}  # ad_group_id -> Entity
+
+    # Step 1: Fetch and upsert ALL campaigns (1 API call)
     try:
-        logger.info("[GOOGLE_SYNC] Fetching campaigns for customer %s", customer_id)
+        logger.info("[GOOGLE_SYNC] Fetching ALL campaigns for customer %s (1 API call)", customer_id)
         campaigns = client.list_campaigns(customer_id)
+        logger.info("[GOOGLE_SYNC] Found %d campaigns", len(campaigns))
+
         for c in campaigns:
             goal = map_channel_to_goal(c.get("advertising_channel_type"))
             camp, created = _upsert_entity(
@@ -317,93 +343,125 @@ def sync_google_entities(
             else:
                 stats.campaigns_updated += 1
 
-            # Route by channel type: STANDARD (ad groups/ads) vs PMax (asset groups/assets)
-            chan = c.get("advertising_channel_type") or ""
-            logger.info("[GOOGLE_SYNC] Campaign %s (%s) has channel_type=%s", c.get("id"), c.get("name"), chan)
-            if str(chan).upper() == "PERFORMANCE_MAX":
-                # Asset Groups for PMax campaigns - these are the leaf entities for metrics
-                # Asset Groups are similar to ads in traditional campaigns
-                try:
-                    agroups = client.list_asset_groups(customer_id, str(c["id"]))
-                    logger.info("[GOOGLE_SYNC] PMax campaign %s has %d asset_groups", c.get("id"), len(agroups))
-                    for grp in agroups:
-                        asset_group_entity, ag_created = _upsert_entity(
-                            db=db,
-                            connection=connection,
-                            external_id=str(grp["id"]),
-                            level=LevelEnum.asset_group,  # Use proper asset_group level
-                            name=grp.get("name") or f"Asset Group {grp['id']}",
-                            status=_normalize_status(grp.get("status")),
-                            parent_id=camp.id,
-                        )
-                        if ag_created:
-                            stats.adsets_created += 1  # Count as adsets for UI totals
-                        else:
-                            stats.adsets_updated += 1
-
-                        # Note: We don't sync individual assets as they don't have metrics
-                        # The asset_group level is where metrics are reported for PMax
-                except Exception as e:
-                    logger.exception("[GOOGLE_SYNC] Asset groups fetch failed for campaign %s: %s", c.get("id"), e)
-                    errors.append(f"campaign {c.get('id')}: {e}")
-            else:
-                # Standard campaigns: Ad groups and ads
-                # Note: Shopping campaigns have ad_groups but NO ad_group_ad entities
-                chan_upper = str(chan).upper()
-                is_shopping = chan_upper == "SHOPPING"
-
-                try:
-                    ad_groups = client.list_ad_groups(customer_id, str(c["id"]))
-                    logger.info("[GOOGLE_SYNC] Campaign %s has %d ad_groups", c.get("id"), len(ad_groups))
-                    for ag in ad_groups:
-                        adset, ag_created = _upsert_entity(
-                            db=db,
-                            connection=connection,
-                            external_id=str(ag["id"]),
-                            level=LevelEnum.adset,
-                            name=ag.get("name") or f"Ad group {ag['id']}",
-                            status=_normalize_status(ag.get("status")),
-                            parent_id=camp.id,
-                        )
-                        if ag_created:
-                            stats.adsets_created += 1
-                        else:
-                            stats.adsets_updated += 1
-
-                        # Ads - try to fetch for all campaign types including Shopping
-                        # Some Shopping campaigns may have ad_group_ad records with metrics
-                        try:
-                            ads = client.list_ads(customer_id, str(ag["id"]))
-                            for ad in ads:
-                                # Extract tracking params for UTM detection
-                                # WHY: Enables proactive attribution warnings
-                                tracking_params = ad.get("tracking_params")
-
-                                _, ad_created = _upsert_entity(
-                                    db=db,
-                                    connection=connection,
-                                    external_id=str(ad["id"]),
-                                    level=LevelEnum.ad,
-                                    name=ad.get("name") or f"Ad {ad['id']}",
-                                    status=_normalize_status(ad.get("status")),
-                                    parent_id=adset.id,
-                                    tracking_params=tracking_params,
-                                )
-                                if ad_created:
-                                    stats.ads_created += 1
-                                else:
-                                    stats.ads_updated += 1
-                        except Exception as e:
-                            logger.exception("[GOOGLE_SYNC] Ads fetch failed for ad group %s: %s", ag.get("id"), e)
-                            errors.append(f"ad_group {ag.get('id')}: {e}")
-                except Exception as e:
-                    logger.exception("[GOOGLE_SYNC] Ad groups fetch failed for campaign %s: %s", c.get("id"), e)
-                    errors.append(f"campaign {c.get('id')}: {e}")
+            # Store for child relationship mapping
+            campaign_entity_map[str(c["id"])] = {
+                "entity": camp,
+                "channel_type": str(c.get("advertising_channel_type") or "").upper(),
+            }
     except Exception as e:
         logger.exception("[GOOGLE_SYNC] Campaigns fetch failed: %s", e)
-        errors.append(str(e))
+        errors.append(f"campaigns: {e}")
+        # Cannot continue without campaigns
+        stats.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
+        db.commit()
+        return EntitySyncResponse(success=False, synced=stats, errors=errors)
+
+    # Step 2: Fetch and upsert ALL ad_groups (1 API call)
+    try:
+        logger.info("[GOOGLE_SYNC] Fetching ALL ad_groups for customer %s (1 API call)", customer_id)
+        all_ad_groups = client.list_all_ad_groups(customer_id)
+        logger.info("[GOOGLE_SYNC] Found %d ad_groups total", len(all_ad_groups))
+
+        for ag in all_ad_groups:
+            campaign_id = ag.get("campaign_id")
+            if not campaign_id or campaign_id not in campaign_entity_map:
+                continue  # Orphan ad_group (parent campaign not found)
+
+            parent_campaign = campaign_entity_map[campaign_id]["entity"]
+
+            adset, ag_created = _upsert_entity(
+                db=db,
+                connection=connection,
+                external_id=str(ag["id"]),
+                level=LevelEnum.adset,
+                name=ag.get("name") or f"Ad group {ag['id']}",
+                status=_normalize_status(ag.get("status")),
+                parent_id=parent_campaign.id,
+            )
+            if ag_created:
+                stats.adsets_created += 1
+            else:
+                stats.adsets_updated += 1
+
+            # Store for child relationship mapping
+            adset_entity_map[str(ag["id"])] = adset
+
+    except Exception as e:
+        logger.exception("[GOOGLE_SYNC] Ad groups batch fetch failed: %s", e)
+        errors.append(f"ad_groups: {e}")
+
+    # Step 3: Fetch and upsert ALL ads (1 API call)
+    try:
+        logger.info("[GOOGLE_SYNC] Fetching ALL ads for customer %s (1 API call)", customer_id)
+        all_ads = client.list_all_ads(customer_id)
+        logger.info("[GOOGLE_SYNC] Found %d ads total", len(all_ads))
+
+        for ad in all_ads:
+            ad_group_id = ad.get("ad_group_id")
+            if not ad_group_id or ad_group_id not in adset_entity_map:
+                continue  # Orphan ad (parent ad_group not found)
+
+            parent_adset = adset_entity_map[ad_group_id]
+            tracking_params = ad.get("tracking_params")
+
+            _, ad_created = _upsert_entity(
+                db=db,
+                connection=connection,
+                external_id=str(ad["id"]),
+                level=LevelEnum.ad,
+                name=ad.get("name") or f"Ad {ad['id']}",
+                status=_normalize_status(ad.get("status")),
+                parent_id=parent_adset.id,
+                tracking_params=tracking_params,
+            )
+            if ad_created:
+                stats.ads_created += 1
+            else:
+                stats.ads_updated += 1
+
+    except Exception as e:
+        logger.exception("[GOOGLE_SYNC] Ads batch fetch failed: %s", e)
+        errors.append(f"ads: {e}")
+
+    # Step 4: Fetch and upsert ALL asset_groups for PMax campaigns (1 API call)
+    try:
+        logger.info("[GOOGLE_SYNC] Fetching ALL asset_groups for customer %s (1 API call)", customer_id)
+        all_asset_groups = client.list_all_asset_groups(customer_id)
+        logger.info("[GOOGLE_SYNC] Found %d asset_groups total", len(all_asset_groups))
+
+        for grp in all_asset_groups:
+            campaign_id = grp.get("campaign_id")
+            if not campaign_id or campaign_id not in campaign_entity_map:
+                continue  # Orphan asset_group (parent campaign not found)
+
+            parent_campaign = campaign_entity_map[campaign_id]["entity"]
+
+            asset_group_entity, ag_created = _upsert_entity(
+                db=db,
+                connection=connection,
+                external_id=str(grp["id"]),
+                level=LevelEnum.asset_group,
+                name=grp.get("name") or f"Asset Group {grp['id']}",
+                status=_normalize_status(grp.get("status")),
+                parent_id=parent_campaign.id,
+            )
+            if ag_created:
+                stats.adsets_created += 1  # Count as adsets for UI totals
+            else:
+                stats.adsets_updated += 1
+
+    except Exception as e:
+        logger.exception("[GOOGLE_SYNC] Asset groups batch fetch failed: %s", e)
+        errors.append(f"asset_groups: {e}")
 
     stats.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
+    logger.info(
+        "[GOOGLE_SYNC] Entity sync complete in %.2fs: %d campaigns, %d adsets, %d ads (4 API calls total)",
+        stats.duration_seconds,
+        stats.campaigns_created + stats.campaigns_updated,
+        stats.adsets_created + stats.adsets_updated,
+        stats.ads_created + stats.ads_updated,
+    )
     db.commit()
     return EntitySyncResponse(success=len(errors) == 0, synced=stats, errors=errors)
 

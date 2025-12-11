@@ -129,20 +129,24 @@ async def scheduler_shutdown(ctx: Dict) -> None:
 # =============================================================================
 
 class SchedulerSettings:
-    """ARQ scheduler configuration - runs cron jobs only.
+    """ARQ scheduler configuration - runs cron jobs ONLY.
 
     WHAT:
         Dedicated scheduler that ONLY runs cron jobs.
-        Does NOT process ad-hoc sync jobs (that's the worker's job).
+        Uses a separate queue (arq:cron) to avoid picking up sync jobs.
 
     WHY:
         - Single scheduler instance prevents duplicate cron execution
-        - Workers can scale independently for job processing
-        - Clear separation of concerns
+        - Workers can scale independently for job processing (10+ concurrent syncs)
+        - Scheduler uses arq:cron, workers use arq:queue (no interference)
+
+    SCALING:
+        - Scheduler: 1 instance, runs cron, enqueues to arq:queue
+        - Workers: N instances, each with max_jobs=10, process from arq:queue
+        - 200 concurrent syncs = 20 workers or adjust max_jobs
     """
 
-    # No ad-hoc job functions - this is a scheduler, not a worker
-    # The cron jobs enqueue work to be processed by arq_worker
+    # Only cron-related functions - sync jobs go to workers via arq:queue
     functions = [
         scheduled_realtime_sync,
         scheduled_attribution_sync,
@@ -174,8 +178,11 @@ class SchedulerSettings:
     keep_result = 300                # Keep results for 5 min
     health_check_interval = 30       # Health check every 30s
 
-    # Queue name (same as worker so cron jobs can enqueue to it)
-    queue_name = "arq:queue"
+    # IMPORTANT: Use separate queue so scheduler doesn't pick up sync jobs
+    # Scheduler: arq:cron (cron jobs only)
+    # Worker: arq:queue (sync jobs)
+    # Cron jobs enqueue sync jobs to arq:queue via arq_enqueue.py
+    queue_name = "arq:cron"
 
 
 # =============================================================================

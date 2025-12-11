@@ -5,6 +5,12 @@
 /.pnp
 .pnp.js
 
+# BMAD
+.agent
+.bmad
+.cursor
+.claude
+
 # testing
 /coverage
 

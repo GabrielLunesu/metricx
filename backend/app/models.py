@@ -264,8 +264,15 @@ class Connection(Base):
     last_metrics_changed_at = Column(DateTime, nullable=True)  # Last actual data change (freshness)
     total_syncs_attempted = Column(Integer, default=0)  # Counter: all attempts
     total_syncs_with_changes = Column(Integer, default=0)  # Counter: syncs with DB writes
-    sync_status = Column(String, default="idle")  # idle, syncing, error
+    sync_status = Column(String, default="idle")  # idle, syncing, error, rate_limited
     last_sync_error = Column(Text, nullable=True)  # Error message from last failure
+
+    # Circuit breaker for API rate limiting
+    # WHAT: Timestamp until which this connection should not attempt syncing
+    # WHY: When Google/Meta returns 429 "quota exhausted", we respect the retry hint
+    #      and skip syncing until the cooldown expires
+    # REFERENCES: docs/living-docs/plans/fancy-launching-lake.md (quota fix plan)
+    rate_limited_until = Column(DateTime(timezone=True), nullable=True)
 
     # Foreign key - EVERY connection belongs to exactly ONE workspace
     # This ensures data isolation between different companies

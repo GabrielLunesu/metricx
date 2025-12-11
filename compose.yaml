@@ -135,7 +135,7 @@ services:
     restart: always
 
   # Scheduler - runs cron jobs that enqueue work to the ARQ worker
-  # Uses same image as worker since it imports from arq_worker module
+  # Uses arq:cron queue, worker uses arq:queue (separate to avoid conflicts)
   scheduler:
     build:
       context: ./backend
@@ -144,7 +144,6 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
-      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
       # Error tracking
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SENTRY_DSN: ${SENTRY_DSN:-}

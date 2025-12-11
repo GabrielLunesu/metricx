@@ -11,7 +11,9 @@ function formatRelativeTime(isoString) {
     if (!isoString) return null;
 
     try {
-        const date = new Date(isoString);
+        // Append 'Z' to indicate UTC if no timezone is present
+        const dateStr = isoString.includes('Z') || isoString.includes('+') ? isoString : isoString + 'Z';
+        const date = new Date(dateStr);
         const now = new Date();
         const diffMs = now - date;
         const diffSec = Math.floor(diffMs / 1000);
