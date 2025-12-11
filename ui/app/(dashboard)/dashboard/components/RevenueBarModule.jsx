@@ -240,7 +240,7 @@ export default function RevenueBarModule({ workspaceId, loading: parentLoading }
 
                 {/* Highlight badge for highest */}
                 {isHighest && bar.revenue > 0 && (
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2">
+                  <div className="absolute -top-14 left-1/2 -translate-x-1/2">
                     <div className="flex items-center gap-0.5 bg-slate-900 text-emerald-400 text-[9px] font-medium px-1.5 py-0.5 rounded-full">
                       <TrendingUp className="w-2.5 h-2.5" />
                     </div>
