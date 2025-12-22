@@ -60,7 +60,7 @@ export default function CTASectionNew() {
               <svg className="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span>Free 14-day trial</span>
+              <span>Free until mid-January!</span>
             </div>
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">

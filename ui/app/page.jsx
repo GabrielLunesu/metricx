@@ -3,7 +3,7 @@
 /**
  * HomePage - Modern landing page for metricx ad analytics platform
  * White theme with flowing data visualizations and premium design
- * Structure: Hero -> Features -> Copilot -> Data Ingestion -> CTA -> Footer
+ * Structure: Hero -> Features -> Copilot -> Data Ingestion -> Pricing -> CTA -> Footer
  * Related: components/landing/*
  */
 
@@ -11,6 +11,7 @@ import HeroSectionNew from "@/components/landing/HeroSectionNew";
 import FeaturesSectionNew from "@/components/landing/FeaturesSectionNew";
 import CopilotShowcaseSection from "@/components/landing/CopilotShowcaseSection";
 import DataIngestionSection from "@/components/landing/DataIngestionSection";
+import PricingSectionNew from "@/components/landing/PricingSectionNew";
 import CTASectionNew from "@/components/landing/CTASectionNew";
 import FooterSectionNew from "@/components/landing/FooterSectionNew";
 
@@ -40,6 +41,9 @@ export default function HomePage() {
 
       {/* Data ingestion / platform integrations */}
       <DataIngestionSection />
+
+      {/* Pricing */}
+      <PricingSectionNew />
 
       {/* Final CTA */}
       <CTASectionNew />

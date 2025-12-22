@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timezone
 import enum
 
-from sqlalchemy import Column, String, DateTime, Enum, Integer, BigInteger, ForeignKey, Numeric, JSON, Text, Boolean, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, Date, Enum, Integer, BigInteger, ForeignKey, Numeric, JSON, Text, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -24,6 +24,38 @@ class RoleEnum(str, enum.Enum):
     owner = "Owner"
     admin = "Admin"
     viewer = "Viewer"
+
+
+class BillingStatusEnum(str, enum.Enum):
+    """Workspace subscription status.
+
+    WHAT: Represents the billing state of a workspace
+    WHY: Determines access to subscription-gated routes (/onboarding, /dashboard)
+
+    Allowed states (grant access): trialing, active
+    Blocked states (deny access): locked, canceled, past_due, incomplete, revoked
+    """
+    locked = "locked"          # Default state - no subscription yet
+    trialing = "trialing"      # Free trial active
+    active = "active"          # Paid subscription active
+    canceled = "canceled"      # Subscription canceled (may still be active until period end)
+    past_due = "past_due"      # Payment failed, grace period
+    incomplete = "incomplete"  # Checkout started but not completed
+    revoked = "revoked"        # Access revoked (e.g., fraud, chargeback)
+
+
+class BillingPlanEnum(str, enum.Enum):
+    """Workspace billing plan tier.
+
+    WHAT: Represents the feature tier of a workspace
+    WHY: Determines feature limits (ad accounts, pages, team invites)
+
+    free: Limited features (1 ad account, dashboard only, no team invites)
+    starter: Full features ($79/month or $569/year)
+    """
+    free = "free"        # Free tier - limited features
+    starter = "starter"  # Paid tier - full features
+
 
 class InviteStatusEnum(str, enum.Enum):
     pending = "pending"
@@ -105,6 +137,69 @@ class Workspace(Base):
     # WHAT: Timestamp of last successful sync for any connection in this workspace
     # WHY: Shows "Last updated X min ago" in dashboard UI
     last_synced_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Business Profile Fields (collected during onboarding)
+    # WHAT: Business context for AI personalization and copilot responses
+    # WHY: Copilot uses this to give contextually relevant answers
+    # REFERENCES: backend/app/routers/onboarding.py, backend/app/agent/nodes.py
+    domain = Column(String, nullable=True)  # e.g., "acme.com"
+    domain_description = Column(Text, nullable=True)  # AI-extracted business description
+    niche = Column(String, nullable=True)  # e.g., "Fashion", "SaaS", "E-commerce"
+    target_markets = Column(JSON, nullable=True)  # e.g., ["United States", "Europe", "Worldwide"]
+    brand_voice = Column(String, nullable=True)  # e.g., "Professional", "Casual", "Luxury"
+    business_size = Column(String, nullable=True)  # e.g., "startup", "smb", "enterprise"
+
+    # Onboarding tracking
+    # WHAT: Tracks whether user has completed onboarding flow
+    # WHY: New users are redirected to /onboarding until this is true
+    onboarding_completed = Column(Boolean, default=False)
+    onboarding_completed_at = Column(DateTime(timezone=True), nullable=True)
+    intended_ad_providers = Column(JSON, nullable=True)  # e.g., ["meta", "google"]
+
+    # ==========================================================================
+    # BILLING FIELDS (Polar Integration)
+    # ==========================================================================
+    # WHAT: Per-workspace subscription state for access gating
+    # WHY: Each workspace requires its own subscription (Monthly $79 / Annual $569)
+    # REFERENCES:
+    #   - openspec/changes/add-polar-workspace-billing/proposal.md
+    #   - backend/app/routers/polar.py (webhook handler)
+
+    # Subscription status - determines access to /onboarding, /dashboard
+    # Allowed states: trialing, active | Blocked: everything else
+    billing_status = Column(
+        Enum(BillingStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
+        default=BillingStatusEnum.locked,
+        nullable=False
+    )
+
+    # Feature tier: free (limited) or starter (full features)
+    # WHAT: Determines feature limits (ad accounts, pages, team invites)
+    # WHY: Free tier allows 1 ad account, dashboard only, no team invites
+    billing_tier = Column(
+        Enum(BillingPlanEnum, values_callable=lambda obj: [e.value for e in obj]),
+        default=BillingPlanEnum.free,
+        nullable=False
+    )
+
+    # Plan type: monthly or annual (only set for paid tiers)
+    billing_plan = Column(String, nullable=True)  # "monthly" | "annual" | None
+
+    # Polar subscription ID (set after checkout.updated webhook)
+    polar_subscription_id = Column(String, nullable=True, unique=True)
+
+    # Polar customer ID (for portal link generation)
+    polar_customer_id = Column(String, nullable=True)
+
+    # Trial and period timestamps
+    trial_end = Column(DateTime(timezone=True), nullable=True)
+    current_period_start = Column(DateTime(timezone=True), nullable=True)
+    current_period_end = Column(DateTime(timezone=True), nullable=True)
+
+    # Pending workspace tracking (for cap enforcement)
+    # WHAT: Timestamp when workspace entered locked state
+    # WHY: Enforce max 2 pending workspaces per owner/admin
+    pending_since = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships - these create reverse lookups
     users = relationship("User", back_populates="workspace")  # Active workspace for the user (legacy single workspace)
@@ -543,6 +638,12 @@ class MetricSnapshot(Base):
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
     provider = Column(String(20), nullable=False)  # 'meta', 'google', 'tiktok'
     captured_at = Column(DateTime(timezone=True), nullable=False)
+
+    # The date this data represents (from ad platform, in account timezone)
+    # WHY: Ad platforms report metrics by calendar day in the account's timezone.
+    # This field stores that date explicitly, avoiding timezone math when querying.
+    # Example: Google returns {"date": "2025-12-12", ...} - we store 2025-12-12 here.
+    metrics_date = Column(Date, nullable=True, index=True)  # nullable for migration
 
     # Base measures (same as MetricFact)
     spend = Column(Numeric(18, 4), nullable=True)
@@ -1402,6 +1503,94 @@ class Attribution(Base):
     def __str__(self):
         entity_name = self.entity.name if self.entity else self.provider
         return f"Attribution to {entity_name} ({self.match_type}, {self.confidence})"
+
+
+# =============================================================================
+# POLAR BILLING MODELS
+# =============================================================================
+# WHAT: Models for Polar checkout-to-workspace mapping and webhook idempotency
+# WHY: Design says not to rely on metadata; instead persist checkout mapping
+# REFERENCES:
+#   - openspec/changes/add-polar-workspace-billing/design.md
+#   - backend/app/routers/polar.py
+
+
+class PolarCheckoutMapping(Base):
+    """Maps Polar checkout_id to workspace for webhook resolution.
+
+    WHAT: Persists the mapping when creating a Polar checkout
+    WHY: Webhook payloads may not include metadata; we need to look up workspace
+         from checkout_id when processing checkout.updated events
+
+    Lifecycle:
+        1. User initiates checkout → create mapping with workspace_id, checkout_id, plan
+        2. checkout.updated webhook → lookup workspace by checkout_id, update subscription_id
+        3. After successful link → mapping can be archived or kept for audit
+    """
+    __tablename__ = "polar_checkout_mappings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+
+    # Polar identifiers
+    polar_checkout_id = Column(String, nullable=False, unique=True, index=True)
+
+    # Requested plan: monthly | annual
+    requested_plan = Column(String, nullable=False)
+
+    # Who initiated the checkout
+    created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    # Checkout status tracking
+    status = Column(String, default="pending")  # pending, completed, expired, failed
+
+    # Subscription link (set after checkout.updated)
+    polar_subscription_id = Column(String, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    def __str__(self):
+        return f"Checkout {self.polar_checkout_id} → Workspace {self.workspace_id}"
+
+
+class PolarWebhookEvent(Base):
+    """Stores processed Polar webhook events for idempotency.
+
+    WHAT: Records each webhook event to prevent duplicate processing
+    WHY: Polar may retry webhook deliveries; we must ignore duplicates
+
+    Idempotency strategy:
+        - On webhook receive, compute event_key from (type, timestamp, data.id)
+        - If event_key exists in this table, skip processing (return 200 OK)
+        - If new, insert row THEN process event
+        - Use short TTL (e.g., 7 days) for cleanup to prevent unbounded growth
+
+    REFERENCES:
+        - openspec/changes/add-polar-workspace-billing/design.md (Idempotency section)
+    """
+    __tablename__ = "polar_webhook_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Unique event identifier for deduplication
+    # Format: "{event_type}:{timestamp}:{data.id}" or use Polar's event_id if available
+    event_key = Column(String, nullable=False, unique=True, index=True)
+
+    # Event metadata for debugging/audit
+    event_type = Column(String, nullable=False)  # e.g., "checkout.updated", "subscription.active"
+    polar_data_id = Column(String, nullable=True)  # data.id from payload
+
+    # Raw payload (for debugging/replay if needed)
+    payload_json = Column(JSON, nullable=True)
+
+    # Processing result
+    processed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    processing_result = Column(String, default="success")  # success, error, skipped
+
+    def __str__(self):
+        return f"Webhook {self.event_type} at {self.processed_at}"
 
 
 # Local auth credential (password hash stored separately) ----------

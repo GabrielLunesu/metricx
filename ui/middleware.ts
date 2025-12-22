@@ -49,9 +49,7 @@ export const config = {
   matcher: [
     // Match all routes except:
     // - Static files (_next, images, fonts, etc.)
-    // - API routes handled separately
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes (if any frontend API routes exist)
-    '/(api|trpc)(.*)',
+    // - /api/* routes (these are proxied to backend which has its own auth)
+    '/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
   ],
 }

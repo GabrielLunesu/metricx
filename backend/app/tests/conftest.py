@@ -29,7 +29,8 @@ if str(BACKEND_ROOT) not in sys.path:
 
 # Set test environment
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret")
-os.environ.setdefault("TOKEN_ENCRYPTION_KEY", "test-encryption-key")
+# Must be URL-safe base64-encoded 32-byte string (app.security validates at import time)
+os.environ.setdefault("TOKEN_ENCRYPTION_KEY", "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=")
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("OPENAI_API_KEY", "test-api-key")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379")

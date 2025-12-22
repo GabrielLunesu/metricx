@@ -4,7 +4,7 @@ QA Router
 
 HTTP endpoint for natural language question answering using the Agentic Copilot.
 
-VERSION 4.0 - Agentic Copilot with LangGraph + Claude
+VERSION 4.1 - Agentic Copilot with LangGraph + GPT-4o-mini (cost-optimized)
 
 Related files:
 - app/agent/nodes.py: Agent nodes (understand, fetch_data, respond)
@@ -49,6 +49,7 @@ from app.telemetry import (
     log_generation,
     set_user_context,
 )
+from app.telemetry.llm_trace import log_live_api_call, log_live_api_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +161,75 @@ def _normalize_question(question: str) -> str:
     return normalized
 
 
+def _build_business_context_answer(question: str, business_context: dict) -> str:
+    """
+    Build a response for business context questions.
+
+    WHAT: Answers questions about the user's business profile
+    WHY: These don't require data fetching, just reading from workspace settings
+    """
+    if not business_context:
+        return "I don't have your business profile on file yet. You can set it up in Settings → Business."
+
+    question_lower = question.lower()
+
+    # Handle specific questions - order matters! Check more specific patterns first
+    if "what" in question_lower and ("do" in question_lower or "does" in question_lower or "about" in question_lower):
+        # "what does my company do" or "what is my company about"
+        about = business_context.get("about")
+        if about:
+            company = business_context.get("company_name", "Your company")
+            return f"**{company}** - {about}"
+        return "I don't have a description on file. You can add it in Settings → Business."
+
+    if "name" in question_lower or ("company" in question_lower and "what" not in question_lower):
+        company = business_context.get("company_name")
+        if company:
+            return f"Your company is **{company}**."
+        return "I don't have your company name on file. You can add it in Settings → Business."
+
+    if "industry" in question_lower or "niche" in question_lower:
+        industry = business_context.get("industry")
+        if industry:
+            return f"Your industry/niche is **{industry}**."
+        return "I don't have your industry/niche on file. You can add it in Settings → Business."
+
+    if "market" in question_lower:
+        markets = business_context.get("markets")
+        if markets:
+            if isinstance(markets, list):
+                markets = ", ".join(markets)
+            return f"Your target markets are: **{markets}**."
+        return "I don't have your target markets on file. You can add them in Settings → Business."
+
+    if "brand" in question_lower or "voice" in question_lower:
+        voice = business_context.get("brand_voice")
+        if voice:
+            return f"Your brand voice is set to **{voice}**."
+        return "I don't have your brand voice on file. You can set it in Settings → Business."
+
+    # General business context summary
+    parts = []
+    if business_context.get("company_name"):
+        parts.append(f"**Company:** {business_context['company_name']}")
+    if business_context.get("industry"):
+        parts.append(f"**Industry:** {business_context['industry']}")
+    if business_context.get("markets"):
+        markets = business_context["markets"]
+        if isinstance(markets, list):
+            markets = ", ".join(markets)
+        parts.append(f"**Markets:** {markets}")
+    if business_context.get("about"):
+        parts.append(f"**About:** {business_context['about']}")
+    if business_context.get("brand_voice"):
+        parts.append(f"**Brand Voice:** {business_context['brand_voice']}")
+
+    if parts:
+        return "Here's your business profile:\n\n" + "\n".join(parts)
+
+    return "I don't have your business profile on file yet. You can set it up in Settings → Business."
+
+
 def _get_insight_cache_key(workspace_id: str, question: str) -> str:
     """Generate cache key for insight.
 
@@ -224,7 +294,7 @@ def get_insights(
         - Finance page highlights
     """
     import json as json_module
-    from app.agent.nodes import get_claude_client, UNDERSTAND_PROMPT
+    from app.agent.nodes import get_openai_client, UNDERSTAND_PROMPT, LLM_MODEL
     from app.agent.tools import SemanticTools
 
     user_id = str(current_user.id)
@@ -252,17 +322,19 @@ def get_insights(
             # Continue without cache - don't fail the request
 
     try:
-        client = get_claude_client()
+        client = get_openai_client()
 
         # Step 1: Understand the question
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
             max_tokens=512,
-            system=UNDERSTAND_PROMPT,
-            messages=[{"role": "user", "content": question}],
+            messages=[
+                {"role": "system", "content": UNDERSTAND_PROMPT},
+                {"role": "user", "content": question}
+            ],
         )
 
-        content = response.content[0].text
+        content = response.choices[0].message.content
         if "```json" in content:
             json_str = content.split("```json")[1].split("```")[0]
         elif "```" in content:
@@ -321,24 +393,26 @@ RULES:
 - Do NOT offer to show more data"""
 
         data_summary = json_module.dumps(data, indent=2, default=str)
-        messages = [{
-            "role": "user",
-            "content": f"""Question: "{question}"
+        messages = [
+            {"role": "system", "content": INSIGHT_PROMPT},
+            {
+                "role": "user",
+                "content": f"""Question: "{question}"
 
 Data:
 {data_summary}
 
 Provide a brief insight."""
-        }]
+            }
+        ]
 
-        insight_response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+        insight_response = client.chat.completions.create(
+            model=LLM_MODEL,
             max_tokens=256,  # Keep responses short
-            system=INSIGHT_PROMPT,
             messages=messages,
         )
 
-        answer = insight_response.content[0].text
+        answer = insight_response.choices[0].message.content
 
         # ==========================================================================
         # CACHE WRITE: Store result for future requests
@@ -904,7 +978,7 @@ def ask_question_agent_sync(
 
 
 # =============================================================================
-# DIRECT SSE STREAMING ENDPOINT (no Redis)
+# DIRECT SSE STREAMING ENDPOINT (v2 - Free Agent)
 # =============================================================================
 
 @router.post("/agent/sse")
@@ -915,28 +989,39 @@ async def ask_question_agent_sse(
     current_user=Depends(get_current_user),
 ):
     """
-    POST /qa/agent/sse
+    POST /qa/agent/sse (v2 - Free Agent)
 
-    Direct SSE streaming endpoint for agent (no Redis queue).
+    Direct SSE streaming endpoint for the free-form ReAct agent.
 
     WHAT:
-        Streams agent response token-by-token via Server-Sent Events.
-        Provides real-time typing effect in the frontend.
-        Uses ASYNC Claude client to avoid blocking the event loop.
+        Streams agent response via Server-Sent Events. The agent (LLM)
+        autonomously decides which tools to call based on the question.
+
+    HOW IT WORKS:
+        1. LLM sees the question and ALL available tools
+        2. LLM decides what tool(s) to call (or answer directly)
+        3. Tools execute, results added to context
+        4. Loop until LLM has enough info to answer (max 5 iterations)
+        5. Final answer streamed token-by-token
+
+    DATA SOURCE PRIORITY (embedded in tool descriptions):
+        - Snapshots FIRST (fast, updated every 15 min) for metrics
+        - Live API only for data not in snapshots (start_date, keywords, etc.)
+        - Response always includes data freshness info
 
     EVENTS:
         - thinking: Agent is processing
+        - tool_call: Tool being called (name, args)
+        - tool_result: Tool execution result (preview)
         - token: Single answer token (for typing effect)
-        - visual: Chart/table specification
         - done: Final result with all data
         - error: Something went wrong
 
     NON-BLOCKING:
-        This endpoint uses AsyncAnthropic and asyncio.to_thread() for DB queries
-        to avoid blocking the event loop. Multiple concurrent requests can be handled.
+        Uses async OpenAI client and asyncio.to_thread() for DB queries.
     """
-    from app.agent.nodes import get_async_claude_client, UNDERSTAND_PROMPT, RESPOND_PROMPT, _build_visuals_from_data
-    from app.agent.tools import SemanticTools
+    from app.agent.graph import run_agent_async
+    from app.agent.stream import StreamPublisher, create_async_queue_publisher
     import json as json_module
     import time as time_module
 
@@ -962,178 +1047,139 @@ async def ask_question_agent_sse(
         user_id=user_id,
         workspace_id=workspace_id,
         question_length=len(question),
-        has_context=False,  # TODO: Add context tracking
+        has_context=False,
     )
 
     async def generate():
-        """Generator that yields SSE events.
+        """Generator that yields SSE events from the free agent.
 
-        Uses async Claude client and thread pool for DB to avoid blocking.
+        Creates an async queue for events and runs the agent in parallel.
         """
         start_time = time_module.time()
-        total_tokens = 0
-        success = False
 
         try:
-            # Stage 1: Understanding (ASYNC - non-blocking)
+            # Create async queue for streaming events
+            event_queue = asyncio.Queue()
+
+            # Create publisher that pushes to the queue
+            publisher = create_async_queue_publisher(event_queue)
+
+            # Emit initial thinking event
             yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Understanding your question...'})}\n\n"
 
-            client = get_async_claude_client()
-
-            # Understand the question - ASYNC call
-            response = await client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=1024,
-                system=UNDERSTAND_PROMPT,
-                messages=[{"role": "user", "content": question}],
-            )
-
-            # Log understand generation to Langfuse
-            if trace and response.usage:
-                log_generation(
-                    trace=trace,
-                    name="understand",
-                    model="claude-sonnet-4-20250514",
-                    input_messages=[{"role": "user", "content": question}],
-                    output=response.content[0].text,
-                    usage={
-                        "input": response.usage.input_tokens,
-                        "output": response.usage.output_tokens,
-                        "total": response.usage.input_tokens + response.usage.output_tokens,
-                    },
-                )
-                total_tokens += response.usage.input_tokens + response.usage.output_tokens
-
-            content = response.content[0].text
-            if "```json" in content:
-                json_str = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                json_str = content.split("```")[1].split("```")[0]
-            else:
-                json_str = content
-
-            parsed = json_module.loads(json_str.strip())
-            intent = parsed.get("intent", "metric_query")
-
-            # Build semantic query (use 'or' to handle null values)
-            semantic_query = {
-                "metrics": parsed.get("metrics") or ["roas"],
-                "time_range": parsed.get("time_range") or "7d",
-                "breakdown_level": parsed.get("breakdown_level"),
-                "compare_to_previous": parsed.get("compare_to_previous") or False,
-                "include_timeseries": parsed.get("include_timeseries") or False,
-                "filters": parsed.get("filters") or {},
-            }
-
-            # Auto-enable timeseries for comparisons
-            if semantic_query["compare_to_previous"] and not semantic_query["include_timeseries"]:
-                semantic_query["include_timeseries"] = True
-
-            yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Fetching your data...'})}\n\n"
-
-            # Stage 2: Fetch data - run in thread pool to avoid blocking
-            def fetch_data_sync():
-                tools = SemanticTools(db, workspace_id, user_id)
-                return tools.query_metrics(
-                    metrics=semantic_query["metrics"],
-                    time_range=semantic_query["time_range"],
-                    breakdown_level=semantic_query.get("breakdown_level"),
-                    compare_to_previous=semantic_query.get("compare_to_previous", False),
-                    include_timeseries=semantic_query.get("include_timeseries", False),
-                    filters=semantic_query.get("filters"),
-                )
-
-            result = await asyncio.to_thread(fetch_data_sync)
-
-            if result.get("error"):
-                yield f"data: {json_module.dumps({'type': 'error', 'data': result['error']})}\n\n"
-                return
-
-            data = result.get("data", {})
-
-            yield f"data: {json_module.dumps({'type': 'thinking', 'data': 'Preparing your answer...'})}\n\n"
-
-            # Stage 3: Stream the response - ASYNC streaming
-            data_summary = json_module.dumps(data, indent=2, default=str)
-            messages = [{
-                "role": "user",
-                "content": f"""User asked: "{question}"
-
-Intent: {intent}
-
-Data retrieved:
-{data_summary}
-
-Please write a helpful, conversational response based on this data."""
-            }]
-
-            full_answer = ""
-            async with client.messages.stream(
-                model="claude-sonnet-4-20250514",
-                max_tokens=1024,
-                system=RESPOND_PROMPT,
-                messages=messages,
-            ) as stream:
-                async for text in stream.text_stream:
-                    full_answer += text
-                    yield f"data: {json_module.dumps({'type': 'token', 'data': text})}\n\n"
-
-                # Log respond generation to Langfuse (after stream completes)
-                final_message = await stream.get_final_message()
-                if trace and final_message.usage:
-                    log_generation(
-                        trace=trace,
-                        name="respond",
-                        model="claude-sonnet-4-20250514",
-                        input_messages=messages,
-                        output=full_answer,
-                        usage={
-                            "input": final_message.usage.input_tokens,
-                            "output": final_message.usage.output_tokens,
-                            "total": final_message.usage.input_tokens + final_message.usage.output_tokens,
-                        },
+            # Run agent in background task
+            async def run_agent_task():
+                """Run the agent and push events to queue."""
+                try:
+                    result = await run_agent_async(
+                        question=question,
+                        workspace_id=workspace_id,
+                        user_id=user_id,
+                        db=db,
+                        publisher=publisher,
+                        conversation_history=None,  # TODO: Add context
                     )
-                    total_tokens += final_message.usage.input_tokens + final_message.usage.output_tokens
+                    # Push final result
+                    await event_queue.put({"type": "agent_done", "data": result})
+                except Exception as e:
+                    logger.exception(f"[QA_SSE] Agent task failed: {e}")
+                    await event_queue.put({"type": "error", "data": str(e)})
 
-            # Stage 4: Send visuals
-            visuals = _build_visuals_from_data(data, semantic_query)
-            if visuals:
-                yield f"data: {json_module.dumps({'type': 'visual', 'data': visuals}, default=str)}\n\n"
+            # Start agent task
+            agent_task = asyncio.create_task(run_agent_task())
 
-            # Stage 5: Done
-            success = True
-            final_result = {
-                "success": True,
-                "answer": full_answer,
-                "visuals": visuals,
-                "data": data,
-                "semantic_query": semantic_query,
-                "intent": intent,
-            }
-            yield f"data: {json_module.dumps({'type': 'done', 'data': final_result}, default=str)}\n\n"
+            # Stream events from queue
+            full_answer = ""
+            while True:
+                try:
+                    # Wait for next event with timeout
+                    event = await asyncio.wait_for(event_queue.get(), timeout=120)
 
-            # Complete Langfuse trace
-            latency_ms = int((time_module.time() - start_time) * 1000)
-            complete_copilot_trace(
-                trace=trace,
-                success=True,
-                answer=full_answer,
-                latency_ms=latency_ms,
-                total_tokens=total_tokens,
-            )
+                    event_type = event.get("type")
+                    event_data = event.get("data")
+
+                    # Handle different event types
+                    if event_type == "thinking":
+                        yield f"data: {json_module.dumps({'type': 'thinking', 'data': event_data})}\n\n"
+
+                    elif event_type == "tool_call":
+                        # Tool being called - show user what's happening
+                        yield f"data: {json_module.dumps({'type': 'tool_call', 'data': event_data})}\n\n"
+
+                    elif event_type == "tool_result":
+                        # Tool result preview
+                        yield f"data: {json_module.dumps({'type': 'tool_result', 'data': event_data})}\n\n"
+
+                    elif event_type == "token":
+                        # Answer token (typing effect)
+                        full_answer += event_data
+                        yield f"data: {json_module.dumps({'type': 'token', 'data': event_data})}\n\n"
+
+                    elif event_type == "visual":
+                        # Chart/table spec
+                        yield f"data: {json_module.dumps({'type': 'visual', 'data': event_data}, default=str)}\n\n"
+
+                    elif event_type == "agent_done":
+                        # Agent completed - send final result
+                        result = event_data
+                        final_result = {
+                            "success": result.get("success", True),
+                            "answer": result.get("answer", full_answer),
+                            "visuals": result.get("visuals"),
+                            "data": result.get("data"),
+                            "tool_calls_made": result.get("tool_calls_made", []),
+                            "iterations": result.get("iterations", 1),
+                        }
+
+                        if result.get("error"):
+                            final_result["error"] = result["error"]
+
+                        yield f"data: {json_module.dumps({'type': 'done', 'data': final_result}, default=str)}\n\n"
+
+                        # Complete Langfuse trace
+                        latency_ms = int((time_module.time() - start_time) * 1000)
+                        complete_copilot_trace(
+                            trace=trace,
+                            success=result.get("success", True),
+                            answer=result.get("answer", ""),
+                            latency_ms=latency_ms,
+                            total_tokens=0,  # TODO: Track from agent
+                        )
+                        break
+
+                    elif event_type == "error":
+                        # Error occurred
+                        yield f"data: {json_module.dumps({'type': 'error', 'data': event_data})}\n\n"
+
+                        latency_ms = int((time_module.time() - start_time) * 1000)
+                        complete_copilot_trace(
+                            trace=trace,
+                            success=False,
+                            error=str(event_data),
+                            latency_ms=latency_ms,
+                            total_tokens=0,
+                        )
+                        break
+
+                except asyncio.TimeoutError:
+                    logger.warning("[QA_SSE] Event queue timeout")
+                    yield f"data: {json_module.dumps({'type': 'error', 'data': 'Request timed out'})}\n\n"
+                    break
+
+            # Cleanup
+            agent_task.cancel()
 
         except Exception as e:
             logger.exception(f"[QA_AGENT_SSE] Failed: {e}")
             yield f"data: {json_module.dumps({'type': 'error', 'data': str(e)})}\n\n"
 
-            # Complete Langfuse trace with error
             latency_ms = int((time_module.time() - start_time) * 1000)
             complete_copilot_trace(
                 trace=trace,
                 success=False,
                 error=str(e),
                 latency_ms=latency_ms,
-                total_tokens=total_tokens,
+                total_tokens=0,
             )
 
     return StreamingResponse(

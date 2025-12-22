@@ -41,7 +41,7 @@ from dataclasses import dataclass
 import logging
 
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, cast, Date, desc, asc
+from sqlalchemy import func, cast, Date, desc, asc, and_
 
 from app import models
 from app.metrics.registry import compute_metric, get_required_bases, is_base_measure
@@ -266,10 +266,14 @@ class UnifiedMetricService:
             Dictionary mapping metric name to list of time points
         """
         logger.info(f"[UNIFIED_METRICS] Getting timeseries for {len(metrics)} metrics (granularity={granularity})")
-        
+
         # Resolve time range
         start_date, end_date = self._resolve_time_range(time_range)
-        
+
+        # Default to campaign-level to avoid double/triple counting across hierarchy levels
+        # The same spend appears at campaign, adset, and ad levels - we only want campaign
+        level_filter = filters.level if filters.level else "campaign"
+
         # Determine grouping expression
         if granularity == "hour":
             # For hourly, we group by the full datetime (truncated to hour if needed, 
@@ -308,6 +312,7 @@ class UnifiedMetricService:
                 )
                 .join(self.E, self.E.id == self.MF.entity_id)
                 .filter(self.E.workspace_id == workspace_id)
+                .filter(self.E.level == level_filter)  # CRITICAL: Only campaign level by default
                 .filter(self.date_field.between(start_datetime, end_datetime))
                 .group_by(time_bucket)
                 .order_by(time_bucket)
@@ -329,6 +334,7 @@ class UnifiedMetricService:
                 )
                 .join(self.E, self.E.id == self.MF.entity_id)
                 .filter(self.E.workspace_id == workspace_id)
+                .filter(self.E.level == level_filter)  # CRITICAL: Only campaign level by default
                 .filter(cast(self.date_field, Date).between(start_date, end_date))
                 .group_by(time_bucket)
                 .order_by(time_bucket)
@@ -384,6 +390,7 @@ class UnifiedMetricService:
                     )
                     .join(self.E, self.E.id == self.MF.entity_id)
                     .filter(self.E.workspace_id == workspace_id)
+                    .filter(self.E.level == level_filter)  # CRITICAL: Only campaign level by default
                     .filter(self.date_field.between(prev_start_datetime, prev_end_datetime))
                     .group_by(self.date_field)
                     .order_by(self.date_field)
@@ -405,6 +412,7 @@ class UnifiedMetricService:
                     )
                     .join(self.E, self.E.id == self.MF.entity_id)
                     .filter(self.E.workspace_id == workspace_id)
+                    .filter(self.E.level == level_filter)  # CRITICAL: Only campaign level by default
                     .filter(cast(self.date_field, Date).between(prev_start_date, prev_end_date))
                     .group_by(cast(self.date_field, Date))
                     .order_by(cast(self.date_field, Date))
@@ -733,7 +741,38 @@ class UnifiedMetricService:
         end_date: date,
         filters: MetricFilters
     ) -> Dict[str, float]:
-        """Get aggregated base measures for a time period."""
+        """Get aggregated base measures for a time period.
+
+        IMPORTANT:
+        1. Defaults to CAMPAIGN-level entities only (matches dashboard behavior).
+           Without this, we'd sum campaign + adset + ad levels = 3x the actual spend!
+        2. Uses only the LATEST snapshot per entity per day to avoid
+           double-counting when multiple snapshots exist (15-min sync creates many).
+        """
+        from sqlalchemy import literal_column
+        from sqlalchemy.dialects.postgresql import aggregate_order_by
+
+        # Default to campaign-level to avoid double/triple counting across hierarchy levels
+        # The same spend appears at campaign, adset, and ad levels - we only want campaign
+        level_filter = filters.level if filters.level else "campaign"
+
+        # Subquery to get latest snapshot per entity per metrics_date
+        # This avoids summing duplicate snapshots from 15-min syncs
+        latest_snapshots = (
+            self.db.query(
+                self.MF.entity_id,
+                self.MF.metrics_date,
+                func.max(self.MF.captured_at).label("max_captured_at")
+            )
+            .join(self.E, self.E.id == self.MF.entity_id)
+            .filter(self.E.workspace_id == workspace_id)
+            .filter(self.E.level == level_filter)  # CRITICAL: Only campaign level by default
+            .filter(self.MF.metrics_date.between(start_date, end_date))
+            .group_by(self.MF.entity_id, self.MF.metrics_date)
+            .subquery()
+        )
+
+        # Main query - only sum from the latest snapshots
         query = (
             self.db.query(
                 func.coalesce(func.sum(self.MF.spend), 0).label("spend"),
@@ -748,18 +787,25 @@ class UnifiedMetricService:
                 func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
             )
             .join(self.E, self.E.id == self.MF.entity_id)
+            .join(
+                latest_snapshots,
+                and_(
+                    self.MF.entity_id == latest_snapshots.c.entity_id,
+                    self.MF.metrics_date == latest_snapshots.c.metrics_date,
+                    self.MF.captured_at == latest_snapshots.c.max_captured_at,
+                )
+            )
             .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.date_field, Date).between(start_date, end_date))
         )
-        
+
         # Apply filters
         query = self._apply_filters(query, filters, workspace_id)
-        
+
         # Execute query
         row = query.first()
         if not row:
             return {}
-        
+
         return row._asdict()
     
     def _resolve_entity_name_to_descendants(self, workspace_id: str, entity_name: str) -> Optional[List[str]]:

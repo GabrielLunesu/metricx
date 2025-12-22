@@ -41,28 +41,29 @@ export default function FooterSectionNew() {
           {/* Brand column */}
           <div className="col-span-2 lg:col-span-2 pr-8">
             <div className="flex items-center gap-2 mb-6">
-              <div className="flex text-white bg-gradient-to-br from-blue-500 to-cyan-500 w-8 h-8 rounded-full items-center justify-center shadow-lg shadow-blue-500/20">
+              {/* <div className="flex text-white bg-gradient-to-br from-blue-500 to-cyan-500 w-8 h-8 rounded-full items-center justify-center shadow-lg shadow-blue-500/20">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 10c4.418 0 8-1.79 8-4s-3.582-4-8-4-8 1.79-8 4 3.582 4 8 4" />
                   <path d="M4 12v6c0 2.21 3.582 4 8 4s8-1.79 8-4v-6c0 2.21-3.582 4-8 4s-8-1.79-8-4" opacity="0.5" />
                   <path d="M4 6v6c0 2.21 3.582 4 8 4s8-1.79 8-4V6c0 2.21-3.582 4-8 4S4 8.21 4 6" opacity="0.7" />
                 </svg>
               </div>
-              <span className="text-xl font-semibold text-gray-900 tracking-tight">metricx</span>
+              <span className="text-xl font-semibold text-gray-900 tracking-tight">metricx</span> */}
+              <img src="logo.png" alt="metricx" className="h-16" />
             </div>
             <p className="leading-relaxed text-sm text-gray-500 mb-6">
               The unified ad analytics platform for modern growth teams. Connect, analyze, and optimize your ad spend across all platforms.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+              <a href="https://x.com/metricxapp" className="text-gray-400 hover:text-gray-600 transition-colors">
                 <TwitterIcon className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+              {/* <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
                 <LinkedInIcon className="w-5 h-5" />
               </a>
               <a href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
                 <GithubIcon className="w-5 h-5" />
-              </a>
+              </a> */}
             </div>
           </div>
 
@@ -78,7 +79,7 @@ export default function FooterSectionNew() {
           </div>
 
           {/* Resources column */}
-          <div>
+          {/* <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-4">Resources</h4>
             <ul className="space-y-3 text-sm text-gray-500">
               <li><a href="#" className="hover:text-blue-500 transition-colors">Documentation</a></li>
@@ -86,17 +87,17 @@ export default function FooterSectionNew() {
               <li><a href="#" className="hover:text-blue-500 transition-colors">Blog</a></li>
               <li><a href="#" className="hover:text-blue-500 transition-colors">Changelog</a></li>
             </ul>
-          </div>
+          </div> */}
 
           {/* Company column */}
-          <div>
+          {/* <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-4">Company</h4>
             <ul className="space-y-3 text-sm text-gray-500">
               <li><a href="#" className="hover:text-blue-500 transition-colors">About</a></li>
               <li><a href="#" className="hover:text-blue-500 transition-colors">Careers</a></li>
               <li><a href="#" className="hover:text-blue-500 transition-colors">Contact</a></li>
             </ul>
-          </div>
+          </div> */}
 
           {/* Legal column */}
           <div>
@@ -104,14 +105,14 @@ export default function FooterSectionNew() {
             <ul className="space-y-3 text-sm text-gray-500">
               <li><a href="/privacy" className="hover:text-blue-500 transition-colors">Privacy</a></li>
               <li><a href="/terms" className="hover:text-blue-500 transition-colors">Terms</a></li>
-              <li><a href="#" className="hover:text-blue-500 transition-colors">Security</a></li>
+              {/* <li><a href="#" className="hover:text-blue-500 transition-colors">Security</a></li> */}
             </ul>
           </div>
         </div>
 
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-gray-200 text-xs text-gray-400">
-          <p>© 2024 metricx. All rights reserved.</p>
+          <p>© 2025 metricx. All rights reserved.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />

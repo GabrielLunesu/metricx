@@ -27,7 +27,7 @@ import json
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import User, Connection, ProviderEnum
+from app.models import User, Connection, ProviderEnum, Workspace, BillingPlanEnum
 from app.services.token_service import store_connection_token
 from app.telemetry import track_connected_google_ads
 
@@ -45,15 +45,56 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_SCOPES = ["https://www.googleapis.com/auth/adwords"]
 
+# =============================================================================
+# FREE TIER LIMITS
+# =============================================================================
+# WHAT: Enforce ad account limit for free tier workspaces
+# WHY: Free tier allows only 1 ad account (Meta OR Google, not both)
+
+FREE_TIER_AD_ACCOUNT_LIMIT = 1
+
+
+def _check_ad_account_limit(db: Session, workspace_id, new_account_count: int = 1):
+    """Check if workspace can add more ad accounts based on billing tier.
+
+    Args:
+        db: Database session
+        workspace_id: Workspace UUID
+        new_account_count: Number of new accounts being added
+
+    Raises:
+        HTTPException: If free tier limit would be exceeded
+    """
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    # Paid tier has no limit
+    if workspace.billing_tier != BillingPlanEnum.free:
+        return
+
+    # Count existing ad accounts (Meta + Google)
+    existing_count = db.query(Connection).filter(
+        Connection.workspace_id == workspace_id,
+        Connection.provider.in_([ProviderEnum.meta, ProviderEnum.google]),
+    ).count()
+
+    if existing_count + new_account_count > FREE_TIER_AD_ACCOUNT_LIMIT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Free plan allows only {FREE_TIER_AD_ACCOUNT_LIMIT} ad account. Upgrade to connect more."
+        )
+
 
 @router.get("/authorize")
 async def google_authorize(
+    return_url: Optional[str] = Query(None, description="URL to redirect to after OAuth"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Redirect user to Google OAuth consent screen.
-    
+
     WHAT:
         Builds authorization URL with required parameters and redirects user.
     WHY:
@@ -64,7 +105,13 @@ async def google_authorize(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Google OAuth not configured. Missing CLIENT_ID or CLIENT_SECRET."
         )
-    
+
+    # Build state parameter with workspace_id and optional return_url
+    # Format: workspace_id|return_url (if return_url provided)
+    state = str(current_user.workspace_id)
+    if return_url:
+        state = f"{current_user.workspace_id}|{return_url}"
+
     # Build authorization URL
     params = {
         "client_id": GOOGLE_CLIENT_ID,
@@ -73,12 +120,12 @@ async def google_authorize(
         "scope": " ".join(GOOGLE_SCOPES),
         "access_type": "offline",  # Request refresh token
         "prompt": "consent",  # Force consent screen to ensure refresh token
-        "state": str(current_user.workspace_id),  # Pass workspace ID for callback
+        "state": state,  # Pass workspace ID (and optional return_url) for callback
     }
-    
+
     auth_url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
-    logger.info(f"[GOOGLE_OAUTH] Redirecting user {current_user.id} to Google consent screen")
-    
+    logger.info(f"[GOOGLE_OAUTH] Redirecting user {current_user.id} to Google consent screen (return_url={return_url})")
+
     return RedirectResponse(url=auth_url)
 
 
@@ -86,52 +133,64 @@ async def google_authorize(
 async def google_callback(
     code: Optional[str] = Query(None),
     error: Optional[str] = Query(None),
-    state: Optional[str] = Query(None),  # workspace_id
+    state: Optional[str] = Query(None),  # workspace_id|return_url
     db: Session = Depends(get_db)
 ):
     """
     Handle OAuth callback from Google.
-    
+
     WHAT:
         Exchanges authorization code for access/refresh tokens.
         Fetches customer IDs and creates connection.
     WHY:
         Completes OAuth flow and stores encrypted tokens.
     """
+    # Parse state parameter: workspace_id|return_url (return_url is optional)
+    workspace_id = None
+    return_url = None
+    if state:
+        parts = state.split("|", 1)
+        workspace_id = parts[0]
+        if len(parts) > 1:
+            return_url = parts[1]
+
+    # Determine redirect base (return_url or /settings)
+    redirect_base = f"{FRONTEND_URL}{return_url}" if return_url else f"{FRONTEND_URL}/settings"
+
     # Validate configuration
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
         logger.error("[GOOGLE_OAUTH] OAuth not configured - missing credentials")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=oauth_not_configured"
+            url=f"{redirect_base}?google_oauth=error&message=oauth_not_configured"
         )
-    
+
     # Handle errors from Google
     if error:
         logger.error(f"[GOOGLE_OAUTH] OAuth error: {error}")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message={error}"
+            url=f"{redirect_base}?google_oauth=error&message={error}"
         )
-    
+
     if not code:
         logger.error("[GOOGLE_OAUTH] Missing authorization code")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=missing_code"
+            url=f"{redirect_base}?google_oauth=error&message=missing_code"
         )
-    
+
     # Validate state parameter (workspace_id)
-    if not state:
+    if not workspace_id:
         logger.error("[GOOGLE_OAUTH] Missing state parameter")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=missing_state"
+            url=f"{redirect_base}?google_oauth=error&message=missing_state"
         )
-    
+
     # Verify workspace exists
     from app.models import Workspace
-    workspace = db.query(Workspace).filter(Workspace.id == state).first()
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
     if not workspace:
-        logger.error(f"[GOOGLE_OAUTH] Invalid workspace ID: {state}")
+        logger.error(f"[GOOGLE_OAUTH] Invalid workspace ID: {workspace_id}")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=invalid_workspace"
+            url=f"{redirect_base}?google_oauth=error&message=invalid_workspace"
         )
     
     # Exchange code for tokens
@@ -152,17 +211,17 @@ async def google_callback(
     except Exception as e:
         logger.exception("[GOOGLE_OAUTH] Failed to exchange code for tokens")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=token_exchange_failed"
+            url=f"{redirect_base}?google_oauth=error&message=token_exchange_failed"
         )
-    
+
     access_token = token_data.get("access_token")
     refresh_token = token_data.get("refresh_token")
     expires_in = token_data.get("expires_in")  # seconds
-    
+
     if not access_token or not refresh_token:
         logger.error("[GOOGLE_OAUTH] Missing tokens in response")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=missing_tokens"
+            url=f"{redirect_base}?google_oauth=error&message=missing_tokens"
         )
     
     # Fetch accessible customer IDs using the new access token
@@ -172,7 +231,7 @@ async def google_callback(
         if not developer_token:
             logger.error("[GOOGLE_OAUTH] GOOGLE_DEVELOPER_TOKEN not configured")
             return RedirectResponse(
-                url=f"{FRONTEND_URL}/settings?google_oauth=error&message=developer_token_missing"
+                url=f"{redirect_base}?google_oauth=error&message=developer_token_missing"
             )
         
         # Build temporary client with OAuth tokens
@@ -196,7 +255,7 @@ async def google_callback(
         if not customer_ids:
             logger.error("[GOOGLE_OAUTH] No accessible customers found")
             return RedirectResponse(
-                url=f"{FRONTEND_URL}/settings?google_oauth=error&message=no_customers"
+                url=f"{redirect_base}?google_oauth=error&message=no_customers"
             )
         
         logger.info(f"[GOOGLE_OAUTH] Found {len(customer_ids)} accessible customer(s)")
@@ -340,12 +399,12 @@ async def google_callback(
     except ImportError as e:
         logger.exception("[GOOGLE_OAUTH] Google Ads SDK not installed")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=sdk_not_installed"
+            url=f"{redirect_base}?google_oauth=error&message=sdk_not_installed"
         )
     except Exception as e:
         logger.exception(f"[GOOGLE_OAUTH] Failed to fetch customer details: {str(e)}")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=customer_fetch_failed"
+            url=f"{redirect_base}?google_oauth=error&message=customer_fetch_failed"
         )
     
     # Store accounts temporarily and redirect to selection page
@@ -409,7 +468,7 @@ async def google_callback(
     if len(accounts_for_selection) == 0:
         logger.warning("[GOOGLE_OAUTH] No ad accounts available (only MCCs with no children)")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?google_oauth=error&message=no_ad_accounts"
+            url=f"{redirect_base}?google_oauth=error&message=no_ad_accounts"
         )
     
     # Always show selection modal (even for single account) to allow user to review before connecting
@@ -427,8 +486,7 @@ async def google_callback(
         )
     
     session_id = str(uuid.uuid4())
-    workspace_id = state  # workspace_id from OAuth state parameter
-    
+
     # Store in Redis with 10 minute TTL (600 seconds)
     # Include MCC info so frontend can display all MCCs even if they have no children
     selection_data_json = json.dumps({
@@ -439,17 +497,17 @@ async def google_callback(
         "refresh_token": refresh_token,
         "expires_in": expires_in,
     })
-    
+
     app_state.context_manager.redis_client.setex(
         f"google_oauth_selection:{session_id}",
         600,  # TTL in seconds
         selection_data_json
     )
-    
+
     logger.info(f"[GOOGLE_OAUTH] Stored selection data with session_id: {session_id}")
-    
+
     return RedirectResponse(
-        url=f"{FRONTEND_URL}/settings?google_oauth=select&session_id={session_id}"
+        url=f"{redirect_base}?google_oauth=select&session_id={session_id}"
     )
 
 
@@ -546,13 +604,28 @@ async def connect_selected_accounts(
     access_token = selection_data["access_token"]
     refresh_token = selection_data["refresh_token"]
     expires_in = selection_data["expires_in"]
-    
+
+    # Check free tier ad account limit before creating connections
+    # Count how many are truly new (not updates to existing)
+    new_account_count = 0
+    for account_data in selected_accounts:
+        existing = db.query(Connection).filter(
+            Connection.workspace_id == workspace_id,
+            Connection.provider == ProviderEnum.google,
+            Connection.external_account_id == account_data["id"],
+        ).first()
+        if not existing:
+            new_account_count += 1
+
+    if new_account_count > 0:
+        _check_ad_account_limit(db, workspace_id, new_account_count)
+
     created_connections = []
     updated_connections = []
-    
+
     try:
         expires_at = datetime.utcnow() + timedelta(seconds=expires_in) if expires_in else None
-        
+
         for account_data in selected_accounts:
             connection = db.query(Connection).filter(
                 Connection.workspace_id == workspace_id,

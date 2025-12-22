@@ -127,7 +127,7 @@ export function DateRangePicker({
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium",
+                        "flex z-[9999] items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium",
                         "bg-white border border-slate-200",
                         "hover:bg-slate-50 hover:border-slate-300 transition-all duration-150",
                         "text-slate-700 shadow-sm",
@@ -140,7 +140,7 @@ export function DateRangePicker({
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-auto p-0 bg-white border-slate-200 shadow-xl rounded-xl overflow-hidden"
+                className="w-auto p-0 bg-white border-slate-200 shadow-xl rounded-xl overflow-hidden z-[10000]"
                 align="end"
                 sideOffset={8}
             >

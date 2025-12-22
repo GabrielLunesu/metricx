@@ -3,24 +3,27 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Settings, Loader2 } from 'lucide-react';
-import { currentUser } from '@/lib/workspace';
+import { currentUser, getBillingStatus } from '@/lib/workspace';
 import SettingsTabs from './components/SettingsTabs';
 import ConnectionsTab from './components/ConnectionsTab';
 import AttributionTab from './components/AttributionTab';
 import ProfileTab from './components/ProfileTab';
 import UsersTab from './components/UsersTab';
 import WorkspacesTab from './components/WorkspacesTab';
+import BusinessProfileTab from './components/BusinessProfileTab';
+import BillingTab from './components/BillingTab';
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
+  const [billingTier, setBillingTier] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('connections');
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['connections', 'attribution', 'profile', 'users', 'invites', 'workspaces'].includes(tabParam)) {
+    if (tabParam && ['connections', 'attribution', 'profile', 'business', 'users', 'invites', 'workspaces', 'billing'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -28,11 +31,18 @@ export default function SettingsPage() {
   useEffect(() => {
     let mounted = true;
 
-    const loadUser = async () => {
+    const loadData = async () => {
       try {
-        const userData = await currentUser();
+        // Fetch user and billing status in parallel
+        const [userData, billingData] = await Promise.all([
+          currentUser(),
+          getBillingStatus(),
+        ]);
         if (mounted) {
           setUser(userData);
+          if (billingData?.billing?.billing_tier) {
+            setBillingTier(billingData.billing.billing_tier);
+          }
         }
       } catch (err) {
         if (mounted) {
@@ -46,7 +56,7 @@ export default function SettingsPage() {
       }
     };
 
-    loadUser();
+    loadData();
 
     return () => {
       mounted = false;
@@ -57,9 +67,11 @@ export default function SettingsPage() {
     { id: 'connections', label: 'Connections' },
     { id: 'attribution', label: 'Attribution' },
     { id: 'profile', label: 'Profile' },
+    { id: 'business', label: 'Business' },
     { id: 'workspaces', label: 'Workspaces' },
     { id: 'users', label: 'Members' },
-    { id: 'invites', label: 'Invites' }
+    { id: 'invites', label: 'Invites' },
+    { id: 'billing', label: 'Billing' }
   ];
 
   if (loading) {
@@ -105,12 +117,14 @@ export default function SettingsPage() {
       />
 
       <div className="mt-8">
-        {activeTab === 'connections' && <ConnectionsTab user={user} />}
+        {activeTab === 'connections' && <ConnectionsTab user={user} billingTier={billingTier} />}
         {activeTab === 'attribution' && <AttributionTab user={user} />}
-        {activeTab === 'profile' && <ProfileTab user={user} />}
+        {activeTab === 'profile' && <ProfileTab />}
+        {activeTab === 'business' && <BusinessProfileTab user={user} />}
         {activeTab === 'workspaces' && <WorkspacesTab user={user} />}
-        {activeTab === 'users' && <UsersTab user={user} />}
-        {activeTab === 'invites' && <UsersTab user={user} view="invites" />}
+        {activeTab === 'users' && <UsersTab user={user} billingTier={billingTier} />}
+        {activeTab === 'invites' && <UsersTab user={user} view="invites" billingTier={billingTier} />}
+        {activeTab === 'billing' && <BillingTab user={user} />}
       </div>
     </div>
   );

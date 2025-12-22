@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Calendar, Clock, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Trash2, Calendar, Clock, RefreshCw, CheckCircle2, AlertCircle, Lock, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { fetchConnections, deleteConnection } from '@/lib/api';
 import MetaSyncButton from '@/components/MetaSyncButton';
 import GoogleSyncButton from '@/components/GoogleSyncButton';
@@ -14,7 +15,7 @@ import PixelHealthCard from './PixelHealthCard';
 import UTMSetupGuide from './UTMSetupGuide';
 import MetaPixelSelector from './MetaPixelSelector';
 
-export default function ConnectionsTab({ user }) {
+export default function ConnectionsTab({ user, billingTier }) {
     const [connections, setConnections] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -26,6 +27,24 @@ export default function ConnectionsTab({ user }) {
         const interval = setInterval(() => setNow(new Date()), 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // Poll for sync completion when any connection is syncing
+    useEffect(() => {
+        const hasSyncingConnection = connections.some(c => c.sync_status === 'syncing');
+
+        if (!hasSyncingConnection || !user?.workspace_id) return;
+
+        // Poll every 3 seconds while syncing
+        const pollInterval = setInterval(async () => {
+            try {
+                await refreshConnectionsList(user.workspace_id);
+            } catch (err) {
+                console.error('Failed to poll connections:', err);
+            }
+        }, 3000);
+
+        return () => clearInterval(pollInterval);
+    }, [connections, user?.workspace_id]);
 
     const refreshConnectionsList = async (workspaceId, mounted = true) => {
         const connectionsData = await fetchConnections({ workspaceId });
@@ -165,6 +184,26 @@ export default function ConnectionsTab({ user }) {
             {/* Connect New Account Section */}
             <div className="mb-8">
                 <h2 className="text-lg font-semibold text-neutral-900 mb-4">Connect Accounts</h2>
+
+                {/* Free tier limit message */}
+                {billingTier === 'free' && connections.filter(c => c.provider === 'meta' || c.provider === 'google').length >= 1 && (
+                    <div className="p-4 border border-amber-200 bg-amber-50 rounded-xl flex items-start gap-3 mb-6">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                            <Lock className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-amber-800">Ad account limit reached</p>
+                            <p className="text-xs text-amber-600 mt-1">Free plan allows 1 ad account (Meta or Google). Upgrade to connect unlimited accounts.</p>
+                            <Link
+                                href="/subscribe"
+                                className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+                            >
+                                <Zap className="w-3.5 h-3.5" />
+                                Upgrade Now
+                            </Link>
+                        </div>
+                    </div>
+                )}
 
                 {/* Ad Platforms */}
                 <h3 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wide">Ad Platforms</h3>

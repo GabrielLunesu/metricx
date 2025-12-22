@@ -176,6 +176,290 @@ def get_tool_schemas() -> List[Dict[str, Any]]:
 
 
 # =============================================================================
+# FREE AGENT TOOLS (OpenAI function calling format)
+# =============================================================================
+# These tools are used by the new free-form agent that lets the LLM decide
+# what to call. The LLM sees ALL tools and picks the right one based on the
+# question.
+#
+# KEY PRINCIPLE: Snapshots first, Live API only when needed
+# - Snapshots are updated every 15 minutes
+# - For metrics (spend, ROAS, etc.), ALWAYS use query_metrics first
+# - For data not in snapshots (start_date, keywords), use live API
+# =============================================================================
+
+AGENT_TOOLS = [
+    # ===================
+    # SNAPSHOT DATA (Updated every 15 min - USE THIS FIRST for metrics)
+    # ===================
+    {
+        "type": "function",
+        "function": {
+            "name": "query_metrics",
+            "description": """Query advertising metrics from our database (snapshots updated every 15 minutes).
+
+**USE THIS FIRST** for any metrics question. This is fast and doesn't hit external APIs.
+
+RETURNS:
+- Metrics data
+- snapshot_time: When the data was last updated
+- snapshot_age_minutes: How old the snapshot is
+
+USE THIS FOR:
+- Any spend, ROAS, CPC, etc. questions (even "today")
+- Historical trends (this week, last month, etc.)
+- Comparisons (this week vs last week)
+- Aggregated metrics over time periods
+
+AVAILABLE METRICS: spend, revenue, roas, cpc, ctr, cpa, clicks, impressions, conversions, profit
+
+IMPORTANT: Always tell user the snapshot time in your response!
+Example response: "Your spend today is $1,234 (based on data from 12:30 PM)"
+
+EXAMPLE: "What's my spend today?" → query_metrics(metrics=["spend"], time_range="1d")""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "metrics": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Metrics to query: spend, revenue, roas, cpc, ctr, cpa, clicks, impressions, conversions, profit",
+                    },
+                    "time_range": {
+                        "type": "string",
+                        "enum": ["1d", "7d", "14d", "30d", "90d"],
+                        "description": "Time range. Default: 7d",
+                    },
+                    "breakdown_level": {
+                        "type": "string",
+                        "enum": ["campaign", "adset", "ad", "provider"],
+                        "description": "Break down by entity level or platform",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of entities to return for breakdown. Default: 5",
+                    },
+                    "compare_to_previous": {
+                        "type": "boolean",
+                        "description": "Compare to previous period (this week vs last week)",
+                    },
+                    "include_timeseries": {
+                        "type": "boolean",
+                        "description": "Include daily data for charts",
+                    },
+                    "filters": {
+                        "type": "object",
+                        "description": "Filters: {provider: 'meta'|'google', entity_name: 'Campaign Name'}",
+                    },
+                },
+                "required": ["metrics"],
+            },
+        },
+    },
+
+    # ===================
+    # LIVE GOOGLE ADS API (Use only when snapshots don't have the data)
+    # ===================
+    {
+        "type": "function",
+        "function": {
+            "name": "google_ads_query",
+            "description": """Query Google Ads API directly. **Only use when query_metrics can't answer.**
+
+USE THIS FOR:
+- Data NOT stored in snapshots:
+  - Campaign start_date, end_date (for "went live yesterday")
+  - Keywords (for "what keywords am I targeting")
+  - Search terms (for "what did users search")
+  - Audiences, targeting details
+- User explicitly asks for "real-time" or "live" data
+- When query_metrics returns stale data (>15 min) and user needs current
+
+DO NOT USE FOR:
+- Basic metrics (spend, ROAS, etc.) - use query_metrics first!
+- General performance questions - use query_metrics first!
+
+QUERY TYPES:
+- campaigns: List campaigns with status, budget, start_date, end_date
+- campaign_details: Full config for a specific campaign
+- keywords: Search keywords (for Search campaigns)
+- search_terms: What users actually searched
+- ad_groups: Ad group details
+- ads: Ad details and creatives
+- metrics: Real-time metrics (only if user explicitly wants live)
+
+IMPORTANT STATUS FILTER:
+- For "live", "active", or "running" campaigns: use filters: {status: "ENABLED"}
+- For "paused" campaigns: use filters: {status: "PAUSED"}
+- Without status filter, returns BOTH enabled and paused campaigns
+
+EXAMPLES:
+- "What campaigns are live/active right now?" → google_ads_query(query_type="campaigns", filters={"status": "ENABLED"})
+- "Which campaigns went live yesterday?" → google_ads_query(query_type="campaigns", filters={"start_date": "yesterday"})
+- "Show all campaigns" → google_ads_query(query_type="campaigns")""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query_type": {
+                        "type": "string",
+                        "enum": ["campaigns", "campaign_details", "ad_groups", "ads", "keywords", "search_terms", "metrics"],
+                        "description": "Type of data to query",
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Fields to fetch: name, status, start_date, end_date, budget, bid_strategy, etc.",
+                    },
+                    "filters": {
+                        "type": "object",
+                        "description": "Filters: {status: 'ENABLED', start_date: 'yesterday', campaign_id: '123'}",
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "description": "Specific entity ID for detail queries",
+                    },
+                    "date_range": {
+                        "type": "string",
+                        "enum": ["today", "yesterday", "last_7d", "last_30d"],
+                        "description": "For metrics queries",
+                    },
+                },
+                "required": ["query_type"],
+            },
+        },
+    },
+
+    # ===================
+    # LIVE META ADS API (Use only when snapshots don't have the data)
+    # ===================
+    {
+        "type": "function",
+        "function": {
+            "name": "meta_ads_query",
+            "description": """Query Meta Ads API directly. **Only use when query_metrics can't answer.**
+
+USE THIS FOR:
+- Data NOT stored in snapshots:
+  - Ad creative details (images, copy, CTAs)
+  - Audience targeting information
+  - Campaign objectives, optimization settings
+- User explicitly asks for "real-time" or "live" data
+- When query_metrics returns stale data (>15 min) and user needs current
+
+DO NOT USE FOR:
+- Basic metrics (spend, ROAS, etc.) - use query_metrics first!
+- General performance questions - use query_metrics first!
+
+QUERY TYPES:
+- campaigns: List campaigns with status, budget, objective
+- campaign_details: Full config for a specific campaign
+- adsets: Ad set details with targeting
+- ads: Ad details with creatives
+- metrics: Real-time metrics (only if user explicitly wants live)
+
+EXAMPLE: "What audiences am I targeting on Meta?" → meta_ads_query(query_type="adsets", fields=["targeting"])""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query_type": {
+                        "type": "string",
+                        "enum": ["campaigns", "campaign_details", "adsets", "ads", "metrics"],
+                        "description": "Type of data to query",
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Fields to fetch: name, status, budget, objective, targeting, etc.",
+                    },
+                    "filters": {
+                        "type": "object",
+                        "description": "Filters: {status: 'ACTIVE', campaign_id: '123'}",
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "description": "Specific entity ID for detail queries",
+                    },
+                    "date_range": {
+                        "type": "string",
+                        "enum": ["today", "yesterday", "last_7d", "last_30d"],
+                        "description": "For metrics queries",
+                    },
+                },
+                "required": ["query_type"],
+            },
+        },
+    },
+
+    # ===================
+    # ENTITY LISTING (from our database - fast)
+    # ===================
+    {
+        "type": "function",
+        "function": {
+            "name": "list_entities",
+            "description": """List campaigns, ad sets, or ads from our database.
+
+USE THIS FOR:
+- Finding entities by name
+- Getting list of all campaigns/adsets/ads
+- Quick lookups without hitting external APIs
+
+NOTE: This uses cached data. For real-time status, use google_ads_query or meta_ads_query.""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "level": {
+                        "type": "string",
+                        "enum": ["campaign", "adset", "ad"],
+                        "description": "Entity level to query",
+                    },
+                    "name_contains": {
+                        "type": "string",
+                        "description": "Filter by name (case-insensitive)",
+                    },
+                    "provider": {
+                        "type": "string",
+                        "enum": ["google", "meta"],
+                        "description": "Filter by ad platform",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max entities to return. Default: 20",
+                    },
+                },
+                "required": ["level"],
+            },
+        },
+    },
+
+    # ===================
+    # BUSINESS CONTEXT
+    # ===================
+    {
+        "type": "function",
+        "function": {
+            "name": "get_business_context",
+            "description": """Get the user's business profile information.
+
+USE THIS FOR:
+- Questions about company name, industry, target markets
+- "What is my company?" "What industry am I in?"
+- Personalizing responses with business context""",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+]
+
+
+def get_agent_tools() -> List[Dict[str, Any]]:
+    """Get tool schemas for the free-form agent (OpenAI function calling format)."""
+    return AGENT_TOOLS
+
+
+# =============================================================================
 # TOOL IMPLEMENTATIONS
 # =============================================================================
 

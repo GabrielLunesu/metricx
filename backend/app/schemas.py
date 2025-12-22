@@ -6,7 +6,7 @@ from uuid import UUID
 from typing import Optional, List, Literal, Union, Any
 from decimal import Decimal
 from pydantic import BaseModel, EmailStr, constr, Field, field_serializer, field_validator
-from .models import RoleEnum, ProviderEnum, LevelEnum, KindEnum, ComputeRunTypeEnum, GoalEnum
+from .models import RoleEnum, ProviderEnum, LevelEnum, KindEnum, ComputeRunTypeEnum, GoalEnum, BillingStatusEnum, BillingPlanEnum
 
 
 class UserCreate(BaseModel):
@@ -589,11 +589,13 @@ class WorkspaceListResponse(BaseModel):
 class ActiveWorkspaceResponse(BaseModel):
     """Response schema for GET /workspaces/active.
 
-    WHAT: Returns current user's active workspace context
-    WHY: Frontend needs this after Clerk login to hydrate workspace state
+    WHAT: Returns current user's active workspace context with role and memberships
+    WHY: Frontend needs this after Clerk login to hydrate workspace state and
+         determine user permissions (e.g., can manage team members, invite users)
 
     REFERENCES:
         - ui/lib/workspace.js (getActiveWorkspace, currentUser)
+        - ui/app/(dashboard)/settings/components/UsersTab.jsx (checks memberships for canManage)
         - backend/app/routers/workspaces.py (get_active_workspace)
     """
 
@@ -602,6 +604,10 @@ class ActiveWorkspaceResponse(BaseModel):
     user_id: str = Field(description="Current user UUID")
     user_name: str = Field(description="User's display name")
     user_email: str = Field(description="User's email address")
+    role: str = Field(description="User's role in the active workspace (Owner, Admin, Viewer)")
+    memberships: List[WorkspaceMemberOutLite] = Field(
+        description="All workspace memberships for this user (for permission checks)"
+    )
 
 
 class ConnectionListResponse(BaseModel):
@@ -1412,6 +1418,266 @@ class MetricsSyncResponse(BaseModel):
             }
         }
     }
+
+
+# ==========================================================================
+# ONBOARDING SCHEMAS
+# ==========================================================================
+# WHAT: Request/response schemas for onboarding flow
+# WHY: Collect business profile for AI personalization
+# REFERENCES: backend/app/routers/onboarding.py
+
+
+class DomainAnalyzeRequest(BaseModel):
+    """Request to analyze a domain for business information extraction."""
+
+    domain: str = Field(
+        description="Domain to analyze (e.g., 'acme.com')",
+        example="acme.com",
+        min_length=3
+    )
+
+
+class DomainSuggestions(BaseModel):
+    """AI-extracted business suggestions from domain analysis."""
+
+    business_name: Optional[str] = Field(
+        None,
+        description="Suggested business name"
+    )
+    description: Optional[str] = Field(
+        None,
+        description="AI-extracted business description"
+    )
+    niche: Optional[str] = Field(
+        None,
+        description="Suggested niche/industry"
+    )
+    brand_voice: Optional[str] = Field(
+        None,
+        description="Suggested brand voice"
+    )
+    confidence: float = Field(
+        default=0.0,
+        description="Confidence score (0-1)"
+    )
+
+
+class DomainAnalyzeResponse(BaseModel):
+    """Response from domain analysis endpoint."""
+
+    success: bool = Field(description="Whether analysis succeeded")
+    suggestions: Optional[DomainSuggestions] = Field(
+        None,
+        description="AI-extracted suggestions"
+    )
+    error: Optional[str] = Field(
+        None,
+        description="Error message if analysis failed"
+    )
+
+
+class OnboardingCompleteRequest(BaseModel):
+    """Request to complete onboarding and save business profile."""
+
+    workspace_name: str = Field(
+        description="Workspace/business name (required)",
+        min_length=1,
+        max_length=100
+    )
+    domain: Optional[str] = Field(
+        None,
+        description="Business domain"
+    )
+    domain_description: Optional[str] = Field(
+        None,
+        description="Business description (AI-generated or user-edited)"
+    )
+    niche: Optional[str] = Field(
+        None,
+        description="Business niche/industry"
+    )
+    target_markets: Optional[List[str]] = Field(
+        None,
+        description="Target markets (countries, continents, or 'Worldwide')"
+    )
+    brand_voice: Optional[str] = Field(
+        None,
+        description="Brand voice style"
+    )
+    business_size: Optional[str] = Field(
+        None,
+        description="Business size (startup, smb, enterprise)"
+    )
+    intended_ad_providers: Optional[List[str]] = Field(
+        None,
+        description="Ad platforms user intends to connect"
+    )
+
+
+class OnboardingCompleteResponse(BaseModel):
+    """Response from onboarding completion."""
+
+    success: bool = Field(description="Whether onboarding completed successfully")
+    redirect_to: str = Field(
+        default="/dashboard",
+        description="Where to redirect after completion"
+    )
+
+
+class OnboardingStatusResponse(BaseModel):
+    """Response from onboarding status check."""
+
+    completed: bool = Field(description="Whether onboarding is completed")
+    workspace_id: str = Field(description="Current workspace ID")
+    workspace_name: str = Field(description="Current workspace name")
+    profile: Optional[dict] = Field(
+        None,
+        description="Current business profile data (if any)"
+    )
+
+
+class BusinessProfileUpdate(BaseModel):
+    """Request to update business profile (from Settings page)."""
+
+    domain: Optional[str] = Field(None, description="Business domain")
+    domain_description: Optional[str] = Field(None, description="Business description")
+    niche: Optional[str] = Field(None, description="Business niche")
+    target_markets: Optional[List[str]] = Field(None, description="Target markets")
+    brand_voice: Optional[str] = Field(None, description="Brand voice")
+    business_size: Optional[str] = Field(None, description="Business size")
+
+
+class BusinessProfileResponse(BaseModel):
+    """Response with business profile data."""
+
+    workspace_id: str
+    workspace_name: str
+    domain: Optional[str] = None
+    domain_description: Optional[str] = None
+    niche: Optional[str] = None
+    target_markets: Optional[List[str]] = None
+    brand_voice: Optional[str] = None
+    business_size: Optional[str] = None
+    onboarding_completed: bool
+    onboarding_completed_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ==========================================================================
+# BILLING SCHEMAS (Polar Integration)
+# ==========================================================================
+# WHAT: Request/response schemas for workspace billing operations
+# WHY: Per-workspace subscription state for access gating
+# REFERENCES:
+#   - openspec/changes/add-polar-workspace-billing/proposal.md
+#   - backend/app/routers/polar.py
+
+
+class BillingInfo(BaseModel):
+    """Billing information for a workspace.
+
+    WHAT: Summary of workspace subscription state and feature tier
+    WHY: Frontend needs this to show billing status, manage subscriptions,
+         and gate features based on tier (free vs starter)
+    """
+
+    billing_status: BillingStatusEnum = Field(description="Current subscription status")
+    billing_tier: BillingPlanEnum = Field(description="Feature tier: free (limited) or starter (full)")
+    billing_plan: Optional[str] = Field(None, description="Plan type: monthly | annual")
+    trial_end: Optional[datetime] = Field(None, description="When trial expires")
+    current_period_start: Optional[datetime] = Field(None, description="Current billing period start")
+    current_period_end: Optional[datetime] = Field(None, description="Current billing period end")
+    is_access_allowed: bool = Field(description="Whether user can access subscription-gated routes")
+    can_manage_billing: bool = Field(description="Whether user can manage billing (Owner/Admin)")
+    portal_url: Optional[str] = Field(None, description="Polar customer portal URL (Owner/Admin only)")
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceBillingStatusResponse(BaseModel):
+    """Response from GET /billing/status endpoint.
+
+    WHAT: Full billing status for the active workspace
+    WHY: Frontend dashboard shell needs this to gate routes
+    """
+
+    workspace_id: str = Field(description="Workspace UUID")
+    workspace_name: str = Field(description="Workspace display name")
+    billing: BillingInfo = Field(description="Billing information")
+
+
+class CheckoutCreateRequest(BaseModel):
+    """Request to create a Polar checkout session.
+
+    WHAT: User initiates subscription checkout
+    WHY: Starts the Polar payment flow for a workspace
+    """
+
+    workspace_id: str = Field(description="Workspace UUID to subscribe")
+    plan: Literal["monthly", "annual"] = Field(description="Subscription plan to purchase")
+    success_url: Optional[str] = Field(None, description="Redirect URL after successful checkout")
+    cancel_url: Optional[str] = Field(None, description="Redirect URL if checkout is canceled")
+
+
+class CheckoutCreateResponse(BaseModel):
+    """Response with Polar checkout URL.
+
+    WHAT: Returns the URL to redirect user to Polar checkout
+    WHY: Frontend redirects to this URL to complete payment
+    """
+
+    checkout_url: str = Field(description="Polar checkout page URL")
+    checkout_id: str = Field(description="Polar checkout ID for tracking")
+
+
+class BillingPortalRequest(BaseModel):
+    """Request to get Polar customer portal URL.
+
+    WHAT: Owner/Admin requests portal link to manage subscription
+    WHY: Users need to update payment method, cancel, etc.
+    """
+
+    workspace_id: str = Field(description="Workspace UUID")
+
+
+class BillingPortalResponse(BaseModel):
+    """Response with Polar customer portal URL.
+
+    WHAT: Portal URL for self-service billing management
+    WHY: Polar handles subscription changes, invoices, cancellation
+    """
+
+    portal_url: str = Field(description="Polar customer portal URL")
+
+
+class WebhookResponse(BaseModel):
+    """Standard webhook response.
+
+    WHAT: Acknowledges webhook receipt
+    WHY: Polar expects 200 OK; this provides structured response
+    """
+
+    received: bool = Field(default=True, description="Webhook received successfully")
+    event_type: Optional[str] = Field(None, description="Event type processed")
+    action: Optional[str] = Field(None, description="Action taken (processed, skipped, error)")
+
+
+class WorkspaceBillingUpdate(BaseModel):
+    """Internal schema for updating workspace billing.
+
+    WHAT: Fields updated by webhook handlers
+    WHY: Used internally to apply subscription changes
+    """
+
+    billing_status: Optional[BillingStatusEnum] = None
+    billing_plan: Optional[str] = None
+    polar_subscription_id: Optional[str] = None
+    polar_customer_id: Optional[str] = None
+    trial_end: Optional[datetime] = None
+    current_period_start: Optional[datetime] = None
+    current_period_end: Optional[datetime] = None
 
 
 # Resolve forward references for nested models

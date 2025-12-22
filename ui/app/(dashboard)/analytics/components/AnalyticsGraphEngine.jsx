@@ -38,6 +38,8 @@ const METRIC_TABS = [
     { key: 'spend', label: 'Spend', format: 'currency' },
     { key: 'roas', label: 'ROAS', format: 'multiplier' },
     { key: 'conversions', label: 'Conversions', format: 'number' },
+    { key: 'cpc', label: 'CPC', format: 'currency' },
+    { key: 'ctr', label: 'CTR', format: 'percent' },
 ];
 
 // Currency symbols for formatting
@@ -51,6 +53,9 @@ const CURRENCY_SYMBOLS = {
 
 export default function AnalyticsGraphEngine({
     series = [],
+    compareSeries = [],
+    compareEnabled = false,
+    compareLoading = false,
     totals = {},
     metadata = {},
     loading,
@@ -72,22 +77,29 @@ export default function AnalyticsGraphEngine({
         return series.some(s => s.data && s.data.length > 0 && s.data.some(d => (d[selectedMetric] ?? 0) > 0));
     }, [series, selectedMetric]);
 
+    const renderSeries = useMemo(() => {
+        const base = (series || []).map((s) => ({ ...s, isCompare: false }));
+        if (!compareEnabled) return base;
+        const compare = (compareSeries || []).map((s) => ({ ...s, isCompare: true }));
+        return [...base, ...compare];
+    }, [series, compareSeries, compareEnabled]);
+
     // Transform series data for chart - pick the selected metric as the Y value
     const chartData = useMemo(() => {
-        if (!series || series.length === 0) return [];
+        if (!renderSeries || renderSeries.length === 0) return [];
 
         // If single series, just return its data with metric value
-        if (series.length === 1) {
-            return series[0].data.map(d => ({
+        if (renderSeries.length === 1) {
+            return renderSeries[0].data.map(d => ({
                 date: d.date,
-                [series[0].key]: d[selectedMetric] ?? 0
+                [renderSeries[0].key]: d[selectedMetric] ?? 0
             }));
         }
 
         // Multiple series: merge by date
         const dateMap = new Map();
 
-        series.forEach(s => {
+        renderSeries.forEach(s => {
             (s.data || []).forEach(d => {
                 if (!dateMap.has(d.date)) {
                     dateMap.set(d.date, { date: d.date });
@@ -99,16 +111,16 @@ export default function AnalyticsGraphEngine({
         return Array.from(dateMap.values()).sort((a, b) =>
             new Date(a.date) - new Date(b.date)
         );
-    }, [series, selectedMetric]);
+    }, [renderSeries, selectedMetric]);
 
     // Build chart config from series
     const chartConfig = useMemo(() => {
         const config = {};
-        series.forEach(s => {
-            config[s.key] = { label: s.label, color: s.color };
+        renderSeries.forEach(s => {
+            config[s.key] = { label: s.label, color: s.color, isCompare: Boolean(s.isCompare) };
         });
         return config;
-    }, [series]);
+    }, [renderSeries]);
 
     /**
      * Format value for Y axis and tooltip.
@@ -127,6 +139,8 @@ export default function AnalyticsGraphEngine({
             case 'number':
                 if (compact && value >= 1000) return `${(value / 1000).toFixed(1)}k`;
                 return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            case 'percent':
+                return `${value.toFixed(compact ? 1 : 2)}%`;
             default:
                 return value.toLocaleString();
         }
@@ -177,9 +191,19 @@ export default function AnalyticsGraphEngine({
                                     </span>
                                 ))
                             )}
+                            {compareEnabled && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900 text-[10px] font-medium text-white">
+                                    Prev period
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
+                {compareEnabled && (
+                    <div className="text-[10px] font-medium text-slate-500">
+                        {compareLoading ? "Loading compare…" : "Comparing to previous period"}
+                    </div>
+                )}
             </div>
 
             {/* Metric Tabs */}
@@ -219,7 +243,7 @@ export default function AnalyticsGraphEngine({
                     <ChartContainer config={chartConfig} className="h-full w-full">
                         <AreaChart data={chartData} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
                             <defs>
-                                {series.map(s => (
+                                {renderSeries.filter(s => !s.isCompare).map(s => (
                                     <linearGradient key={`gradient-${s.key}`} id={`gradient-${s.key}`} x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor={s.color} stopOpacity={0.3} />
                                         <stop offset="95%" stopColor={s.color} stopOpacity={0.05} />
@@ -297,7 +321,7 @@ export default function AnalyticsGraphEngine({
                                 cursor={{ stroke: '#64748b', strokeWidth: 1, strokeDasharray: '4 4' }}
                             />
                             {/* Render an Area for each series */}
-                            {series.map(s => (
+                            {renderSeries.map(s => (
                                 <Area
                                     key={s.key}
                                     type="monotone"
@@ -305,9 +329,12 @@ export default function AnalyticsGraphEngine({
                                     name={s.key}
                                     stroke={s.color}
                                     strokeWidth={2}
-                                    fill={`url(#gradient-${s.key})`}
+                                    strokeDasharray={s.isCompare ? "6 4" : undefined}
+                                    strokeOpacity={s.isCompare ? 0.55 : 1}
+                                    fill={s.isCompare ? "transparent" : `url(#gradient-${s.key})`}
+                                    fillOpacity={s.isCompare ? 0 : 1}
                                     dot={false}
-                                    activeDot={{ r: 4, fill: s.color, stroke: '#fff', strokeWidth: 2 }}
+                                    activeDot={s.isCompare ? false : { r: 4, fill: s.color, stroke: '#fff', strokeWidth: 2 }}
                                 />
                             ))}
                             {/* Legend for multiple series */}

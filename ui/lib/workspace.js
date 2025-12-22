@@ -133,17 +133,126 @@ export async function getActiveWorkspaceId() {
 
 /**
  * Compatibility shim for pages still using the old currentUser pattern.
- * Returns an object matching the old auth.js currentUser() shape.
+ * Returns an object matching the old auth.js currentUser() shape plus
+ * role and memberships for permission checks.
  *
  * @deprecated Use getActiveWorkspace() for new code
- * @returns {Promise<{workspace_id: string}>}
+ * @returns {Promise<{workspace_id: string, active_workspace_id: string, id: string, name: string, email: string, role: string, memberships: Array}>}
  */
 export async function currentUser() {
   const data = await getActiveWorkspace();
   return {
     workspace_id: data.workspace_id,
+    active_workspace_id: data.workspace_id, // UsersTab uses this alias
     id: data.user_id,
     name: data.user_name,
-    email: data.user_email
+    email: data.user_email,
+    role: data.role,
+    memberships: data.memberships,
   };
+}
+
+
+// =============================================================================
+// BILLING STATUS
+// =============================================================================
+// WHAT: Functions to check workspace billing status
+// WHY: Per-workspace billing gating for /onboarding, /dashboard
+// REFERENCES: backend/app/routers/polar.py
+
+
+/**
+ * Fetch billing status for the current workspace.
+ *
+ * @returns {Promise<{
+ *   workspace_id: string,
+ *   workspace_name: string,
+ *   billing: {
+ *     billing_status: string,
+ *     billing_plan: string|null,
+ *     trial_end: string|null,
+ *     current_period_start: string|null,
+ *     current_period_end: string|null,
+ *     is_access_allowed: boolean,
+ *     can_manage_billing: boolean,
+ *     portal_url: string|null
+ *   }
+ * }>}
+ */
+export async function getBillingStatus() {
+  const res = await authFetch(`${BASE}/billing/status`, {
+    method: 'GET',
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('Not authenticated');
+    }
+    const msg = await res.text();
+    throw new Error(`Failed to get billing status: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+
+/**
+ * Check if the current workspace has access (trialing or active).
+ *
+ * @returns {Promise<boolean>}
+ */
+export async function isSubscriptionActive() {
+  try {
+    const status = await getBillingStatus();
+    return status.billing.is_access_allowed;
+  } catch (e) {
+    console.error('[workspace] Failed to check subscription:', e);
+    // Default to false if we can't verify
+    return false;
+  }
+}
+
+
+/**
+ * Create a checkout session for the current workspace.
+ *
+ * @param {string} workspaceId - Workspace UUID
+ * @param {'monthly'|'annual'} plan - Subscription plan
+ * @returns {Promise<{checkout_url: string, checkout_id: string}>}
+ */
+export async function createCheckout(workspaceId, plan) {
+  const res = await authFetch(`${BASE}/billing/checkout`, {
+    method: 'POST',
+    body: JSON.stringify({
+      workspace_id: workspaceId,
+      plan,
+    }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to create checkout: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+
+/**
+ * Get Polar customer portal URL for billing management.
+ *
+ * @param {string} workspaceId - Workspace UUID
+ * @returns {Promise<{portal_url: string}>}
+ */
+export async function getBillingPortalUrl(workspaceId) {
+  const res = await authFetch(`${BASE}/billing/portal?workspace_id=${workspaceId}`, {
+    method: 'GET',
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to get portal URL: ${res.status}`);
+  }
+
+  return res.json();
 }
