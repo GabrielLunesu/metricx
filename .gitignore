@@ -5,11 +5,19 @@
 /.pnp
 .pnp.js
 
-# BMAD
-.agent
-.bmad
-.cursor
-.claude
+# AI/IDE tools (never commit)
+.claude/
+.cursor/
+.codex/
+.vscode/
+.idea/
+.polar/
+.agent/
+.bmad/
+.openspec/
+
+# pytest
+.pytest_cache/
 
 # testing
 /coverage
@@ -54,8 +62,6 @@ venv/
 
 # Editor junk
 .DS_Store
-.vscode/
-.idea/
 
 # Log files
 *.log

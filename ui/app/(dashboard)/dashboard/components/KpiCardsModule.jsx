@@ -188,6 +188,9 @@ export default function KpiCardsModule({
           const isSelected = selectedMetric === kpi.key;
           const deltaPct = kpiData?.delta_pct;
           const isPositive = kpi.inverse ? deltaPct <= 0 : deltaPct >= 0;
+          const label = (kpi.key === "revenue" && data?.has_shopify) ? "Revenue (Shopify)" : kpi.label;
+          const googleConversionValue = data?.provider_totals?.google?.conversion_value;
+          const googleConversions = data?.provider_totals?.google?.conversions;
 
           return (
             <button
@@ -204,13 +207,25 @@ export default function KpiCardsModule({
             >
               {/* Label */}
               <p className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">
-                {kpi.label}
+                {label}
               </p>
 
               {/* Value */}
               <p className={`text-xl font-bold mt-1 ${isSelected ? kpi.textColor : 'text-slate-900'}`}>
                 {formatValue(kpiData?.value, kpi.format, data?.currency)}
               </p>
+
+              {/* Shopify note: show ad conversion value for direct Google Ads comparison */}
+              {kpi.key === "revenue" && data?.has_shopify && googleConversionValue !== undefined && googleConversionValue !== null && (
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Google conv. value: {formatValue(googleConversionValue, "currency", data?.currency)}
+                </p>
+              )}
+              {kpi.key === "conversions" && googleConversions !== undefined && googleConversions !== null && (
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Google: {formatValue(googleConversions, "number", data?.currency)}
+                </p>
+              )}
 
               {/* Delta */}
               {deltaPct !== null && deltaPct !== undefined && (

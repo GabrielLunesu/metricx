@@ -15,7 +15,7 @@
  * NOTE: Reduced from 7 metrics to 4 core metrics that match chart_data.
  * CPA, CPC, CTR, CVR not available in unified dashboard endpoint.
  */
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Layers } from "lucide-react";
 import { formatMetricValue, formatDelta } from "@/lib/utils";
 
 /**
@@ -29,7 +29,7 @@ const METRICS = [
     { key: 'conversions', label: 'Conversions', format: 'number', inverse: false },
 ];
 
-export default function AnalyticsKpiStrip({ data, loading }) {
+export default function AnalyticsKpiStrip({ data, loading, dataSource = "Blended Data" }) {
     // Convert kpis array to map for O(1) lookups
     const kpis = {};
     data?.kpis?.forEach(item => {
@@ -39,18 +39,43 @@ export default function AnalyticsKpiStrip({ data, loading }) {
     // Get currency from API response (defaults to USD)
     const currency = data?.currency || "USD";
 
+    // Determine badge styling based on data source
+    const isGoogle = dataSource?.toLowerCase().includes('google');
+    const isMeta = dataSource?.toLowerCase().includes('meta');
+    const badgeStyle = isGoogle
+        ? 'bg-blue-50 text-blue-700 border-blue-200'
+        : isMeta
+        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+        : 'bg-slate-100 text-slate-600 border-slate-200';
+
     if (loading) {
         return (
-            <section className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
-                {METRICS.map((_, i) => (
-                    <div key={i} className="dashboard-module h-28"></div>
-                ))}
+            <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                    <div className="h-5 w-32 bg-slate-200 rounded animate-pulse"></div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+                    {METRICS.map((_, i) => (
+                        <div key={i} className="dashboard-module h-28"></div>
+                    ))}
+                </div>
             </section>
         );
     }
 
     return (
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up">
+        <section className="space-y-3 animate-slide-up">
+            {/* Data Source Header */}
+            <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-slate-400" />
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Primary KPIs</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${badgeStyle}`}>
+                    {dataSource}
+                </span>
+            </div>
+
+            {/* KPI Cards Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {METRICS.map((metric) => {
                 const kpiData = kpis[metric.key] || {};
                 const value = kpiData.value;
@@ -94,6 +119,7 @@ export default function AnalyticsKpiStrip({ data, loading }) {
                     </div>
                 );
             })}
+            </div>
         </section>
     );
 }

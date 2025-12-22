@@ -442,6 +442,261 @@ class GAdsClient:
             "campaign_id": campaign_id,
         } for r in rows]
 
+    # --- Campaign Configuration (for Copilot live queries) ----------------
+    def get_campaigns_with_config(
+        self,
+        customer_id: str,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch campaigns with configuration data including start/end dates.
+
+        WHAT:
+            Gets campaign config that's NOT stored in our Entity snapshots:
+            - start_date, end_date
+            - budget amount
+            - bidding strategy
+
+        WHY:
+            Answers Copilot questions like "which campaigns went live yesterday"
+            that require data not in our snapshot database.
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+            filters: Optional dict with:
+                - start_date: "yesterday", "today", or ISO date string
+                - status: "ENABLED", "PAUSED"
+
+        Returns:
+            List of campaign dicts with config data
+        """
+        from datetime import datetime, timedelta
+
+        q = """
+            SELECT
+                campaign.id,
+                campaign.name,
+                campaign.status,
+                campaign.start_date,
+                campaign.end_date,
+                campaign_budget.amount_micros,
+                campaign.bidding_strategy_type,
+                campaign.advertising_channel_type
+            FROM campaign
+            WHERE campaign.status IN ('ENABLED', 'PAUSED')
+        """
+
+        # Add date filter if specified
+        if filters:
+            if filters.get("start_date"):
+                start_date_filter = filters["start_date"]
+                if start_date_filter == "yesterday":
+                    yesterday = (date.today() - timedelta(days=1)).isoformat()
+                    q += f" AND campaign.start_date = '{yesterday}'"
+                elif start_date_filter == "today":
+                    q += f" AND campaign.start_date = '{date.today().isoformat()}'"
+                elif isinstance(start_date_filter, str) and len(start_date_filter) == 10:
+                    # Assume ISO format YYYY-MM-DD
+                    q += f" AND campaign.start_date = '{start_date_filter}'"
+
+            if filters.get("status"):
+                q += f" AND campaign.status = '{filters['status']}'"
+
+        q += " ORDER BY campaign.start_date DESC, campaign.name"
+
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+
+        for r in rows:
+            c = r.campaign
+            budget = getattr(r, "campaign_budget", None)
+
+            # Parse status enum properly (e.g., CampaignStatus.ENABLED -> "ENABLED")
+            status_raw = getattr(c, "status", None)
+            if status_raw is not None and hasattr(status_raw, "name"):
+                status_val = str(status_raw.name)
+            else:
+                status_val = str(status_raw) if status_raw is not None else None
+
+            # Parse channel type
+            chan = getattr(c, "advertising_channel_type", None)
+            if chan is not None and hasattr(chan, "name"):
+                chan_val = str(chan.name)
+            else:
+                chan_val = str(chan) if chan is not None else None
+
+            # Parse bidding strategy type
+            bid_strategy = getattr(c, "bidding_strategy_type", None)
+            if bid_strategy is not None and hasattr(bid_strategy, "name"):
+                bid_strategy_val = str(bid_strategy.name)
+            else:
+                bid_strategy_val = str(bid_strategy) if bid_strategy is not None else None
+
+            # Convert budget from micros
+            budget_amount = None
+            if budget:
+                amount_micros = getattr(budget, "amount_micros", None)
+                if amount_micros:
+                    budget_amount = amount_micros / 1_000_000.0
+
+            out.append({
+                "id": getattr(c, "id", None),
+                "name": getattr(c, "name", None),
+                "status": status_val,
+                "start_date": str(getattr(c, "start_date", None)) if getattr(c, "start_date", None) else None,
+                "end_date": str(getattr(c, "end_date", None)) if getattr(c, "end_date", None) else None,
+                "budget_amount": budget_amount,
+                "bidding_strategy_type": bid_strategy_val,
+                "advertising_channel_type": chan_val,
+            })
+
+        return out
+
+    def list_keywords(
+        self,
+        customer_id: str,
+        campaign_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch keywords for Search campaigns.
+
+        WHAT:
+            Gets keyword targeting data from ad_group_criterion.
+            Includes keyword text, match type, and status.
+
+        WHY:
+            Answers Copilot questions like "what keywords am I targeting?"
+            This data is NOT stored in our snapshot database.
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+            campaign_id: Optional campaign ID to filter by
+
+        Returns:
+            List of keyword dicts with text, match_type, status
+        """
+        q = """
+            SELECT
+                ad_group_criterion.keyword.text,
+                ad_group_criterion.keyword.match_type,
+                ad_group_criterion.status,
+                ad_group.name,
+                campaign.name,
+                campaign.id
+            FROM ad_group_criterion
+            WHERE ad_group_criterion.type = 'KEYWORD'
+        """
+
+        if campaign_id:
+            q += f" AND campaign.id = {campaign_id}"
+
+        q += " ORDER BY campaign.name, ad_group.name, ad_group_criterion.keyword.text"
+
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+
+        for r in rows:
+            keyword = getattr(r.ad_group_criterion, "keyword", None)
+            if not keyword:
+                continue
+
+            # Parse match type
+            match_type = getattr(keyword, "match_type", None)
+            if match_type is not None and hasattr(match_type, "name"):
+                match_type_val = str(match_type.name)
+            else:
+                match_type_val = str(match_type) if match_type is not None else None
+
+            out.append({
+                "keyword_text": getattr(keyword, "text", None),
+                "match_type": match_type_val,
+                "status": str(getattr(r.ad_group_criterion, "status", None)),
+                "ad_group_name": getattr(r.ad_group, "name", None),
+                "campaign_name": getattr(r.campaign, "name", None),
+                "campaign_id": getattr(r.campaign, "id", None),
+            })
+
+        return out
+
+    def list_search_terms(
+        self,
+        customer_id: str,
+        campaign_id: Optional[str] = None,
+        start: Optional[date] = None,
+        end: Optional[date] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch search terms report for Search campaigns.
+
+        WHAT:
+            Gets actual search queries that triggered ads.
+            Includes the search term, keyword it matched, and metrics.
+
+        WHY:
+            Answers Copilot questions like "what did users search for?"
+            This data is NOT stored in our snapshot database.
+
+        Args:
+            customer_id: Google Ads customer ID (digits only)
+            campaign_id: Optional campaign ID to filter by
+            start: Start date for report (default: last 7 days)
+            end: End date for report (default: yesterday)
+
+        Returns:
+            List of search term dicts with term, keyword, metrics
+        """
+        from datetime import timedelta
+
+        if not end:
+            end = date.today() - timedelta(days=1)
+        if not start:
+            start = end - timedelta(days=6)
+
+        q = f"""
+            SELECT
+                search_term_view.search_term,
+                search_term_view.status,
+                segments.keyword.info.text,
+                campaign.name,
+                campaign.id,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions_by_conversion_date
+            FROM search_term_view
+            WHERE segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'
+        """
+
+        if campaign_id:
+            q += f" AND campaign.id = {campaign_id}"
+
+        q += " ORDER BY metrics.impressions DESC LIMIT 100"
+
+        rows = self.search(customer_id, q)
+        out: List[Dict[str, Any]] = []
+
+        for r in rows:
+            search_term = getattr(r.search_term_view, "search_term", None)
+            status = getattr(r.search_term_view, "status", None)
+
+            # Get the matching keyword
+            keyword_info = getattr(getattr(r.segments, "keyword", None), "info", None)
+            keyword_text = getattr(keyword_info, "text", None) if keyword_info else None
+
+            m = r.metrics
+            spend = (m.cost_micros or 0) / 1_000_000.0
+
+            out.append({
+                "search_term": search_term,
+                "status": str(status) if status else None,
+                "matched_keyword": keyword_text,
+                "campaign_name": getattr(r.campaign, "name", None),
+                "campaign_id": getattr(r.campaign, "id", None),
+                "impressions": int(m.impressions or 0),
+                "clicks": int(m.clicks or 0),
+                "spend": float(spend),
+                "conversions": float(getattr(m, "conversions_by_conversion_date", 0.0) or 0.0),
+            })
+
+        return out
+
     # --- Batch Query Methods (Quota Optimization) -----------------------
     # WHY: Reduce API calls from O(N×M) to O(1) by fetching all entities
     # in a single GAQL query instead of per-campaign/per-ad_group calls.
@@ -724,8 +979,8 @@ class GAdsClient:
                 metrics.impressions,
                 metrics.clicks,
                 metrics.cost_micros,
-                metrics.conversions,
-                metrics.conversions_value
+                metrics.conversions_by_conversion_date,
+                metrics.conversions_value_by_conversion_date
             FROM shopping_performance_view
             WHERE segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'
         """
@@ -757,8 +1012,8 @@ class GAdsClient:
                 "impressions": int(m.impressions or 0),
                 "clicks": int(m.clicks or 0),
                 "spend": float(spend),
-                "conversions": float(m.conversions or 0.0),
-                "revenue": float(m.conversions_value or 0.0),
+                "conversions": float(getattr(m, "conversions_by_conversion_date", 0.0) or 0.0),
+                "revenue": float(getattr(m, "conversions_value_by_conversion_date", 0.0) or 0.0),
                 "resource_id": resource_id,
                 "_raw": r,
             })
@@ -802,8 +1057,8 @@ class GAdsClient:
                 metrics.impressions,
                 metrics.clicks,
                 metrics.cost_micros,
-                metrics.conversions,
-                metrics.conversions_value
+                metrics.conversions_by_conversion_date,
+                metrics.conversions_value_by_conversion_date
             FROM asset_group_product_group_view
             WHERE segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'
         """
@@ -835,8 +1090,8 @@ class GAdsClient:
                 "impressions": int(m.impressions or 0),
                 "clicks": int(m.clicks or 0),
                 "spend": float(spend),
-                "conversions": float(m.conversions or 0.0),
-                "revenue": float(m.conversions_value or 0.0),
+                "conversions": float(getattr(m, "conversions_by_conversion_date", 0.0) or 0.0),
+                "revenue": float(getattr(m, "conversions_value_by_conversion_date", 0.0) or 0.0),
                 "resource_id": resource_id,
                 "_raw": r,
             })
@@ -888,7 +1143,7 @@ class GAdsClient:
         q = (
             f"SELECT {select_id}, "
             "metrics.impressions, metrics.clicks, metrics.cost_micros, "
-            "metrics.conversions, metrics.conversions_value, segments.date "
+            "metrics.conversions_by_conversion_date, metrics.conversions_value_by_conversion_date, segments.date "
             f"FROM {resource} "
             f"WHERE {where_clause}"
         )
@@ -917,8 +1172,8 @@ class GAdsClient:
                 "impressions": int(m.impressions or 0),
                 "clicks": int(m.clicks or 0),
                 "spend": float(spend),
-                "conversions": float(m.conversions or 0.0),
-                "revenue": float(m.conversions_value or 0.0),
+                "conversions": float(getattr(m, "conversions_by_conversion_date", 0.0) or 0.0),
+                "revenue": float(getattr(m, "conversions_value_by_conversion_date", 0.0) or 0.0),
                 "resource_id": resource_id,
                 "_raw": r,
             })

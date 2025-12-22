@@ -115,13 +115,21 @@ ASYNC_DATABASE_URL = _get_async_database_url(DATABASE_URL)
 # - max_overflow: Additional connections allowed beyond pool_size during load spikes
 # - pool_recycle: Recreate connections after 1 hour to prevent stale connections
 # - pool_pre_ping: Check connection health before use (small overhead but prevents errors)
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=10,           # Base pool size
-    max_overflow=20,        # Allow up to 30 total connections under load
-    pool_recycle=3600,      # Recycle connections every hour
-    pool_pre_ping=True,     # Validate connections before use
-)
+#
+# NOTE: SQLite engines (used in some tests/dev) do not support pool_size/max_overflow.
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=10,           # Base pool size
+        max_overflow=20,        # Allow up to 30 total connections under load
+        pool_recycle=3600,      # Recycle connections every hour
+        pool_pre_ping=True,     # Validate connections before use
+    )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
@@ -132,22 +140,28 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 # Async engine with similar pool settings
 # asyncpg is ~2-5x faster than psycopg2 for I/O-bound operations
-async_engine = create_async_engine(
-    ASYNC_DATABASE_URL,
-    pool_size=10,           # Base pool size
-    max_overflow=20,        # Allow up to 30 total connections under load
-    pool_recycle=3600,      # Recycle connections every hour
-    pool_pre_ping=True,     # Validate connections before use
-    echo=False,             # Set True for SQL debugging
-)
+#
+# NOTE: We only initialize the async engine for PostgreSQL. SQLite async usage
+# would require aiosqlite, which is not a production dependency for this project.
+async_engine = None
+AsyncSessionLocal = None
+if ASYNC_DATABASE_URL.startswith("postgresql+asyncpg://"):
+    async_engine = create_async_engine(
+        ASYNC_DATABASE_URL,
+        pool_size=10,           # Base pool size
+        max_overflow=20,        # Allow up to 30 total connections under load
+        pool_recycle=3600,      # Recycle connections every hour to prevent stale connections
+        pool_pre_ping=True,     # Validate connections before use
+        echo=False,             # Set True for SQL debugging
+    )
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=async_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,  # Prevent lazy load issues after commit
-    autoflush=False,
-    autocommit=False,
-)
+    AsyncSessionLocal = async_sessionmaker(
+        bind=async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,  # Prevent lazy load issues after commit
+        autoflush=False,
+        autocommit=False,
+    )
 
 
 # =============================================================================

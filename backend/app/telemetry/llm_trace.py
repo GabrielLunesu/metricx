@@ -383,6 +383,138 @@ def log_span(
         return None
 
 
+def log_live_api_call(
+    trace: Any,
+    provider: str,
+    endpoint: str,
+    latency_ms: int,
+    success: bool,
+    error: Optional[str] = None,
+    workspace_id: Optional[str] = None,
+    account_id: Optional[str] = None,
+    entity_count: Optional[int] = None,
+) -> None:
+    """
+    Log a live API call to Langfuse for monitoring.
+
+    WHAT:
+        Records details of a live Google/Meta Ads API call as a span
+        in the current trace.
+
+    WHY:
+        - Monitor live API usage patterns
+        - Track success/failure rates per provider
+        - Identify latency issues
+        - Debug API errors
+        - Audit API access by workspace
+
+    PARAMETERS:
+        trace: Parent trace object from create_copilot_trace
+        provider: "google" or "meta"
+        endpoint: API endpoint called (e.g., "get_metrics", "list_campaigns")
+        latency_ms: Response latency in milliseconds
+        success: Whether the call succeeded
+        error: Error message if call failed
+        workspace_id: Workspace making the call (for audit)
+        account_id: Ad account ID queried
+        entity_count: Number of entities returned (for monitoring)
+
+    EXAMPLE:
+        log_live_api_call(
+            trace=trace,
+            provider="google",
+            endpoint="get_live_metrics",
+            latency_ms=245,
+            success=True,
+            workspace_id="...",
+            account_id="123-456-7890",
+            entity_count=5,
+        )
+    """
+    if not trace or not _langfuse_client:
+        return
+
+    try:
+        # Build metadata
+        metadata = {
+            "provider": provider,
+            "endpoint": endpoint,
+            "latency_ms": latency_ms,
+            "success": success,
+        }
+
+        if workspace_id:
+            metadata["workspace_id"] = workspace_id
+        if account_id:
+            metadata["account_id"] = account_id
+        if entity_count is not None:
+            metadata["entity_count"] = entity_count
+        if error:
+            metadata["error"] = error
+
+        # Create span for the API call
+        span = trace.span(
+            name=f"live_api_{provider}_{endpoint}",
+            metadata=metadata,
+        )
+
+        if span:
+            span.end()
+
+    except Exception as e:
+        logger.error(f"[LANGFUSE] Failed to log live API call: {e}")
+
+
+def log_live_api_fallback(
+    trace: Any,
+    from_source: str,
+    to_source: str,
+    reason: str,
+    workspace_id: Optional[str] = None,
+) -> None:
+    """
+    Log a fallback event (e.g., live API → snapshot, or vice versa).
+
+    WHAT:
+        Records when the agent falls back from one data source to another.
+
+    WHY:
+        - Track how often live API is used vs snapshots
+        - Identify patterns in fallback behavior
+        - Monitor auto-fallback triggers (staleness, errors)
+
+    PARAMETERS:
+        trace: Parent trace object
+        from_source: Original data source ("live_api" or "snapshot")
+        to_source: Fallback data source ("live_api" or "snapshot")
+        reason: Why fallback occurred (e.g., "stale_snapshot", "api_error", "rate_limited")
+        workspace_id: Workspace context
+    """
+    if not trace or not _langfuse_client:
+        return
+
+    try:
+        metadata = {
+            "from_source": from_source,
+            "to_source": to_source,
+            "reason": reason,
+        }
+
+        if workspace_id:
+            metadata["workspace_id"] = workspace_id
+
+        span = trace.span(
+            name="data_source_fallback",
+            metadata=metadata,
+        )
+
+        if span:
+            span.end()
+
+    except Exception as e:
+        logger.error(f"[LANGFUSE] Failed to log fallback: {e}")
+
+
 def flush() -> None:
     """
     Flush any pending Langfuse events.

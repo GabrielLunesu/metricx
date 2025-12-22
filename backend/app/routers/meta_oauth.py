@@ -28,7 +28,7 @@ import json
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import User, Connection, ProviderEnum
+from app.models import User, Connection, ProviderEnum, Workspace, BillingPlanEnum
 from app.services.token_service import store_connection_token
 from app.utils.env import require_env  # utility to fetch env vars with mandatory check
 from app.telemetry import track_connected_meta_ads
@@ -55,15 +55,56 @@ META_AUTH_URL = "https://www.facebook.com/v24.0/dialog/oauth"
 META_TOKEN_URL = "https://graph.facebook.com/v24.0/oauth/access_token"
 META_EXCHANGE_TOKEN_URL = "https://graph.facebook.com/v24.0/oauth/access_token"
 
+# =============================================================================
+# FREE TIER LIMITS
+# =============================================================================
+# WHAT: Enforce ad account limit for free tier workspaces
+# WHY: Free tier allows only 1 ad account (Meta OR Google, not both)
+
+FREE_TIER_AD_ACCOUNT_LIMIT = 1
+
+
+def _check_ad_account_limit(db: Session, workspace_id, new_account_count: int = 1):
+    """Check if workspace can add more ad accounts based on billing tier.
+
+    Args:
+        db: Database session
+        workspace_id: Workspace UUID
+        new_account_count: Number of new accounts being added
+
+    Raises:
+        HTTPException: If free tier limit would be exceeded
+    """
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    # Paid tier has no limit
+    if workspace.billing_tier != BillingPlanEnum.free:
+        return
+
+    # Count existing ad accounts (Meta + Google)
+    existing_count = db.query(Connection).filter(
+        Connection.workspace_id == workspace_id,
+        Connection.provider.in_([ProviderEnum.meta, ProviderEnum.google]),
+    ).count()
+
+    if existing_count + new_account_count > FREE_TIER_AD_ACCOUNT_LIMIT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Free plan allows only {FREE_TIER_AD_ACCOUNT_LIMIT} ad account. Upgrade to connect more."
+        )
+
 
 @router.get("/authorize")
 async def meta_authorize(
+    return_url: Optional[str] = Query(None, description="URL to redirect to after OAuth"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Redirect user to Meta OAuth consent screen.
-    
+
     WHAT:
         Builds authorization URL with required parameters and redirects user.
     WHY:
@@ -74,13 +115,19 @@ async def meta_authorize(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Meta OAuth not configured. Missing APP_ID or APP_SECRET."
         )
-    
+
+    # Build state parameter with workspace_id and optional return_url
+    # Format: workspace_id|return_url (if return_url provided)
+    state = str(current_user.workspace_id)
+    if return_url:
+        state = f"{current_user.workspace_id}|{return_url}"
+
     # Build authorization URL
     params = {
         "client_id": META_APP_ID,
         "redirect_uri": META_REDIRECT_URI,
         "response_type": "code",
-        "state": str(current_user.workspace_id),  # Pass workspace ID for callback
+        "state": state,  # Pass workspace ID (and optional return_url) for callback
     }
 
     # Use config_id if available (Facebook Login for Business), otherwise use scopes
@@ -91,12 +138,12 @@ async def meta_authorize(
     else:
         params["scope"] = ",".join(META_SCOPES)  # Meta uses comma-separated scopes
         logger.info(f"[META_OAUTH] Using scopes: {params['scope']}")
-    
-    
+
+
     auth_url = f"{META_AUTH_URL}?{urlencode(params)}"
     logger.info(f"[META_OAUTH] Generated Auth URL: {auth_url}")
-    logger.info(f"[META_OAUTH] Redirecting user {current_user.id} to Meta consent screen")
-    
+    logger.info(f"[META_OAUTH] Redirecting user {current_user.id} to Meta consent screen (return_url={return_url})")
+
     return RedirectResponse(url=auth_url)
 
 
@@ -106,52 +153,64 @@ async def meta_callback(
     error: Optional[str] = Query(None),
     error_reason: Optional[str] = Query(None),
     error_description: Optional[str] = Query(None),
-    state: Optional[str] = Query(None),  # workspace_id
+    state: Optional[str] = Query(None),  # workspace_id|return_url
     db: Session = Depends(get_db)
 ):
     """
     Handle OAuth callback from Meta.
-    
+
     WHAT:
         Exchanges authorization code for access token.
         Fetches ad account IDs and creates connection.
     WHY:
         Completes OAuth flow and stores encrypted tokens.
     """
+    # Parse state parameter: workspace_id|return_url (return_url is optional)
+    workspace_id = None
+    return_url = None
+    if state:
+        parts = state.split("|", 1)
+        workspace_id = parts[0]
+        if len(parts) > 1:
+            return_url = parts[1]
+
+    # Determine redirect base (return_url or /settings)
+    redirect_base = f"{FRONTEND_URL}{return_url}" if return_url else f"{FRONTEND_URL}/settings"
+
     # Validate configuration
     if not META_APP_ID or not META_APP_SECRET:
         logger.error("[META_OAUTH] OAuth not configured - missing credentials")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=oauth_not_configured"
+            url=f"{redirect_base}?meta_oauth=error&message=oauth_not_configured"
         )
-    
+
     # Handle errors from Meta
     if error:
         logger.error(f"[META_OAUTH] OAuth error: {error} - {error_reason} - {error_description}")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message={error}"
+            url=f"{redirect_base}?meta_oauth=error&message={error}"
         )
-    
+
     if not code:
         logger.error("[META_OAUTH] Missing authorization code")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=missing_code"
+            url=f"{redirect_base}?meta_oauth=error&message=missing_code"
         )
-    
+
     # Validate state parameter (workspace_id)
-    if not state:
+    if not workspace_id:
         logger.error("[META_OAUTH] Missing state parameter")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=missing_state"
+            url=f"{redirect_base}?meta_oauth=error&message=missing_state"
         )
-    
+
     # Verify workspace exists
     from app.models import Workspace
-    workspace = db.query(Workspace).filter(Workspace.id == state).first()
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
     if not workspace:
-        logger.error(f"[META_OAUTH] Invalid workspace ID: {state}")
+        logger.error(f"[META_OAUTH] Invalid workspace ID: {workspace_id}")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=invalid_workspace"
+            url=f"{redirect_base}?meta_oauth=error&message=invalid_workspace"
         )
     
     # Exchange code for tokens
@@ -171,7 +230,7 @@ async def meta_callback(
     except Exception as e:
         logger.exception("[META_OAUTH] Failed to exchange code for tokens")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=token_exchange_failed"
+            url=f"{redirect_base}?meta_oauth=error&message=token_exchange_failed"
         )
     
     access_token = token_data.get("access_token")
@@ -180,7 +239,7 @@ async def meta_callback(
     if not access_token:
         logger.error("[META_OAUTH] Missing access token in response")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=missing_tokens"
+            url=f"{redirect_base}?meta_oauth=error&message=missing_tokens"
         )
     
     # Check if token is short-lived (expires_in < 5184000 = 60 days)
@@ -225,7 +284,7 @@ async def meta_callback(
             if not ad_accounts:
                 logger.error("[META_OAUTH] No accessible ad accounts found")
                 return RedirectResponse(
-                    url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=no_ad_accounts"
+                    url=f"{redirect_base}?meta_oauth=error&message=no_ad_accounts"
                 )
             
             logger.info(f"[META_OAUTH] Found {len(ad_accounts)} accessible ad account(s)")
@@ -299,7 +358,7 @@ async def meta_callback(
     except Exception as e:
         logger.exception(f"[META_OAUTH] Failed to fetch ad accounts: {str(e)}")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?meta_oauth=error&message=account_fetch_failed"
+            url=f"{redirect_base}?meta_oauth=error&message=account_fetch_failed"
         )
     
     # Store tokens temporarily and redirect to selection page
@@ -314,11 +373,10 @@ async def meta_callback(
         )
     
     session_id = str(uuid.uuid4())
-    workspace_id = state  # workspace_id from OAuth state parameter
-    
+
     # Calculate expiration time
     expires_at = datetime.utcnow() + timedelta(seconds=expires_in) if expires_in else None
-    
+
     # Store in Redis with 10 minute TTL (600 seconds)
     selection_data_json = json.dumps({
         "accounts": accounts_for_selection,
@@ -327,17 +385,17 @@ async def meta_callback(
         "expires_in": expires_in,
         "expires_at": expires_at.isoformat() if expires_at else None,
     })
-    
+
     app_state.context_manager.redis_client.setex(
         f"meta_oauth_selection:{session_id}",
         600,  # TTL in seconds
         selection_data_json
     )
-    
+
     logger.info(f"[META_OAUTH] Stored selection data with session_id: {session_id}")
-    
+
     return RedirectResponse(
-        url=f"{FRONTEND_URL}/settings?meta_oauth=select&session_id={session_id}"
+        url=f"{redirect_base}?meta_oauth=select&session_id={session_id}"
     )
 
 
@@ -448,10 +506,26 @@ async def connect_selected_accounts(
     expires_in = selection_data.get("expires_in")
     expires_at_str = selection_data.get("expires_at")
     expires_at = datetime.fromisoformat(expires_at_str) if expires_at_str else None
-    
+
+    # Check free tier ad account limit before creating connections
+    # Count how many are truly new (not updates to existing)
+    new_account_count = 0
+    for account_data in selected_accounts:
+        account_id = account_data["account_id"]
+        existing = db.query(Connection).filter(
+            Connection.workspace_id == workspace_id,
+            Connection.provider == ProviderEnum.meta,
+            Connection.external_account_id == account_id,
+        ).first()
+        if not existing:
+            new_account_count += 1
+
+    if new_account_count > 0:
+        _check_ad_account_limit(db, workspace_id, new_account_count)
+
     created_connections = []
     updated_connections = []
-    
+
     try:
         for account_data in selected_accounts:
             # Use account_id (numeric) for external_account_id storage

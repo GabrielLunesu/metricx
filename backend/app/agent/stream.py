@@ -336,3 +336,154 @@ def create_subscriber(job_id: str, redis_url: Optional[str] = None) -> StreamSub
     url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379")
     client = redis.from_url(url)
     return StreamSubscriber(client, job_id)
+
+
+# =============================================================================
+# ASYNC QUEUE PUBLISHER (for direct SSE without Redis)
+# =============================================================================
+
+class AsyncQueuePublisher:
+    """
+    Publisher that pushes events to an asyncio.Queue.
+
+    WHAT: Used for direct SSE streaming without Redis.
+
+    WHY: When running the agent in the same process as the API,
+         we don't need Redis Pub/Sub. We can use an async queue instead.
+
+    USAGE:
+        queue = asyncio.Queue()
+        publisher = AsyncQueuePublisher(queue)
+
+        # In agent:
+        publisher.thinking("Analyzing...")
+        publisher.tool_call("query_metrics", {"metrics": ["spend"]})
+        publisher.token("Your")
+        publisher.token(" spend")
+        publisher.done(result)
+
+        # In SSE generator:
+        while True:
+            event = await queue.get()
+            yield f"data: {json.dumps(event)}\n\n"
+    """
+
+    def __init__(self, queue):
+        """
+        Initialize publisher.
+
+        PARAMETERS:
+            queue: asyncio.Queue to push events to
+        """
+        import asyncio
+        self.queue = queue
+        self._loop = None
+        logger.info("[STREAM] AsyncQueuePublisher created")
+
+    def _get_loop(self):
+        """Get event loop, handling threading."""
+        import asyncio
+        try:
+            return asyncio.get_running_loop()
+        except RuntimeError:
+            return None
+
+    def _put_event(self, event: Dict[str, Any]) -> None:
+        """Put event in queue (handles sync/async context)."""
+        import asyncio
+
+        loop = self._get_loop()
+        if loop and loop.is_running():
+            # We're in an async context but this method is sync
+            # Use call_soon_threadsafe if in different thread
+            try:
+                loop.call_soon_threadsafe(
+                    lambda: asyncio.create_task(self.queue.put(event))
+                )
+            except RuntimeError:
+                # If that fails, try direct put_nowait
+                try:
+                    self.queue.put_nowait(event)
+                except asyncio.QueueFull:
+                    logger.warning("[STREAM] Queue full, dropping event")
+        else:
+            # Sync context - use put_nowait
+            try:
+                self.queue.put_nowait(event)
+            except asyncio.QueueFull:
+                logger.warning("[STREAM] Queue full, dropping event")
+
+    async def put_event_async(self, event: Dict[str, Any]) -> None:
+        """Put event in queue (async version)."""
+        await self.queue.put(event)
+        logger.debug(f"[STREAM] Queued event: {event.get('type')}")
+
+    def thinking(self, text: str) -> None:
+        """Publish thinking event."""
+        self._put_event({"type": "thinking", "data": text})
+
+    def tool_call(self, tool_name: str, args: Dict[str, Any]) -> None:
+        """Publish tool call event."""
+        self._put_event({
+            "type": "tool_call",
+            "data": {"tool": tool_name, "args": args}
+        })
+
+    def tool_result(self, tool_name: str, preview: str, success: bool = True) -> None:
+        """Publish tool result event."""
+        self._put_event({
+            "type": "tool_result",
+            "data": {"tool": tool_name, "preview": preview, "success": success}
+        })
+
+    def token(self, text: str) -> None:
+        """Publish single answer token (for typing effect)."""
+        self._put_event({"type": "token", "data": text})
+
+    def answer_token(self, token: str) -> None:
+        """Alias for token() for compatibility."""
+        self.token(token)
+
+    def visual(self, spec: Dict[str, Any]) -> None:
+        """Publish visual spec."""
+        self._put_event({"type": "visual", "data": spec})
+
+    def done(self, result: Dict[str, Any]) -> None:
+        """Publish done event with final result."""
+        self._put_event({"type": "done", "data": result, "is_final": True})
+
+    def error(self, message: str) -> None:
+        """Publish error event."""
+        self._put_event({
+            "type": "error",
+            "data": message,
+            "is_final": True
+        })
+
+
+def create_async_queue_publisher(queue) -> AsyncQueuePublisher:
+    """
+    Factory function to create an async queue publisher.
+
+    WHAT: Creates a publisher that pushes events to an asyncio.Queue.
+
+    WHY: For direct SSE streaming without Redis (same-process agent).
+
+    PARAMETERS:
+        queue: asyncio.Queue instance
+
+    RETURNS:
+        AsyncQueuePublisher ready to use
+
+    EXAMPLE:
+        queue = asyncio.Queue()
+        publisher = create_async_queue_publisher(queue)
+
+        # Run agent with publisher
+        result = await run_agent_async(..., publisher=publisher)
+
+        # Meanwhile, in SSE generator:
+        async for event in queue_to_events(queue):
+            yield f"data: {json.dumps(event)}\n\n"
+    """
+    return AsyncQueuePublisher(queue)

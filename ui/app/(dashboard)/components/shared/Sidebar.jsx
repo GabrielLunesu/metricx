@@ -4,6 +4,15 @@
  * WHAT: Main navigation sidebar for the dashboard
  * WHY: Users need consistent navigation across all pages
  *
+ * CHANGES (2025-12-22):
+ *   - Replaced Clerk UserButton with custom avatar popover
+ *   - Added Profile button → /settings?tab=profile
+ *   - Added Logout button using Clerk signOut
+ *
+ * CHANGES (2025-12-17):
+ *   - Added free tier gating with lock icons on pro-only features
+ *   - Added UpgradeModal for locked feature clicks
+ *
  * CHANGES (2025-12-10):
  *   - Fixed workspace detection to use is_active field from API
  *   - Added toast notifications for switch errors
@@ -18,31 +27,45 @@
  *
  * REFERENCES:
  *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
+ *   - docs-arch/living-docs/BILLING.md (free tier gating)
  *   - https://clerk.com/docs/components/user/user-button
  */
 'use client'
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User } from "lucide-react";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import { UserButton } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../../components/ui/popover";
+import { Button } from "../../../../components/ui/button";
 import { fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
+import { getBillingStatus } from "../../../../lib/workspace";
 import NavItem from "./NavItem";
+import { UpgradeModal } from "../../../../components/UpgradeModal";
 
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const { user } = useUser();
+    const { signOut } = useClerk();
     const [workspace, setWorkspace] = useState(null);
     const [workspaces, setWorkspaces] = useState([]);
+    const [billingTier, setBillingTier] = useState(null);
+    const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: null });
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     useEffect(() => {
         let mounted = true;
 
         const init = async () => {
             try {
-                const wsData = await fetchWorkspaces();
+                // Fetch workspaces and billing status in parallel
+                const [wsData, billingData] = await Promise.all([
+                    fetchWorkspaces(),
+                    getBillingStatus(),
+                ]);
                 if (!mounted) return;
 
                 const list = wsData.workspaces || [];
@@ -53,6 +76,11 @@ export default function Sidebar() {
                     // Find active workspace or default to first
                     const active = list.find(w => w.is_active) || list[0];
                     setWorkspace(active);
+                }
+
+                // Set billing tier for feature gating
+                if (billingData?.billing?.billing_tier) {
+                    setBillingTier(billingData.billing.billing_tier);
                 }
             } catch (err) {
                 console.error("Sidebar init failed:", err);
@@ -80,13 +108,19 @@ export default function Sidebar() {
 
     // Navigation items - Attribution removed (now accessed via Analytics page)
     // WHY: Ad analytics first, attribution second (only for Shopify users)
+    // requiresPaid: true = locked for free tier users
     const navItems = [
-        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/dashboard" },
-        { href: "/analytics", label: "Analytics", icon: BarChart2, active: pathname?.startsWith("/analytics") },
-        { href: "/copilot", label: "Copilot AI", icon: Sparkles, active: pathname?.startsWith('/copilot') },
-        { href: "/finance", label: "Finance", icon: Wallet, active: pathname === "/finance" },
-        { href: "/campaigns", label: "Campaigns", icon: Layers, active: pathname?.startsWith('/campaigns') },
+        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, active: pathname === "/dashboard", requiresPaid: false },
+        { href: "/analytics", label: "Analytics", icon: BarChart2, active: pathname?.startsWith("/analytics"), requiresPaid: true },
+        { href: "/copilot", label: "Copilot AI", icon: Sparkles, active: pathname?.startsWith('/copilot'), requiresPaid: true },
+        { href: "/finance", label: "Finance", icon: Wallet, active: pathname === "/finance", requiresPaid: true },
+        { href: "/campaigns", label: "Campaigns", icon: Layers, active: pathname?.startsWith('/campaigns'), requiresPaid: true },
     ];
+
+    // Handler for locked nav item clicks
+    const handleLockedClick = (featureLabel) => {
+        setUpgradeModal({ open: true, feature: featureLabel });
+    };
 
 
 
@@ -151,15 +185,20 @@ export default function Sidebar() {
 
                 {/* Nav */}
                 <nav className="flex flex-col gap-6 w-full items-center">
-                    {navItems.map((item) => (
-                        <NavItem
-                            key={item.href}
-                            href={item.href}
-                            label={item.label}
-                            icon={item.icon}
-                            isActive={item.active}
-                        />
-                    ))}
+                    {navItems.map((item) => {
+                        const isLocked = item.requiresPaid && billingTier === 'free';
+                        return (
+                            <NavItem
+                                key={item.href}
+                                href={item.href}
+                                label={item.label}
+                                icon={item.icon}
+                                isActive={item.active}
+                                isLocked={isLocked}
+                                onLockedClick={handleLockedClick}
+                            />
+                        );
+                    })}
                 </nav>
 
                 {/* Bottom */}
@@ -174,17 +213,43 @@ export default function Sidebar() {
                         <Settings className="w-5 h-5" />
                     </a>
 
-                    {/* User Profile - Clerk UserButton */}
-                    <UserButton
-                        afterSignOutUrl="/"
-                        appearance={{
-                            elements: {
-                                avatarBox: "w-10 h-10 ring-2 ring-offset-2 ring-cyan-200/50 hover:ring-cyan-300 transition-all",
-                                userButtonPopoverCard: "rounded-2xl shadow-xl border border-slate-100",
-                                userButtonPopoverActionButton: "rounded-lg",
-                            }
-                        }}
-                    />
+                    {/* User Profile Menu */}
+                    <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+                        <PopoverTrigger asChild>
+                            <button className="w-8 h-8 rounded-full ring-2 ring-offset-2 ring-cyan-200/50 hover:ring-cyan-300 transition-all overflow-hidden bg-slate-100 flex items-center justify-center">
+                                {user?.imageUrl ? (
+                                    <img src={user.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="w-4 h-4 text-slate-400" />
+                                )}
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent side="right" align="end" className="z-[100] w-auto p-2 bg-white border border-slate-200 shadow-lg">
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex items-center gap-2"
+                                    onClick={() => {
+                                        setUserMenuOpen(false);
+                                        window.location.href = '/settings?tab=profile';
+                                    }}
+                                >
+                                    <User className="w-4 h-4" />
+                                    Profile
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => signOut({ redirectUrl: '/' })}
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Logout
+                                </Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </aside>
 
@@ -233,6 +298,13 @@ export default function Sidebar() {
                     <User className="w-5 h-5" />
                 </Link>
             </nav>
+
+            {/* Upgrade Modal for locked features */}
+            <UpgradeModal
+                open={upgradeModal.open}
+                onClose={() => setUpgradeModal({ open: false, feature: null })}
+                feature={upgradeModal.feature}
+            />
         </>
     );
 }

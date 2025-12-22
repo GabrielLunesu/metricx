@@ -42,6 +42,13 @@ This project is building **metricx** - an ad analytics platform that helps merch
   - Any dependencies or integrations involved
 - Ask clarifying questions if anything is unclear.
 
+## Reasoning Approach
+For complex architectural decisions or debugging, use atom of thought:
+1. Identify the core sub-problems
+2. Reason through each independently
+3. Check for conflicts between conclusions
+4. Synthesize into a coherent solution
+
 ## Development Principles
 
 ### Design Patterns
@@ -58,6 +65,23 @@ Follow core programming principles rigorously:
 - Group related functionality into well-named modules
 - Use clear, consistent naming conventions throughout
 - Maintain a flat-ish directory structure - avoid deep nesting
+
+### UI Components (MANDATORY)
+**All UI components MUST use shadcn/ui.** This is non-negotiable.
+
+- **Never** create custom components when a shadcn equivalent exists
+- **Never** use raw HTML elements for buttons, inputs, cards, dialogs, etc.
+- **Always** check if shadcn has the component first: `npx shadcn@latest add <component>`
+- Components live in `ui/components/ui/` - use these, don't reinvent them
+
+**Already installed:** button, card, chart, calendar, popover, date-range-picker
+
+**To add new components:**
+```bash
+cd ui && npx shadcn@latest add <component-name>
+```
+
+**Shadcn config:** `ui/components.json` (new-york style, JSX, Lucide icons)
 
 ## Documentation Requirements
 
@@ -128,6 +152,7 @@ Before considering any feature complete:
 - [ ] Error cases handled with proper observability
 - [ ] No TODO comments without linked tickets
 - [ ] Related files/modules updated if needed
+- [ ] **UI uses shadcn components** (no custom buttons, inputs, cards, etc.)
 
 ## Triple Whale Context
 Key domains we're competing in:

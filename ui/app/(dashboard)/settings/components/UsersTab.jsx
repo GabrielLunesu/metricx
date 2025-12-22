@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { Users, Loader2, Shield, Trash2, UserPlus, Mail, Check, X } from 'lucide-react';
+import { Users, Loader2, Shield, Trash2, UserPlus, Mail, Check, X, Lock, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { currentUser } from '@/lib/workspace';
 import { getApiBase } from '@/lib/config';
 
@@ -11,7 +12,7 @@ const ROLE_OPTIONS = [
   { value: 'Viewer', label: 'Viewer' },
 ];
 
-export default function UsersTab({ user, view = 'members' }) {
+export default function UsersTab({ user, view = 'members', billingTier }) {
   const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -188,7 +189,28 @@ export default function UsersTab({ user, view = 'members' }) {
         <h3 className="text-lg font-semibold text-neutral-900">Workspace Members</h3>
       </div>
 
-      {canManage && (
+      {/* Free tier restriction message */}
+      {canManage && billingTier === 'free' && (
+        <div className="p-4 border border-amber-200 bg-amber-50 rounded-xl flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <Lock className="w-4 h-4 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">Team invites require a paid plan</p>
+            <p className="text-xs text-amber-600 mt-1">Upgrade to invite team members and collaborate on your ad analytics.</p>
+            <Link
+              href="/subscribe"
+              className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Upgrade Now
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Invite form - only for paid tier with manage permissions */}
+      {canManage && billingTier !== 'free' && (
         <div className="p-4 border border-neutral-200 rounded-xl bg-white flex flex-col md:flex-row gap-3 items-center">
           <input
             type="email"

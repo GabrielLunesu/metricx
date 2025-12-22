@@ -33,8 +33,15 @@ async function getClerkToken() {
 
 /**
  * Make an authenticated API request using Clerk token.
+ *
+ * WHAT: Wrapper around fetch that adds Clerk authentication.
+ * WHY: All API calls need consistent auth handling.
+ *
+ * @param {string} url - The URL to fetch
+ * @param {object} options - Fetch options (method, headers, body, etc.)
+ * @returns {Promise<Response>} - The fetch response
  */
-async function authFetch(url, options = {}) {
+export async function authFetch(url, options = {}) {
   const token = await getClerkToken();
 
   const headers = {
@@ -883,20 +890,52 @@ export async function getSyncStatus({ connectionId }) {
 }
 
 // =============================================================================
-// AUTH FUNCTIONS REMOVED (2025-12-09)
+// AUTH FUNCTIONS (Clerk Migration 2025-12-09)
 // =============================================================================
-// The following functions were removed as part of Clerk migration:
-// - deleteUserAccount (now handled via Clerk webhook user.deleted)
-// - updateProfile (now handled by Clerk UserProfile component)
-// - changePassword (now handled by Clerk)
-// - requestPasswordReset (now handled by Clerk)
-// - confirmPasswordReset (now handled by Clerk)
-// - verifyEmail (now handled by Clerk)
+// Most auth functions are now handled by Clerk:
+// - updateProfile → Clerk UserProfile component
+// - changePassword → Clerk UserProfile component
+// - requestPasswordReset → Clerk handles this
+// - confirmPasswordReset → Clerk handles this
+// - verifyEmail → Clerk handles this
+//
+// REMAINING: deleteUserAccount - still needed to clean up local workspace data
+// before Clerk user deletion (called from ProfileTab.jsx)
 //
 // REFERENCES:
-// - backend/app/routers/clerk_webhooks.py (handles user lifecycle)
+// - backend/app/routers/clerk_webhooks.py (handles user lifecycle sync)
+// - backend/app/routers/auth.py (delete-account endpoint)
 // - https://clerk.com/docs/components/user/user-profile
 // =============================================================================
+
+/**
+ * Delete the current user's account and all associated workspace data.
+ *
+ * WHAT: Calls backend to delete all local data (connections, entities, metrics, etc.)
+ * WHY: GDPR/CCPA compliance - users have right to data deletion
+ *
+ * NOTE: After calling this, you should also delete the Clerk user via
+ * `useClerk().user.delete()` to complete the account deletion.
+ *
+ * @returns {Promise<object>} - { detail: "Account deleted successfully" }
+ * @throws {Error} - If deletion fails
+ *
+ * REFERENCES:
+ * - backend/app/routers/auth.py:605-740 (DELETE /auth/delete-account)
+ */
+export async function deleteUserAccount() {
+  const res = await authFetch(`${BASE}/auth/delete-account`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to delete account');
+  }
+
+  return res.json();
+}
 
 export async function fetchEntityPerformance({
   workspaceId,
@@ -959,6 +998,70 @@ export async function fetchEntityPerformance({
 
   // Transform response to match expected format if needed,
   // but for now return as is (TopCreative expects .items which might be .rows in actual response)
+  const data = await res.json();
+  return { items: data.rows, meta: data.meta };
+}
+
+/**
+ * Fetch immediate children entities for drill-down (campaign → ad sets → ads/creatives).
+ *
+ * WHAT: Mirrors `GET /entity-performance/{entity_id}/children`
+ * WHY: Analytics "command center" needs ad-level filtering without loading full breakdown tables.
+ *
+ * NOTE: Backend expects `date_end` to be exclusive (same as `fetchEntityPerformance`).
+ */
+export async function fetchEntityChildren({
+  entityId,
+  timeRange = { last_n_days: 7 },
+  limit = 50,
+  sortBy = "roas",
+  sortDir = "desc",
+  status = "active",
+  provider = null,
+}) {
+  const params = new URLSearchParams();
+  params.set("page_size", String(limit));
+  params.set("sort_by", sortBy);
+  params.set("sort_dir", sortDir);
+  params.set("status", status);
+  if (provider) params.set("platform", provider);
+
+  if (timeRange.start && timeRange.end) {
+    // Custom date range - backend expects date_end to be exclusive
+    params.set("timeframe", "custom");
+    params.set("date_start", timeRange.start);
+
+    const endDate = new Date(timeRange.end);
+    endDate.setDate(endDate.getDate() + 1); // Make end exclusive
+    params.set("date_end", endDate.toISOString().split("T")[0]);
+  } else if (timeRange.last_n_days) {
+    if (timeRange.last_n_days === 7) {
+      params.set("timeframe", "7d");
+    } else if (timeRange.last_n_days === 30) {
+      params.set("timeframe", "30d");
+    } else {
+      // Convert to custom dates (end exclusive)
+      params.set("timeframe", "custom");
+      const end = new Date();
+      end.setDate(end.getDate() + 1);
+      const start = new Date();
+      start.setDate(start.getDate() - timeRange.last_n_days + 1);
+      params.set("date_start", start.toISOString().split("T")[0]);
+      params.set("date_end", end.toISOString().split("T")[0]);
+    }
+  }
+
+  const res = await authFetch(`${BASE}/entity-performance/${entityId}/children?${params.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch entity children: ${res.status} ${msg}`);
+  }
+
   const data = await res.json();
   return { items: data.rows, meta: data.meta };
 }
@@ -1140,7 +1243,8 @@ export async function fetchUnifiedDashboard({
   workspaceId,
   timeframe = 'last_7_days',
   startDate = null,
-  endDate = null
+  endDate = null,
+  platform = null
 }) {
   const params = new URLSearchParams();
   params.set("timeframe", timeframe);
@@ -1148,6 +1252,9 @@ export async function fetchUnifiedDashboard({
   // Use custom dates if provided (for custom date range selection)
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
+
+  // Platform filter (google, meta) - filters all metrics to single platform
+  if (platform) params.set("platform", platform);
 
   const res = await authFetch(`${BASE}/workspaces/${workspaceId}/dashboard/unified?${params.toString()}`, {
     method: "GET",

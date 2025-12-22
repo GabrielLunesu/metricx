@@ -56,7 +56,7 @@ export default function SignUpPage() {
         {/* Clerk SignUp Component */}
         <SignUp
           signInUrl="/sign-in"
-          forceRedirectUrl="/dashboard"
+          forceRedirectUrl="/onboarding"
           appearance={{
             elements: {
               rootBox: 'w-full',

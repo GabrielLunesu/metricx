@@ -243,23 +243,42 @@ def _build_chart_query(
     """
 
     # Build the time truncation based on granularity
+    # NOTE: For daily granularity, use metrics_date (date from ad platform in account timezone)
+    # For hourly granularity, use captured_at (actual timestamp of the sync)
     if granularity == "hour":
-        time_trunc = "date_trunc('hour', captured_at)"
+        time_trunc = "date_trunc('hour', ms.captured_at)"
+        # Hourly uses timestamp filtering
+        # IMPORTANT: Filter to campaign-level entities to avoid double-counting
+        # (same logic as dashboard.py - campaign metrics are source of truth)
+        where_clauses = [
+            "e.workspace_id = :workspace_id",
+            "e.level = 'campaign'",
+            "ms.captured_at >= :start_ts",
+            "ms.captured_at <= :end_ts"
+        ]
+        params = {
+            "workspace_id": str(workspace_id),
+            "start_ts": start,
+            "end_ts": end
+        }
     else:
-        time_trunc = "date_trunc('day', captured_at)::date"
-
-    # Build WHERE clauses
-    where_clauses = [
-        "e.workspace_id = :workspace_id",
-        "ms.captured_at >= :start_ts",
-        "ms.captured_at <= :end_ts"
-    ]
-
-    params = {
-        "workspace_id": str(workspace_id),
-        "start_ts": start,
-        "end_ts": end
-    }
+        time_trunc = "ms.metrics_date"
+        # Daily uses metrics_date filtering for accurate day boundaries
+        # IMPORTANT: Filter to campaign-level entities to avoid double-counting
+        # (same logic as dashboard.py - campaign metrics are source of truth)
+        start_date = start.date() if hasattr(start, 'date') else start
+        end_date = end.date() if hasattr(end, 'date') else end
+        where_clauses = [
+            "e.workspace_id = :workspace_id",
+            "e.level = 'campaign'",
+            "ms.metrics_date >= :start_date",
+            "ms.metrics_date <= :end_date"
+        ]
+        params = {
+            "workspace_id": str(workspace_id),
+            "start_date": start_date,
+            "end_date": end_date
+        }
 
     # Platform filter
     if platforms:
@@ -733,18 +752,21 @@ def get_daily_revenue(
     day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
     # Query: Get daily revenue aggregated from latest snapshots per entity per day
+    # NOTE: Uses metrics_date (date from ad platform in account timezone) for accurate day grouping
+    # IMPORTANT: Filter to campaign-level entities to avoid double-counting
     sql = text("""
         WITH latest_snapshots AS (
-            SELECT DISTINCT ON (ms.entity_id, date_trunc('day', ms.captured_at)::date)
-                date_trunc('day', ms.captured_at)::date as day,
+            SELECT DISTINCT ON (ms.entity_id, ms.metrics_date)
+                ms.metrics_date as day,
                 ms.entity_id,
                 ms.revenue
             FROM metric_snapshots ms
             INNER JOIN entities e ON e.id = ms.entity_id
             WHERE e.workspace_id = :workspace_id
-              AND ms.captured_at >= :start_ts
-              AND ms.captured_at <= :end_ts
-            ORDER BY ms.entity_id, date_trunc('day', ms.captured_at)::date, ms.captured_at DESC
+              AND e.level = 'campaign'
+              AND ms.metrics_date >= :start_date
+              AND ms.metrics_date <= :end_date
+            ORDER BY ms.entity_id, ms.metrics_date, ms.captured_at DESC
         )
         SELECT
             day,
@@ -756,8 +778,8 @@ def get_daily_revenue(
 
     result = db.execute(sql, {
         "workspace_id": str(workspace_id),
-        "start_ts": datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc),
-        "end_ts": now
+        "start_date": start_date,
+        "end_date": today
     }).fetchall()
 
     # Build a map of date -> revenue

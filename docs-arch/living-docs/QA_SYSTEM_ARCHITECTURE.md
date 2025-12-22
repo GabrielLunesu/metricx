@@ -1,19 +1,20 @@
 # AI Copilot Architecture
 
-**Version**: 4.0.0 (Semantic Layer + Claude + LangGraph)
-**Last Updated**: 2025-12-10
+**Version**: 5.0.0 (Free Agent + Smart Data Source Selection)
+**Last Updated**: 2025-12-22
 **Status**: Production
 
 ---
 
 ## Overview
 
-The metricx AI Copilot is a **semantic query engine** that translates natural language questions into analytics queries using:
+The metricx AI Copilot is a **free-form ReAct-style agent** that autonomously decides what tools to call based on the question. Key features:
 
-- **Claude Sonnet 4** (Anthropic) for understanding and response generation
-- **Semantic Layer** for composable, type-safe queries
-- **LangGraph** for structured agent workflows
+- **GPT-4o-mini** (OpenAI) for cost-effective reasoning (95% cost reduction from Claude)
+- **Smart Data Source Selection** - Snapshots first, Live API fallback
+- **LangGraph** for agent loop with tool execution
 - **SSE Streaming** for real-time token-by-token responses
+- **User Feedback Handling** - Automatically verifies data when user questions accuracy
 
 ---
 
@@ -21,7 +22,7 @@ The metricx AI Copilot is a **semantic query engine** that translates natural la
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         AI COPILOT ARCHITECTURE                              │
+│                         AI COPILOT ARCHITECTURE (v5.0)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
   User Question
@@ -32,217 +33,298 @@ The metricx AI Copilot is a **semantic query engine** that translates natural la
        │
        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           LANGGRAPH AGENT                                    │
+│                        FREE AGENT LOOP (ReAct Style)                         │
 │                                                                              │
-│  ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐    │
-│  │  understand_node │────▶│  fetch_data_node │────▶│   respond_node   │    │
-│  │                  │     │                  │     │                  │    │
-│  │  Claude extracts │     │  SemanticTools   │     │  Claude generates│    │
-│  │  intent →        │     │  execute query → │     │  answer +        │    │
-│  │  SemanticQuery   │     │  CompilationResult│     │  visuals         │    │
-│  └──────────────────┘     └──────────────────┘     └──────────────────┘    │
-│           │                                                │                │
-│           │                                                │                │
-│           ▼                                                ▼                │
-│  ┌──────────────────┐                              ┌──────────────────┐    │
-│  │  error_node      │                              │  SSE Streaming   │    │
-│  │  (if validation  │                              │  • tokens        │    │
-│  │   fails)         │                              │  • visuals       │    │
-│  └──────────────────┘                              │  • done          │    │
-│                                                    └──────────────────┘    │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                         agent_loop_node                               │   │
+│  │                                                                       │   │
+│  │   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │   │
+│  │   │   LLM sees  │────▶│ Tool Calls? │────▶│  Execute    │            │   │
+│  │   │   question  │     │             │     │  Tools      │            │   │
+│  │   │   + tools   │     │   YES       │     │             │            │   │
+│  │   └─────────────┘     └──────┬──────┘     └──────┬──────┘            │   │
+│  │                              │                   │                    │   │
+│  │                              │ NO                │                    │   │
+│  │                              ▼                   │                    │   │
+│  │                       ┌─────────────┐            │                    │   │
+│  │                       │  Generate   │◄───────────┘                    │   │
+│  │                       │  Answer     │     (loop until ready)          │   │
+│  │                       └─────────────┘                                 │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  AVAILABLE TOOLS:                                                            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │query_metrics │  │google_ads_   │  │meta_ads_     │  │list_entities │    │
+│  │  (Snapshots) │  │query (Live)  │  │query (Live)  │  │              │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+│                                                                              │
+│  SSE Events: thinking → tool_call → tool_result → token → done              │
 └─────────────────────────────────────────────────────────────────────────────┘
        │
        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           SEMANTIC LAYER                                     │
+│                           DATA SOURCES                                       │
 │                                                                              │
-│  ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐    │
-│  │  SemanticQuery   │────▶│    Validator     │────▶│    Compiler      │    │
-│  │  (model.py)      │     │  (validator.py)  │     │  (compiler.py)   │    │
-│  │                  │     │                  │     │                  │    │
-│  │  • metrics       │     │  • Schema check  │     │  • Strategy      │    │
-│  │  • breakdown     │     │  • Permissions   │     │    selection     │    │
-│  │  • comparison    │     │  • Data exists   │     │  • SQL building  │    │
-│  │  • timeseries    │     │                  │     │  • Aggregation   │    │
-│  └──────────────────┘     └──────────────────┘     └──────────────────┘    │
-│                                                             │               │
-│                                                             ▼               │
-│                                                    ┌──────────────────┐    │
-│                                                    │ UnifiedMetric    │    │
-│                                                    │ Service          │    │
-│                                                    └──────────────────┘    │
+│  ┌────────────────────────────────┐   ┌────────────────────────────────┐   │
+│  │       SNAPSHOTS (Primary)      │   │      LIVE API (Fallback)       │   │
+│  │                                │   │                                │   │
+│  │  • Updated every 15 minutes    │   │  • Google Ads API              │   │
+│  │  • Fast (no external calls)    │   │  • Meta Ads API                │   │
+│  │  • Campaign-level aggregation  │   │  • Rate limited                │   │
+│  │                                │   │                                │   │
+│  │  USE FOR:                      │   │  USE FOR:                      │   │
+│  │  - spend, revenue, ROAS        │   │  - Campaign start_date         │   │
+│  │  - CPC, CTR, CPA               │   │  - Keywords, search terms      │   │
+│  │  - Conversions, clicks         │   │  - Audiences, targeting        │   │
+│  │  - Trends, comparisons         │   │  - "Real-time" requests        │   │
+│  │                                │   │  - User data verification      │   │
+│  └────────────────────────────────┘   └────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## LLM Provider: Claude (Anthropic)
+## Key Change: Free Agent vs Rigid Pipeline
 
-**Model**: `claude-sonnet-4-20250514`
+### Old Architecture (v4.0)
+
+```
+Question → understand_node (classify intent) → fixed route → specific tool → respond
+```
+
+The old system classified questions into rigid intents (metric_query, comparison, ranking) and followed pre-defined paths.
+
+### New Architecture (v5.0)
+
+```
+Question → LLM with ALL tools → LLM decides what to call → execute →
+        → LLM sees results → LLM decides: more tools? or answer? → respond
+```
+
+The new ReAct-style agent autonomously decides:
+1. Which tools to call (if any)
+2. What arguments to pass
+3. Whether to call more tools or answer
+4. How to present the data
+
+---
+
+## LLM Provider: OpenAI
+
+**Model**: `gpt-4o-mini`
 
 **Location**: `backend/app/agent/nodes.py`
 
-**Clients**:
-- `Anthropic()` - Synchronous client for blocking calls
-- `AsyncAnthropic()` - Async client for SSE streaming
+**Why Changed from Claude**: 95% cost reduction while maintaining quality for tool-calling tasks.
 
-**Environment**: `ANTHROPIC_API_KEY`
+**Environment**: `OPENAI_API_KEY`
 
 ```python
 # backend/app/agent/nodes.py
 
-from anthropic import Anthropic, AsyncAnthropic
+from openai import OpenAI, AsyncOpenAI
 
-def get_claude_client() -> Anthropic:
-    return Anthropic()
+def get_openai_client() -> OpenAI:
+    return OpenAI()
 
-def get_async_claude_client() -> AsyncAnthropic:
-    return AsyncAnthropic()
+def get_async_openai_client() -> AsyncOpenAI:
+    return AsyncOpenAI()
 ```
 
 ---
 
-## Semantic Layer (Composable Queries)
+## Smart Data Source Selection
 
-### What It Replaces
+### Priority Order
 
-The old **DSL (Domain-Specific Language)** had mutually exclusive fields - you could have breakdown OR comparison, but not both. The semantic layer allows **composition**:
+| Data Type | First Choice | Fallback | When to Fallback |
+|-----------|--------------|----------|------------------|
+| Metrics (spend, ROAS, etc.) | Snapshots (DB) | Live API | User says "real-time" OR snapshot stale |
+| Campaign config (budget, status) | Snapshots | Live API | start_date, keywords not in DB |
+| Keywords, search terms | Live API only | N/A | Not stored in snapshots |
+| Audiences, targeting | Live API only | N/A | Not stored in snapshots |
+
+### Response Transparency
+
+The agent ALWAYS tells the user about data freshness:
+
+```
+✅ "Your spend today is $1,234 (data from 12:30 PM, ~8 min ago)"
+✅ "Your ROAS is 3.2x (live from Google Ads)"
+❌ "Your ROAS is 3.2x" (no context - BAD!)
+```
+
+### User Feedback Handling
+
+When user says "this is wrong", "doesn't match", etc.:
+
+1. **Acknowledge**: "I apologize for the discrepancy."
+2. **Explain**: "The previous data came from our cached snapshots."
+3. **Verify**: Automatically call live API to fetch fresh data
+4. **Compare**: Show live vs cached and explain the difference
+
+---
+
+## Available Tools
+
+### 1. query_metrics (Snapshots - Primary)
 
 ```python
-# OLD DSL - IMPOSSIBLE to combine:
 {
-    "breakdown": "ad",      # Can't also have comparison!
-    "compare_to_previous": true  # XOR
+    "name": "query_metrics",
+    "description": "Query metrics from database snapshots (updated every 15 min)",
+    "parameters": {
+        "metrics": ["spend", "revenue", "roas", "cpc", "ctr", "conversions"],
+        "time_range": "7d",  # 1d, 7d, 14d, 30d, 90d
+        "breakdown_level": "campaign",  # campaign, adset, ad, provider
+        "compare_to_previous": false,
+        "include_timeseries": false
+    }
 }
-
-# NEW Semantic Layer - COMPOSABLE:
-SemanticQuery(
-    metrics=["cpc"],
-    breakdown=Breakdown(dimension="entity", level="ad", limit=3),
-    comparison=Comparison(type=ComparisonType.PREVIOUS_PERIOD),
-    include_timeseries=True
-)
 ```
 
-### Files
+**Returns**: Metric values + `snapshot_time` + `snapshot_age_minutes`
 
-| File | Purpose |
-|------|---------|
-| `app/semantic/model.py` | Metric/dimension definitions |
-| `app/semantic/query.py` | SemanticQuery, Breakdown, Comparison classes |
-| `app/semantic/validator.py` | Query validation (permissions, data existence) |
-| `app/semantic/compiler.py` | Query → SQL execution strategy |
-
-### SemanticQuery Structure
+### 2. google_ads_query (Live API)
 
 ```python
-@dataclass
-class SemanticQuery:
-    # What to measure
-    metrics: List[str]  # ["cpc", "roas", "spend"]
-
-    # Time range
-    time_range: TimeRange  # last_n_days or start/end
-
-    # Optional composition
-    breakdown: Optional[Breakdown] = None      # Group by entity/provider/time
-    comparison: Optional[Comparison] = None    # vs previous period
-    include_timeseries: bool = False           # Daily/hourly breakdown
-
-    # Filters
-    filters: Optional[Filters] = None          # provider, level, status
+{
+    "name": "google_ads_query",
+    "description": "Query Google Ads API directly for data not in snapshots",
+    "parameters": {
+        "query_type": "campaigns",  # campaigns, keywords, search_terms, metrics
+        "fields": ["name", "status", "start_date"],
+        "filters": {"status": "ENABLED"},
+        "date_range": "today"
+    }
+}
 ```
 
-### Breakdown Types
+**Use for**: Campaign start_date, keywords, search terms, real-time data
+
+### 3. meta_ads_query (Live API)
 
 ```python
-class Breakdown:
-    dimension: str  # "entity", "provider", "temporal"
-    level: str      # "campaign", "adset", "ad" (for entity)
-    limit: int      # Top N results
-    sort_order: str # "desc" or "asc"
+{
+    "name": "meta_ads_query",
+    "description": "Query Meta Ads API directly",
+    "parameters": {
+        "query_type": "campaigns",  # campaigns, adsets, ads, metrics
+        "fields": ["name", "status", "targeting"],
+        "filters": {},
+        "date_range": "last_7d"
+    }
+}
 ```
 
-### Comparison Types
+**Use for**: Audiences, targeting details, creative info
+
+### 4. list_entities
 
 ```python
-class ComparisonType(Enum):
-    PREVIOUS_PERIOD = "previous_period"   # Last 7 days vs 7-14 days ago
-    YEAR_OVER_YEAR = "year_over_year"     # This week vs same week last year
-    CUSTOM = "custom"                      # Custom date range
+{
+    "name": "list_entities",
+    "description": "List campaigns/adsets/ads from database",
+    "parameters": {
+        "level": "campaign",
+        "name_contains": "Summer",
+        "provider": "google"
+    }
+}
+```
+
+### 5. get_business_context
+
+```python
+{
+    "name": "get_business_context",
+    "description": "Get user's business profile (company, industry, markets)"
+}
 ```
 
 ---
 
-## LangGraph Agent
-
-### State Machine
-
-```
-START
-   │
-   ▼
-understand_node ───────────────────────────┐
-   │                                       │
-   │ [intent extracted]                    │ [clarification needed]
-   │                                       │
-   ▼                                       ▼
-fetch_data_node                      respond_node (clarify)
-   │                                       │
-   │ [data fetched]                        │
-   │                                       │
-   ▼                                       │
-respond_node ◄─────────────────────────────┘
-   │
-   ▼
-END
-```
-
-### Nodes
-
-**1. understand_node** (`app/agent/nodes.py`)
-- Claude analyzes question and conversation context
-- Extracts intent → SemanticQuery
-- Routes to fetch_data or respond (if clarification needed)
-
-**2. fetch_data_node** (`app/agent/nodes.py`)
-- Calls SemanticTools with the query
-- Tools call Semantic Layer → UnifiedMetricService
-- Returns CompilationResult with metrics
-
-**3. respond_node** (`app/agent/nodes.py`)
-- Claude generates natural language answer
-- Builds visual spec (chart/table/card)
-- Streams response via SSE
-
-**4. error_node** (`app/agent/nodes.py`)
-- Handles validation errors gracefully
-- Returns helpful error message
-
-### State Schema
+## Agent Loop Implementation
 
 ```python
-# app/agent/state.py
+# backend/app/agent/nodes.py
 
-class AgentState(TypedDict):
-    question: str
-    workspace_id: str
-    user_id: str
+MAX_ITERATIONS = 5
+MAX_TOOL_CALLS_PER_ITERATION = 3
 
-    # Extracted by understand_node
-    intent: Optional[str]
-    semantic_query: Optional[SemanticQuery]
+async def agent_loop_node(state: AgentState, db: Session, publisher) -> Dict:
+    """
+    ReAct-style agent loop.
 
-    # Fetched by fetch_data_node
-    data: Optional[CompilationResult]
+    1. Send question + tools to LLM
+    2. If LLM returns tool_calls → execute, add results, loop
+    3. If LLM returns content → done, return answer
+    4. Max 5 iterations to prevent runaway
+    """
+    messages = [
+        {"role": "system", "content": AGENT_SYSTEM_PROMPT},
+        {"role": "user", "content": state["current_question"]}
+    ]
 
-    # Generated by respond_node
-    answer: Optional[str]
-    visuals: Optional[dict]
+    iteration = 0
+    while iteration < MAX_ITERATIONS:
+        iteration += 1
 
-    # Error handling
-    error: Optional[str]
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=AGENT_TOOLS,
+            tool_choice="auto"
+        )
+
+        message = response.choices[0].message
+
+        # No tool calls = ready to answer
+        if not message.tool_calls:
+            return {"answer_chunks": [message.content], "stage": "done"}
+
+        # Execute tool calls
+        for tool_call in message.tool_calls:
+            result = await execute_tool_async(tool_call.function.name, ...)
+            messages.append({"role": "tool", "content": json.dumps(result)})
+
+    return {"answer_chunks": ["Max iterations reached"], "stage": "done"}
 ```
+
+---
+
+## Critical: Campaign-Level Aggregation
+
+### The Problem
+
+The entity hierarchy stores metrics at ALL levels:
+```
+Campaign "Summer Sale" → spend: $500
+  └─ Adset "US Audience" → spend: $500 (same data!)
+      └─ Ad "Banner 1" → spend: $500 (same data again!)
+```
+
+Without filtering, queries would sum: $500 + $500 + $500 = $1,500 (3x actual)
+
+### The Solution
+
+All aggregation queries default to `level='campaign'`:
+
+```python
+# backend/app/services/unified_metric_service.py
+
+def _get_base_totals(self, workspace_id, start_date, end_date, filters):
+    # Default to campaign-level to avoid double/triple counting
+    level_filter = filters.level if filters.level else "campaign"
+
+    query = (
+        self.db.query(...)
+        .filter(self.E.level == level_filter)  # CRITICAL
+        ...
+    )
+```
+
+This matches dashboard behavior and ensures copilot numbers match UI.
 
 ---
 
@@ -252,6 +334,17 @@ class AgentState(TypedDict):
 
 **Location**: `backend/app/routers/qa.py`
 
+### Event Types
+
+| Event | Description | Example |
+|-------|-------------|---------|
+| `thinking` | Processing indicator | `{"type": "thinking", "data": "Understanding..."}` |
+| `tool_call` | Tool being executed | `{"type": "tool_call", "data": {"tool": "query_metrics"}}` |
+| `tool_result` | Tool returned data | `{"type": "tool_result", "data": {"tool": "...", "preview": "..."}}` |
+| `token` | Single token (typing) | `{"type": "token", "data": "Your"}` |
+| `done` | Final result | `{"type": "done", "data": {...}}` |
+| `error` | Error occurred | `{"type": "error", "data": "..."}` |
+
 ### Flow
 
 ```
@@ -259,203 +352,62 @@ Client Request
        ↓
 FastAPI Handler (async)
        ↓
-AsyncAnthropic Client
+AsyncQueuePublisher (events queue)
        ↓
-async for token in stream.text_stream
+agent_loop_node runs in background
        ↓
-yield SSE events
+Events streamed via SSE
        ↓
-Client (typing effect)
-```
-
-### Event Types
-
-| Event | Description | Example |
-|-------|-------------|---------|
-| `thinking` | Processing indicator | `{"type": "thinking", "data": "Understanding your question..."}` |
-| `token` | Single token (typing) | `{"type": "token", "data": "Your"}` |
-| `visual` | Chart/table spec | `{"type": "visual", "data": {...}}` |
-| `done` | Final result | `{"type": "done", "data": {"answer": "...", "visuals": {...}}}` |
-| `error` | Error occurred | `{"type": "error", "data": "..."}` |
-
-### Non-Blocking Architecture
-
-```python
-# backend/app/routers/qa.py
-
-@router.post("/qa/agent/sse")
-async def agent_sse(request: AgentRequest, ...):
-
-    # 1. Async Claude call (non-blocking)
-    client = get_async_claude_client()
-
-    async with client.messages.stream(
-        model="claude-sonnet-4-20250514",
-        messages=messages,
-        max_tokens=1024,
-    ) as stream:
-        async for text in stream.text_stream:
-            yield f"data: {json.dumps({'type': 'token', 'data': text})}\n\n"
-
-    # 2. DB queries run in thread pool (SQLAlchemy is sync)
-    def fetch_data_sync():
-        tools = SemanticTools(db, workspace_id, user_id)
-        return tools.query_metrics(semantic_query)
-
-    result = await asyncio.to_thread(fetch_data_sync)
-```
-
-**Why this matters:**
-- Sync Claude API would block event loop for 5+ seconds
-- Async client allows FastAPI to handle other requests concurrently
-- DB queries offloaded to thread pool (SQLAlchemy is sync)
-
----
-
-## SemanticTools
-
-**Location**: `backend/app/agent/tools.py`
-
-Interface between LangGraph agent and Semantic Layer.
-
-### Methods
-
-```python
-class SemanticTools:
-    def __init__(self, db: Session, workspace_id: UUID, user_id: UUID):
-        ...
-
-    def query_metrics(self, query: SemanticQuery) -> CompilationResult:
-        """
-        Main data fetching - supports all compositions:
-        - Simple metrics
-        - Breakdowns (top N by entity/provider/time)
-        - Comparisons (vs previous period)
-        - Timeseries (daily/hourly)
-        """
-
-    def get_entities(self, filters: Filters) -> List[Entity]:
-        """List campaigns/adsets/ads with filters."""
-
-    def analyze_change(self, metric: str, time_range: TimeRange) -> ChangeAnalysis:
-        """
-        "Why" questions - compares periods, finds:
-        - Top contributors to change
-        - Anomalies
-        - Trend direction
-        """
-```
-
-### Security
-
-All calls scoped by `workspace_id` - no raw SQL exposure:
-
-```python
-def query_metrics(self, query: SemanticQuery):
-    # Workspace scoping at SQL level
-    base = self.db.query(MetricSnapshot).join(Entity)
-    base = base.filter(Entity.workspace_id == self.workspace_id)
-    ...
+Client (typing effect + tool indicators)
 ```
 
 ---
 
-## API Endpoints
+## Guardrails
 
-### Current (v4.0)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/qa/agent/sse` | POST | **SSE streaming** (recommended) |
-| `/qa/agent/sync` | POST | Synchronous (no streaming) |
-| `/qa/semantic` | POST | Direct semantic layer access |
-| `/qa/insights` | POST | Lightweight insights for dashboard widgets |
-
-### Deprecated (410 Gone)
-
-| Endpoint | Replacement |
-|----------|-------------|
-| `/qa` | `/qa/agent/sse` |
-| `/qa/stream` | `/qa/agent/sse` |
+| Guardrail | Value | Why |
+|-----------|-------|-----|
+| Max iterations | 5 | Prevent runaway loops |
+| Max tool calls per iteration | 3 | Limit API usage per turn |
+| Tool execution timeout | 30s | Prevent hanging |
+| Rate limits | Per workspace | Google 15/min, Meta 30/min |
+| Default level filter | campaign | Prevent double-counting |
 
 ---
 
-## Example Query Flow
+## Example Query Flows
 
-### User Question
-
-```
-"Compare CPC this week vs last week for top 3 ads"
-```
-
-### Step 1: understand_node
-
-Claude extracts intent:
-
-```python
-SemanticQuery(
-    metrics=["cpc"],
-    time_range=TimeRange(last_n_days=7),
-    breakdown=Breakdown(
-        dimension="entity",
-        level="ad",
-        limit=3,
-        sort_order="desc"
-    ),
-    comparison=Comparison(
-        type=ComparisonType.PREVIOUS_PERIOD
-    ),
-    include_timeseries=True
-)
-```
-
-### Step 2: fetch_data_node
-
-Semantic Layer executes:
-
-```python
-CompilationResult(
-    summary={"cpc": 0.48, "cpc_prev": 0.52, "cpc_delta_pct": -7.7},
-    breakdown=[
-        {"entity": "Summer Sale Ad", "cpc": 0.35, "cpc_prev": 0.42},
-        {"entity": "Winter Promo", "cpc": 0.48, "cpc_prev": 0.51},
-        {"entity": "Holiday Special", "cpc": 0.55, "cpc_prev": 0.58},
-    ],
-    timeseries=[
-        {"date": "2025-12-04", "Summer Sale Ad": 0.32, "Winter Promo": 0.45, ...},
-        {"date": "2025-12-05", "Summer Sale Ad": 0.38, "Winter Promo": 0.49, ...},
-        ...
-    ]
-)
-```
-
-### Step 3: respond_node
-
-Claude generates answer:
+### Basic Metrics (Snapshots)
 
 ```
-Your overall CPC this week is $0.48, down 7.7% from last week's $0.52.
+User: "What's my ROAS today?"
 
-Top 3 ads by CPC:
-1. Summer Sale Ad: $0.35 (↓17% from $0.42)
-2. Winter Promo: $0.48 (↓6% from $0.51)
-3. Holiday Special: $0.55 (↓5% from $0.58)
-
-All three ads showed improvement week-over-week.
+1. Agent calls: query_metrics(metrics=["roas"], time_range="1d")
+2. Tool returns: { roas: 1.11, snapshot_time: "12:30 PM", snapshot_age_minutes: 8 }
+3. Agent responds: "Your ROAS today is 1.11x (data from 12:30 PM, ~8 min ago)"
 ```
 
-Visual spec:
+### Campaign Config (Live API)
 
-```json
-{
-  "type": "multi_line",
-  "series": [
-    {"name": "Summer Sale Ad", "data": [...]},
-    {"name": "Winter Promo", "data": [...]},
-    {"name": "Holiday Special", "data": [...]}
-  ],
-  "comparison": true
-}
+```
+User: "Which campaigns went live yesterday?"
+
+1. Agent recognizes: start_date NOT in snapshots → need live API
+2. Agent calls: google_ads_query(query_type="campaigns", fields=["start_date"],
+                                 filters={start_date: "yesterday"})
+3. Tool returns: [{ name: "Summer Sale", start_date: "2025-12-21" }, ...]
+4. Agent responds: "2 campaigns went live yesterday: Summer Sale, Holiday Promo"
+```
+
+### User Feedback (Verification)
+
+```
+User: "This is wrong, my Google Ads shows different"
+
+1. Agent acknowledges: "I apologize for the discrepancy. Let me verify..."
+2. Agent calls: google_ads_query(query_type="metrics", date_range="today")
+3. Tool returns live data
+4. Agent compares and explains: "Here's the live data vs cached..."
 ```
 
 ---
@@ -464,50 +416,12 @@ Visual spec:
 
 | Stage | Latency | Notes |
 |-------|---------|-------|
-| understand_node | 500-1000ms | Claude intent extraction |
-| Semantic validation | <10ms | Pydantic + custom rules |
-| Semantic compilation | 50-200ms | DB queries via UnifiedMetricService |
-| respond_node | 500-1500ms | Claude answer + streaming |
-| **Total** | **1-3 seconds** | End-to-end |
-
-### Optimizations
-
-1. **Async streaming**: Non-blocking Claude calls
-2. **Thread pool**: DB queries don't block event loop
-3. **Connection pooling**: SQLAlchemy connection reuse
-4. **JWKS caching**: Clerk key caching (1 hour)
-
----
-
-## Observability
-
-### Langfuse Integration
-
-All LLM calls traced:
-
-```python
-from app.telemetry import create_copilot_trace, log_generation
-
-trace = create_copilot_trace(user_id, workspace_id, question)
-
-log_generation(
-    trace=trace,
-    name="understand",
-    model="claude-sonnet-4-20250514",
-    input_messages=messages,
-    output=response,
-    usage={"input": 100, "output": 50, "total": 150}
-)
-```
-
-### Log Markers
-
-| Marker | Location |
-|--------|----------|
-| `[AGENT]` | agent/nodes.py |
-| `[SEMANTIC]` | semantic/*.py |
-| `[TOOLS]` | agent/tools.py |
-| `[STREAM]` | routers/qa.py |
+| Initial LLM call | 300-500ms | GPT-4o-mini tool selection |
+| Tool execution | 50-200ms | DB query (snapshots) |
+| Tool execution | 500-2000ms | Live API call |
+| Response generation | 200-500ms | GPT-4o-mini streaming |
+| **Total (snapshots)** | **0.5-1.5s** | Fast path |
+| **Total (live API)** | **1-3s** | Slow path |
 
 ---
 
@@ -515,43 +429,35 @@ log_generation(
 
 | File | Purpose |
 |------|---------|
-| `app/routers/qa.py` | API endpoints (SSE, sync, semantic) |
-| `app/agent/graph.py` | LangGraph state machine |
-| `app/agent/nodes.py` | Node implementations (understand, fetch_data, respond) |
-| `app/agent/state.py` | State schema |
-| `app/agent/tools.py` | SemanticTools class |
-| `app/agent/stream.py` | Redis Pub/Sub streaming (background jobs) |
-| `app/semantic/model.py` | Metric/dimension definitions |
-| `app/semantic/query.py` | SemanticQuery, Breakdown, Comparison |
-| `app/semantic/validator.py` | Query validation |
-| `app/semantic/compiler.py` | Query execution |
-| `app/services/unified_metric_service.py` | Single source of truth for metrics |
-| `app/telemetry/llm_trace.py` | Langfuse integration |
+| `app/routers/qa.py` | SSE endpoint, async queue publisher |
+| `app/agent/graph.py` | LangGraph state machine (simplified) |
+| `app/agent/nodes.py` | agent_loop_node, execute_tool_async, system prompts |
+| `app/agent/state.py` | AgentState schema |
+| `app/agent/tools.py` | AGENT_TOOLS schema, SemanticTools class |
+| `app/agent/stream.py` | AsyncQueuePublisher for SSE |
+| `app/agent/connection_resolver.py` | Get authenticated API clients |
+| `app/agent/live_api_tools.py` | Live API tool implementations |
+| `app/agent/rate_limiter.py` | Per-workspace rate limiting |
+| `app/services/unified_metric_service.py` | Single source of truth (campaign-level default) |
+| `app/services/google_ads_client.py` | Google Ads API client |
 
 ---
 
-## Migration from DSL
+## Migration from v4.0
 
 ### What Changed
 
-| Aspect | DSL (old) | Semantic Layer (new) |
-|--------|-----------|---------------------|
-| LLM | OpenAI GPT-4o | Claude Sonnet 4 |
-| Query format | JSON DSL | SemanticQuery dataclass |
-| Composition | Mutually exclusive fields | Fully composable |
-| Streaming | RQ workers + polling | Direct SSE with AsyncAnthropic |
-| Threading | Blocking | async/await + thread pool |
-| Agent | Pipeline functions | LangGraph state machine |
+| Aspect | v4.0 (Rigid Pipeline) | v5.0 (Free Agent) |
+|--------|----------------------|-------------------|
+| LLM | Claude Sonnet 4 | GPT-4o-mini |
+| Flow | understand → fetch → respond | Single agent loop |
+| Tool Selection | Pre-defined by intent | LLM decides autonomously |
+| Data Source | Snapshots only | Smart selection (snapshots + live) |
+| User Feedback | Manual retry | Auto-verification with live API |
+| Cost | ~$0.015/query | ~$0.0008/query (95% reduction) |
 
 ### Backward Compatibility
 
-Old DSL files still exist for legacy endpoints:
-- `app/dsl/schema.py` - Used by `/routers/metrics.py`, `/routers/finance.py`
-- QA system exclusively uses Semantic Layer
-
-Old endpoints return 410 Gone:
-```python
-@router.post("/qa")
-async def legacy_qa():
-    raise HTTPException(410, "Use /qa/agent/sse instead")
-```
+- Old `/qa/agent/sse` endpoint still works (uses new agent internally)
+- Old `/qa/agent/sync` endpoint still works
+- Legacy `/qa` returns 410 Gone

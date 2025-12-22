@@ -439,8 +439,10 @@ def _sync_meta_snapshots(
         access_token = _get_meta_access_token(connection)
         client = MetaAdsClient(access_token=access_token)
 
-        # Determine date range based on mode
-        today = date.today()
+        # Determine date range based on mode, using account's timezone
+        # CRITICAL: Meta reports data in the account's configured timezone.
+        # Using the wrong "today" would cause data misalignment.
+        today = _get_today_in_account_timezone(connection.timezone)
         if mode == "realtime":
             start_date = today
             end_date = today
@@ -505,17 +507,17 @@ def _sync_meta_snapshots(
                     result.skipped += 1
                     continue
 
-                # Determine timestamp
-                if mode == "realtime":
-                    snap_time = captured_at
-                else:
-                    date_str = insight.get("date_stop")
-                    if date_str:
-                        snap_time = datetime.combine(
-                            date.fromisoformat(date_str), datetime.max.time()
-                        ).replace(tzinfo=timezone.utc)
-                    else:
-                        snap_time = captured_at
+                # Determine persisted timestamp for this snapshot.
+                # For historical days we anchor to end-of-day in account timezone.
+                # For the current account day, never write a future captured_at.
+                date_str = insight.get("date_stop")
+                snap_time = _get_snapshot_captured_at(
+                    mode=mode,
+                    metrics_date_str=date_str,
+                    captured_at=captured_at,
+                    account_timezone=connection.timezone,
+                    account_today=today,
+                )
 
                 snapshot_result = _upsert_meta_snapshot(
                     db=db,
@@ -578,20 +580,17 @@ def _sync_meta_snapshots(
                 result.skipped += 1
                 continue
 
-            # Determine timestamp
-            # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
-            # This ensures DISTINCT ON ... ORDER BY captured_at DESC picks the backfill data
-            # over any partial realtime snapshots from earlier in the day
-            if mode == "realtime":
-                snap_time = captured_at
-            else:
-                date_str = insight.get("date_stop")
-                if date_str:
-                    snap_time = datetime.combine(
-                        date.fromisoformat(date_str), datetime.max.time()
-                    ).replace(tzinfo=timezone.utc)
-                else:
-                    snap_time = captured_at
+            # Determine persisted timestamp for this snapshot.
+            # For historical days we anchor to end-of-day in account timezone.
+            # For the current account day, never write a future captured_at.
+            date_str = insight.get("date_stop")
+            snap_time = _get_snapshot_captured_at(
+                mode=mode,
+                metrics_date_str=date_str,
+                captured_at=captured_at,
+                account_timezone=connection.timezone,
+                account_today=today,
+            )
 
             snapshot_result = _upsert_meta_snapshot(
                 db=db,
@@ -764,11 +763,23 @@ def _upsert_meta_snapshot(
         if av.get("action_type") == "omni_purchase":
             revenue = Decimal(str(av.get("value", 0)))
 
+    # Parse the metrics_date from Meta's response
+    # WHY: Meta returns date_stop which is the date the data represents in account timezone.
+    # Storing it explicitly avoids timezone math when querying "today" or "yesterday".
+    metrics_date = None
+    date_str = insight.get("date_stop")
+    if date_str:
+        try:
+            metrics_date = date.fromisoformat(date_str)
+        except ValueError:
+            logger.warning("[SNAPSHOT_SYNC] Invalid date format from Meta: %s", date_str)
+
     # Build snapshot data
     snapshot_data = {
         "entity_id": entity.id,
         "provider": "meta",
         "captured_at": captured_at,
+        "metrics_date": metrics_date,
         "spend": Decimal(str(insight.get("spend", 0) or 0)),
         "impressions": int(insight.get("impressions", 0) or 0),
         "clicks": int(insight.get("clicks", 0) or 0),
@@ -792,6 +803,7 @@ def _upsert_meta_snapshot(
             "leads": stmt.excluded.leads,
             "purchases": stmt.excluded.purchases,
             "currency": stmt.excluded.currency,
+            "metrics_date": stmt.excluded.metrics_date,
         }
     )
 
@@ -839,8 +851,10 @@ def _sync_google_snapshots(
         client = _get_google_ads_client(connection)
         customer_id = _normalize_customer_id(connection.external_account_id)
 
-        # Determine date range based on mode
-        today = date.today()
+        # Determine date range based on mode, using account's timezone
+        # CRITICAL: Google Ads reports data in the account's configured timezone.
+        # Using the wrong "today" would cause data misalignment.
+        today = _get_today_in_account_timezone(connection.timezone)
         if mode == "realtime":
             start_date = today
             end_date = today
@@ -896,10 +910,16 @@ def _sync_google_snapshots(
                         result.skipped += 1
                         continue
 
-                    # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
-                    snap_time = captured_at if mode == "realtime" else datetime.combine(
-                        date.fromisoformat(row["date"]), datetime.max.time()
-                    ).replace(tzinfo=timezone.utc)
+                    # Determine persisted timestamp for this snapshot.
+                    # For historical days we anchor to end-of-day in account timezone.
+                    # For the current account day, never write a future captured_at.
+                    snap_time = _get_snapshot_captured_at(
+                        mode=mode,
+                        metrics_date_str=row.get("date"),
+                        captured_at=captured_at,
+                        account_timezone=connection.timezone,
+                        account_today=today,
+                    )
 
                     _upsert_google_snapshot(
                         db=db,
@@ -945,12 +965,16 @@ def _sync_google_snapshots(
                         result.skipped += 1
                         continue
 
-                    # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
-                    # This ensures DISTINCT ON ... ORDER BY captured_at DESC picks the backfill data
-                    # over any partial realtime snapshots from earlier in the day
-                    snap_time = captured_at if mode == "realtime" else datetime.combine(
-                        date.fromisoformat(row["date"]), datetime.max.time()
-                    ).replace(tzinfo=timezone.utc)
+                    # Determine persisted timestamp for this snapshot.
+                    # For historical days we anchor to end-of-day in account timezone.
+                    # For the current account day, never write a future captured_at.
+                    snap_time = _get_snapshot_captured_at(
+                        mode=mode,
+                        metrics_date_str=row.get("date"),
+                        captured_at=captured_at,
+                        account_timezone=connection.timezone,
+                        account_today=today,
+                    )
 
                     _upsert_google_snapshot(
                         db=db,
@@ -996,10 +1020,16 @@ def _sync_google_snapshots(
                         result.skipped += 1
                         continue
 
-                    # For backfill/attribution: use 23:59:59 so it's the "final" snapshot for that day
-                    snap_time = captured_at if mode == "realtime" else datetime.combine(
-                        date.fromisoformat(row["date"]), datetime.max.time()
-                    ).replace(tzinfo=timezone.utc)
+                    # Determine persisted timestamp for this snapshot.
+                    # For historical days we anchor to end-of-day in account timezone.
+                    # For the current account day, never write a future captured_at.
+                    snap_time = _get_snapshot_captured_at(
+                        mode=mode,
+                        metrics_date_str=row.get("date"),
+                        captured_at=captured_at,
+                        account_timezone=connection.timezone,
+                        account_today=today,
+                    )
 
                     _upsert_google_snapshot(
                         db=db,
@@ -1112,11 +1142,22 @@ def _upsert_google_snapshot(
         captured_at: Timestamp for the snapshot
         currency: Currency code from the connection (e.g., "EUR", "USD")
     """
+    # Parse the metrics_date from Google's response
+    # WHY: Google returns the date the data represents in the account's timezone.
+    # Storing it explicitly avoids timezone math when querying "today" or "yesterday".
+    metrics_date = None
+    date_str = row.get("date")
+    if date_str:
+        try:
+            metrics_date = date.fromisoformat(date_str)
+        except ValueError:
+            logger.warning("[SNAPSHOT_SYNC] Invalid date format from Google: %s", date_str)
 
     snapshot_data = {
         "entity_id": entity.id,
         "provider": "google",
         "captured_at": captured_at,
+        "metrics_date": metrics_date,
         "spend": Decimal(str(row.get("spend", 0) or 0)),
         "impressions": int(row.get("impressions", 0) or 0),
         "clicks": int(row.get("clicks", 0) or 0),
@@ -1135,6 +1176,7 @@ def _upsert_google_snapshot(
             "conversions": stmt.excluded.conversions,
             "revenue": stmt.excluded.revenue,
             "currency": stmt.excluded.currency,
+            "metrics_date": stmt.excluded.metrics_date,
         }
     )
 
@@ -1303,6 +1345,147 @@ def _get_google_ads_client(connection: Connection) -> GAdsClient:
 def _normalize_customer_id(customer_id: str) -> str:
     """Remove dashes from customer ID."""
     return customer_id.replace("-", "") if customer_id else ""
+
+
+def _get_today_in_account_timezone(account_timezone: Optional[str] = None) -> date:
+    """Get today's date in the account's timezone.
+
+    WHAT:
+        Returns the current date as seen in the ad account's configured timezone.
+
+    WHY:
+        Google Ads and Meta report metrics for dates in their account timezone.
+        If the server is in UTC and the account is in CET (UTC+1), at 00:30 UTC:
+        - Server date.today() = Dec 12
+        - Account's "today" = Dec 12 01:30 CET = still Dec 12
+        But at 23:30 UTC:
+        - Server date.today() = Dec 12
+        - Account's "today" = Dec 13 00:30 CET = Dec 13!
+
+        This mismatch causes syncs to fetch data for the wrong day.
+
+    Args:
+        account_timezone: IANA timezone string (e.g., "Europe/Amsterdam")
+                         Falls back to UTC if not provided.
+
+    Returns:
+        Today's date in the account's timezone.
+    """
+    from zoneinfo import ZoneInfo
+
+    if not account_timezone:
+        return date.today()
+
+    try:
+        tz = ZoneInfo(account_timezone)
+        now_in_account_tz = datetime.now(tz)
+        return now_in_account_tz.date()
+    except Exception as e:
+        logger.warning(
+            "[SNAPSHOT_SYNC] Invalid timezone '%s', falling back to UTC: %s",
+            account_timezone, e
+        )
+        return date.today()
+
+
+def _get_end_of_day_in_utc(date_str: str, account_timezone: Optional[str] = None) -> datetime:
+    """Get end-of-day timestamp in UTC for a given date in account's timezone.
+
+    WHAT:
+        Converts a date's end-of-day (23:59:59) in the account's timezone to UTC.
+
+    WHY:
+        Google Ads reports data for dates in the account's configured timezone.
+        When storing attribution/backfill data, we need the "end of day" timestamp
+        to be accurate for that timezone. Otherwise:
+
+        Example (CET = UTC+1):
+        - Dec 11 in CET ends at Dec 11 23:59:59 CET = Dec 11 22:59:59 UTC
+        - Using UTC directly: Dec 11 23:59:59 UTC = Dec 12 00:59:59 CET
+
+        This causes "yesterday's" data to appear in "today's" dashboard view!
+
+    Args:
+        date_str: ISO format date string (e.g., "2025-12-11")
+        account_timezone: IANA timezone string. Falls back to UTC if not provided.
+
+    Returns:
+        End of day timestamp in UTC.
+    """
+    from zoneinfo import ZoneInfo
+
+    d = date.fromisoformat(date_str)
+
+    if not account_timezone:
+        # No timezone - use UTC end-of-day
+        return datetime.combine(d, datetime.max.time()).replace(tzinfo=timezone.utc)
+
+    try:
+        tz = ZoneInfo(account_timezone)
+        # Create end-of-day in account timezone, then convert to UTC
+        end_of_day_local = datetime.combine(d, datetime.max.time(), tzinfo=tz)
+        return end_of_day_local.astimezone(timezone.utc)
+    except Exception as e:
+        logger.warning(
+            "[SNAPSHOT_SYNC] Invalid timezone '%s' for end-of-day calc, using UTC: %s",
+            account_timezone, e
+        )
+        return datetime.combine(d, datetime.max.time()).replace(tzinfo=timezone.utc)
+
+
+def _get_snapshot_captured_at(
+    *,
+    mode: str,
+    metrics_date_str: Optional[str],
+    captured_at: datetime,
+    account_timezone: Optional[str],
+    account_today: date,
+) -> datetime:
+    """Choose the correct captured_at timestamp for a snapshot row.
+
+    WHAT:
+        Returns the timestamp to persist in `metric_snapshots.captured_at` for a row.
+
+    WHY:
+        We store two time concepts:
+        - `metrics_date`: the day the metrics represent (from the platform, in account timezone)
+        - `captured_at`: when we fetched/persisted the snapshot (UTC timestamp)
+
+        For historical backfill/attribution we previously used "end of day in account timezone"
+        as `captured_at` so daily DISTINCT ON ordering selects a stable "final" snapshot.
+
+        Bug: When backfill includes the current day, "end of day" is in the future, causing:
+        - "today" intraday queries to return no rows (future `captured_at` is outside now)
+        - confusing single-point charts after fallback to daily
+
+        Fix: If the row is for the account's current day, anchor `captured_at` to the real
+        sync time (rounded), never in the future.
+
+    Args:
+        mode: Sync mode ("realtime", "backfill", "attribution")
+        metrics_date_str: ISO date string from the platform (YYYY-MM-DD)
+        captured_at: Rounded sync timestamp for this batch (UTC)
+        account_timezone: IANA timezone for the ad account
+        account_today: Today's date in the account timezone
+
+    Returns:
+        A timezone-aware UTC datetime for `captured_at`.
+    """
+    if mode == "realtime":
+        return captured_at
+
+    if not metrics_date_str:
+        return captured_at
+
+    try:
+        metrics_day = date.fromisoformat(metrics_date_str)
+    except Exception:
+        return captured_at
+
+    if metrics_day == account_today:
+        return captured_at
+
+    return _get_end_of_day_in_utc(metrics_date_str, account_timezone)
 
 
 def _date_to_hourly_timestamp(date_str: str) -> datetime:

@@ -71,7 +71,7 @@ Metricx is an AI-powered marketing analytics platform that helps merchants under
 - **Container:** Docker (multi-stage builds)
 - **Orchestration:** Docker Compose
 - **Deployment:** Defang
-- **Hosting:** PostgreSQL (Railway), Redis (Upstash)
+- **Hosting:** PostgreSQL , Redis (Upstash)
 
 ## Data Model
 

@@ -2,8 +2,9 @@
 LangGraph Agent Definition
 ==========================
 
-**Version**: 1.0.0
+**Version**: 2.0.0
 **Created**: 2025-12-03
+**Updated**: 2025-12-22
 
 Defines the LangGraph state machine for the QA agent.
 This is where nodes are connected into a flow.
@@ -17,112 +18,61 @@ LangGraph uses a graph structure where:
 
 This file defines the graph topology.
 
-GRAPH STRUCTURE
----------------
+GRAPH STRUCTURE (v2 - Free Agent)
+---------------------------------
 ```
                     ┌─────────────┐
                     │   START     │
                     └──────┬──────┘
                            │
                     ┌──────▼──────┐
-                    │ understand  │ ─── Classify intent
+                    │    agent    │ ─── ReAct loop: LLM decides tools → execute → repeat
+                    │   (loop)    │     until answer is ready
                     └──────┬──────┘
                            │
-          ┌────────────────┼────────────────┐
-          │                │                │
-    (out_of_scope)   (needs_clarify)   (normal)
-          │                │                │
-          ▼                ▼                ▼
-    ┌─────────┐      ┌─────────┐     ┌─────────┐
-    │ respond │      │ respond │     │  fetch  │
-    └────┬────┘      └────┬────┘     └────┬────┘
-         │                │               │
-         │                │        (error)│(success)
-         │                │          ┌────┴────┐
-         │                │          │         │
-         │                │          ▼         ▼
-         │                │    ┌─────────┐ ┌─────────┐
-         │                │    │  error  │ │ respond │
-         │                │    └────┬────┘ └────┬────┘
-         │                │         │           │
-         └────────────────┴─────────┴───────────┘
-                                   │
-                            ┌──────▼──────┐
-                            │    END      │
-                            └─────────────┘
+                    ┌──────▼──────┐
+                    │    END      │
+                    └─────────────┘
 ```
+
+The agent_loop_node handles everything internally:
+1. LLM sees question + all available tools
+2. LLM decides what tool(s) to call (or answer directly)
+3. Tools execute, results added to context
+4. Loop until LLM has enough info to answer (max 5 iterations)
+
+DATA SOURCE PRIORITY (embedded in tool descriptions):
+- Snapshots FIRST (updated every 15 min) for metrics
+- Live API only for data not in snapshots (start_date, keywords, audiences)
+- Response always includes data freshness info
 
 RELATED FILES
 -------------
-- app/agent/nodes.py: Node implementations
+- app/agent/nodes.py: Node implementations (including agent_loop_node)
+- app/agent/tools.py: AGENT_TOOLS schema for OpenAI function calling
 - app/agent/state.py: State schema
-- app/workers/agent_worker.py: Runs this graph
+- app/routers/qa.py: SSE endpoint that runs this graph
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Optional, Dict, Any, Literal
+from typing import Optional, Dict, Any
 from functools import partial
 
 from langgraph.graph import StateGraph, END
 from sqlalchemy.orm import Session
 
 from app.agent.state import AgentState, create_initial_state
-from app.agent.nodes import (
-    understand_node,
-    fetch_data_node,
-    respond_node,
-    error_node,
-)
+from app.agent.nodes import agent_loop_node
 from app.agent.stream import StreamPublisher
 
 logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# ROUTING FUNCTIONS
-# =============================================================================
-
-def route_after_understand(state: AgentState) -> Literal["fetch_data", "respond", "error"]:
-    """
-    Route after understand node.
-
-    LOGIC:
-        - If error occurred → error node
-        - If needs clarification → respond (with clarification question)
-        - If out of scope → respond (with explanation)
-        - Otherwise → fetch data
-    """
-    if state.get("error") and state.get("stage") == "error":
-        return "error"
-
-    if state.get("needs_clarification"):
-        return "respond"
-
-    intent = state.get("intent")
-    if intent == "out_of_scope":
-        return "respond"
-
-    return "fetch_data"
-
-
-def route_after_fetch(state: AgentState) -> Literal["respond", "error"]:
-    """
-    Route after fetch_data node.
-
-    LOGIC:
-        - If error occurred → error node
-        - Otherwise → respond
-    """
-    if state.get("error") or state.get("stage") == "error":
-        return "error"
-
-    return "respond"
-
-
-# =============================================================================
-# GRAPH BUILDER
+# GRAPH BUILDER (v2 - Simplified Free Agent)
 # =============================================================================
 
 def create_agent_graph(
@@ -130,19 +80,30 @@ def create_agent_graph(
     publisher: Optional[StreamPublisher] = None,
 ) -> StateGraph:
     """
-    Create the LangGraph agent graph.
+    Create the LangGraph agent graph (v2 - Free Agent).
 
-    WHAT: Builds the state machine that processes questions.
+    WHAT: Builds a simple state machine with a single ReAct-style agent node.
 
-    WHY: LangGraph provides:
-        - State management
-        - Conditional routing
-        - Error handling
-        - Streaming support
+    WHY: The free agent approach lets the LLM decide what tools to call,
+         rather than following rigid intent-classification routes.
+
+    HOW IT WORKS:
+        1. User question enters the agent node
+        2. LLM sees ALL available tools and decides what to call
+        3. Tools execute, results added to conversation
+        4. LLM decides: need more info? → call more tools
+                        have enough? → generate answer
+        5. Max 5 iterations to prevent runaway loops
+
+    DATA SOURCE PRIORITY:
+        The tool descriptions guide the LLM to:
+        - Use snapshots FIRST (fast, no external API calls)
+        - Use live API only when snapshots can't answer
+        - Always include data freshness in responses
 
     PARAMETERS:
-        db: SQLAlchemy session (passed to nodes)
-        publisher: Optional StreamPublisher for real-time updates
+        db: SQLAlchemy session (passed to nodes for DB access)
+        publisher: Optional StreamPublisher for real-time SSE updates
 
     RETURNS:
         Compiled LangGraph ready to invoke
@@ -151,59 +112,33 @@ def create_agent_graph(
         graph = create_agent_graph(db, publisher)
         result = graph.invoke(initial_state)
     """
-    logger.info("[GRAPH] Creating agent graph")
+    logger.info("[GRAPH] Creating free agent graph (v2)")
 
     # Create graph with state schema
     workflow = StateGraph(AgentState)
 
-    # Create node functions with bound db and publisher
-    understand = partial(understand_node, db=db, publisher=publisher)
-    fetch_data = partial(fetch_data_node, db=db, publisher=publisher)
-    respond = partial(respond_node, db=db, publisher=publisher)
-    error = partial(error_node, db=db, publisher=publisher)
+    # Create the agent node with bound db and publisher
+    # This single node handles the entire ReAct loop internally
+    agent = partial(agent_loop_node, db=db, publisher=publisher)
 
-    # Add nodes
-    workflow.add_node("understand", understand)
-    workflow.add_node("fetch_data", fetch_data)
-    workflow.add_node("respond", respond)
-    workflow.add_node("error", error)
+    # Add the single agent node
+    workflow.add_node("agent", agent)
 
     # Set entry point
-    workflow.set_entry_point("understand")
+    workflow.set_entry_point("agent")
 
-    # Add conditional edges
-    workflow.add_conditional_edges(
-        "understand",
-        route_after_understand,
-        {
-            "fetch_data": "fetch_data",
-            "respond": "respond",
-            "error": "error",
-        }
-    )
-
-    workflow.add_conditional_edges(
-        "fetch_data",
-        route_after_fetch,
-        {
-            "respond": "respond",
-            "error": "error",
-        }
-    )
-
-    # Add terminal edges
-    workflow.add_edge("respond", END)
-    workflow.add_edge("error", END)
+    # Agent goes directly to END (it handles all logic internally)
+    workflow.add_edge("agent", END)
 
     # Compile
     graph = workflow.compile()
-    logger.info("[GRAPH] Agent graph compiled")
+    logger.info("[GRAPH] Free agent graph compiled")
 
     return graph
 
 
 # =============================================================================
-# RUN FUNCTION
+# RUN FUNCTION (Sync - wrapper around async)
 # =============================================================================
 
 def run_agent(
@@ -215,11 +150,12 @@ def run_agent(
     conversation_history: Optional[list] = None,
 ) -> Dict[str, Any]:
     """
-    Run the agent to answer a question.
+    Run the agent to answer a question (sync wrapper).
 
-    WHAT: Main entry point for running the agent.
+    WHAT: Main entry point for running the agent synchronously.
 
     WHY: Simple interface for callers - just pass the question and context.
+         Wraps the async version for backwards compatibility.
 
     PARAMETERS:
         question: User's natural language question
@@ -233,7 +169,8 @@ def run_agent(
         Dict with:
             - success: bool
             - answer: Full answer text
-            - visuals: Chart/table specs
+            - tool_calls_made: List of tools called and their success
+            - iterations: Number of agent loop iterations
             - error: Error message if failed
 
     EXAMPLE:
@@ -245,60 +182,19 @@ def run_agent(
         )
         print(result["answer"])
     """
-    logger.info(f"[AGENT] Running: {question[:50]}...")
-
-    try:
-        # Create initial state
-        state = create_initial_state(
-            question=question,
-            workspace_id=workspace_id,
-            user_id=user_id,
-            conversation_history=conversation_history,
-        )
-
-        # Create and run graph
-        graph = create_agent_graph(db, publisher)
-        final_state = graph.invoke(state)
-
-        # Extract result
-        answer_chunks = final_state.get("answer_chunks", [])
-        answer = "".join(answer_chunks) if answer_chunks else "I couldn't generate an answer."
-
-        result = {
-            "success": not final_state.get("error"),
-            "answer": answer,
-            "visuals": final_state.get("visuals"),
-            "semantic_query": final_state.get("semantic_query"),
-            "intent": final_state.get("intent"),
-            "data": final_state.get("compilation_result", {}).get("data"),
-        }
-
-        if final_state.get("error"):
-            result["error"] = final_state["error"]
-
-        # Publish done event
-        if publisher:
-            publisher.done(result)
-
-        logger.info(f"[AGENT] Complete: success={result['success']}")
-        return result
-
-    except Exception as e:
-        logger.exception(f"[AGENT] Failed: {e}")
-        error_result = {
-            "success": False,
-            "answer": "I encountered an unexpected error. Please try again.",
-            "error": str(e),
-        }
-
-        if publisher:
-            publisher.error(str(e))
-
-        return error_result
+    # Run the async version in a new event loop
+    return asyncio.run(run_agent_async(
+        question=question,
+        workspace_id=workspace_id,
+        user_id=user_id,
+        db=db,
+        publisher=publisher,
+        conversation_history=conversation_history,
+    ))
 
 
 # =============================================================================
-# ASYNC VARIANT (for future use)
+# RUN FUNCTION (Async - primary implementation)
 # =============================================================================
 
 async def run_agent_async(
@@ -310,18 +206,128 @@ async def run_agent_async(
     conversation_history: Optional[list] = None,
 ) -> Dict[str, Any]:
     """
-    Async version of run_agent.
+    Run the agent to answer a question (async).
 
-    NOTE: Currently just wraps sync version.
-    LangGraph has async support that can be enabled later.
+    WHAT: Main entry point for running the agent asynchronously.
+
+    WHY: The agent_loop_node uses async OpenAI calls, so this is
+         the primary implementation.
+
+    HOW IT WORKS:
+        1. Creates initial state with question and context
+        2. Builds the graph with single agent node
+        3. Invokes the graph (agent handles all logic internally)
+        4. Extracts and returns the result
+
+    PARAMETERS:
+        question: User's natural language question
+        workspace_id: UUID of workspace (security scope)
+        user_id: UUID of user
+        db: SQLAlchemy session
+        publisher: Optional StreamPublisher for streaming
+        conversation_history: Previous Q&A for context
+
+    RETURNS:
+        Dict with:
+            - success: bool
+            - answer: Full answer text
+            - tool_calls_made: List of tools the LLM decided to call
+            - iterations: Number of agent loop iterations
+            - error: Error message if failed
     """
-    # For now, just call sync version
-    # TODO: Use ainvoke when we switch to async db sessions
-    return run_agent(
-        question=question,
-        workspace_id=workspace_id,
-        user_id=user_id,
-        db=db,
-        publisher=publisher,
-        conversation_history=conversation_history,
-    )
+    logger.info(f"[AGENT] Running free agent: {question[:50]}...")
+
+    try:
+        # Create initial state
+        state = create_initial_state(
+            question=question,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            conversation_history=conversation_history,
+        )
+
+        # Create the graph
+        graph = create_agent_graph(db, publisher)
+
+        # Run the graph (agent_loop_node is async, but LangGraph handles it)
+        # For async execution, we need to run the agent node directly
+        # since LangGraph's invoke is sync
+        final_state = await _run_graph_async(graph, state, db, publisher)
+
+        # Extract result
+        answer_chunks = final_state.get("answer_chunks", [])
+        answer = "".join(answer_chunks) if answer_chunks else "I couldn't generate an answer."
+
+        result = {
+            "success": not final_state.get("error"),
+            "answer": answer,
+            # New fields from free agent
+            "tool_calls_made": final_state.get("tool_calls_made", []),
+            "iterations": final_state.get("iterations", 1),
+            # Legacy fields for backwards compatibility
+            "visuals": final_state.get("visuals"),
+            "data": final_state.get("data"),
+        }
+
+        if final_state.get("error"):
+            result["error"] = final_state["error"]
+
+        # Publish done event
+        if publisher:
+            publisher.done(result)
+
+        logger.info(
+            f"[AGENT] Complete: success={result['success']}, "
+            f"iterations={result['iterations']}, "
+            f"tools_called={len(result['tool_calls_made'])}"
+        )
+        return result
+
+    except Exception as e:
+        logger.exception(f"[AGENT] Failed: {e}")
+        error_result = {
+            "success": False,
+            "answer": "I encountered an unexpected error. Please try again.",
+            "error": str(e),
+            "tool_calls_made": [],
+            "iterations": 0,
+        }
+
+        if publisher:
+            publisher.error(str(e))
+
+        return error_result
+
+
+async def _run_graph_async(
+    graph: StateGraph,
+    state: AgentState,
+    db: Session,
+    publisher: Optional[StreamPublisher] = None,
+) -> Dict[str, Any]:
+    """
+    Run the graph asynchronously.
+
+    WHAT: Executes the agent_loop_node directly since it's async.
+
+    WHY: LangGraph's invoke() is sync, but our agent_loop_node is async
+         (uses async OpenAI client). This helper runs it properly.
+
+    PARAMETERS:
+        graph: Compiled LangGraph (unused, kept for signature consistency)
+        state: Initial agent state
+        db: SQLAlchemy session
+        publisher: Optional StreamPublisher
+
+    RETURNS:
+        Final agent state after execution
+    """
+    # Import here to avoid circular imports
+    from app.agent.nodes import agent_loop_node
+
+    # Run the agent loop directly (it's async)
+    result = await agent_loop_node(state, db, publisher)
+
+    # Merge result into state
+    final_state = {**state, **result}
+    return final_state

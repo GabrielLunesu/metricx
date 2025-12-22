@@ -98,16 +98,17 @@ def test_fetch_daily_metrics_normalizes_spend_and_fields():
     q = (
         f"SELECT campaign.id, campaign.name, "
         "metrics.impressions, metrics.clicks, metrics.cost_micros, "
-        "metrics.conversions, metrics.conversions_value, segments.date "
+        "metrics.conversions_by_conversion_date, metrics.conversions_value_by_conversion_date, segments.date "
         f"FROM campaign WHERE segments.date BETWEEN '{start.isoformat()}' AND '{end.isoformat()}'"
     )
     fake_row = _mk_row({
+        "campaign": types.SimpleNamespace(id="123", name="Test Campaign"),
         "metrics": types.SimpleNamespace(
             impressions=100,
             clicks=10,
             cost_micros=1234567,
-            conversions=2.0,
-            conversions_value=50.0,
+            conversions_by_conversion_date=2.0,
+            conversions_value_by_conversion_date=50.0,
         ),
         "segments": types.SimpleNamespace(date=start),
     })

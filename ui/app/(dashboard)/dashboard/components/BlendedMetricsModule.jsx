@@ -9,18 +9,23 @@
  *
  * FEATURES:
  *   - Metric tabs: Revenue, ROAS, Ad Spend, Conversions
- *   - Animated area chart with gradient fill
+ *   - Uses UnifiedGraphEngine for consistent chart rendering
  *   - Glassmorphic card with blue primary accent
  *   - Timeframe-aware x-axis formatting
+ *
+ * UPDATED: Now uses UnifiedGraphEngine and chartFormatting for consistency
  */
 
 import { useMemo } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
+import { formatDateOnlyLabel, formatTimestampLabel } from "@/lib/datetime";
+import { UnifiedGraphEngine } from "@/components/charts/UnifiedGraphEngine";
+import { formatCurrency, formatMultiplier, formatNumber } from "@/lib/chartFormatting";
 
 // Metric configuration - blue primary, each has inner accent color
 const METRICS = [
   { key: 'revenue', label: 'Revenue', color: '#22d3ee', format: 'currency' },
+  { key: 'conversion_value', label: 'Conv. value', color: '#0891b2', format: 'currency' },
   { key: 'roas', label: 'ROAS', color: '#a78bfa', format: 'multiplier' },
   { key: 'spend', label: 'Ad Spend', color: '#60a5fa', format: 'currency' },
   { key: 'conversions', label: 'Conversions', color: '#f97316', format: 'number' },
@@ -61,14 +66,19 @@ function formatValue(val, format, compact = false, currency = 'USD') {
 }
 
 // Custom tooltip
-function CustomTooltip({ active, payload, label, format, currency }) {
+function CustomTooltip({ active, payload, label, format, currency, timeZone, granularity }) {
   if (!active || !payload?.length) return null;
 
   const value = payload[0]?.value;
-  const date = new Date(label);
-  const dateStr = !isNaN(date.getTime())
-    ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : label;
+  const dateStr = granularity === "intraday_15m"
+    ? formatTimestampLabel(label, {
+        timeZone,
+        options: { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }
+      })
+    : formatDateOnlyLabel(label, {
+        timeZone,
+        options: { month: "short", day: "numeric", year: "numeric" }
+      });
 
   return (
     <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-2 shadow-lg">
@@ -88,7 +98,8 @@ export default function BlendedMetricsModule({
   onMetricChange
 }) {
   // Get current metric config
-  const currentMetric = METRICS.find(m => m.key === selectedMetric) || METRICS[0];
+  const availableMetrics = data?.has_shopify ? METRICS : METRICS.filter(m => m.key !== 'conversion_value');
+  const currentMetric = availableMetrics.find(m => m.key === selectedMetric) || availableMetrics[0];
 
   // Get KPI data for the selected metric
   const kpiMap = useMemo(() => {
@@ -101,6 +112,9 @@ export default function BlendedMetricsModule({
 
   const metricData = kpiMap[selectedMetric];
   const isSingleDay = timeframe === 'today' || timeframe === 'yesterday';
+  const chartTimeZone = data?.chart_timezone || 'UTC';
+  const chartGranularity = data?.chart_granularity || (isSingleDay ? 'intraday_15m' : 'daily');
+  const isIntraday = chartGranularity === 'intraday_15m';
 
   // Process chart data - ensure we have valid numbers
   const chartData = useMemo(() => {
@@ -169,7 +183,7 @@ export default function BlendedMetricsModule({
 
       {/* Metric Tabs */}
       <div className="flex items-center gap-1.5 mb-4 p-1 bg-slate-900/5 rounded-full w-fit">
-        {METRICS.map((metric) => (
+        {availableMetrics.map((metric) => (
           <button
             key={metric.key}
             onClick={() => onMetricChange?.(metric.key)}
@@ -188,79 +202,36 @@ export default function BlendedMetricsModule({
 
       {/* Chart */}
       <div className="flex-1 min-h-[220px]">
-        {hasData ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData}
-              margin={{ left: 0, right: 0, top: 10, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id={`gradient-${selectedMetric}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={currentMetric.color} stopOpacity={0.4} />
-                  <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                vertical={false}
-                strokeDasharray="3 3"
-                stroke="#e2e8f0"
-                opacity={0.5}
-              />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tick={{ fontSize: 11, fill: '#64748b' }}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  if (!isNaN(date.getTime())) {
-                    if (isSingleDay) {
-                      return date.toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                      });
-                    }
-                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                  }
-                  return value;
-                }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                width={55}
-                tick={{ fontSize: 11, fill: '#64748b' }}
-                tickFormatter={(value) => formatValue(value, currentMetric.format, true, data?.currency)}
-              />
-              <Tooltip
-                content={<CustomTooltip format={currentMetric.format} currency={data?.currency} />}
-                cursor={{ stroke: currentMetric.color, strokeWidth: 1, strokeDasharray: '4 4' }}
-              />
-              <Area
-                type="monotone"
-                dataKey={selectedMetric}
-                stroke={currentMetric.color}
-                strokeWidth={2}
-                fill={`url(#gradient-${selectedMetric})`}
-                dot={false}
-                activeDot={{ r: 4, fill: currentMetric.color, stroke: '#fff', strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-              <RefreshCw className="w-5 h-5 text-slate-400" />
-            </div>
-            <p className="text-slate-600 font-medium text-sm">No data yet</p>
-            <p className="text-slate-400 text-xs mt-1">
-              Data will appear after the next sync
-            </p>
-          </div>
+        {/* Intraday messaging */}
+        {isSingleDay && !isIntraday && (
+          <p className="text-[10px] text-slate-400 mb-2">
+            Hourly data starts after you connect your account and the first sync completes.
+          </p>
         )}
+        {isSingleDay && isIntraday && data?.intraday_available_from && (
+          <p className="text-[10px] text-slate-400 mb-2">
+            Hourly data since{" "}
+            {formatTimestampLabel(data.intraday_available_from, {
+              timeZone: chartTimeZone,
+              options: { hour: "2-digit", minute: "2-digit", hour12: false }
+            })}{" "}
+            ({chartTimeZone})
+          </p>
+        )}
+        <UnifiedGraphEngine
+          data={chartData}
+          metrics={[selectedMetric]}
+          type="area"
+          height="100%"
+          showLegend={false}
+          showGrid={true}
+          isSingleDay={isIntraday}
+          emptyState={{
+            icon: RefreshCw,
+            title: "No data yet",
+            description: "Data will appear after the next sync"
+          }}
+        />
       </div>
     </div>
   );

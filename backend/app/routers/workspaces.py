@@ -1,6 +1,6 @@
 """Workspace management endpoints."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from typing import List
 from uuid import UUID
@@ -25,7 +25,19 @@ from ..models import (
     Connection,
     RoleEnum,
     InviteStatusEnum,
+    BillingStatusEnum,
+    BillingPlanEnum,
 )
+
+# =============================================================================
+# BILLING CAPS CONFIGURATION
+# =============================================================================
+# WHAT: Limits enforced for workspace billing
+# WHY: Prevent abuse, control costs
+# REFERENCES: openspec/changes/add-polar-workspace-billing/design.md
+
+MAX_ACTIVE_MEMBERS_PER_WORKSPACE = 10  # Members cap per workspace
+MAX_PENDING_WORKSPACES_PER_USER = 2    # Pending (locked) workspaces cap per owner/admin
 from sqlalchemy.orm import joinedload
 
 
@@ -39,6 +51,84 @@ router = APIRouter(
         500: {"model": schemas.ErrorResponse, "description": "Internal Server Error"},
     }
 )
+
+
+def _get_active_member_count(db: Session, workspace_id: UUID) -> int:
+    """Get count of active members in a workspace.
+
+    WHAT: Counts members with status='active'
+    WHY: Used to enforce member cap before adding/inviting
+    """
+    return (
+        db.query(WorkspaceMember)
+        .filter(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.status == "active",
+        )
+        .count()
+    )
+
+
+def _check_member_cap(db: Session, workspace_id: UUID):
+    """Check if workspace has reached member cap.
+
+    WHAT: Raises HTTPException if at cap
+    WHY: Enforce max 10 active members per workspace
+
+    Raises:
+        HTTPException 400 if cap reached
+    """
+    count = _get_active_member_count(db, workspace_id)
+    if count >= MAX_ACTIVE_MEMBERS_PER_WORKSPACE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Workspace has reached maximum of {MAX_ACTIVE_MEMBERS_PER_WORKSPACE} members"
+        )
+
+
+def _get_pending_workspace_count(db: Session, user_id: UUID) -> int:
+    """Get count of pending (locked) workspaces owned/admined by user.
+
+    WHAT: Counts workspaces where user is owner/admin and billing_status=locked
+    WHY: Used to enforce pending workspace cap before creating new workspace
+    """
+    # Get all workspace IDs where user is owner or admin
+    owned_workspace_ids = (
+        db.query(WorkspaceMember.workspace_id)
+        .filter(
+            WorkspaceMember.user_id == user_id,
+            WorkspaceMember.status == "active",
+            WorkspaceMember.role.in_([RoleEnum.owner, RoleEnum.admin]),
+        )
+        .subquery()
+    )
+
+    # Count those that are locked
+    return (
+        db.query(Workspace)
+        .filter(
+            Workspace.id.in_(owned_workspace_ids),
+            Workspace.billing_status == BillingStatusEnum.locked,
+        )
+        .count()
+    )
+
+
+def _check_pending_workspace_cap(db: Session, user_id: UUID):
+    """Check if user has reached pending workspace cap.
+
+    WHAT: Raises HTTPException if at cap
+    WHY: Prevent spam - max 2 pending workspaces per user
+
+    Raises:
+        HTTPException 400 if cap reached
+    """
+    count = _get_pending_workspace_count(db, user_id)
+    if count >= MAX_PENDING_WORKSPACES_PER_USER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"You have reached the maximum of {MAX_PENDING_WORKSPACES_PER_USER} pending workspaces. Please subscribe to an existing workspace before creating a new one."
+        )
 
 
 def _require_membership(
@@ -91,11 +181,12 @@ async def get_active_workspace(
 ):
     """Get current user's active workspace for frontend context.
 
-    WHAT: Returns workspace_id, workspace_name, and user info
-    WHY: Frontend needs this to hydrate after Clerk login
+    WHAT: Returns workspace context, user's role, and all memberships
+    WHY: Frontend needs this to hydrate after Clerk login and to determine
+         user permissions (e.g., can manage team members, invite users)
 
     Returns:
-        ActiveWorkspaceResponse with workspace and user details
+        ActiveWorkspaceResponse with workspace details, role, and memberships
     """
     # Get the workspace details
     workspace = db.query(Workspace).filter(
@@ -108,12 +199,44 @@ async def get_active_workspace(
             detail="Active workspace not found. Please contact support."
         )
 
+    # Get user's role in the active workspace
+    active_membership = db.query(WorkspaceMember).filter(
+        WorkspaceMember.user_id == current_user.id,
+        WorkspaceMember.workspace_id == current_user.workspace_id,
+        WorkspaceMember.status == "active",
+    ).first()
+
+    role = active_membership.role if active_membership else RoleEnum.viewer
+
+    # Get all user's memberships (for permission checks across workspaces)
+    all_memberships = (
+        db.query(WorkspaceMember)
+        .options(joinedload(WorkspaceMember.workspace))
+        .filter(
+            WorkspaceMember.user_id == current_user.id,
+            WorkspaceMember.status == "active",
+        )
+        .all()
+    )
+
+    memberships_out = [
+        schemas.WorkspaceMemberOutLite(
+            workspace_id=m.workspace_id,
+            workspace_name=m.workspace.name if m.workspace else None,
+            role=m.role,
+            status=m.status,
+        )
+        for m in all_memberships
+    ]
+
     return schemas.ActiveWorkspaceResponse(
         workspace_id=str(workspace.id),
         workspace_name=workspace.name,
         user_id=str(current_user.id),
         user_name=current_user.name,
         user_email=current_user.email,
+        role=role.value if hasattr(role, "value") else str(role),
+        memberships=memberships_out,
     )
 
 
@@ -176,7 +299,15 @@ def create_workspace(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    workspace = Workspace(name=payload.name)
+    # Check pending workspace cap before creating
+    _check_pending_workspace_cap(db, current_user.id)
+
+    workspace = Workspace(
+        name=payload.name,
+        # New workspaces start with free tier and active status (immediate access)
+        billing_status=BillingStatusEnum.active,
+        billing_tier=BillingPlanEnum.free,
+    )
     db.add(workspace)
     db.flush()
 
@@ -324,6 +455,9 @@ def add_workspace_member(
 ):
     _require_membership(db, current_user, workspace_id, roles=[RoleEnum.owner])
 
+    # Check member cap before adding
+    _check_member_cap(db, workspace_id)
+
     if payload.role == RoleEnum.owner:
         raise HTTPException(status_code=400, detail="Only one owner per workspace")
 
@@ -466,6 +600,17 @@ def create_invite(
     current_user: User = Depends(get_current_user),
 ):
     _require_membership(db, current_user, workspace_id, roles=[RoleEnum.owner])
+
+    # Check free tier restriction - no team invites on free plan
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    if workspace and workspace.billing_tier == BillingPlanEnum.free:
+        raise HTTPException(
+            status_code=400,
+            detail="Team invites require a paid plan. Upgrade to invite members."
+        )
+
+    # Check member cap before inviting
+    _check_member_cap(db, workspace_id)
 
     if payload.role == RoleEnum.owner:
         raise HTTPException(status_code=400, detail="Cannot invite additional owners")

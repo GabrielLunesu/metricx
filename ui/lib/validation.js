@@ -37,3 +37,16 @@ export const manualCostSchema = z.object({
     z.string().max(280, "Keep notes under 280 characters"),
   ),
 });
+
+/**
+ * Business Profile Schema
+ * WHY: Validates workspace business information collected during onboarding
+ * NOTE: All fields optional except they're validated when provided
+ */
+export const businessProfileSchema = z.object({
+  domain: z.string().trim().optional().or(z.literal('')),
+  domain_description: z.string().trim().max(500, "Description too long").optional().or(z.literal('')),
+  niche: z.string().trim().max(100, "Niche too long").optional().or(z.literal('')),
+  target_markets: z.array(z.string()).optional().default([]),
+  brand_voice: z.string().trim().optional().or(z.literal('')),
+});

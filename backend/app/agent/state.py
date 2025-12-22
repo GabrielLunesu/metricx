@@ -116,7 +116,16 @@ class AgentState(TypedDict, total=False):
     clarification_question: Optional[str]
 
     # Progress tracking
-    stage: Literal["understanding", "fetching", "analyzing", "responding", "done", "error"]
+    stage: Literal["understanding", "checking_freshness", "fetching", "analyzing", "responding", "done", "error"]
+
+    # Live API tracking (for real-time data queries)
+    # WHAT: Tracks whether live API calls are needed and their results
+    # WHY: Enables copilot to query Google/Meta APIs directly when snapshots are stale
+    # REFERENCES: app/agent/live_api_tools.py
+    needs_live_data: bool  # True if user requested "live" data or snapshots are stale
+    live_data_reason: Optional[str]  # "user_requested" | "stale_snapshot" | None
+    live_api_calls: List[Dict[str, Any]]  # Track API calls [{provider, endpoint, success, latency_ms}]
+    live_api_errors: List[str]  # Any errors from live API calls
 
 
 def create_initial_state(
@@ -183,4 +192,9 @@ def create_initial_state(
         needs_clarification=False,
         clarification_question=None,
         stage="understanding",
+        # Live API tracking
+        needs_live_data=False,
+        live_data_reason=None,
+        live_api_calls=[],
+        live_api_errors=[],
     )
