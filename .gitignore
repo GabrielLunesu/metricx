@@ -5,6 +5,19 @@
 /.pnp
 .pnp.js
 
+# claude
+.claude
+
+# polar
+.polar
+
+# pytest
+.pytest_cache
+
+# openspec
+.openspec
+
+
 # BMAD
 .agent
 .bmad
