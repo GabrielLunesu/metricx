@@ -32,7 +32,7 @@
  */
 'use client'
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -48,6 +48,7 @@ import { UpgradeModal } from "../../../../components/UpgradeModal";
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { user } = useUser();
     const { signOut } = useClerk();
     const [workspace, setWorkspace] = useState(null);
@@ -203,7 +204,7 @@ export default function Sidebar() {
 
                 {/* Bottom */}
                 <div className="flex flex-col gap-6 items-center">
-                    <a
+                    <Link
                         href="/settings"
                         className={`p-3 rounded-xl transition-all duration-500 ${pathname === "/settings"
                             ? 'text-cyan-600 bg-cyan-50/50 ring-1 ring-cyan-100'
@@ -211,7 +212,7 @@ export default function Sidebar() {
                             }`}
                     >
                         <Settings className="w-5 h-5" />
-                    </a>
+                    </Link>
 
                     {/* User Profile Menu */}
                     <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
@@ -232,7 +233,7 @@ export default function Sidebar() {
                                     className="flex items-center gap-2"
                                     onClick={() => {
                                         setUserMenuOpen(false);
-                                        window.location.href = '/settings?tab=profile';
+                                        router.push('/settings?tab=profile');
                                     }}
                                 >
                                     <User className="w-4 h-4" />

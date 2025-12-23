@@ -138,6 +138,7 @@ export default function ProfitTrendChart({
                 <div className="flex items-center gap-2 mb-4">
                     <DollarSign className="w-4 h-4 text-emerald-500" />
                     <h3 className="text-sm font-semibold text-slate-900">Daily Profit</h3>
+                    <span className="text-[10px] text-slate-400 font-medium">(Last 30 days)</span>
                 </div>
                 <div className="h-[180px] flex items-center justify-center">
                     <p className="text-sm text-slate-500">No data available</p>
@@ -155,6 +156,7 @@ export default function ProfitTrendChart({
                 <div className="flex items-center gap-2">
                     <DollarSign className={`w-4 h-4 ${isPositiveTotal ? 'text-emerald-500' : 'text-red-500'}`} />
                     <h3 className="text-sm font-semibold text-slate-900">Daily Profit</h3>
+                    <span className="text-[10px] text-slate-400 font-medium">(Last 30 days)</span>
                 </div>
                 <div className="text-right">
                     <p className={`text-lg font-bold ${isPositiveTotal ? 'text-emerald-600' : 'text-red-500'}`}>

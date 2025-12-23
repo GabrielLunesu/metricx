@@ -29,7 +29,7 @@ const CURRENCY_SYMBOLS = {
  * @param {string} options.currency - Currency code (default: "USD")
  * @returns {string} Formatted currency string
  */
-export function formatCurrency(value, { decimals = 0, compact = true, currency = "USD" } = {}) {
+export function formatCurrency(value, { decimals, compact = true, currency = "USD" } = {}) {
   if (value === null || value === undefined) return "—";
 
   const symbol = CURRENCY_SYMBOLS[currency] || currency;
@@ -40,9 +40,12 @@ export function formatCurrency(value, { decimals = 0, compact = true, currency =
     if (absValue >= 1000) return `${symbol}${(value / 1000).toFixed(1)}K`;
   }
 
+  // Auto-determine decimals: 2 for small values (under $10), 0 otherwise
+  const effectiveDecimals = decimals !== undefined ? decimals : (absValue < 10 ? 2 : 0);
+
   return `${symbol}${value.toLocaleString(undefined, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
+    minimumFractionDigits: effectiveDecimals,
+    maximumFractionDigits: effectiveDecimals
   })}`;
 }
 

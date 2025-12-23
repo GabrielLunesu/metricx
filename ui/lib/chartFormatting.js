@@ -246,11 +246,14 @@ export function formatCurrency(value, currency = 'USD', compact = false) {
     return '-';
   }
 
+  // Show 2 decimals for small values (under $10) like CPC
+  const decimals = Math.abs(value) < 10 ? 2 : 0;
+
   const options = {
     style: 'currency',
     currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: value < 10 ? 2 : 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   };
 
   if (compact && Math.abs(value) >= 10000) {

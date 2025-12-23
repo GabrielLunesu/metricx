@@ -1,5 +1,6 @@
 'use client'
 
+import Link from "next/link";
 import { Lock } from "lucide-react";
 
 /**
@@ -29,7 +30,7 @@ export default function NavItem({ href, label, icon: Icon, isActive, isLocked, o
             {/* Glow effect on hover - dimmed when locked */}
             <div className={`absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity rounded-full ${isLocked ? 'from-slate-300/20 to-slate-400/20' : ''}`}></div>
 
-            <a
+            <Link
                 href={isLocked ? "#" : href}
                 onClick={handleClick}
                 className={`relative p-3 rounded-xl transition-all duration-300 group-hover:scale-110 ${isLocked
@@ -45,7 +46,7 @@ export default function NavItem({ href, label, icon: Icon, isActive, isLocked, o
                         <Lock className="w-2.5 h-2.5 text-amber-600" />
                     </div>
                 )}
-            </a>
+            </Link>
 
             {/* Tooltip - shows "Pro" badge when locked */}
             <div className="absolute left-16 top-2 px-3 py-1 glass-panel rounded-lg text-[10px] font-medium text-slate-600 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-50 flex items-center gap-1.5">

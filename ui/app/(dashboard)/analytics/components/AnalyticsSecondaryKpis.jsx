@@ -29,19 +29,24 @@ const CURRENCY_SYMBOLS = {
 
 /**
  * Format currency values with appropriate symbols and decimals
+ * Shows 2 decimal places for values under $10 (e.g., CPC, CPM)
  */
 function formatCurrency(value, currency = 'USD', compact = false) {
     if (value === null || value === undefined) return '—';
     const symbol = CURRENCY_SYMBOLS[currency] || '$';
+    const absValue = Math.abs(value);
 
-    if (compact && Math.abs(value) >= 1000) {
-        return `${value < 0 ? '-' : ''}${symbol}${(Math.abs(value) / 1000).toFixed(1)}k`;
+    if (compact && absValue >= 1000) {
+        return `${value < 0 ? '-' : ''}${symbol}${(absValue / 1000).toFixed(1)}k`;
     }
 
+    // Show 2 decimals for small values (under $10) like CPC
+    const decimals = absValue < 10 ? 2 : 0;
+
     return `${value < 0 ? '-' : ''}${symbol}${new Intl.NumberFormat('en-US', {
-        maximumFractionDigits: 0,
-        minimumFractionDigits: 0
-    }).format(Math.abs(value))}`;
+        maximumFractionDigits: decimals,
+        minimumFractionDigits: decimals
+    }).format(absValue)}`;
 }
 
 /**

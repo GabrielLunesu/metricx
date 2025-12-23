@@ -83,6 +83,36 @@ cd ui && npx shadcn@latest add <component-name>
 
 **Shadcn config:** `ui/components.json` (new-york style, JSX, Lucide icons)
 
+### Next.js Routing (MANDATORY)
+**Always use Next.js client-side routing.** This is non-negotiable.
+
+- **Never** use `<a href>` for internal navigation - use `<Link href>` from `next/link`
+- **Never** use `window.location.href` or `window.location.assign()` - use `router.push()` from `useRouter`
+- **Never** use `window.location.reload()` unless absolutely necessary (e.g., clearing auth context)
+- **Always** import routing utilities correctly:
+  ```jsx
+  import Link from "next/link";
+  import { useRouter, usePathname } from "next/navigation";
+  ```
+
+**Why this matters:**
+- `<a href>` causes full page reloads, losing React state and breaking SPA behavior
+- `<Link>` enables client-side navigation, keeping layouts mounted and enabling smooth transitions
+- Layouts (like sidebars) should persist across page changes - full reloads break this
+
+**Correct patterns:**
+```jsx
+// Navigation link
+<Link href="/dashboard">Dashboard</Link>
+
+// Programmatic navigation
+const router = useRouter();
+router.push('/settings?tab=profile');
+
+// Only if you MUST reload (auth logout, workspace context switch)
+window.location.reload();
+```
+
 ## Documentation Requirements
 
 ### Every File Must Include
@@ -153,6 +183,7 @@ Before considering any feature complete:
 - [ ] No TODO comments without linked tickets
 - [ ] Related files/modules updated if needed
 - [ ] **UI uses shadcn components** (no custom buttons, inputs, cards, etc.)
+- [ ] **Navigation uses Next.js Link/router** (no `<a href>` or `window.location`)
 
 ## Triple Whale Context
 Key domains we're competing in:

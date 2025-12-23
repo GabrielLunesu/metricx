@@ -126,6 +126,10 @@ export default function AnalyticsPage() {
     const [compareChartData, setCompareChartData] = useState(null);
     const [compareChartLoading, setCompareChartLoading] = useState(false);
 
+    // Fixed 30-day profit chart data (independent of page filters)
+    const [profitChartData, setProfitChartData] = useState([]);
+    const [profitChartLoading, setProfitChartLoading] = useState(false);
+
     // ============================================
     // GLOBAL FILTERS - These affect the ENTIRE page
     // ============================================
@@ -534,6 +538,30 @@ export default function AnalyticsPage() {
             .finally(() => setCompareChartLoading(false));
     }, [workspaceId, compareEnabled, isAdView, dateRange, selectedPlatform, selectedCampaigns, chartGroupBy]);
 
+    // Fetch fixed 30-day data for profit chart (independent of page date range)
+    useEffect(() => {
+        if (!workspaceId) return;
+
+        setProfitChartLoading(true);
+        fetchAnalyticsChart({
+            workspaceId,
+            timeframe: 'last_30_days',
+            startDate: null,
+            endDate: null,
+            platforms: selectedPlatform ? [selectedPlatform] : null,
+            campaignIds: selectedCampaigns.length > 0 ? selectedCampaigns : null,
+            groupBy: chartGroupBy,
+        })
+            .then((data) => {
+                setProfitChartData(aggregateSeriesToChartData(data?.series || []));
+            })
+            .catch((err) => {
+                console.error("Failed to fetch profit chart data:", err);
+                setProfitChartData([]);
+            })
+            .finally(() => setProfitChartLoading(false));
+    }, [workspaceId, selectedPlatform, selectedCampaigns, chartGroupBy]);
+
     const alignedCompareSeries = useMemo(() => {
         if (!compareEnabled) return null;
         const currentSeries = chartData?.series || [];
@@ -604,7 +632,7 @@ export default function AnalyticsPage() {
                 <div className="flex-1">
                     <div className="flex items-center gap-3">
                         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-                            Paid Growth Command Center
+                            Analytics
                         </h1>
                         <button
                             type="button"
@@ -723,7 +751,7 @@ export default function AnalyticsPage() {
 
                 <div className="xl:col-span-4 min-w-0 flex flex-col gap-5">
                     <AnalyticsProfitWidget data={effectiveData} loading={effectiveLoading} />
-                    <ProfitTrendChart chartData={effectiveData?.chart_data || []} loading={effectiveLoading} currency={effectiveData?.currency || "USD"} />
+                    <ProfitTrendChart chartData={profitChartData} loading={profitChartLoading} currency={effectiveData?.currency || "USD"} />
                 </div>
             </section>
 
