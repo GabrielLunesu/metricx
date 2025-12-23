@@ -156,6 +156,7 @@ def _base_query(
         # Use raw SQL subquery for latest snapshots per entity per day
         # WHY: DISTINCT ON is PostgreSQL-specific and gives us exactly one row
         # per (entity_id, metrics_date) - the most recent snapshot for that day
+        # NOTE: Use CAST() instead of ::uuid to avoid SQLAlchemy parameter confusion
         latest_snapshots_sql = text(f"""
             SELECT
                 ls.entity_id,
@@ -178,7 +179,7 @@ def _base_query(
                 FROM metric_snapshots ms
                 JOIN entities e ON e.id = ms.entity_id
                 JOIN connections c ON c.id = e.connection_id
-                WHERE e.workspace_id = :workspace_id::uuid
+                WHERE e.workspace_id = CAST(:workspace_id AS uuid)
                   AND e.level = :level
                   AND ms.metrics_date >= :start_date
                   AND ms.metrics_date <= :end_date
@@ -519,6 +520,7 @@ def _fetch_trend(
     # For campaigns, ads, and creatives - use raw SQL with DISTINCT ON
     if level in (models.LevelEnum.ad, models.LevelEnum.creative, models.LevelEnum.campaign):
         # Use raw SQL with DISTINCT ON to get latest snapshot per entity per day
+        # NOTE: Use CAST() instead of ::uuid[] to avoid SQLAlchemy parameter confusion
         trend_sql = text("""
             SELECT
                 entity_id,
@@ -538,7 +540,7 @@ def _fetch_trend(
                     ms.impressions,
                     ms.conversions
                 FROM metric_snapshots ms
-                WHERE ms.entity_id = ANY(:entity_ids::uuid[])
+                WHERE ms.entity_id = ANY(CAST(:entity_ids AS uuid[]))
                   AND ms.metrics_date >= :start_date
                   AND ms.metrics_date <= :end_date
                 ORDER BY ms.entity_id, ms.metrics_date, ms.captured_at DESC
