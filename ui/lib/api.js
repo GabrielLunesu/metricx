@@ -258,10 +258,17 @@ export async function fetchQA({ workspaceId, question, context = {}, maxRetries 
 // This is a SYNCHRONOUS endpoint for simplicity.
 // Use /qa/agent + /qa/agent/stream/{job_id} for streaming in production.
 //
+// CALLBACKS:
+// - onStage(stage): Called when agent state changes ("understanding", "processing", etc.)
+// - onToken(token): Called for each answer token (typing effect)
+// - onToolEvent(event): NEW - Called for tool_start and tool_end events
+//   - { type: "tool_start", tool: "query_metrics", args: {...}, description: "..." }
+//   - { type: "tool_end", tool: "query_metrics", preview: "...", success: true, duration_ms: 234, data_source: "snapshots" }
+//
 // REFERENCES:
 // - backend/app/agent/ (LangGraph agent)
 // - backend/app/routers/qa.py (POST /qa/agent/sync)
-export async function fetchQAAgent({ workspaceId, question, context = {}, onStage, onToken }) {
+export async function fetchQAAgent({ workspaceId, question, context = {}, onStage, onToken, onToolEvent }) {
   // Append context to question if provided
   let finalQuestion = question;
   if (context && Object.keys(context).length > 0) {
@@ -291,6 +298,7 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
   const decoder = new TextDecoder();
   let buffer = '';
   let finalResult = null;
+  let toolEvents = []; // Collect tool events for final result
 
   while (true) {
     const { done, value } = await reader.read();
@@ -316,17 +324,81 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
               case 'thinking':
                 onStage?.(event.data);
                 break;
+
+              case 'tool_start':
+                // NEW: Tool execution started
+                {
+                  const toolEvent = {
+                    type: 'tool_start',
+                    tool: event.data.tool,
+                    args: event.data.args,
+                    description: event.data.description,
+                    timestamp: Date.now(),
+                  };
+                  toolEvents.push(toolEvent);
+                  onToolEvent?.(toolEvent);
+                }
+                break;
+
+              case 'tool_end':
+                // NEW: Tool execution finished
+                {
+                  const toolEvent = {
+                    type: 'tool_end',
+                    tool: event.data.tool,
+                    preview: event.data.preview,
+                    success: event.data.success,
+                    duration_ms: event.data.duration_ms,
+                    data_source: event.data.data_source,
+                    timestamp: Date.now(),
+                  };
+                  toolEvents.push(toolEvent);
+                  onToolEvent?.(toolEvent);
+                }
+                break;
+
+              // Legacy events (for backwards compatibility)
+              case 'tool_call':
+                {
+                  const toolEvent = {
+                    type: 'tool_start',
+                    tool: event.data.tool,
+                    args: event.data.args,
+                    timestamp: Date.now(),
+                  };
+                  toolEvents.push(toolEvent);
+                  onToolEvent?.(toolEvent);
+                }
+                break;
+
+              case 'tool_result':
+                {
+                  const toolEvent = {
+                    type: 'tool_end',
+                    tool: event.data.tool,
+                    preview: event.data.preview,
+                    success: event.data.success ?? true,
+                    timestamp: Date.now(),
+                  };
+                  toolEvents.push(toolEvent);
+                  onToolEvent?.(toolEvent);
+                }
+                break;
+
               case 'token':
                 if (onToken) {
                   onToken(event.data);
                 }
                 break;
+
               case 'visual':
                 // Visuals received, will be in final result
                 break;
+
               case 'done':
                 finalResult = event.data;
                 break;
+
               case 'error':
                 throw new Error(event.data);
             }
@@ -354,7 +426,10 @@ export async function fetchQAAgent({ workspaceId, question, context = {}, onStag
     visuals: finalResult.visuals,
     context_used: [],
     intent: finalResult.intent,
-    error: finalResult.error
+    error: finalResult.error,
+    // NEW: Include tool events and data sources
+    toolEvents: toolEvents,
+    toolCallsMade: finalResult.tool_calls_made || [],
   };
 }
 

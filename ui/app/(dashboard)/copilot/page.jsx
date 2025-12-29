@@ -22,6 +22,10 @@ export default function CopilotPage() {
   // Stages: queued → translating → executing → formatting → complete
   const [stage, setStage] = useState(null);
 
+  // Tool events state (v5.0 - Agentic Feedback)
+  // WHY: Shows users what the agent is doing in real-time
+  const [toolEvents, setToolEvents] = useState([]);
+
   // Resolve workspace id from session if not present in URL
   useEffect(() => {
     if (workspaceId) {
@@ -71,6 +75,7 @@ export default function CopilotPage() {
     setStage('queued'); // Initial stage
     setStreamingText(''); // Reset streaming text
     streamingBufferRef.current = ''; // Reset buffer
+    setToolEvents([]); // Reset tool events for new question
 
     // Create a placeholder AI message for streaming
     const streamingId = Date.now();
@@ -102,7 +107,10 @@ export default function CopilotPage() {
         timestamp: Date.now(),
         visuals: res.visuals,
         data: res.data,
-        executedDsl: res.executed_dsl
+        executedDsl: res.executed_dsl,
+        // NEW: Include tool events and data sources for display
+        toolEvents: res.toolEvents || [],
+        toolCallsMade: res.toolCallsMade || [],
       };
       setMessages((prev) => [...prev, aiMessage]);
     };
@@ -139,6 +147,10 @@ export default function CopilotPage() {
           if (streamingIdRef.current === streamingId) {
             streamingBufferRef.current += token;
           }
+        },
+        // NEW: Capture tool events for ThinkingAccordion
+        onToolEvent: (event) => {
+          setToolEvents((prev) => [...prev, event]);
         }
       });
       addAiResponse(result);
@@ -192,12 +204,13 @@ export default function CopilotPage() {
     <div className="mesh-bg h-full relative flex flex-col md:pl-[90px]">
       {/* Conversation Area */}
       <main className="flex-1 overflow-y-auto pt-8 pb-48 w-full">
-        {/* Pass stage and streamingText for real-time typing effect (v4.0) */}
+        {/* Pass stage, streamingText, and toolEvents for real-time feedback (v5.0) */}
         <ConversationThread
           messages={messages}
           isLoading={loading}
           stage={stage}
           streamingText={streamingText}
+          toolEvents={toolEvents}
         />
       </main>
 

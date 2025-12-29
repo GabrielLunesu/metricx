@@ -47,7 +47,13 @@ from openai import OpenAI, AsyncOpenAI
 from sqlalchemy.orm import Session
 
 from app.agent.state import AgentState, Message, MessageRole
-from app.agent.tools import SemanticTools, get_tool_schemas, get_tools_description, get_agent_tools, AGENT_TOOLS
+from app.agent.tools import (
+    SemanticTools,
+    get_tool_schemas,
+    get_tools_description,
+    get_agent_tools,
+    AGENT_TOOLS,
+)
 from app.agent.stream import StreamPublisher, AsyncQueuePublisher
 from app.agent.live_api_tools import LiveApiTools
 from app.agent.rate_limiter import WorkspaceRateLimiter
@@ -67,7 +73,10 @@ logger = logging.getLogger(__name__)
 # WORKSPACE CONTEXT
 # =============================================================================
 
-def _fetch_workspace_context(db: Session, workspace_id: str) -> Optional[Dict[str, Any]]:
+
+def _fetch_workspace_context(
+    db: Session, workspace_id: str
+) -> Optional[Dict[str, Any]]:
     """
     Fetch business profile context for a workspace.
 
@@ -101,12 +110,17 @@ def _fetch_workspace_context(db: Session, workspace_id: str) -> Optional[Dict[st
             context["brand_voice"] = workspace.brand_voice
 
         # Add connected ad platforms
-        connections = db.query(Connection).filter(
-            Connection.workspace_id == workspace_id,
-            Connection.status == "active"
-        ).all()
+        connections = (
+            db.query(Connection)
+            .filter(
+                Connection.workspace_id == workspace_id, Connection.status == "active"
+            )
+            .all()
+        )
         if connections:
-            context["connected_providers"] = list(set(c.provider.value for c in connections))
+            context["connected_providers"] = list(
+                set(c.provider.value for c in connections)
+            )
 
         # Return context if we have any useful info
         return context if context else None
@@ -350,6 +364,7 @@ Do NOT include raw data or JSON. Speak naturally."""
 # NODE FUNCTIONS
 # =============================================================================
 
+
 def understand_node(
     state: AgentState,
     db: Session,
@@ -382,16 +397,24 @@ def understand_node(
 
     # Add conversation history for context
     for msg in state.get("messages", [])[:-1]:  # Exclude current question
-        messages.append({
-            "role": msg.role.value if hasattr(msg, 'role') else msg.get("role", "user"),
-            "content": msg.content if hasattr(msg, 'content') else msg.get("content", ""),
-        })
+        messages.append(
+            {
+                "role": msg.role.value
+                if hasattr(msg, "role")
+                else msg.get("role", "user"),
+                "content": msg.content
+                if hasattr(msg, "content")
+                else msg.get("content", ""),
+            }
+        )
 
     # Add current question
-    messages.append({
-        "role": "user",
-        "content": state["current_question"],
-    })
+    messages.append(
+        {
+            "role": "user",
+            "content": state["current_question"],
+        }
+    )
 
     try:
         client = get_openai_client()
@@ -399,7 +422,9 @@ def understand_node(
         # Fetch business context for personalization
         workspace_id = state.get("workspace_id")
         print(f"[DEBUG] understand workspace_id: {workspace_id}")
-        business_context = _fetch_workspace_context(db, workspace_id) if workspace_id else None
+        business_context = (
+            _fetch_workspace_context(db, workspace_id) if workspace_id else None
+        )
         print(f"[DEBUG] business_context fetched: {business_context}")
         context_prompt = _build_business_context_prompt(business_context)
 
@@ -407,9 +432,13 @@ def understand_node(
         system_prompt = UNDERSTAND_PROMPT
         if context_prompt:
             system_prompt = f"{context_prompt}\n{UNDERSTAND_PROMPT}"
-            logger.info(f"[NODE] Injecting business context for workspace: {workspace_id}")
+            logger.info(
+                f"[NODE] Injecting business context for workspace: {workspace_id}"
+            )
         else:
-            logger.warning(f"[NODE] No business context found for workspace: {workspace_id}")
+            logger.warning(
+                f"[NODE] No business context found for workspace: {workspace_id}"
+            )
 
         # OpenAI format: system prompt goes in messages array
         openai_messages = [{"role": "system", "content": system_prompt}] + messages
@@ -435,7 +464,9 @@ def understand_node(
         parsed = json.loads(json_str.strip())
 
         intent = parsed.get("intent", "metric_query")
-        print(f"[DEBUG] Classified intent: {intent}, question was: {state.get('current_question', '')[:100]}")
+        print(
+            f"[DEBUG] Classified intent: {intent}, question was: {state.get('current_question', '')[:100]}"
+        )
 
         # Build semantic query dict
         compare_to_previous = parsed.get("compare_to_previous", False)
@@ -471,7 +502,10 @@ def understand_node(
         if intent == "out_of_scope":
             return {
                 "intent": intent,
-                "error": parsed.get("out_of_scope_reason", "I can only answer questions about your advertising data."),
+                "error": parsed.get(
+                    "out_of_scope_reason",
+                    "I can only answer questions about your advertising data.",
+                ),
                 "stage": "responding",
             }
 
@@ -538,7 +572,9 @@ def check_data_freshness_node(
 
     # If user explicitly requested live data, pass through
     if state.get("needs_live_data"):
-        logger.info("[NODE] Live data already requested by user, skipping freshness check")
+        logger.info(
+            "[NODE] Live data already requested by user, skipping freshness check"
+        )
         return {
             "stage": "fetching",
         }
@@ -554,6 +590,7 @@ def check_data_freshness_node(
         # Use LiveApiTools to check freshness
         # Note: We create a minimal instance just for freshness check
         from app import state as app_state
+
         redis_client = getattr(app_state, "redis_client", None)
 
         live_tools = LiveApiTools(
@@ -580,7 +617,9 @@ def check_data_freshness_node(
                 )
 
         if any_stale:
-            logger.info(f"[NODE] Enabling auto-fallback to live API for stale providers: {stale_providers}")
+            logger.info(
+                f"[NODE] Enabling auto-fallback to live API for stale providers: {stale_providers}"
+            )
             return {
                 "needs_live_data": True,
                 "live_data_reason": "stale_snapshot",
@@ -602,6 +641,7 @@ def check_data_freshness_node(
 # =============================================================================
 # LIVE API HELPER FUNCTIONS
 # =============================================================================
+
 
 def _map_time_range_to_live(time_range: str) -> str:
     """
@@ -759,6 +799,7 @@ def fetch_data_node(
 
     # Get Redis client for rate limiting
     from app import state as app_state
+
     redis_client = getattr(app_state, "redis_client", None)
 
     live_api_calls = []
@@ -794,22 +835,28 @@ def fetch_data_node(
             # If no provider specified, try to determine from connected accounts
             if not provider:
                 from app.agent.connection_resolver import ConnectionResolver
+
                 resolver = ConnectionResolver(db, workspace_id)
                 available = resolver.get_available_providers()
                 provider = available[0] if available else "meta"
 
             if publisher:
-                publisher.tool_call("live_api_query", {
-                    "provider": provider,
-                    "entity_type": entity_type,
-                    "date_range": live_date_range,
-                })
+                publisher.tool_call(
+                    "live_api_query",
+                    {
+                        "provider": provider,
+                        "entity_type": entity_type,
+                        "date_range": live_date_range,
+                    },
+                )
 
             # Fetch live metrics
             live_result = live_tools.get_live_metrics(
                 provider=provider,
                 entity_type=entity_type,
-                metrics=semantic_query.get("metrics", ["spend", "impressions", "clicks"]),
+                metrics=semantic_query.get(
+                    "metrics", ["spend", "impressions", "clicks"]
+                ),
                 date_range=live_date_range,
             )
 
@@ -818,7 +865,9 @@ def fetch_data_node(
 
             if live_result.get("success"):
                 # Convert live result to compilation_result format
-                result = _convert_live_to_compilation_result(live_result, semantic_query)
+                result = _convert_live_to_compilation_result(
+                    live_result, semantic_query
+                )
 
                 if publisher:
                     summary = live_result.get("data", {}).get("summary", {})
@@ -829,19 +878,28 @@ def fetch_data_node(
                                 preview_parts.append(f"{metric}: ${val:,.2f}")
                             else:
                                 preview_parts.append(f"{metric}: {val:,.0f}")
-                    publisher.tool_result("live_api_query", ", ".join(preview_parts) if preview_parts else "Live data retrieved")
+                    publisher.tool_result(
+                        "live_api_query",
+                        ", ".join(preview_parts)
+                        if preview_parts
+                        else "Live data retrieved",
+                    )
             else:
                 logger.warning(f"[NODE] Live API failed, falling back to snapshot")
                 result = None  # Will trigger fallback below
 
         except (QuotaExhaustedError, WorkspaceRateLimitError) as e:
-            logger.warning(f"[NODE] Live API rate limited: {e}, falling back to snapshot")
-            live_api_calls.append({
-                "provider": getattr(e, "provider", "unknown"),
-                "endpoint": "get_live_metrics",
-                "success": False,
-                "error": str(e),
-            })
+            logger.warning(
+                f"[NODE] Live API rate limited: {e}, falling back to snapshot"
+            )
+            live_api_calls.append(
+                {
+                    "provider": getattr(e, "provider", "unknown"),
+                    "endpoint": "get_live_metrics",
+                    "success": False,
+                    "error": str(e),
+                }
+            )
             result = None  # Fallback to snapshot
 
         except (TokenExpiredError, ProviderNotConnectedError) as e:
@@ -855,12 +913,14 @@ def fetch_data_node(
 
         except LiveApiError as e:
             logger.warning(f"[NODE] Live API error: {e}, falling back to snapshot")
-            live_api_calls.append({
-                "provider": getattr(e, "provider", "unknown"),
-                "endpoint": "get_live_metrics",
-                "success": False,
-                "error": str(e),
-            })
+            live_api_calls.append(
+                {
+                    "provider": getattr(e, "provider", "unknown"),
+                    "endpoint": "get_live_metrics",
+                    "success": False,
+                    "error": str(e),
+                }
+            )
             result = None  # Fallback to snapshot
 
     # If not using live API or live API failed, use snapshot data
@@ -890,9 +950,13 @@ def fetch_data_node(
                     if result and result.get("success"):
                         direction = result.get("direction", "")
                         change = result.get("change_str", "")
-                        publisher.tool_result("analyze_change", f"{metric.upper()} {direction} {change}")
+                        publisher.tool_result(
+                            "analyze_change", f"{metric.upper()} {direction} {change}"
+                        )
                     else:
-                        publisher.tool_result("analyze_change", "No change data available")
+                        publisher.tool_result(
+                            "analyze_change", "No change data available"
+                        )
 
             else:
                 # Use query_metrics for most queries
@@ -904,7 +968,9 @@ def fetch_data_node(
                     time_range=semantic_query.get("time_range", "7d"),
                     breakdown_level=semantic_query.get("breakdown_level"),
                     limit=semantic_query.get("limit", 5),
-                    compare_to_previous=semantic_query.get("compare_to_previous", False),
+                    compare_to_previous=semantic_query.get(
+                        "compare_to_previous", False
+                    ),
                     include_timeseries=semantic_query.get("include_timeseries", False),
                     filters=semantic_query.get("filters"),
                 )
@@ -922,7 +988,10 @@ def fetch_data_node(
                                 preview_parts.append(f"{metric}: {val:.2f}×")
                             else:
                                 preview_parts.append(f"{metric}: {val:.2f}")
-                    publisher.tool_result("query_metrics", ", ".join(preview_parts) if preview_parts else "Data retrieved")
+                    publisher.tool_result(
+                        "query_metrics",
+                        ", ".join(preview_parts) if preview_parts else "Data retrieved",
+                    )
 
         except Exception as e:
             logger.exception(f"[NODE] Snapshot query failed: {e}")
@@ -932,7 +1001,9 @@ def fetch_data_node(
                 "live_api_calls": live_api_calls,
             }
 
-        logger.info(f"[NODE] fetch_data result: {result.get('success', False) if result else False}")
+        logger.info(
+            f"[NODE] fetch_data result: {result.get('success', False) if result else False}"
+        )
 
     # Return result
     if result and result.get("error"):
@@ -974,7 +1045,9 @@ def respond_node(
 
     # Handle special cases
     if state.get("needs_clarification"):
-        answer = state.get("clarification_question", "Could you please clarify your question?")
+        answer = state.get(
+            "clarification_question", "Could you please clarify your question?"
+        )
         if publisher:
             publisher.answer_chunk(answer)
         return {
@@ -1063,7 +1136,9 @@ def respond_node(
         }
 
     compilation_result = state.get("compilation_result") or {}
-    data = compilation_result.get("data") if isinstance(compilation_result, dict) else {}
+    data = (
+        compilation_result.get("data") if isinstance(compilation_result, dict) else {}
+    )
     data = data or {}  # Ensure data is never None
     intent = state.get("intent", "metric_query")
 
@@ -1075,7 +1150,9 @@ def respond_node(
 
         # Fetch business context for personalization
         workspace_id = state.get("workspace_id")
-        business_context = _fetch_workspace_context(db, workspace_id) if workspace_id else None
+        business_context = (
+            _fetch_workspace_context(db, workspace_id) if workspace_id else None
+        )
         context_prompt = _build_business_context_prompt(business_context)
 
         # Build system prompt with optional business context
@@ -1091,7 +1168,7 @@ def respond_node(
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
-                "content": f"""User asked: "{state['current_question']}"
+                "content": f"""User asked: "{state["current_question"]}"
 
 Intent: {intent}
 
@@ -1099,7 +1176,7 @@ Data retrieved:
 {data_summary}
 
 Please write a helpful, conversational response based on this data.""",
-            }
+            },
         ]
 
         # Stream the response
@@ -1181,6 +1258,97 @@ def error_node(
 # Agent system prompt with data source priority
 AGENT_SYSTEM_PROMPT = """You are an expert advertising analyst copilot. You help users understand their ad performance across Google Ads and Meta Ads.
 
+## CHARTS AND GRAPHS (CRITICAL)
+
+**NEVER create ASCII charts, markdown tables, text-based graphs, or list individual daily values.**
+
+Charts and visualizations are AUTOMATICALLY generated by our frontend based on the data you retrieve.
+- If a user asks for a "graph" or "chart", just fetch the data with `include_timeseries: true`
+- The frontend will render beautiful interactive charts automatically
+- DO NOT repeat individual daily/hourly values - the chart shows them visually
+- Only mention SUMMARY metrics (totals, averages, % change) in your text
+
+**BAD (never do this):**
+```
+- Dec 23: $500
+- Dec 24: $450
+- Dec 25: $400
+```
+
+**ALSO BAD:**
+"Here are the daily values: Monday $500, Tuesday $450..."
+
+**GOOD:**
+"Your spend this week totaled $5,147, down 40.8% from last week's $8,697. The chart below shows the daily breakdown."
+
+## RESPONSE RULES (CRITICAL - READ CAREFULLY)
+
+1. **ONLY use numbers EXACTLY as they appear in tool results** - NEVER calculate, estimate, or round
+2. **For current period total**: Use `summary.<metric>.value` EXACTLY
+3. **For previous period total**: Use `summary.<metric>.previous` EXACTLY  
+4. **For % change**: Use `summary.<metric>.delta_pct` EXACTLY (multiply by 100 for percentage)
+5. **NEVER add up timeseries values** - The summary already has the correct totals
+6. **Don't list individual daily values** - The chart handles visualization
+7. **Keep responses concise** - 2-3 sentences max
+
+**EXAMPLE - Given this tool result:**
+```json
+{
+  "summary": {
+    "spend": {
+      "value": 28579.86,
+      "previous": 31543.84,
+      "delta_pct": -0.094
+    }
+  },
+  "time_range_resolved": {
+    "start": "2025-11-30",
+    "end": "2025-12-29"
+  }
+}
+```
+
+**CORRECT response (includes dates for clarity):**
+"Your spend for the last 30 days (Nov 30 - Dec 29) was $28,580, down 9.4% from the previous 30 days' $31,544."
+
+**ALSO CORRECT:**
+"From Nov 30 to Dec 29, you spent $28,580. That's down 9.4% compared to the prior period ($31,544)."
+
+**WRONG (ambiguous - what does 'last month' mean?):**
+"Your spend for last month was $28,580..." ← User doesn't know if this means November or last 30 days!
+
+**WRONG (hallucinated number):**
+"Your spend was $28,580, down from $60,124." ← WRONG NUMBER!
+
+## DATE CLARITY (IMPORTANT)
+
+The tool uses **rolling time windows**, NOT calendar months:
+- "7d" = last 7 days from today
+- "30d" = last 30 days from today (NOT "November" or "last month")
+- "90d" = last 90 days from today
+
+**ALWAYS include the actual date range** from `time_range_resolved` in your response so users know exactly what period you're referring to.
+
+## TOOL CALLING EFFICIENCY (CRITICAL)
+
+**For period comparisons (this week vs last week, this month vs last month):**
+- Use ONE call with `compare_to_previous: true`
+- This returns BOTH periods: `summary.value` (current) and `summary.previous` (previous)
+- Do NOT make multiple calls for different time ranges
+
+**WRONG (2 calls):**
+```
+query_metrics(time_range="30d") → $28,580
+query_metrics(time_range="60d") → $60,140  ← This is CUMULATIVE, not "month before"!
+```
+
+**CORRECT (1 call):**
+```
+query_metrics(time_range="30d", compare_to_previous=true)
+→ value: $28,580 (last 30 days)
+→ previous: $31,544 (30 days before that)
+```
+
 ## DATA SOURCE PRIORITY (CRITICAL)
 
 **ALWAYS use query_metrics FIRST** for any metrics question. Our database has snapshots updated every 15 minutes.
@@ -1189,6 +1357,9 @@ AGENT_SYSTEM_PROMPT = """You are an expert advertising analyst copilot. You help
    - Use for: spend, ROAS, CPC, CTR, conversions, revenue, profit
    - Even for "today" questions - snapshots are only ~15 min old
    - Returns: data + snapshot_time + snapshot_age_minutes
+   - **For comparisons**: Set `compare_to_previous: true` to get both periods in ONE call
+   - For graphs/charts: set `include_timeseries: true`
+   - For comparisons: set `compare_to_previous: true`
 
 2. **google_ads_query / meta_ads_query** (LIVE API - Slower, rate limited)
    - Use ONLY when query_metrics can't answer:
@@ -1245,6 +1416,23 @@ User: "This is wrong, my Google Ads shows different numbers"
 → You: "Here's what Google Ads shows right now: [live numbers]. The difference was likely due to
    [recent activity / sync timing / etc.]"
 
+## PROVIDER ATTRIBUTION (CRITICAL)
+
+**NEVER attribute data to the wrong provider!**
+
+- If user asks about "Meta" but query_metrics returns data without a provider filter, that data is from ALL connected providers (likely Google only if Meta shows "not connected")
+- If a tool returns an error like "Meta Ads not connected", DO NOT use data from other tools and call it "Meta data"
+- ALWAYS check which provider the data actually came from
+
+**WRONG:**
+User: "How's Meta doing?"
+Tool 1: query_metrics → returns $28,000 (this is Google data!)
+Tool 2: meta_ads_query → Error: "Meta Ads not connected"
+Response: "Your Meta Ads spend is $28,000" ← WRONG! This is Google data!
+
+**CORRECT:**
+Response: "Meta Ads is not connected to your account. The $28,000 spend shown is from Google Ads. To see Meta performance, please connect your Meta account in Settings → Connections."
+
 ## IMPORTANT
 
 - If you need data you don't have, USE A TOOL to get it
@@ -1252,6 +1440,7 @@ User: "This is wrong, my Google Ads shows different numbers"
 - If a tool fails, try a different approach or explain the limitation
 - Be concise and actionable in your responses
 - When user questions data accuracy, ALWAYS fetch live data to verify
+- **NEVER mislabel data from one provider as another provider's data**
 
 When you have enough information to answer, respond directly without calling more tools."""
 
@@ -1292,7 +1481,9 @@ async def agent_loop_node(
     RETURNS:
         State updates: answer_chunks, tool_calls_made, iterations, stage
     """
-    logger.info(f"[AGENT] Starting agent loop: {state.get('current_question', '')[:50]}...")
+    logger.info(
+        f"[AGENT] Starting agent loop: {state.get('current_question', '')[:50]}..."
+    )
 
     if publisher:
         publisher.thinking("Understanding your question...")
@@ -1301,7 +1492,9 @@ async def agent_loop_node(
     user_id = state.get("user_id", "")
 
     # Fetch business context for personalization
-    business_context = _fetch_workspace_context(db, workspace_id) if workspace_id else None
+    business_context = (
+        _fetch_workspace_context(db, workspace_id) if workspace_id else None
+    )
     context_prompt = _build_business_context_prompt(business_context)
 
     # Build system prompt with optional business context
@@ -1327,6 +1520,10 @@ async def agent_loop_node(
     iteration = 0
     tool_calls_made = []
     answer_chunks = []
+
+    # Track query_metrics results for building visuals
+    collected_data = {}
+    collected_semantic_query = {}
 
     while iteration < MAX_ITERATIONS:
         iteration += 1
@@ -1357,29 +1554,42 @@ async def agent_loop_node(
                     for char in answer:
                         publisher.answer_token(char)
 
+                # Build visuals from collected data (if any query_metrics was called)
+                visuals = None
+                if collected_data:
+                    visuals = _build_visuals_from_data(
+                        collected_data, collected_semantic_query
+                    )
+                    if publisher and visuals:
+                        publisher.visual(visuals)
+
                 return {
                     "answer_chunks": answer_chunks,
                     "tool_calls_made": tool_calls_made,
                     "iterations": iteration,
+                    "visuals": visuals,
+                    "data": collected_data,
                     "stage": "done",
                 }
 
             # Execute tool calls
-            messages.append({
-                "role": "assistant",
-                "content": message.content,
-                "tool_calls": [
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        },
-                    }
-                    for tc in message.tool_calls
-                ],
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": message.content,
+                    "tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            },
+                        }
+                        for tc in message.tool_calls
+                    ],
+                }
+            )
 
             for tool_call in message.tool_calls[:MAX_TOOL_CALLS_PER_ITERATION]:
                 tool_name = tool_call.function.name
@@ -1392,8 +1602,14 @@ async def agent_loop_node(
 
                 logger.info(f"[AGENT] Executing tool: {tool_name}({tool_args})")
 
+                # Emit tool_start event
                 if publisher:
-                    publisher.tool_call(tool_name, tool_args)
+                    publisher.tool_start(tool_name, tool_args)
+
+                # Track execution time
+                import time
+
+                start_time = time.time()
 
                 # Execute the tool
                 try:
@@ -1405,46 +1621,103 @@ async def agent_loop_node(
                         user_id=user_id,
                     )
 
-                    tool_calls_made.append({
-                        "tool": tool_name,
-                        "args": tool_args,
-                        "success": result.get("success", not result.get("error")),
-                    })
+                    duration_ms = int((time.time() - start_time) * 1000)
+                    data_source = result.get("data_source", "snapshots")
+                    success = result.get("success", not result.get("error"))
 
+                    tool_calls_made.append(
+                        {
+                            "tool": tool_name,
+                            "args": tool_args,
+                            "success": success,
+                            "duration_ms": duration_ms,
+                            "data_source": data_source,
+                        }
+                    )
+
+                    # Collect data from query_metrics for building visuals
+                    if tool_name == "query_metrics" and success and result.get("data"):
+                        collected_data = result.get("data", {})
+                        collected_semantic_query = (
+                            tool_args  # Store the query args for visual building
+                        )
+                        logger.info(
+                            f"[AGENT] Collected data for visuals: {list(collected_data.keys())}"
+                        )
+
+                    # Emit tool_end event with timing and data source
                     if publisher:
-                        # Show preview of result
-                        if result.get("success") or not result.get("error"):
+                        if success:
                             preview = _get_tool_result_preview(tool_name, result)
-                            publisher.tool_result(tool_name, preview)
+                            publisher.tool_end(
+                                tool_name,
+                                preview,
+                                success=True,
+                                duration_ms=duration_ms,
+                                data_source=data_source,
+                            )
                         else:
-                            publisher.tool_result(tool_name, f"Error: {result.get('error', 'Unknown error')}")
+                            publisher.tool_end(
+                                tool_name,
+                                f"Error: {result.get('error', 'Unknown error')}",
+                                success=False,
+                                duration_ms=duration_ms,
+                            )
 
                 except asyncio.TimeoutError:
+                    duration_ms = int((time.time() - start_time) * 1000)
                     logger.warning(f"[AGENT] Tool {tool_name} timed out")
-                    result = {"error": f"Tool {tool_name} timed out after {TOOL_EXECUTION_TIMEOUT}s"}
-                    tool_calls_made.append({
-                        "tool": tool_name,
-                        "args": tool_args,
-                        "success": False,
-                        "error": "timeout",
-                    })
+                    result = {
+                        "error": f"Tool {tool_name} timed out after {TOOL_EXECUTION_TIMEOUT}s"
+                    }
+                    tool_calls_made.append(
+                        {
+                            "tool": tool_name,
+                            "args": tool_args,
+                            "success": False,
+                            "error": "timeout",
+                            "duration_ms": duration_ms,
+                        }
+                    )
+                    if publisher:
+                        publisher.tool_end(
+                            tool_name,
+                            "Timed out",
+                            success=False,
+                            duration_ms=duration_ms,
+                        )
 
                 except Exception as e:
+                    duration_ms = int((time.time() - start_time) * 1000)
                     logger.exception(f"[AGENT] Tool {tool_name} failed: {e}")
                     result = {"error": str(e)}
-                    tool_calls_made.append({
-                        "tool": tool_name,
-                        "args": tool_args,
-                        "success": False,
-                        "error": str(e),
-                    })
+                    tool_calls_made.append(
+                        {
+                            "tool": tool_name,
+                            "args": tool_args,
+                            "success": False,
+                            "error": str(e),
+                            "duration_ms": duration_ms,
+                        }
+                    )
+                    if publisher:
+                        publisher.tool_end(
+                            tool_name,
+                            f"Error: {str(e)}",
+                            success=False,
+                            duration_ms=duration_ms,
+                        )
 
-                # Add tool result to messages
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps(result, default=str),
-                })
+                # Add tool result to messages (summarized for LLM, not full data)
+                # We summarize timeseries data to prevent LLM from listing individual values
+                summarized_result = _summarize_tool_result_for_llm(tool_name, result)
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": json.dumps(summarized_result, default=str),
+                    }
+                )
 
         except Exception as e:
             logger.exception(f"[AGENT] LLM call failed: {e}")
@@ -1462,10 +1735,19 @@ async def agent_loop_node(
     if publisher:
         publisher.answer_chunk(fallback)
 
+    # Still try to build visuals if we collected any data
+    visuals = None
+    if collected_data:
+        visuals = _build_visuals_from_data(collected_data, collected_semantic_query)
+        if publisher and visuals:
+            publisher.visual(visuals)
+
     return {
         "answer_chunks": [fallback],
         "tool_calls_made": tool_calls_made,
         "iterations": iteration,
+        "visuals": visuals,
+        "data": collected_data,
         "stage": "done",
     }
 
@@ -1504,55 +1786,75 @@ async def execute_tool_async(
 
             # Add snapshot freshness info
             from datetime import datetime, date
+
             snapshot_time = _get_latest_snapshot_time(db, workspace_id)
             if snapshot_time:
                 # Handle both date and datetime types
-                if isinstance(snapshot_time, date) and not isinstance(snapshot_time, datetime):
+                if isinstance(snapshot_time, date) and not isinstance(
+                    snapshot_time, datetime
+                ):
                     # It's a date, convert to datetime at end of day for comparison
-                    snapshot_datetime = datetime.combine(snapshot_time, datetime.max.time())
+                    snapshot_datetime = datetime.combine(
+                        snapshot_time, datetime.max.time()
+                    )
                     age_days = (date.today() - snapshot_time).days
                     result["snapshot_time"] = snapshot_time.strftime("%b %d, %Y")
                     result["snapshot_age_days"] = age_days
                     result["snapshot_age_minutes"] = age_days * 24 * 60  # Approximate
                 else:
                     # It's a datetime
-                    age_minutes = (datetime.utcnow() - snapshot_time).total_seconds() / 60
+                    age_minutes = (
+                        datetime.utcnow() - snapshot_time
+                    ).total_seconds() / 60
                     result["snapshot_time"] = snapshot_time.strftime("%I:%M %p")
                     result["snapshot_age_minutes"] = round(age_minutes)
                 result["data_source"] = "snapshots (updated every 15 min)"
 
             return result
+
         return await asyncio.to_thread(run_sync)
 
     elif tool_name == "google_ads_query":
         # Use GoogleAdsClient for live queries
         def run_sync():
             return _execute_google_ads_query(db, workspace_id, tool_args)
+
         return await asyncio.to_thread(run_sync)
 
     elif tool_name == "meta_ads_query":
         # Use Meta Ads API for live queries
         def run_sync():
             return _execute_meta_ads_query(db, workspace_id, tool_args)
+
         return await asyncio.to_thread(run_sync)
 
     elif tool_name == "list_entities":
         # Use SemanticTools.get_entities
         def run_sync():
             tools = SemanticTools(db, workspace_id, user_id)
-            return tools.get_entities(**tool_args)
+            result = tools.get_entities(**tool_args)
+            result["data_source"] = "database"
+            return result
+
         return await asyncio.to_thread(run_sync)
 
     elif tool_name == "get_business_context":
+
         def run_sync():
-            return _fetch_workspace_context(db, workspace_id) or {
+            context = _fetch_workspace_context(db, workspace_id)
+            if context:
+                context["data_source"] = "workspace_settings"
+                return context
+            return {
                 "success": True,
-                "message": "No business profile configured. Set it up in Settings → Business."
+                "message": "No business profile configured. Set it up in Settings → Business.",
+                "data_source": "workspace_settings",
             }
+
         return await asyncio.to_thread(run_sync)
 
     else:
-        return {"error": f"Unknown tool: {tool_name}"}
+        return {"error": f"Unknown tool: {tool_name}", "data_source": "none"}
 
 
 def _get_latest_snapshot_time(db: Session, workspace_id: str):
@@ -1565,14 +1867,94 @@ def _get_latest_snapshot_time(db: Session, workspace_id: str):
     from app.models import MetricSnapshot, Entity
 
     try:
-        result = db.query(func.max(MetricSnapshot.metrics_date)) \
-            .join(Entity) \
-            .filter(Entity.workspace_id == workspace_id) \
+        result = (
+            db.query(func.max(MetricSnapshot.metrics_date))
+            .join(Entity)
+            .filter(Entity.workspace_id == workspace_id)
             .scalar()
+        )
         return result
     except Exception as e:
         logger.warning(f"[AGENT] Failed to get snapshot time: {e}")
         return None
+
+
+def _summarize_tool_result_for_llm(
+    tool_name: str, result: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Create a summarized version of tool result for the LLM.
+
+    WHAT: Removes verbose timeseries data to prevent LLM from listing individual values.
+
+    WHY: The LLM tends to repeat timeseries values in its response, which:
+         1. Creates long, unhelpful responses
+         2. Sometimes hallucinates values
+         3. Duplicates what the chart already shows
+
+    HOW: For query_metrics results, we:
+         - Keep summary (totals, delta_pct)
+         - Keep breakdown (entity comparisons)
+         - Replace timeseries with a simple "data_points: N" indicator
+         - Add a note telling LLM not to list individual values
+    """
+    if tool_name != "query_metrics":
+        return result
+
+    if not result.get("success") or not result.get("data"):
+        return result
+
+    # Deep copy to avoid modifying original
+    summarized = {
+        "success": result.get("success"),
+        "snapshot_time": result.get("snapshot_time"),
+        "snapshot_age_minutes": result.get("snapshot_age_minutes"),
+        "data_source": result.get("data_source"),
+    }
+
+    data = result.get("data", {})
+    summarized_data = {}
+
+    # Keep summary as-is (this has the totals)
+    if data.get("summary"):
+        summarized_data["summary"] = data["summary"]
+
+    # Keep breakdown as-is (entity comparisons)
+    if data.get("breakdown"):
+        summarized_data["breakdown"] = data["breakdown"]
+
+    # Keep entity_comparison as-is
+    if data.get("entity_comparison"):
+        summarized_data["entity_comparison"] = data["entity_comparison"]
+
+    # SUMMARIZE timeseries instead of passing full data
+    if data.get("timeseries"):
+        timeseries = data["timeseries"]
+        timeseries_summary = {}
+        for metric, points in timeseries.items():
+            if isinstance(points, list) and len(points) > 0:
+                # Just tell LLM how many points, not the actual values
+                timeseries_summary[metric] = {
+                    "data_points": len(points),
+                    "first_date": points[0].get("date") if points else None,
+                    "last_date": points[-1].get("date") if points else None,
+                    "note": "Chart will display these values visually. Do NOT list individual values in your response.",
+                }
+        summarized_data["timeseries_info"] = timeseries_summary
+
+    # Keep time_range_resolved
+    if data.get("time_range_resolved"):
+        summarized_data["time_range_resolved"] = data["time_range_resolved"]
+
+    summarized["data"] = summarized_data
+
+    # Add instruction for LLM
+    summarized["response_instructions"] = (
+        "Use summary values for totals and percentages. "
+        "The chart will show daily breakdown - do NOT list individual daily values."
+    )
+
+    return summarized
 
 
 def _get_tool_result_preview(tool_name: str, result: Dict[str, Any]) -> str:
@@ -1758,6 +2140,7 @@ def _execute_meta_ads_query(
 # HELPER FUNCTIONS
 # =============================================================================
 
+
 def _build_visuals_from_data(
     data: Dict[str, Any],
     semantic_query: Dict[str, Any],
@@ -1796,11 +2179,11 @@ def _build_visuals_from_data(
             # Normalize X-axis to "Day 1", "Day 2", etc. for proper overlay
             # (The dates are different between periods, so we use relative days)
             current_data = [
-                {"x": f"Day {i+1}", "y": p.get("value")}
+                {"x": f"Day {i + 1}", "y": p.get("value")}
                 for i, p in enumerate(current_points)
             ]
             previous_data = [
-                {"x": f"Day {i+1}", "y": p.get("value")}
+                {"x": f"Day {i + 1}", "y": p.get("value")}
                 for i, p in enumerate(previous_points)
             ]
 
@@ -1829,10 +2212,15 @@ def _build_visuals_from_data(
                 "type": "area",
                 "title": f"{metric.upper()} Trend",
                 "valueFormat": metric,
-                "series": [{
-                    "name": metric.upper(),
-                    "data": [{"x": p.get("date"), "y": p.get("value")} for p in current_points],
-                }],
+                "series": [
+                    {
+                        "name": metric.upper(),
+                        "data": [
+                            {"x": p.get("date"), "y": p.get("value")}
+                            for p in current_points
+                        ],
+                    }
+                ],
             }
             visuals["viz_specs"].append(spec)
 
@@ -1857,13 +2245,15 @@ def _build_visuals_from_data(
                     "type": "bar",
                     "title": f"{metric.upper()} Comparison",
                     "valueFormat": metric,
-                    "series": [{
-                        "name": metric.upper(),
-                        "data": [
-                            {"x": "Previous Period", "y": previous_val},
-                            {"x": "This Period", "y": current_val},
-                        ],
-                    }],
+                    "series": [
+                        {
+                            "name": metric.upper(),
+                            "data": [
+                                {"x": "Previous Period", "y": previous_val},
+                                {"x": "This Period", "y": current_val},
+                            ],
+                        }
+                    ],
                     "delta_pct": delta_pct,
                 }
                 visuals["viz_specs"].append(spec)
@@ -1876,10 +2266,15 @@ def _build_visuals_from_data(
             "type": "bar",
             "title": f"{primary_metric.upper()} by {semantic_query.get('breakdown_level', 'campaign')}",
             "valueFormat": primary_metric,
-            "series": [{
-                "name": primary_metric.upper(),
-                "data": [{"x": item.get("label"), "y": item.get("value")} for item in breakdown],
-            }],
+            "series": [
+                {
+                    "name": primary_metric.upper(),
+                    "data": [
+                        {"x": item.get("label"), "y": item.get("value")}
+                        for item in breakdown
+                    ],
+                }
+            ],
         }
         visuals["viz_specs"].append(spec)
 

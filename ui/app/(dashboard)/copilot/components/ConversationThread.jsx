@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import AnswerVisuals from "./AnswerVisuals";
+import ThinkingAccordion from "@/components/copilot/ThinkingAccordion";
 
 // Stage Indicator Component (v2.1)
 // WHAT: Shows real-time progress during QA processing
@@ -62,10 +63,10 @@ function StageIndicator({ stage }) {
   );
 }
 
-// AI Message Bubble (v2.1 - Subtle Glass Design)
-// WHAT: Glass-morphism bubble with lighter blur and cleaner shadows
-// WHY: Apple-inspired subtle aesthetic, reduced visual noise
-function AIMessage({ text, isTyping, visuals, stage }) {
+// AI Message Bubble (v5.0 - With Tool Events)
+// WHAT: Glass-morphism bubble with ThinkingAccordion for tool transparency
+// WHY: Apple-inspired subtle aesthetic + shows what the agent is doing
+function AIMessage({ text, isTyping, visuals, stage, toolEvents = [] }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -87,6 +88,11 @@ function AIMessage({ text, isTyping, visuals, stage }) {
             }}
             className="bg-white/95 backdrop-blur-sm border border-slate-200/40 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl p-5 md:p-6 space-y-4 overflow-hidden"
           >
+            {/* ThinkingAccordion - Shows tool execution steps */}
+            {toolEvents.length > 0 && (
+              <ThinkingAccordion steps={toolEvents} isThinking={isTyping} />
+            )}
+            
             <AnimatePresence mode="wait">
               {isTyping ? (
                 <motion.div
@@ -142,15 +148,16 @@ function UserMessage({ text }) {
   );
 }
 
-// Conversation Thread (v4.0)
-// WHAT: Main conversation container with messages and streaming typing effect
-// WHY: Displays chat history with real-time token streaming for natural feel
+// Conversation Thread (v5.0)
+// WHAT: Main conversation container with messages, streaming, and tool events
+// WHY: Displays chat history with real-time token streaming and tool transparency
 // PROPS:
-//   - messages: Array of user/ai messages
+//   - messages: Array of user/ai messages (each ai message may have toolEvents)
 //   - isLoading: Boolean for loading state
 //   - stage: Current processing stage (from SSE streaming)
 //   - streamingText: Text being streamed token-by-token (typing effect)
-export default function ConversationThread({ messages = [], isLoading, stage, streamingText = '' }) {
+//   - toolEvents: Current tool events during streaming (for live typing indicator)
+export default function ConversationThread({ messages = [], isLoading, stage, streamingText = '', toolEvents = [] }) {
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom when new message arrives, stage changes, or streaming text updates
@@ -212,7 +219,11 @@ export default function ConversationThread({ messages = [], isLoading, stage, st
             key={msg.timestamp || `${msg.type}-${idx}`}
           >
             {msg.type === 'ai' ? (
-              <AIMessage text={msg.text} visuals={msg.visuals} />
+              <AIMessage 
+                text={msg.text} 
+                visuals={msg.visuals} 
+                toolEvents={msg.toolEvents || []}
+              />
             ) : (
               <UserMessage text={msg.text} />
             )}
@@ -220,7 +231,7 @@ export default function ConversationThread({ messages = [], isLoading, stage, st
         ))}
       </AnimatePresence>
 
-      {/* Loading indicator with streaming text (v4.0) */}
+      {/* Loading indicator with streaming text (v5.0) */}
       <AnimatePresence>
         {isLoading && (
           <motion.div
@@ -230,11 +241,14 @@ export default function ConversationThread({ messages = [], isLoading, stage, st
             exit={{ opacity: 0, scale: 0.9 }}
           >
             {streamingText ? (
-              // Show streaming text with typing cursor
-              <AIMessage text={streamingText + '<span class="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse"></span>'} />
+              // Show streaming text with typing cursor + tool events
+              <AIMessage 
+                text={streamingText + '<span class="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse"></span>'} 
+                toolEvents={toolEvents}
+              />
             ) : (
-              // Show stage indicator while waiting for tokens
-              <AIMessage isTyping={true} stage={stage} />
+              // Show stage indicator while waiting for tokens + tool events
+              <AIMessage isTyping={true} stage={stage} toolEvents={toolEvents} />
             )}
           </motion.div>
         )}

@@ -61,8 +61,8 @@ JOB_TIMEOUT_SECONDS = 120  # Job must complete within 2 minutes
 DEDUP_WINDOW_SECONDS = 30  # Deduplication window for identical questions
 
 # SSE polling configuration (exponential backoff)
-SSE_POLL_MIN_MS = 50    # Start polling at 50ms
-SSE_POLL_MAX_MS = 300   # Max polling interval 300ms
+SSE_POLL_MIN_MS = 50  # Start polling at 50ms
+SSE_POLL_MAX_MS = 300  # Max polling interval 300ms
 SSE_POLL_BACKOFF = 1.5  # Multiply interval by 1.5 each iteration
 
 
@@ -87,7 +87,7 @@ def ask_question(
     """
     raise HTTPException(
         status_code=410,
-        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming or POST /qa/agent/sync for synchronous responses."
+        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming or POST /qa/agent/sync for synchronous responses.",
     )
 
 
@@ -105,7 +105,7 @@ def get_job_status(
     """
     raise HTTPException(
         status_code=410,
-        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming responses."
+        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming responses.",
     )
 
 
@@ -125,7 +125,7 @@ async def ask_question_stream(
     """
     raise HTTPException(
         status_code=410,
-        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming responses."
+        detail="This endpoint is deprecated. Use POST /qa/agent/sse for streaming responses.",
     )
 
 
@@ -136,12 +136,14 @@ async def ask_question_stream(
 
 class InsightsRequest(BaseModel):
     """Request for insights endpoint."""
+
     question: str
     metrics_data: Optional[Dict[str, Any]] = None  # Optional pre-fetched metrics
 
 
 class InsightsResponse(BaseModel):
     """Response from insights endpoint."""
+
     success: bool
     answer: str
     intent: Optional[str] = None
@@ -154,10 +156,11 @@ def _normalize_question(question: str) -> str:
          "what is my biggest drop today" should hit same cache.
     """
     import re
+
     # Lowercase, remove extra spaces, remove punctuation
     normalized = question.lower().strip()
-    normalized = re.sub(r'\s+', ' ', normalized)
-    normalized = re.sub(r'[^\w\s]', '', normalized)
+    normalized = re.sub(r"\s+", " ", normalized)
+    normalized = re.sub(r"[^\w\s]", "", normalized)
     return normalized
 
 
@@ -174,15 +177,21 @@ def _build_business_context_answer(question: str, business_context: dict) -> str
     question_lower = question.lower()
 
     # Handle specific questions - order matters! Check more specific patterns first
-    if "what" in question_lower and ("do" in question_lower or "does" in question_lower or "about" in question_lower):
+    if "what" in question_lower and (
+        "do" in question_lower or "does" in question_lower or "about" in question_lower
+    ):
         # "what does my company do" or "what is my company about"
         about = business_context.get("about")
         if about:
             company = business_context.get("company_name", "Your company")
             return f"**{company}** - {about}"
-        return "I don't have a description on file. You can add it in Settings → Business."
+        return (
+            "I don't have a description on file. You can add it in Settings → Business."
+        )
 
-    if "name" in question_lower or ("company" in question_lower and "what" not in question_lower):
+    if "name" in question_lower or (
+        "company" in question_lower and "what" not in question_lower
+    ):
         company = business_context.get("company_name")
         if company:
             return f"Your company is **{company}**."
@@ -315,7 +324,7 @@ def get_insights(
                 return InsightsResponse(
                     success=cached_data.get("success", True),
                     answer=cached_data.get("answer", ""),
-                    intent=cached_data.get("intent")
+                    intent=cached_data.get("intent"),
                 )
         except Exception as e:
             logger.warning(f"[QA_INSIGHTS] Cache read failed: {e}")
@@ -330,7 +339,7 @@ def get_insights(
             max_tokens=512,
             messages=[
                 {"role": "system", "content": UNDERSTAND_PROMPT},
-                {"role": "user", "content": question}
+                {"role": "user", "content": question},
             ],
         )
 
@@ -355,7 +364,8 @@ def get_insights(
                 "metrics": parsed.get("metrics") or ["roas"],
                 "time_range": parsed.get("time_range") or "7d",
                 "breakdown_level": parsed.get("breakdown_level"),
-                "compare_to_previous": parsed.get("compare_to_previous") or True,  # Always compare for insights
+                "compare_to_previous": parsed.get("compare_to_previous")
+                or True,  # Always compare for insights
                 "include_timeseries": False,  # No charts needed
                 "filters": parsed.get("filters") or {},
             }
@@ -374,7 +384,7 @@ def get_insights(
                 return InsightsResponse(
                     success=False,
                     answer=f"Unable to analyze: {result['error']}",
-                    intent=intent
+                    intent=intent,
                 )
 
             data = result.get("data", {})
@@ -402,8 +412,8 @@ RULES:
 Data:
 {data_summary}
 
-Provide a brief insight."""
-            }
+Provide a brief insight.""",
+            },
         ]
 
         insight_response = client.chat.completions.create(
@@ -419,29 +429,25 @@ Provide a brief insight."""
         # ==========================================================================
         if state.redis_client:
             try:
-                cache_data = json_module.dumps({
-                    "success": True,
-                    "answer": answer,
-                    "intent": intent
-                })
+                cache_data = json_module.dumps(
+                    {"success": True, "answer": answer, "intent": intent}
+                )
                 state.redis_client.setex(cache_key, CACHE_TTL_SECONDS, cache_data)
-                logger.info(f"[QA_INSIGHTS] Cache WRITE for {cache_key} (TTL: {CACHE_TTL_SECONDS}s)")
+                logger.info(
+                    f"[QA_INSIGHTS] Cache WRITE for {cache_key} (TTL: {CACHE_TTL_SECONDS}s)"
+                )
             except Exception as e:
                 logger.warning(f"[QA_INSIGHTS] Cache write failed: {e}")
                 # Don't fail the request if cache write fails
 
-        return InsightsResponse(
-            success=True,
-            answer=answer,
-            intent=intent
-        )
+        return InsightsResponse(success=True, answer=answer, intent=intent)
 
     except Exception as e:
         logger.exception(f"[QA_INSIGHTS] Failed: {e}")
         return InsightsResponse(
             success=False,
             answer="Unable to generate insight at this time.",
-            intent=None
+            intent=None,
         )
 
 
@@ -483,23 +489,33 @@ def submit_feedback(
         - Feedback is linked to the original query for context
     """
     # Verify query exists and user has access
-    query_log = db.query(QaQueryLog).filter(
-        QaQueryLog.id == UUID(feedback.query_log_id)
-    ).first()
+    query_log = (
+        db.query(QaQueryLog)
+        .filter(QaQueryLog.id == UUID(feedback.query_log_id))
+        .first()
+    )
 
     if not query_log:
         raise HTTPException(status_code=404, detail="Query log not found")
 
     # Check if feedback already exists
-    existing = db.query(QaFeedback).filter(
-        QaFeedback.query_log_id == UUID(feedback.query_log_id),
-        QaFeedback.user_id == current_user.id,
-    ).first()
+    existing = (
+        db.query(QaFeedback)
+        .filter(
+            QaFeedback.query_log_id == UUID(feedback.query_log_id),
+            QaFeedback.user_id == current_user.id,
+        )
+        .first()
+    )
 
     if existing:
         # Update existing feedback
         existing.rating = feedback.rating
-        existing.feedback_type = FeedbackTypeEnum(feedback.feedback_type.value) if feedback.feedback_type else None
+        existing.feedback_type = (
+            FeedbackTypeEnum(feedback.feedback_type.value)
+            if feedback.feedback_type
+            else None
+        )
         existing.comment = feedback.comment
         existing.corrected_answer = feedback.corrected_answer
         db.commit()
@@ -510,7 +526,9 @@ def submit_feedback(
             query_log_id=str(existing.query_log_id),
             user_id=str(existing.user_id),
             rating=existing.rating,
-            feedback_type=existing.feedback_type.value if existing.feedback_type else None,
+            feedback_type=existing.feedback_type.value
+            if existing.feedback_type
+            else None,
             comment=existing.comment,
             corrected_answer=existing.corrected_answer,
             is_few_shot_example=existing.is_few_shot_example,
@@ -522,7 +540,9 @@ def submit_feedback(
         query_log_id=UUID(feedback.query_log_id),
         user_id=current_user.id,
         rating=feedback.rating,
-        feedback_type=FeedbackTypeEnum(feedback.feedback_type.value) if feedback.feedback_type else None,
+        feedback_type=FeedbackTypeEnum(feedback.feedback_type.value)
+        if feedback.feedback_type
+        else None,
         comment=feedback.comment,
         corrected_answer=feedback.corrected_answer,
         # Auto-mark excellent answers as potential few-shot examples
@@ -533,14 +553,18 @@ def submit_feedback(
     db.commit()
     db.refresh(new_feedback)
 
-    logger.info(f"Feedback submitted: rating={feedback.rating} for query={feedback.query_log_id}")
+    logger.info(
+        f"Feedback submitted: rating={feedback.rating} for query={feedback.query_log_id}"
+    )
 
     return QaFeedbackResponse(
         id=str(new_feedback.id),
         query_log_id=str(new_feedback.query_log_id),
         user_id=str(new_feedback.user_id),
         rating=new_feedback.rating,
-        feedback_type=new_feedback.feedback_type.value if new_feedback.feedback_type else None,
+        feedback_type=new_feedback.feedback_type.value
+        if new_feedback.feedback_type
+        else None,
         comment=new_feedback.comment,
         corrected_answer=new_feedback.corrected_answer,
         is_few_shot_example=new_feedback.is_few_shot_example,
@@ -559,9 +583,11 @@ def get_feedback(
 
     Get feedback for a specific query.
     """
-    feedback = db.query(QaFeedback).filter(
-        QaFeedback.query_log_id == UUID(query_log_id)
-    ).first()
+    feedback = (
+        db.query(QaFeedback)
+        .filter(QaFeedback.query_log_id == UUID(query_log_id))
+        .first()
+    )
 
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback not found")
@@ -619,7 +645,9 @@ def get_feedback_stats(
     for f in all_feedback:
         rating_dist[f.rating] = rating_dist.get(f.rating, 0) + 1
         if f.feedback_type:
-            type_counts[f.feedback_type.value] = type_counts.get(f.feedback_type.value, 0) + 1
+            type_counts[f.feedback_type.value] = (
+                type_counts.get(f.feedback_type.value, 0) + 1
+            )
         if f.is_few_shot_example:
             few_shot_count += 1
 
@@ -635,6 +663,7 @@ def get_feedback_stats(
 # =============================================================================
 # SEMANTIC LAYER ENDPOINT (NEW - for testing)
 # =============================================================================
+
 
 @router.post("/semantic")
 def ask_question_semantic(
@@ -663,23 +692,24 @@ def ask_question_semantic(
     import traceback
 
     try:
-        logger.info(f"[QA_SEMANTIC] Processing: '{req.question}' for workspace={workspace_id}")
+        logger.info(
+            f"[QA_SEMANTIC] Processing: '{req.question}' for workspace={workspace_id}"
+        )
         service = SemanticQAService(db)
         result = service.answer(
             question=req.question,
             workspace_id=workspace_id,
             user_id=str(current_user.id),
         )
-        logger.info(f"[QA_SEMANTIC] Success! Strategy: {result.get('telemetry', {}).get('strategy')}, has_visuals: {result.get('visuals') is not None}")
+        logger.info(
+            f"[QA_SEMANTIC] Success! Strategy: {result.get('telemetry', {}).get('strategy')}, has_visuals: {result.get('visuals') is not None}"
+        )
         return result
 
     except Exception as e:
         logger.error(f"[QA_SEMANTIC] Error: {type(e).__name__}: {e}")
         logger.error(f"[QA_SEMANTIC] Traceback: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Semantic QA failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Semantic QA failed: {str(e)}")
 
 
 @router.get("/examples", response_model=list[dict])
@@ -725,6 +755,7 @@ def get_few_shot_examples(
 # AGENTIC COPILOT ENDPOINTS (NEW - LangGraph Agent)
 # =============================================================================
 
+
 @router.post("/agent", response_model=QAJobResponse)
 def ask_question_agent(
     req: QARequest,
@@ -767,7 +798,7 @@ def ask_question_agent(
             logger.info(f"[QA_AGENT] Returning existing job {existing_job.id} (dedup)")
             return QAJobResponse(
                 job_id=existing_job.id,
-                status="queued" if existing_job.is_queued else "processing"
+                status="queued" if existing_job.is_queued else "processing",
             )
 
         # Get conversation history for context
@@ -796,15 +827,11 @@ def ask_question_agent(
 
         logger.info(f"[QA_AGENT] Enqueued agent job {job.id}")
 
-        return QAJobResponse(
-            job_id=job.id,
-            status="queued"
-        )
+        return QAJobResponse(job_id=job.id, status="queued")
 
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to enqueue agent job: {str(e)}"
+            status_code=500, detail=f"Failed to enqueue agent job: {str(e)}"
         )
 
 
@@ -888,7 +915,9 @@ async def stream_agent_response(
                         break
 
                     # Get stage from meta
-                    current_stage = job.meta.get('stage', 'queued') if job.is_started else 'queued'
+                    current_stage = (
+                        job.meta.get("stage", "queued") if job.is_started else "queued"
+                    )
 
                     # Emit stage changes
                     if current_stage != last_stage:
@@ -908,7 +937,9 @@ async def stream_agent_response(
                         break
 
                     await asyncio.sleep(poll_interval_ms / 1000)
-                    poll_interval_ms = min(poll_interval_ms * SSE_POLL_BACKOFF, SSE_POLL_MAX_MS)
+                    poll_interval_ms = min(
+                        poll_interval_ms * SSE_POLL_BACKOFF, SSE_POLL_MAX_MS
+                    )
 
         except Exception as e:
             logger.exception(f"[QA_AGENT] SSE error for job {job_id}: {e}")
@@ -921,7 +952,7 @@ async def stream_agent_response(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
-        }
+        },
     )
 
 
@@ -971,15 +1002,13 @@ def ask_question_agent_sync(
 
     except Exception as e:
         logger.exception(f"[QA_AGENT] Sync agent failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Agent failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Agent failed: {str(e)}")
 
 
 # =============================================================================
 # DIRECT SSE STREAMING ENDPOINT (v2 - Free Agent)
 # =============================================================================
+
 
 @router.post("/agent/sse")
 async def ask_question_agent_sse(
@@ -1102,12 +1131,20 @@ async def ask_question_agent_sse(
                     if event_type == "thinking":
                         yield f"data: {json_module.dumps({'type': 'thinking', 'data': event_data})}\n\n"
 
+                    elif event_type == "tool_start":
+                        # NEW: Tool execution started - show user what's happening
+                        yield f"data: {json_module.dumps({'type': 'tool_start', 'data': event_data})}\n\n"
+
+                    elif event_type == "tool_end":
+                        # NEW: Tool execution finished - show result preview and timing
+                        yield f"data: {json_module.dumps({'type': 'tool_end', 'data': event_data})}\n\n"
+
                     elif event_type == "tool_call":
-                        # Tool being called - show user what's happening
+                        # Legacy: Tool being called (backwards compatibility)
                         yield f"data: {json_module.dumps({'type': 'tool_call', 'data': event_data})}\n\n"
 
                     elif event_type == "tool_result":
-                        # Tool result preview
+                        # Legacy: Tool result preview (backwards compatibility)
                         yield f"data: {json_module.dumps({'type': 'tool_result', 'data': event_data})}\n\n"
 
                     elif event_type == "token":
@@ -1189,5 +1226,5 @@ async def ask_question_agent_sse(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
-        }
+        },
     )
