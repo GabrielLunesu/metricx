@@ -256,7 +256,6 @@ EXAMPLE: "What's my spend today?" → query_metrics(metrics=["spend"], time_rang
             },
         },
     },
-
     # ===================
     # LIVE GOOGLE ADS API (Use only when snapshots don't have the data)
     # ===================
@@ -302,7 +301,15 @@ EXAMPLES:
                 "properties": {
                     "query_type": {
                         "type": "string",
-                        "enum": ["campaigns", "campaign_details", "ad_groups", "ads", "keywords", "search_terms", "metrics"],
+                        "enum": [
+                            "campaigns",
+                            "campaign_details",
+                            "ad_groups",
+                            "ads",
+                            "keywords",
+                            "search_terms",
+                            "metrics",
+                        ],
                         "description": "Type of data to query",
                     },
                     "fields": {
@@ -328,7 +335,6 @@ EXAMPLES:
             },
         },
     },
-
     # ===================
     # LIVE META ADS API (Use only when snapshots don't have the data)
     # ===================
@@ -363,7 +369,13 @@ EXAMPLE: "What audiences am I targeting on Meta?" → meta_ads_query(query_type=
                 "properties": {
                     "query_type": {
                         "type": "string",
-                        "enum": ["campaigns", "campaign_details", "adsets", "ads", "metrics"],
+                        "enum": [
+                            "campaigns",
+                            "campaign_details",
+                            "adsets",
+                            "ads",
+                            "metrics",
+                        ],
                         "description": "Type of data to query",
                     },
                     "fields": {
@@ -389,7 +401,6 @@ EXAMPLE: "What audiences am I targeting on Meta?" → meta_ads_query(query_type=
             },
         },
     },
-
     # ===================
     # ENTITY LISTING (from our database - fast)
     # ===================
@@ -431,7 +442,6 @@ NOTE: This uses cached data. For real-time status, use google_ads_query or meta_
             },
         },
     },
-
     # ===================
     # BUSINESS CONTEXT
     # ===================
@@ -463,9 +473,11 @@ def get_agent_tools() -> List[Dict[str, Any]]:
 # TOOL IMPLEMENTATIONS
 # =============================================================================
 
+
 @dataclass
 class ToolContext:
     """Context passed to all tools."""
+
     db: Session
     workspace_id: str
     user_id: Optional[str] = None
@@ -535,14 +547,18 @@ class SemanticTools:
                 - timeseries: Daily points (if include_timeseries)
                 - error: Error message if failed
         """
-        logger.info(f"[TOOLS] query_metrics: {metrics}, range={time_range}, breakdown={breakdown_level}")
+        logger.info(
+            f"[TOOLS] query_metrics: {metrics}, range={time_range}, breakdown={breakdown_level}"
+        )
 
         try:
             # Validate metrics
             valid_metrics = get_all_metric_names()
             for m in metrics:
                 if m.lower() not in valid_metrics:
-                    return {"error": f"Unknown metric: {m}. Valid metrics: {', '.join(sorted(valid_metrics))}"}
+                    return {
+                        "error": f"Unknown metric: {m}. Valid metrics: {', '.join(sorted(valid_metrics))}"
+                    }
 
             # Parse time range
             days = self._parse_time_range(time_range)
@@ -577,18 +593,26 @@ class SemanticTools:
             # Add filters if specified (only valid filter fields!)
             # Valid fields: provider, entity_name, level, status, entity_id
             if filters:
-                if filters.get("provider") and filters["provider"] in ["meta", "google", "tiktok"]:
-                    query.filters.append(Filter(
-                        field="provider",
-                        operator="=",
-                        value=filters["provider"],
-                    ))
+                if filters.get("provider") and filters["provider"] in [
+                    "meta",
+                    "google",
+                    "tiktok",
+                ]:
+                    query.filters.append(
+                        Filter(
+                            field="provider",
+                            operator="=",
+                            value=filters["provider"],
+                        )
+                    )
                 if filters.get("entity_name"):
-                    query.filters.append(Filter(
-                        field="entity_name",
-                        operator="contains",
-                        value=filters["entity_name"],
-                    ))
+                    query.filters.append(
+                        Filter(
+                            field="entity_name",
+                            operator="contains",
+                            value=filters["entity_name"],
+                        )
+                    )
                 # Ignore any other filter fields (like conversions, spend, etc.)
                 # These are metric values, not filter fields
 
@@ -600,12 +624,34 @@ class SemanticTools:
             # Compile and execute
             result = self.compiler.compile(self.workspace_id, query)
 
+            # Determine which providers contributed to this data
+            # This helps the LLM correctly attribute data
+            provider_filter = filters.get("provider") if filters else None
+            if provider_filter:
+                data_providers = [provider_filter]
+            else:
+                # Query which providers have active connections
+                from app.models import Connection
+
+                connections = (
+                    self.db.query(Connection)
+                    .filter(
+                        Connection.workspace_id == self.workspace_id,
+                        Connection.status == "active",
+                    )
+                    .all()
+                )
+                data_providers = [c.provider.value for c in connections]
+
             # Convert to dict
-            return {
+            response = {
                 "success": True,
                 "query": query.to_dict(),
                 "data": result.to_dict(),
+                "data_providers": data_providers,  # Tell LLM which providers this data comes from
+                "data_providers_note": f"This data is from: {', '.join(data_providers) if data_providers else 'no connected providers'}. Do NOT attribute this data to any other provider.",
             }
+            return response
 
         except Exception as e:
             logger.exception(f"[TOOLS] query_metrics failed: {e}")
@@ -649,21 +695,25 @@ class SemanticTools:
             )
 
             if name_contains:
-                query.filters.append(Filter(
-                    field="entity_name",
-                    operator="contains",
-                    value=name_contains,
-                ))
+                query.filters.append(
+                    Filter(
+                        field="entity_name",
+                        operator="contains",
+                        value=name_contains,
+                    )
+                )
 
             result = self.compiler.compile(self.workspace_id, query)
 
             entities = []
             for item in result.breakdown:
-                entities.append({
-                    "id": item.entity_id,
-                    "name": item.label,
-                    "spend": item.spend,
-                })
+                entities.append(
+                    {
+                        "id": item.entity_id,
+                        "name": item.label,
+                        "spend": item.spend,
+                    }
+                )
 
             return {
                 "success": True,
@@ -734,7 +784,7 @@ class SemanticTools:
                 }
 
             actual_direction = "up" if change_pct > 0 else "down"
-            change_str = f"{abs(change_pct)*100:.1f}%"
+            change_str = f"{abs(change_pct) * 100:.1f}%"
 
             # Find top contributors from entity comparison
             entity_comparison = result_dict.get("entity_comparison", [])
@@ -742,13 +792,15 @@ class SemanticTools:
             for item in entity_comparison[:5]:
                 if item.get("delta_pct") is not None:
                     item_dir = "up" if item["delta_pct"] > 0 else "down"
-                    contributors.append({
-                        "name": item["entity_name"],
-                        "change_pct": item["delta_pct"],
-                        "direction": item_dir,
-                        "current": item["current_value"],
-                        "previous": item["previous_value"],
-                    })
+                    contributors.append(
+                        {
+                            "name": item["entity_name"],
+                            "change_pct": item["delta_pct"],
+                            "direction": item_dir,
+                            "current": item["current_value"],
+                            "previous": item["previous_value"],
+                        }
+                    )
 
             return {
                 "success": True,
@@ -824,6 +876,7 @@ def execute_tool(
 # =============================================================================
 # TOOL DESCRIPTIONS FOR PROMPTS
 # =============================================================================
+
 
 def get_tools_description() -> str:
     """
