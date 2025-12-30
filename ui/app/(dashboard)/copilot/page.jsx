@@ -201,9 +201,9 @@ export default function CopilotPage() {
   };
 
   return (
-    <div className="mesh-bg h-full relative flex flex-col md:pl-[90px]">
-      {/* Conversation Area */}
-      <main className="flex-1 overflow-y-auto pt-8 pb-48 w-full">
+    <div className="mesh-bg h-full relative flex flex-col items-center">
+      {/* Conversation Area - centered in available space */}
+      <main className="flex-1 overflow-y-auto pt-8 pb-52 md:pb-44 w-full max-w-[900px] px-4">
         {/* Pass stage, streamingText, and toolEvents for real-time feedback (v5.0) */}
         <ConversationThread
           messages={messages}
@@ -214,7 +214,7 @@ export default function CopilotPage() {
         />
       </main>
 
-      {/* Fixed Input Bar */}
+      {/* Input Bar - absolute within centered container */}
       <ChatConsole onSubmit={handleSubmit} disabled={loading} noWorkspace={!resolvedWs} />
     </div>
   );

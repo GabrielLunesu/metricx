@@ -71,7 +71,9 @@ def _resolve_entity_level(level: str) -> models.LevelEnum:
         ) from exc
 
 
-def _date_range(start: Optional[date], end: Optional[date], preset: Optional[str]) -> Tuple[date, date]:
+def _date_range(
+    start: Optional[date], end: Optional[date], preset: Optional[str]
+) -> Tuple[date, date]:
     """
     Resolve query timeframe.
 
@@ -96,9 +98,13 @@ def _date_range(start: Optional[date], end: Optional[date], preset: Optional[str
         return start_date, end_date
     if start and end:
         if start > end:
-            raise HTTPException(status_code=400, detail="date_start must be before or equal to date_end")
+            raise HTTPException(
+                status_code=400, detail="date_start must be before or equal to date_end"
+            )
         return start, end
-    raise HTTPException(status_code=400, detail="Provide date_start/date_end or timeframe preset")
+    raise HTTPException(
+        status_code=400, detail="Provide date_start/date_end or timeframe preset"
+    )
 
 
 def _base_query(
@@ -138,7 +144,11 @@ def _base_query(
 
     # For campaigns, ads, and creatives - use raw SQL with DISTINCT ON for accuracy
     # This matches dashboard.py's approach
-    if level in (models.LevelEnum.campaign, models.LevelEnum.ad, models.LevelEnum.creative):
+    if level in (
+        models.LevelEnum.campaign,
+        models.LevelEnum.ad,
+        models.LevelEnum.creative,
+    ):
         entity = aliased(models.Entity)
         connection_alias = aliased(models.Connection)
 
@@ -151,7 +161,9 @@ def _base_query(
                 platform_filter = "AND ls.provider = :platform"
                 platform_param = provider.value
             except ValueError as exc:
-                raise HTTPException(status_code=400, detail="Unsupported platform filter") from exc
+                raise HTTPException(
+                    status_code=400, detail="Unsupported platform filter"
+                ) from exc
 
         # Use raw SQL subquery for latest snapshots per entity per day
         # WHY: DISTINCT ON is PostgreSQL-specific and gives us exactly one row
@@ -238,7 +250,9 @@ def _base_query(
                 try:
                     parent_uuid = uuid.UUID(parent_id)
                 except ValueError as exc:
-                    raise HTTPException(status_code=400, detail="Invalid parent_id format") from exc
+                    raise HTTPException(
+                        status_code=400, detail="Invalid parent_id format"
+                    ) from exc
             else:
                 parent_uuid = parent_id
             query = query.filter(entity.parent_id == parent_uuid)
@@ -283,19 +297,29 @@ def _base_query(
                 ancestor.status,
                 connection_alias.provider.label("provider"),
                 func.max(latest_leaf_snapshots.c.captured_at).label("last_updated"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.spend), 0).label("spend"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.clicks), 0).label("clicks"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.impressions), 0).label("impressions"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.conversions), 0).label("conversions"),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.spend), 0).label(
+                    "spend"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.revenue), 0).label(
+                    "revenue"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.clicks), 0).label(
+                    "clicks"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.impressions), 0).label(
+                    "impressions"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.conversions), 0).label(
+                    "conversions"
+                ),
             )
             .select_from(ancestor)
             .join(connection_alias, connection_alias.id == ancestor.connection_id)
             .join(mapping, mapping.c.ancestor_id == ancestor.id)
             .join(leaf, leaf.id == mapping.c.leaf_id)
             .filter(leaf.level.in_([models.LevelEnum.ad, models.LevelEnum.creative]))
-            .outerjoin(latest_leaf_snapshots,
-                latest_leaf_snapshots.c.entity_id == leaf.id
+            .outerjoin(
+                latest_leaf_snapshots, latest_leaf_snapshots.c.entity_id == leaf.id
             )
             .filter(ancestor.workspace_id == workspace_id)
             .filter(ancestor.level == models.LevelEnum.adset)
@@ -305,7 +329,9 @@ def _base_query(
             try:
                 provider = models.ProviderEnum(platform)
             except ValueError as exc:
-                raise HTTPException(status_code=400, detail="Unsupported platform filter") from exc
+                raise HTTPException(
+                    status_code=400, detail="Unsupported platform filter"
+                ) from exc
             query = query.filter(connection_alias.provider == provider)
 
         if status and status.lower() != "all":
@@ -316,7 +342,9 @@ def _base_query(
                 try:
                     parent_uuid = uuid.UUID(parent_id)
                 except ValueError as exc:
-                    raise HTTPException(status_code=400, detail="Invalid parent_id format") from exc
+                    raise HTTPException(
+                        status_code=400, detail="Invalid parent_id format"
+                    ) from exc
             else:
                 parent_uuid = parent_id
             query = query.filter(ancestor.parent_id == parent_uuid)
@@ -383,18 +411,20 @@ class _EntityMetricsQueryWrapper:
             metrics = self._metrics_by_entity.get(entity_id, {})
 
             # Create a result object that matches the expected interface
-            results.append(_EntityMetricsRow(
-                entity_id=ent.entity_id,
-                entity_name=ent.entity_name,
-                status=ent.status,
-                provider=ent.provider,
-                spend=metrics.get("spend", 0),
-                revenue=metrics.get("revenue", 0),
-                clicks=metrics.get("clicks", 0),
-                impressions=metrics.get("impressions", 0),
-                conversions=metrics.get("conversions", 0),
-                last_updated=metrics.get("last_updated"),
-            ))
+            results.append(
+                _EntityMetricsRow(
+                    entity_id=ent.entity_id,
+                    entity_name=ent.entity_name,
+                    status=ent.status,
+                    provider=ent.provider,
+                    spend=metrics.get("spend", 0),
+                    revenue=metrics.get("revenue", 0),
+                    clicks=metrics.get("clicks", 0),
+                    impressions=metrics.get("impressions", 0),
+                    conversions=metrics.get("conversions", 0),
+                    last_updated=metrics.get("last_updated"),
+                )
+            )
 
         # Apply sorting based on sort_by and sort_dir
         reverse = self._sort_dir == "desc"
@@ -411,7 +441,11 @@ class _EntityMetricsQueryWrapper:
                 return (row.spend / row.clicks) if row.clicks and row.clicks > 0 else 0
             elif self._sort_by == "ctr":
                 # CTR = clicks / impressions
-                return (row.clicks / row.impressions) if row.impressions and row.impressions > 0 else 0
+                return (
+                    (row.clicks / row.impressions)
+                    if row.impressions and row.impressions > 0
+                    else 0
+                )
             else:  # roas
                 # ROAS = revenue / spend
                 return (row.revenue / row.spend) if row.spend and row.spend > 0 else 0
@@ -420,9 +454,9 @@ class _EntityMetricsQueryWrapper:
 
         # Apply pagination
         if self._offset:
-            results = results[self._offset:]
+            results = results[self._offset :]
         if self._limit:
-            results = results[:self._limit]
+            results = results[: self._limit]
 
         return results
 
@@ -430,8 +464,19 @@ class _EntityMetricsQueryWrapper:
 class _EntityMetricsRow:
     """Row object matching the expected interface from SQLAlchemy query results."""
 
-    def __init__(self, entity_id, entity_name, status, provider, spend, revenue,
-                 clicks, impressions, conversions, last_updated):
+    def __init__(
+        self,
+        entity_id,
+        entity_name,
+        status,
+        provider,
+        spend,
+        revenue,
+        clicks,
+        impressions,
+        conversions,
+        last_updated,
+    ):
         self.entity_id = entity_id
         self.entity_name = entity_name
         self.status = status
@@ -477,13 +522,19 @@ def _apply_sort(query, sort_by: str, sort_dir: str):
         order_clause = func.coalesce(func.sum(MS.conversions), 0)
     elif sort_by == "cpc":
         # CPC = spend / clicks (nullsafe)
-        order_clause = func.coalesce(func.sum(MS.spend), 0) / func.nullif(func.coalesce(func.sum(MS.clicks), 0), 0)
+        order_clause = func.coalesce(func.sum(MS.spend), 0) / func.nullif(
+            func.coalesce(func.sum(MS.clicks), 0), 0
+        )
     elif sort_by == "ctr":
         # CTR = clicks / impressions (nullsafe)
-        order_clause = func.coalesce(func.sum(MS.clicks), 0) / func.nullif(func.coalesce(func.sum(MS.impressions), 0), 0)
+        order_clause = func.coalesce(func.sum(MS.clicks), 0) / func.nullif(
+            func.coalesce(func.sum(MS.impressions), 0), 0
+        )
     else:  # roas
         # ROAS = revenue / spend (nullsafe)
-        order_clause = func.coalesce(func.sum(MS.revenue), 0) / func.nullif(func.coalesce(func.sum(MS.spend), 0), 0)
+        order_clause = func.coalesce(func.sum(MS.revenue), 0) / func.nullif(
+            func.coalesce(func.sum(MS.spend), 0), 0
+        )
 
     if sort_dir == "asc":
         return query.order_by(asc(order_clause))
@@ -518,7 +569,11 @@ def _fetch_trend(
     entity_id_strs = [str(eid) for eid in entity_ids]
 
     # For campaigns, ads, and creatives - use raw SQL with DISTINCT ON
-    if level in (models.LevelEnum.ad, models.LevelEnum.creative, models.LevelEnum.campaign):
+    if level in (
+        models.LevelEnum.ad,
+        models.LevelEnum.creative,
+        models.LevelEnum.campaign,
+    ):
         # Use raw SQL with DISTINCT ON to get latest snapshot per entity per day
         # NOTE: Use CAST() instead of ::uuid[] to avoid SQLAlchemy parameter confusion
         trend_sql = text("""
@@ -547,11 +602,14 @@ def _fetch_trend(
             ) latest
         """)
 
-        results = db.execute(trend_sql, {
-            "entity_ids": entity_id_strs,
-            "start_date": start,
-            "end_date": end,
-        }).fetchall()
+        results = db.execute(
+            trend_sql,
+            {
+                "entity_ids": entity_id_strs,
+                "start_date": start,
+                "end_date": end,
+            },
+        ).fetchall()
     else:
         # For adsets, use hierarchy CTEs to roll up from leaf entities
         # This is more complex - use a subquery approach
@@ -581,11 +639,21 @@ def _fetch_trend(
             db.query(
                 mapping.c.ancestor_id.label("entity_id"),
                 latest_leaf_snapshots.c.metrics_date.label("bucket_date"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.spend), 0).label("spend"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.revenue), 0).label("revenue"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.clicks), 0).label("clicks"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.impressions), 0).label("impressions"),
-                func.coalesce(func.sum(latest_leaf_snapshots.c.conversions), 0).label("conversions"),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.spend), 0).label(
+                    "spend"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.revenue), 0).label(
+                    "revenue"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.clicks), 0).label(
+                    "clicks"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.impressions), 0).label(
+                    "impressions"
+                ),
+                func.coalesce(func.sum(latest_leaf_snapshots.c.conversions), 0).label(
+                    "conversions"
+                ),
             )
             .select_from(latest_leaf_snapshots)
             .join(leaf, leaf.id == latest_leaf_snapshots.c.entity_id)
@@ -647,7 +715,9 @@ def list_entities_performance(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
     entity_level: str = Query(..., description="campaign|adset"),
-    parent_id: Optional[str] = Query(None, description="Parent entity id for ad sets/ads"),
+    parent_id: Optional[str] = Query(
+        None, description="Parent entity id for ad sets/ads"
+    ),
     date_start: Optional[date] = Query(None),
     date_end: Optional[date] = Query(None),
     timeframe: Optional[str] = Query("7d", description="quick preset: 7d/30d"),
@@ -737,17 +807,24 @@ def list_entities_performance(
                 spend=spend,
                 roas=roas,
                 conversions=conversions,
+                clicks=clicks,
+                impressions=impressions,
                 cpc=cpc,
                 ctr_pct=ctr_pct,
                 status=row.status,
                 last_updated_at=row.last_updated,
                 trend=trend_series.get(str(row.entity_id), []),
                 trend_metric="revenue" if trend_metric == "revenue" else "roas",
-                kind_label=kind_by_entity.get(str(row.entity_id)) if level == models.LevelEnum.campaign else None,
+                kind_label=kind_by_entity.get(str(row.entity_id))
+                if level == models.LevelEnum.campaign
+                else None,
             )
         )
 
-    latest_update = max((row.last_updated_at for row in response_rows if row.last_updated_at), default=None)
+    latest_update = max(
+        (row.last_updated_at for row in response_rows if row.last_updated_at),
+        default=None,
+    )
     if level == models.LevelEnum.campaign:
         title = "Campaigns"
     elif level == models.LevelEnum.adset:
@@ -756,7 +833,9 @@ def list_entities_performance(
         title = "Creatives"
     else:
         title = "Ads"
-    meta = EntityPerformanceMeta(title=title, level=level.value, last_updated_at=latest_update)
+    meta = EntityPerformanceMeta(
+        title=title, level=level.value, last_updated_at=latest_update
+    )
 
     return EntityPerformanceResponse(
         meta=meta,
@@ -798,7 +877,9 @@ def list_child_entities(
             .limit(1)
             .first()
         )
-        child_level = models.LevelEnum.creative if has_creatives else models.LevelEnum.ad
+        child_level = (
+            models.LevelEnum.creative if has_creatives else models.LevelEnum.ad
+        )
     start, end = _date_range(date_start, date_end, timeframe)
 
     base = _base_query(
@@ -813,7 +894,12 @@ def list_child_entities(
     )
 
     total = base.count()
-    rows = _apply_sort(base, sort_by, sort_dir).offset((page - 1) * page_size).limit(page_size).all()
+    rows = (
+        _apply_sort(base, sort_by, sort_dir)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
 
     trend_metric = "revenue" if sort_by == "revenue" else "roas"
     entity_ids = [row.entity_id for row in rows]
@@ -838,6 +924,8 @@ def list_child_entities(
                 spend=spend,
                 roas=roas,
                 conversions=conversions,
+                clicks=clicks,
+                impressions=impressions,
                 cpc=cpc,
                 ctr_pct=ctr_pct,
                 status=row.status,
@@ -847,7 +935,10 @@ def list_child_entities(
             )
         )
 
-    latest_update = max((row.last_updated_at for row in response_rows if row.last_updated_at), default=None)
+    latest_update = max(
+        (row.last_updated_at for row in response_rows if row.last_updated_at),
+        default=None,
+    )
     # Title reflects child level: Ad Sets / Ads / Creatives
     if child_level == models.LevelEnum.adset:
         title = "Ad Sets"
@@ -855,7 +946,9 @@ def list_child_entities(
         title = "Creatives"
     else:
         title = "Ads"
-    meta = EntityPerformanceMeta(title=title, level=child_level.value, last_updated_at=latest_update)
+    meta = EntityPerformanceMeta(
+        title=title, level=child_level.value, last_updated_at=latest_update
+    )
 
     return EntityPerformanceResponse(
         meta=meta,

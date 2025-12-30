@@ -4,6 +4,12 @@
  * WHAT: Main navigation sidebar for the dashboard
  * WHY: Users need consistent navigation across all pages
  *
+ * CHANGES (2025-12-30):
+ *   - New design: responsive width (w-20 lg:w-72)
+ *   - New styling: soft glass background, neutral colors
+ *   - Navigation: black active state, show labels on lg screens
+ *   - User profile: avatar + name + plan badge on lg screens
+ *
  * CHANGES (2025-12-22):
  *   - Replaced Clerk UserButton with custom avatar popover
  *   - Added Profile button → /settings?tab=profile
@@ -13,28 +19,16 @@
  *   - Added free tier gating with lock icons on pro-only features
  *   - Added UpgradeModal for locked feature clicks
  *
- * CHANGES (2025-12-10):
- *   - Fixed workspace detection to use is_active field from API
- *   - Added toast notifications for switch errors
- *
- * CHANGES (2025-12-09):
- *   - Migrated from custom auth to Clerk authentication
- *   - Replaced custom logout with Clerk's UserButton
- *
- * CHANGES (2025-12-02):
- *   - Removed standalone Attribution nav item (moved under Analytics)
- *   - Attribution is now accessed via Analytics page unlock widget
- *
  * REFERENCES:
  *   - docs/living-docs/FRONTEND_REFACTOR_PLAN.md
  *   - docs-arch/living-docs/BILLING.md (free tier gating)
- *   - https://clerk.com/docs/components/user/user-button
  */
 'use client'
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut } from "lucide-react";
+import Image from "next/image";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Users, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { toast } from "sonner";
@@ -129,63 +123,93 @@ export default function Sidebar() {
 
 
 
+    // Get plan display name
+    const getPlanName = () => {
+        if (!billingTier) return null;
+        if (billingTier === 'free') return 'Free Plan';
+        if (billingTier === 'pro') return 'Pro Plan';
+        return billingTier.charAt(0).toUpperCase() + billingTier.slice(1);
+    };
+
     return (
         <>
-            <aside className="hidden md:flex fixed left-6 top-6 bottom-6 w-[72px] flex-col items-center py-8 glass-panel rounded-[24px] z-50 justify-between transition-all duration-300 hover:border-cyan-200/50">
-                {/* Logo / Workspace Switcher */}
-                <div className="relative group/ws">
-                    <button
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-xl shadow-slate-300/50 mb-8 cursor-pointer relative overflow-hidden transition-transform active:scale-95"
-                    >
-                        {/* Shimmer effect */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rotate-45 translate-y-full group-hover/ws:-translate-y-full transition-transform duration-700"></div>
-
-                        <span className="font-bold text-xs tracking-tighter relative z-10">
-                            {workspace?.name?.charAt(0)?.toUpperCase() || "AN"}
-                        </span>
-
-                        {/* Dropdown Indicator */}
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[4px] border-b-white/30 mb-1"></div>
-                    </button>
-
-                    {/* Dropdown Menu */}
-                    <div className="absolute left-full top-0 ml-4 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 opacity-0 invisible group-hover/ws:opacity-100 group-hover/ws:visible transition-all duration-200 -translate-x-2 group-hover/ws:translate-x-0 z-50">
-                        <div className="px-3 py-2 border-b border-slate-50 mb-1">
-                            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Switch Workspace</p>
+            {/* Desktop Sidebar - Responsive width */}
+            <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 lg:w-72 sidebar-glass flex-col py-6 px-3 lg:px-5 z-50 justify-between transition-all duration-300">
+                {/* Top Section: Logo + Workspace Selector */}
+                <div className="space-y-5">
+                    {/* Logo */}
+                    <div className="px-2 lg:px-3">
+                        {/* Full logo for expanded state */}
+                        <Image
+                            src="/logo.png"
+                            alt="Metricx"
+                            width={160}
+                            height={42}
+                            className="hidden lg:block h-12 w-auto"
+                            priority
+                        />
+                        {/* Icon only for collapsed state */}
+                        <div className="lg:hidden w-11 h-11 flex items-center justify-center rounded-xl bg-neutral-900 text-white mx-auto">
+                            <span className="font-semibold text-lg">M</span>
                         </div>
+                    </div>
 
-                        <div className="max-h-64 overflow-y-auto space-y-1">
-                            {workspaces.map((ws) => (
-                                <button
-                                    key={ws.id}
-                                    onClick={() => handleSwitchWorkspace(ws.id)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${ws.id === workspace?.id
-                                        ? "bg-cyan-50 text-cyan-700 font-medium"
-                                        : "text-slate-600 hover:bg-slate-50"
-                                        }`}
+                    {/* Workspace Selector */}
+                    <div className="relative group/ws">
+                        <button className="w-full flex items-center gap-3 px-2 lg:px-3 py-2.5 rounded-xl hover:bg-white/60 transition-all duration-200">
+                            <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-700 text-sm font-semibold flex-shrink-0 border border-neutral-200/50">
+                                {workspace?.name?.charAt(0)?.toUpperCase() || 'W'}
+                            </div>
+                            <div className="hidden lg:flex flex-1 items-center justify-between min-w-0">
+                                <div className="flex flex-col items-start min-w-0">
+                                    <span className="text-[11px] text-neutral-400 uppercase tracking-wider">Workspace</span>
+                                    <span className="text-sm font-medium text-neutral-800 truncate">
+                                        {workspace?.name || 'Select workspace'}
+                                    </span>
+                                </div>
+                                <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                            </div>
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        <div className="absolute left-full top-0 ml-2 lg:left-0 lg:top-full lg:ml-0 lg:mt-1 w-64 bg-white rounded-xl shadow-xl border border-neutral-100 p-2 opacity-0 invisible group-hover/ws:opacity-100 group-hover/ws:visible transition-all duration-200 z-50">
+                            <div className="px-3 py-2 border-b border-neutral-50 mb-1">
+                                <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider">Switch Workspace</p>
+                            </div>
+
+                            <div className="max-h-64 overflow-y-auto space-y-1">
+                                {workspaces.map((ws) => (
+                                    <button
+                                        key={ws.id}
+                                        onClick={() => handleSwitchWorkspace(ws.id)}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${ws.id === workspace?.id
+                                            ? "bg-neutral-100 text-neutral-900 font-medium"
+                                            : "text-neutral-600 hover:bg-neutral-50"
+                                            }`}
+                                    >
+                                        <span className="truncate">{ws.name}</span>
+                                        {ws.id === workspace?.id && (
+                                            <div className="w-1.5 h-1.5 rounded-full bg-neutral-900"></div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="mt-2 pt-2 border-t border-neutral-50">
+                                <Link
+                                    href="/settings?tab=workspaces"
+                                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 transition-colors flex items-center gap-2"
                                 >
-                                    <span className="truncate">{ws.name}</span>
-                                    {ws.id === workspace?.id && (
-                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="mt-2 pt-2 border-t border-slate-50">
-                            <Link
-                                href="/settings?tab=workspaces"
-                                className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2"
-                            >
-                                <Settings className="w-4 h-4" />
-                                Workspace Settings
-                            </Link>
+                                    <Settings className="w-4 h-4" />
+                                    Workspace Settings
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Nav */}
-                <nav className="flex flex-col gap-6 w-full items-center">
+                <nav className="flex flex-col gap-1 flex-1 mt-4 px-1">
                     {navItems.map((item) => {
                         const isLocked = item.requiresPaid && billingTier === 'free';
                         return (
@@ -202,35 +226,36 @@ export default function Sidebar() {
                     })}
                 </nav>
 
-                {/* Bottom */}
-                <div className="flex flex-col gap-6 items-center">
-                    <Link
-                        href="/settings"
-                        className={`p-3 rounded-xl transition-all duration-500 ${pathname === "/settings"
-                            ? 'text-cyan-600 bg-cyan-50/50 ring-1 ring-cyan-100'
-                            : 'text-slate-400 hover:text-slate-700 hover:rotate-90'
-                            }`}
-                    >
-                        <Settings className="w-5 h-5" />
-                    </Link>
-
-                    {/* User Profile Menu */}
+                {/* Bottom - User Profile */}
+                <div className="flex flex-col gap-2 pt-6 border-t border-neutral-100">
                     <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
                         <PopoverTrigger asChild>
-                            <button className="w-8 h-8 rounded-full ring-2 ring-offset-2 ring-cyan-200/50 hover:ring-cyan-300 transition-all overflow-hidden bg-slate-100 flex items-center justify-center">
-                                {user?.imageUrl ? (
-                                    <img src={user.imageUrl} alt="Profile" className="w-full h-full object-cover" />
-                                ) : (
-                                    <User className="w-4 h-4 text-slate-400" />
-                                )}
+                            <button className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/60 transition-all duration-300">
+                                <div className="w-9 h-9 rounded-full bg-neutral-200 border border-white flex items-center justify-center overflow-hidden">
+                                    {user?.imageUrl ? (
+                                        <img src={user.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-neutral-500 text-xs font-medium">
+                                            {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="hidden lg:block text-left">
+                                    <div className="text-sm font-medium text-neutral-900">
+                                        {user?.firstName || 'User'}
+                                    </div>
+                                    <div className="text-xs text-neutral-400">
+                                        {getPlanName()}
+                                    </div>
+                                </div>
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent side="right" align="end" className="z-[100] w-auto p-2 bg-white border border-slate-200 shadow-lg">
-                            <div className="flex gap-2">
+                        <PopoverContent side="right" align="end" className="z-[100] w-48 p-2 bg-white border border-neutral-200 shadow-lg rounded-xl">
+                            <div className="flex flex-col gap-1">
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="flex items-center gap-2"
+                                    className="w-full justify-start flex items-center gap-2 text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50"
                                     onClick={() => {
                                         setUserMenuOpen(false);
                                         router.push('/settings?tab=profile');
@@ -242,7 +267,20 @@ export default function Sidebar() {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    className="w-full justify-start flex items-center gap-2 text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50"
+                                    onClick={() => {
+                                        setUserMenuOpen(false);
+                                        router.push('/settings');
+                                    }}
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    Settings
+                                </Button>
+                                <div className="h-px bg-neutral-100 my-1" />
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                                     onClick={() => signOut({ redirectUrl: '/' })}
                                 >
                                     <LogOut className="w-4 h-4" />
@@ -254,46 +292,52 @@ export default function Sidebar() {
                 </div>
             </aside>
 
-            {/* Mobile Bottom Nav (Glass Pebbles) */}
-            <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-white/50 p-2 flex justify-around items-center z-[60] h-[72px]">
+            {/* Mobile Bottom Nav - New design */}
+            <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-neutral-200/40 p-2 flex justify-around items-center z-[60] h-[68px]">
                 <Link
                     href="/dashboard"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${pathname === "/dashboard" ? "text-cyan-600 bg-cyan-50" : "text-slate-400 hover:bg-slate-50 transition-colors"
+                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/dashboard"
+                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
+                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
                         }`}
                 >
                     <LayoutDashboard className="w-5 h-5" />
                 </Link>
                 <Link
                     href="/analytics"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${pathname === "/analytics" ? "text-cyan-600 bg-cyan-50" : "text-slate-400 hover:bg-slate-50 transition-colors"
+                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname?.startsWith("/analytics")
+                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
+                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
                         }`}
                 >
                     <BarChart2 className="w-5 h-5" />
                 </Link>
 
-                {/* Center Action */}
+                {/* Center Action - Copilot */}
                 <Link
                     href="/copilot"
-                    className="relative -translate-y-4 group active:scale-95 transition-transform duration-150"
+                    className="relative -translate-y-3 group active:scale-95 transition-transform duration-150"
                     aria-label="Open Copilot"
                 >
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-400 via-sky-500 to-blue-700 flex items-center justify-center text-white shadow-[0_20px_45px_-12px_rgba(14,165,233,0.7)] ring-4 ring-white/70 backdrop-blur-md relative overflow-hidden">
-                        <div className="absolute inset-0 bg-white/15 blur-xl scale-100 animate-pulse" />
-                        <div className="absolute inset-0 rounded-full border border-white/30 opacity-70 animate-[ping_2.5s_ease-in-out_infinite]" />
-                        <Sparkles className="w-7 h-7 relative z-10 drop-shadow-[0_0_12px_rgba(255,255,255,0.85)]" />
+                    <div className="w-14 h-14 rounded-full bg-neutral-900 flex items-center justify-center text-white shadow-xl shadow-neutral-900/30 ring-4 ring-white relative overflow-hidden">
+                        <Sparkles className="w-6 h-6 relative z-10" />
                     </div>
                 </Link>
 
                 <Link
                     href="/finance"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${pathname === "/finance" ? "text-cyan-600 bg-cyan-50" : "text-slate-400 hover:bg-slate-50 transition-colors"
+                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/finance"
+                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
+                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
                         }`}
                 >
                     <Wallet className="w-5 h-5" />
                 </Link>
                 <Link
                     href="/settings"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${pathname === "/settings" ? "text-cyan-600 bg-cyan-50" : "text-slate-400 hover:bg-slate-50 transition-colors"
+                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/settings"
+                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
+                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
                         }`}
                 >
                     <User className="w-5 h-5" />

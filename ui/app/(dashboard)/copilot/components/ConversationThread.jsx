@@ -166,7 +166,7 @@ export default function ConversationThread({ messages = [], isLoading, stage, st
   }, [messages.length, isLoading, stage, streamingText]);
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 flex flex-col gap-8">
+    <div className="w-full flex flex-col gap-8">
       {/* Empty state when no messages - Apple-like minimal */}
       {messages.length === 0 && !isLoading && (
         <div className="text-center py-20">

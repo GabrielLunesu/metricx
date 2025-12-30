@@ -872,6 +872,7 @@ class UnifiedMetricService:
             .filter(
                 self.E.level == level_filter
             )  # CRITICAL: Only campaign level by default
+            .filter(self.MF.metrics_date.isnot(None))  # Exclude NULL dates
             .filter(self.MF.metrics_date.between(start_date, end_date))
             .group_by(self.MF.entity_id, self.MF.metrics_date)
             .subquery()
@@ -1225,7 +1226,35 @@ class UnifiedMetricService:
         end_date: date,
         filters: MetricFilters,
     ):
-        """Build query for provider breakdown."""
+        """Build query for provider breakdown.
+
+        IMPORTANT:
+        1. Defaults to CAMPAIGN-level entities only to avoid double/triple counting
+           across hierarchy levels (same spend appears at campaign, adset, and ad levels).
+        2. Uses only the LATEST snapshot per entity per day to avoid
+           double-counting when multiple snapshots exist (15-min sync creates many).
+        """
+        # Default to campaign-level to avoid double/triple counting across hierarchy levels
+        level_filter = filters.level if filters.level else "campaign"
+
+        # Subquery to get latest snapshot per entity per metrics_date
+        # This avoids summing duplicate snapshots from 15-min syncs
+        latest_snapshots = (
+            self.db.query(
+                self.MF.entity_id,
+                self.MF.metrics_date,
+                func.max(self.MF.captured_at).label("max_captured_at"),
+            )
+            .join(self.E, self.E.id == self.MF.entity_id)
+            .filter(self.E.workspace_id == workspace_id)
+            .filter(self.E.level == level_filter)
+            .filter(self.MF.metrics_date.isnot(None))  # Exclude NULL dates
+            .filter(self.MF.metrics_date.between(start_date, end_date))
+            .group_by(self.MF.entity_id, self.MF.metrics_date)
+            .subquery()
+        )
+
+        # Main query - only sum from the latest snapshots
         query = (
             self.db.query(
                 self.MF.provider.label("group_name"),
@@ -1241,8 +1270,15 @@ class UnifiedMetricService:
                 func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
             )
             .join(self.E, self.E.id == self.MF.entity_id)
+            .join(
+                latest_snapshots,
+                and_(
+                    self.MF.entity_id == latest_snapshots.c.entity_id,
+                    self.MF.metrics_date == latest_snapshots.c.metrics_date,
+                    self.MF.captured_at == latest_snapshots.c.max_captured_at,
+                ),
+            )
             .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.date_field, Date).between(start_date, end_date))
             .group_by(self.MF.provider)
         )
 
@@ -1261,9 +1297,28 @@ class UnifiedMetricService:
         Includes creative fields (thumbnail_url, image_url, media_type) for ad-level
         breakdowns to support creative card displays. These fields are only populated
         for Meta ads currently.
+
+        IMPORTANT: Uses only the LATEST snapshot per entity per day to avoid
+        double-counting when multiple snapshots exist (15-min sync creates many).
         """
-        # For now, implement simple ad-level breakdown
-        # TODO: Add hierarchy support for campaign/adset rollups
+        # Subquery to get latest snapshot per entity per metrics_date
+        # This avoids summing duplicate snapshots from 15-min syncs
+        latest_snapshots = (
+            self.db.query(
+                self.MF.entity_id,
+                self.MF.metrics_date,
+                func.max(self.MF.captured_at).label("max_captured_at"),
+            )
+            .join(self.E, self.E.id == self.MF.entity_id)
+            .filter(self.E.workspace_id == workspace_id)
+            .filter(self.E.level == level)
+            .filter(self.MF.metrics_date.isnot(None))  # Exclude NULL dates
+            .filter(self.MF.metrics_date.between(start_date, end_date))
+            .group_by(self.MF.entity_id, self.MF.metrics_date)
+            .subquery()
+        )
+
+        # Main query - only sum from the latest snapshots
         query = (
             self.db.query(
                 self.E.id.label("entity_id"),  # Include entity_id for timeseries lookup
@@ -1284,9 +1339,16 @@ class UnifiedMetricService:
                 self.E.media_type.label("media_type"),
             )
             .join(self.E, self.E.id == self.MF.entity_id)
+            .join(
+                latest_snapshots,
+                and_(
+                    self.MF.entity_id == latest_snapshots.c.entity_id,
+                    self.MF.metrics_date == latest_snapshots.c.metrics_date,
+                    self.MF.captured_at == latest_snapshots.c.max_captured_at,
+                ),
+            )
             .filter(self.E.workspace_id == workspace_id)
             .filter(self.E.level == level)
-            .filter(cast(self.date_field, Date).between(start_date, end_date))
             .group_by(
                 self.E.id,
                 self.E.name,
@@ -1645,7 +1707,14 @@ class UnifiedMetricService:
         filters: MetricFilters,
         breakdown_dimension: str,
     ):
-        """Build query for time-based breakdown."""
+        """Build query for time-based breakdown.
+
+        IMPORTANT:
+        1. Defaults to CAMPAIGN-level entities only to avoid double/triple counting
+           across hierarchy levels (same spend appears at campaign, adset, and ad levels).
+        2. Uses only the LATEST snapshot per entity per day to avoid
+           double-counting when multiple snapshots exist (15-min sync creates many).
+        """
         if breakdown_dimension == "day":
             group_expr = cast(self.date_field, Date)
             label_expr = cast(self.date_field, Date)
@@ -1660,6 +1729,27 @@ class UnifiedMetricService:
                 f"Unsupported time breakdown dimension: {breakdown_dimension}"
             )
 
+        # Default to campaign-level to avoid double/triple counting across hierarchy levels
+        level_filter = filters.level if filters.level else "campaign"
+
+        # Subquery to get latest snapshot per entity per metrics_date
+        # This avoids summing duplicate snapshots from 15-min syncs
+        latest_snapshots = (
+            self.db.query(
+                self.MF.entity_id,
+                self.MF.metrics_date,
+                func.max(self.MF.captured_at).label("max_captured_at"),
+            )
+            .join(self.E, self.E.id == self.MF.entity_id)
+            .filter(self.E.workspace_id == workspace_id)
+            .filter(self.E.level == level_filter)
+            .filter(self.MF.metrics_date.isnot(None))  # Exclude NULL dates
+            .filter(self.MF.metrics_date.between(start_date, end_date))
+            .group_by(self.MF.entity_id, self.MF.metrics_date)
+            .subquery()
+        )
+
+        # Main query - only sum from the latest snapshots
         query = (
             self.db.query(
                 label_expr.label("group_name"),
@@ -1675,8 +1765,15 @@ class UnifiedMetricService:
                 func.coalesce(func.sum(self.MF.profit), 0).label("profit"),
             )
             .join(self.E, self.E.id == self.MF.entity_id)
+            .join(
+                latest_snapshots,
+                and_(
+                    self.MF.entity_id == latest_snapshots.c.entity_id,
+                    self.MF.metrics_date == latest_snapshots.c.metrics_date,
+                    self.MF.captured_at == latest_snapshots.c.max_captured_at,
+                ),
+            )
             .filter(self.E.workspace_id == workspace_id)
-            .filter(cast(self.date_field, Date).between(start_date, end_date))
             .group_by(group_expr)
         )
 
