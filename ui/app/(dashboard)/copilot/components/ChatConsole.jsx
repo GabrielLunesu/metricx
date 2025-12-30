@@ -30,11 +30,12 @@ export default function ChatConsole({ onSubmit, disabled, noWorkspace }) {
   };
 
   return (
-    <div className="absolute w-full z-[80] bottom-24 md:bottom-0 md:left-[90px] md:right-6 md:w-auto pointer-events-auto">
+    <div className="absolute bottom-0 left-0 right-0 z-[80] pointer-events-none">
       {/* Gradient Fade for background - subtle */}
       <div className="absolute bottom-0 w-full h-48 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent pointer-events-none"></div>
 
-      <div className="relative max-w-[900px] mx-auto px-4 pb-6 pt-4 flex flex-col gap-3 pointer-events-auto">
+      <div className="relative w-full flex justify-center pointer-events-auto">
+        <div className="w-full max-w-[900px] px-4 pb-6 pt-4 flex flex-col gap-3">
 
         {/* Intent Chips - Subtle glass styling */}
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar w-full mask-linear pl-2">
@@ -86,6 +87,7 @@ export default function ChatConsole({ onSubmit, disabled, noWorkspace }) {
               Copilot is connected to your Meta and Google data. Ask in plain language.
             </p>
           )}
+        </div>
         </div>
       </div>
     </div>

@@ -4,7 +4,5 @@
  */
 
 export { default as NavItem } from './NavItem';
-export { default as LogoMark } from './LogoMark';
-export { default as ProfileAvatar } from './ProfileAvatar';
 export { default as AuroraBackground } from './AuroraBackground';
 export { default as Sidebar } from './Sidebar';

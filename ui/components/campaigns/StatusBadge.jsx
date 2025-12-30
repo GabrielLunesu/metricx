@@ -72,22 +72,22 @@ export function normalizeStatus(status) {
 const STATUS_CONFIG = {
   active: {
     label: "Active",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    className: "bg-emerald-50 text-emerald-700 border-emerald-100",
     dotColor: "bg-emerald-500",
     Icon: Circle,
     iconFill: true,
   },
   paused: {
     label: "Paused",
-    className: "bg-amber-50 text-amber-700 border-amber-200",
-    dotColor: "bg-amber-500",
+    className: "bg-neutral-100 text-neutral-500 border-neutral-200",
+    dotColor: "bg-neutral-400",
     Icon: Pause,
     iconFill: false,
   },
   learning: {
     label: "Learning",
-    className: "bg-sky-50 text-sky-700 border-sky-200",
-    dotColor: "bg-sky-500",
+    className: "bg-amber-50 text-amber-700 border-amber-100",
+    dotColor: "bg-amber-500",
     Icon: Zap,
     iconFill: false,
     animate: true,

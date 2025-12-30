@@ -1,247 +1,82 @@
 /**
- * Campaigns Page v2.0 - Campaign Performance Overview
- * ====================================================
+ * Campaigns Page v3.0 - Redesigned Campaign Performance Overview
+ * ==============================================================
  *
- * WHAT: Lists all campaigns with performance metrics and detail modal
- * WHY: Server-side queries, dumb UI - follows analytics page pattern
+ * WHAT: Lists all campaigns with expandable cards and performance metrics
+ * WHY: Clean, minimalistic design with expandable rows for detailed view
  *
  * ARCHITECTURE:
- *   - All data fetching via fetchEntityPerformance
- *   - Campaign detail shown in modal (replaces /campaigns/[id] pages)
- *   - StatusBadge shows ACTIVE, PAUSED, LEARNING states
- *   - Creatives shown for Meta campaigns only
+ *   - Expandable campaign cards (one expanded at a time)
+ *   - Infinite scroll with IntersectionObserver
+ *   - Filter bar with platform, status, date range, search
+ *   - Optional modal for full campaign details
  *
  * DATA FLOW:
  *   1. Page fetches campaign list from backend
- *   2. Click on campaign opens CampaignDetailModal
- *   3. Modal fetches adsets/creatives as children
- *   4. All calculations done server-side
+ *   2. Click on campaign expands card to show ad sets
+ *   3. "View Full Details" opens CampaignDetailModal
+ *   4. Infinite scroll loads more campaigns
  *
  * REFERENCES:
- *   - ui/app/(dashboard)/analytics/page.jsx (pattern to follow)
- *   - ui/components/campaigns/CampaignDetailModal.jsx
- *   - backend/app/routers/entity_performance.py
+ *   - Metricx v3.0 design system
+ *   - ui/components/campaigns/CampaignCard.jsx
+ *   - ui/components/campaigns/CampaignFilters.jsx
  */
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowDownUp, Layers } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Layers } from "lucide-react";
+import { startOfDay, endOfDay, subDays } from "date-fns";
 import { currentUser } from "@/lib/workspace";
 import { fetchEntityPerformance, fetchWorkspaceProviders } from "@/lib/api";
-
-// Components
-import CampaignDetailModal from "@/components/campaigns/CampaignDetailModal";
-import StatusBadge, { StatusDot, normalizeStatus } from "@/components/campaigns/StatusBadge";
-import PlatformBadge from "@/components/campaigns/PlatformBadge";
-import TrendSparkline from "@/components/campaigns/TrendSparkline";
 import { formatMetricValue } from "@/lib/utils";
 
+// Components
+import CampaignCard from "@/components/campaigns/CampaignCard";
+import CampaignFilters from "@/components/campaigns/CampaignFilters";
+import CampaignDetailModal from "@/components/campaigns/CampaignDetailModal";
+
 /**
- * CampaignRow - Single campaign row with click-to-open modal.
+ * Default date range (Last 7 Days)
  */
-function CampaignRow({ campaign, onRowClick, selected }) {
-  const { name, platform, status, trend, display } = campaign;
-  const normalizedStatus = normalizeStatus(status);
-  const isLearning = normalizedStatus === "learning";
-  const isPaused = normalizedStatus === "paused";
-  const isArchived = normalizedStatus === "archived";
-  const dimmed = isPaused || isArchived;
+function getDefaultDateRange() {
+  return {
+    from: startOfDay(subDays(new Date(), 6)),
+    to: endOfDay(new Date()),
+  };
+}
 
+/**
+ * Table Header Row
+ */
+function TableHeader() {
   return (
-    <div
-      onClick={() => onRowClick(campaign)}
-      className={`
-        group grid grid-cols-[40px_minmax(0,3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)]
-        gap-4 items-center px-6 py-4 cursor-pointer transition-all duration-200
-        ${selected ? "bg-cyan-50/40" : "hover:bg-slate-50/80"}
-        ${dimmed ? "opacity-70 hover:opacity-100" : ""}
-        hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] relative z-0 hover:z-10
-      `}
-    >
-      {/* Checkbox placeholder */}
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          className="custom-checkbox cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => e.stopPropagation()}
-        />
-      </div>
-
-      {/* Campaign name + platform icon */}
-      <div className="flex items-center gap-3 min-w-0">
-        <PlatformBadge platform={platform} size="md" iconOnly className="flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className={`text-sm font-semibold truncate ${dimmed ? "text-slate-500 line-through decoration-slate-300" : "text-slate-800"}`}>
-              {name}
-            </p>
-            {campaign.kindLabel && (
-              <span className="px-2 py-0.5 text-[10px] uppercase tracking-wide rounded-full bg-cyan-500/10 text-cyan-600 border border-cyan-500/30 flex-shrink-0">
-                {campaign.kindLabel}
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-slate-400 mt-0.5 truncate group-hover:text-cyan-600 transition-colors">
-            {display?.subtitle || "—"}
-          </p>
-        </div>
-      </div>
-
-      {/* Platform badge */}
-      <div>
-        <PlatformBadge platform={platform} />
-      </div>
-
-      {/* Status */}
-      <div>
-        <StatusBadge status={status} showDot={isLearning} showIcon={!isLearning} />
-      </div>
-
-      {/* Spend */}
-      <div className="text-right tabular-nums text-sm text-slate-600">
-        {display?.spend || "—"}
-      </div>
-
-      {/* Revenue */}
-      <div className="text-right tabular-nums text-sm font-semibold text-slate-800">
-        {display?.revenue || "—"}
-      </div>
-
-      {/* ROAS */}
-      <div className="text-right">
-        {campaign.roasRaw != null ? (
-          <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-            campaign.roasRaw >= 3 ? "text-emerald-600 bg-emerald-50/50" :
-            campaign.roasRaw >= 1 ? "text-amber-600 bg-amber-50/50" :
-            "text-red-600 bg-red-50/50"
-          }`}>
-            {display?.roas}
-          </span>
-        ) : (
-          <span className="text-sm text-slate-400">—</span>
-        )}
-      </div>
-
-      {/* Trend sparkline */}
-      <div className="flex items-center justify-end">
-        <TrendSparkline data={trend?.map((p) => p.value) || []} />
-      </div>
+    <div className="flex items-center px-4 py-3 mb-2 text-xs font-medium text-neutral-400 uppercase tracking-wider border-b border-neutral-100 sticky top-0 bg-white z-20">
+      <div className="flex-1 pl-2">Campaign</div>
+      <div className="w-24 text-center">Status</div>
+      <div className="w-28 text-right">Spend</div>
+      <div className="w-28 text-right">Revenue</div>
+      <div className="w-24 text-right">ROAS</div>
+      <div className="w-24 text-right pr-2">Conv.</div>
     </div>
   );
 }
 
 /**
- * CampaignTableHeader - Column headers for the campaign table.
+ * Format a timestamp as relative time (e.g., "2h ago").
  */
-function CampaignTableHeader() {
-  return (
-    <div className="grid grid-cols-[40px_minmax(0,3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.8fr)] gap-4 px-6 py-3 text-[10px] uppercase tracking-wider font-semibold text-slate-400 border-b border-slate-100 bg-slate-50/50">
-      <div></div>
-      <div>Campaign</div>
-      <div>Platform</div>
-      <div>Status</div>
-      <div className="text-right">Spend</div>
-      <div className="text-right">Revenue</div>
-      <div className="text-right">ROAS</div>
-      <div className="text-right">Trend</div>
-    </div>
-  );
-}
-
-/**
- * SummaryStrip - Shows aggregate stats (active count, total spend, avg ROAS).
- */
-function SummaryStrip({ campaigns }) {
-  const summary = useMemo(() => {
-    if (!campaigns || campaigns.length === 0) return null;
-
-    const activeCount = campaigns.filter((c) => normalizeStatus(c.status) === "active").length;
-    const totalSpend = campaigns.reduce((sum, c) => sum + (c.spendRaw || 0), 0);
-    const totalRevenue = campaigns.reduce((sum, c) => sum + (c.revenueRaw || 0), 0);
-    const avgRoas = totalSpend > 0 ? totalRevenue / totalSpend : null;
-
-    return {
-      activeCount,
-      totalSpend: formatMetricValue(totalSpend, "currency"),
-      avgRoas: avgRoas != null ? `${avgRoas.toFixed(1)}x` : "—",
-    };
-  }, [campaigns]);
-
-  if (!summary) return null;
-
-  return (
-    <div className="flex items-center gap-6 text-xs px-4 py-2 bg-white/60 border border-white/70 rounded-full backdrop-blur-sm">
-      <div className="flex items-center gap-2">
-        <span className="text-slate-400">Active</span>
-        <span className="font-semibold text-slate-700">{summary.activeCount}</span>
-      </div>
-      <div className="w-px h-3 bg-slate-300" />
-      <div className="flex items-center gap-2">
-        <span className="text-slate-400">Spend</span>
-        <span className="font-semibold text-slate-700">{summary.totalSpend}</span>
-      </div>
-      <div className="w-px h-3 bg-slate-300" />
-      <div className="flex items-center gap-2">
-        <span className="text-slate-400">Avg ROAS</span>
-        <span className="font-semibold text-emerald-600">{summary.avgRoas}</span>
-      </div>
-    </div>
-  );
-}
-
-/**
- * FilterBar - Platform and status filters.
- */
-function FilterBar({ platforms, selectedPlatform, onPlatformChange, selectedStatus, onStatusChange, loading }) {
-  const statusOptions = ["all", "active", "paused"];
-
-  return (
-    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-      {/* Platform filter */}
-      <div className="flex items-center p-1 bg-white/70 border border-slate-200 rounded-full backdrop-blur-sm">
-        <button
-          onClick={() => onPlatformChange(null)}
-          className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-            selectedPlatform === null ? "bg-slate-800 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          All
-        </button>
-        {platforms.map((provider) => (
-          <button
-            key={provider}
-            onClick={() => onPlatformChange(provider)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full capitalize transition-all ${
-              selectedPlatform === provider ? "bg-slate-800 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            {provider}
-          </button>
-        ))}
-      </div>
-
-      <div className="w-px h-6 bg-slate-200 mx-1" />
-
-      {/* Status filter */}
-      <div className="flex items-center gap-2">
-        {statusOptions.map((status) => (
-          <button
-            key={status}
-            onClick={() => onStatusChange(status)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all capitalize ${
-              selectedStatus === status
-                ? status === "active"
-                  ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                  : "bg-slate-100 text-slate-900 border border-slate-200"
-                : "bg-white border border-slate-200 text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {status === "all" ? "All Status" : status}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+function formatRelativeTime(isoDate) {
+  if (!isoDate) return "—";
+  const now = new Date();
+  const then = new Date(isoDate);
+  const diff = Math.max(0, now.getTime() - then.getTime());
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 /**
@@ -251,28 +86,30 @@ export default function CampaignsPage() {
   // User & workspace state
   const [user, setUser] = useState(null);
   const [workspaceId, setWorkspaceId] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
 
   // Data state
   const [campaigns, setCampaigns] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pageSize: 25 });
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
   // Filter state
-  // NOTE: Defaults are ACTIVE campaigns sorted by REVENUE (highest first)
-  // per product decision - users want to see top performers first
   const [platforms, setPlatforms] = useState([]);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState("active"); // Always default to active
-  const [sortBy, setSortBy] = useState("revenue"); // Default to revenue (highest first)
-  const [sortDir, setSortDir] = useState("desc");
-  const [timeframe, setTimeframe] = useState("7d");
+  const [selectedStatus, setSelectedStatus] = useState("active");
+  const [dateRange, setDateRange] = useState(getDefaultDateRange);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Modal state
+  // UI state
+  const [expandedId, setExpandedId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+
+  // Infinite scroll ref
+  const sentinelRef = useRef(null);
 
   // Fetch user on mount
   useEffect(() => {
@@ -303,73 +140,142 @@ export default function CampaignsPage() {
       .catch((err) => console.error("Failed to fetch providers:", err));
   }, [workspaceId]);
 
-  // Fetch campaigns
-  const fetchCampaigns = useCallback(async () => {
+  // Fetch campaigns (initial or append)
+  const fetchCampaigns = useCallback(async (pageNum = 1, append = false) => {
     if (!workspaceId) return;
 
     setDataLoading(true);
     setError(null);
 
     try {
-      const days = timeframe === "30d" ? 30 : timeframe === "today" ? 1 : timeframe === "yesterday" ? 1 : 7;
+      // Calculate days from date range
+      const days = dateRange?.from && dateRange?.to
+        ? Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24)) + 1
+        : 7;
+
       const result = await fetchEntityPerformance({
         workspaceId,
         entityType: "campaign",
         timeRange: { last_n_days: days },
-        limit: 50,
-        sortBy,
-        sortDir,
+        limit: pageSize,
+        offset: (pageNum - 1) * pageSize,
+        sortBy: "revenue",
+        sortDir: "desc",
         status: selectedStatus,
         provider: selectedPlatform,
       });
 
       // Adapt the response to our row format
-      const rows = (result?.items || []).map((row) => ({
-        id: row.id,
-        name: row.name,
-        platform: row.platform,
-        status: row.status,
-        kindLabel: row.kind_label || null,
-        revenueRaw: row.revenue,
-        spendRaw: row.spend,
-        roasRaw: row.roas,
-        conversionsRaw: row.conversions,
-        cpcRaw: row.cpc,
-        ctr_pctRaw: row.ctr_pct,
-        trend: row.trend || [],
-        thumbnail_url: row.thumbnail_url,
-        image_url: row.image_url,
-        media_type: row.media_type,
-        display: {
-          revenue: formatMetricValue(row.revenue, "currency"),
-          spend: formatMetricValue(row.spend, "currency"),
-          roas: row.roas != null ? `${row.roas.toFixed(2)}x` : "—",
-          conversions: row.conversions?.toLocaleString() || "—",
-          subtitle: row.last_updated_at
-            ? `Updated ${formatRelativeTime(row.last_updated_at)}`
-            : "—",
-        },
-      }));
+      const rows = (result?.items || []).map((row) => {
+        // Base metrics from API
+        const spend = row.spend || 0;
+        const revenue = row.revenue || 0;
+        const clicks = row.clicks || 0;
+        const impressions = row.impressions || 0;
+        const conversions = row.conversions || 0;
+        
+        // Calculated metrics
+        const roas = spend > 0 ? revenue / spend : null;
+        const cpc = clicks > 0 ? spend / clicks : null;
+        const ctr = impressions > 0 ? (clicks / impressions) * 100 : null;
+        const cpm = impressions > 0 ? (spend / impressions) * 1000 : null;
+        const cpa = conversions > 0 ? spend / conversions : null;
+        const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : null;
+        
+        return {
+          id: row.id,
+          name: row.name,
+          platform: row.platform,
+          status: row.status,
+          kindLabel: row.kind_label || null,
+          // Raw metrics for KPI grid
+          spendRaw: spend,
+          revenueRaw: revenue,
+          roasRaw: roas,
+          clicksRaw: clicks,
+          impressionsRaw: impressions,
+          conversionsRaw: conversions,
+          cpcRaw: cpc,
+          cpmRaw: cpm,
+          ctrRaw: ctr,
+          cpaRaw: cpa,
+          conversionRateRaw: conversionRate,
+          conversionValueRaw: revenue, // Same as revenue for now
+          // Trend data
+          trend: row.trend || [],
+          thumbnail_url: row.thumbnail_url,
+          image_url: row.image_url,
+          media_type: row.media_type,
+          // Display formatted values (for collapsed row)
+          display: {
+            revenue: formatMetricValue(revenue, "currency"),
+            spend: formatMetricValue(spend, "currency"),
+            roas: roas != null ? `${roas.toFixed(2)}x` : "—",
+            conversions: conversions?.toLocaleString() || "—",
+            subtitle: row.last_updated_at
+              ? `Updated ${formatRelativeTime(row.last_updated_at)}`
+              : "—",
+          },
+        };
+      });
 
-      setCampaigns(rows);
-      setPagination(result?.meta || { total: rows.length, page: 1, pageSize: 50 });
+      // Filter by search query (client-side for now)
+      const filteredRows = searchQuery
+        ? rows.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        : rows;
+
+      if (append) {
+        setCampaigns((prev) => [...prev, ...filteredRows]);
+      } else {
+        setCampaigns(filteredRows);
+      }
+
+      // Check if there are more results
+      const totalFromMeta = result?.meta?.total || rows.length;
+      setHasMore(pageNum * pageSize < totalFromMeta);
     } catch (err) {
       console.error("Failed to fetch campaigns:", err);
       setError("Failed to load campaigns. Please try again.");
-      setCampaigns([]);
+      if (!append) setCampaigns([]);
     } finally {
       setDataLoading(false);
-      setLoading(false);
     }
-  }, [workspaceId, timeframe, sortBy, sortDir, selectedStatus, selectedPlatform]);
+  }, [workspaceId, dateRange, selectedStatus, selectedPlatform, searchQuery]);
 
-  // Fetch campaigns when filters change
+  // Initial fetch when filters change
   useEffect(() => {
-    fetchCampaigns();
+    setPage(1);
+    setExpandedId(null);
+    fetchCampaigns(1, false);
   }, [fetchCampaigns]);
 
-  // Handle campaign row click
-  const handleCampaignClick = (campaign) => {
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !dataLoading) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchCampaigns(nextPage, true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(sentinelRef.current);
+
+    return () => observer.disconnect();
+  }, [hasMore, dataLoading, page, fetchCampaigns]);
+
+  // Handle campaign card toggle
+  const handleToggle = (campaignId) => {
+    setExpandedId((prev) => (prev === campaignId ? null : campaignId));
+  };
+
+  // Handle "View Full Details" click
+  const handleViewDetails = (campaign) => {
     setSelectedCampaign(campaign);
     setModalOpen(true);
   };
@@ -377,24 +283,17 @@ export default function CampaignsPage() {
   // Handle modal close
   const handleModalClose = () => {
     setModalOpen(false);
-    // Delay clearing selected campaign to allow animation
     setTimeout(() => setSelectedCampaign(null), 300);
   };
-
-  // Time range options
-  const timeRanges = [
-    { id: "today", label: "Today" },
-    { id: "yesterday", label: "Yesterday" },
-    { id: "7d", label: "7d" },
-    { id: "30d", label: "30d" },
-  ];
 
   // Loading state
   if (initialLoading) {
     return (
-      <div className="p-12 text-center">
-        <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-slate-500">Loading campaigns...</p>
+      <div className="flex items-center justify-center py-24">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin" />
+          <span className="text-neutral-500 text-sm">Loading campaigns...</span>
+        </div>
       </div>
     );
   }
@@ -402,10 +301,12 @@ export default function CampaignsPage() {
   // Not logged in
   if (!user) {
     return (
-      <div className="p-12 text-center">
-        <div className="glass-card rounded-3xl border border-slate-200/60 p-6 max-w-md mx-auto">
-          <h2 className="text-xl font-medium mb-2 text-slate-900">You must be signed in.</h2>
-          <a href="/sign-in" className="text-cyan-600 hover:text-cyan-700 underline">
+      <div className="flex items-center justify-center py-24">
+        <div className="text-center">
+          <h2 className="text-xl font-medium mb-2 text-neutral-900">
+            You must be signed in.
+          </h2>
+          <a href="/sign-in" className="text-neutral-600 hover:text-neutral-900 underline">
             Go to sign in
           </a>
         </div>
@@ -414,116 +315,112 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
-      <header className="pt-2 pb-2">
-        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+      <header className="flex flex-col gap-8">
+        {/* Title Row */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Campaigns</h1>
-              {dataLoading && <span className="text-[11px] text-cyan-500">Syncing…</span>}
-            </div>
-            <p className="text-sm text-slate-500 mt-1">
-              All paid campaigns across Meta & Google in one view.
-            </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Campaigns</h1>
+            {dataLoading && campaigns.length > 0 && (
+              <span className="text-xs text-neutral-400 mt-1">Syncing...</span>
+            )}
           </div>
-
-          {/* Time range + sort */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Time range pills */}
-            <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-              {timeRanges.map((range) => (
-                <button
-                  key={range.id}
-                  onClick={() => setTimeframe(range.id)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    timeframe === range.id
-                      ? "text-slate-900 bg-slate-100 shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Sort dropdown */}
-            <div className="relative">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="pl-8 pr-10 py-2 rounded-full bg-white border border-slate-200 text-xs font-medium text-slate-700 shadow-sm hover:border-slate-300 transition-all appearance-none cursor-pointer"
-              >
-                <option value="roas">Sort by ROAS</option>
-                <option value="revenue">Sort by Revenue</option>
-                <option value="spend">Sort by Spend</option>
-                <option value="conversions">Sort by Conversions</option>
-              </select>
-              <ArrowDownUp className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
+          
+          {/* New Campaign button - commented out for now */}
+          {/* 
+          <button className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors shadow-sm shadow-neutral-900/10">
+            <Plus className="w-4 h-4" />
+            New Campaign
+          </button>
+          */}
         </div>
 
-        {/* Filters row */}
-        <div className="mt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <FilterBar
-            platforms={platforms}
-            selectedPlatform={selectedPlatform}
-            onPlatformChange={setSelectedPlatform}
-            selectedStatus={selectedStatus}
-            onStatusChange={setSelectedStatus}
-            loading={dataLoading}
-          />
-          <SummaryStrip campaigns={campaigns} />
-        </div>
+        {/* Filters Row */}
+        <CampaignFilters
+          platforms={platforms}
+          selectedPlatform={selectedPlatform}
+          onPlatformChange={setSelectedPlatform}
+          selectedStatus={selectedStatus}
+          onStatusChange={setSelectedStatus}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
       </header>
 
       {/* Table */}
-      <div className="rounded-[24px] border border-slate-200 bg-white shadow-lg shadow-slate-200/50 overflow-hidden">
-        <CampaignTableHeader />
+      <div className="space-y-3">
+        {/* Table Headers */}
+        <TableHeader />
 
-        <div className="divide-y divide-slate-50">
+        {/* Campaign Cards */}
+        <div className="flex flex-col gap-3 pb-20">
+          {/* Initial loading state */}
           {dataLoading && campaigns.length === 0 && (
-            <div className="p-8 text-center text-slate-500">Loading campaigns...</div>
+            <div className="p-8 text-center text-neutral-500">
+              <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin mx-auto mb-3" />
+              Loading campaigns...
+            </div>
           )}
 
+          {/* Error state */}
           {error && (
             <div className="p-8 text-center text-red-500">
               {error}
-              <button onClick={fetchCampaigns} className="ml-2 text-cyan-600 hover:underline">
+              <button
+                onClick={() => fetchCampaigns(1, false)}
+                className="ml-2 text-blue-600 hover:underline"
+              >
                 Retry
               </button>
             </div>
           )}
 
+          {/* Empty state */}
           {!dataLoading && !error && campaigns.length === 0 && (
             <div className="p-12 text-center">
-              <Layers className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-              <p className="text-slate-500">No campaigns found for the selected filters.</p>
-              <p className="text-xs text-slate-400 mt-1">
+              <Layers className="w-12 h-12 mx-auto mb-4 text-neutral-300" />
+              <p className="text-neutral-500">No campaigns found for the selected filters.</p>
+              <p className="text-xs text-neutral-400 mt-1">
                 Try adjusting your filters or connecting an ad platform.
               </p>
             </div>
           )}
 
+          {/* Campaign cards */}
           {campaigns.map((campaign) => (
-            <CampaignRow
+            <CampaignCard
               key={campaign.id}
               campaign={campaign}
-              onRowClick={handleCampaignClick}
-              selected={selectedCampaign?.id === campaign.id}
+              expanded={expandedId === campaign.id}
+              onToggle={() => handleToggle(campaign.id)}
+              onViewDetails={() => handleViewDetails(campaign)}
+              workspaceId={workspaceId}
+              dateRange={dateRange}
             />
           ))}
-        </div>
 
-        {/* Pagination */}
-        {campaigns.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-3 text-[11px] text-slate-400 border-t border-slate-100 bg-white">
-            <span>
-              Showing {campaigns.length} of {pagination.total} campaigns
-            </span>
-          </div>
-        )}
+          {/* Infinite scroll sentinel */}
+          {hasMore && campaigns.length > 0 && (
+            <div ref={sentinelRef} className="py-4 flex justify-center">
+              {dataLoading && (
+                <div className="flex items-center gap-2 text-neutral-400 text-sm">
+                  <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+                  Loading more...
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* End of list */}
+          {!hasMore && campaigns.length > 0 && (
+            <div className="py-4 text-center text-xs text-neutral-400">
+              Showing all {campaigns.length} campaigns
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Campaign Detail Modal */}
@@ -532,25 +429,11 @@ export default function CampaignsPage() {
         onClose={handleModalClose}
         campaign={selectedCampaign}
         workspaceId={workspaceId}
-        timeframe={timeframe}
+        timeframe={dateRange?.from && dateRange?.to
+          ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24)) + 1}d`
+          : "7d"
+        }
       />
     </div>
   );
-}
-
-/**
- * Format a timestamp as relative time (e.g., "2h ago").
- */
-function formatRelativeTime(isoDate) {
-  if (!isoDate) return "—";
-  const now = new Date();
-  const then = new Date(isoDate);
-  const diff = Math.max(0, now.getTime() - then.getTime());
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }

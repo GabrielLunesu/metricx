@@ -1,57 +1,72 @@
 /**
- * Finance & P&L Page
- * 
- * WHAT: Main Finance page with P&L statement, costs, and insights
- * WHY: Central view for financial performance
- * REFERENCES:
- *   - lib/financeApiClient.js: Data fetching
- *   - lib/pnlAdapter.js: View model mapping
- *   - components/*.jsx: Presentational components
- * 
- * State management:
- *   - selectedPeriod: {year, month} - User selection
- *   - compareEnabled: boolean - Toggle for comparison mode
- *   - viewModel: adapted P&L data (from adapter)
- *   - loading/error: UI states
- * 
- * Design:
- *   - Zero business logic (only display state)
- *   - Adapter handles all formatting
- *   - Components are presentational only
+ * Finance & P&L Page v3.0 - Redesigned Financial Dashboard
+ * =========================================================
+ *
+ * WHAT: Clean, minimalistic finance page with new design system
+ * WHY: Improved UX matching Metricx v3.0 design language
+ *
+ * LAYOUT:
+ *   - Header: Title, subtitle, date range picker (This Month / Last Month / 90 Days / Custom)
+ *   - 4 KPI cards: Revenue, Spend, Gross Profit, Net ROAS
+ *   - Middle section: P&L Table + Spend Breakdown
+ *   - Bottom section: Revenue Chart + AI Copilot
+ *
+ * DATA FLOW:
+ *   - Date range selection → fetch P&L from /workspaces/{id}/finance/pnl
+ *   - Manual costs CRUD → refetch P&L on changes
  */
-
 "use client";
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { format, startOfMonth, endOfDay } from "date-fns";
 import { currentUser } from "@/lib/workspace";
-import TopBar from "./components/TopBar";
-import FinancialSummaryCards from "./components/FinancialSummaryCards";
-import PLTable from "./components/PLTable";
-import ManualCostModal from "./components/ManualCostModal";
-import ChartsSection from "./components/ChartsSection";
-import AIFinancialSummary from "./components/AIFinancialSummary";
 import { getPnLStatement } from "@/lib/financeApiClient";
-import { adaptPnLStatement, getPeriodDatesForMonth } from "@/lib/pnlAdapter";
-import LoadingAnimation from "@/components/LoadingAnimation";
+import { adaptPnLStatement } from "@/lib/pnlAdapter";
+
+// New Components
+import FinanceHeader from "./components/FinanceHeader";
+import FinanceKpiCards from "./components/FinanceKpiCards";
+import FinancePLTable from "./components/FinancePLTable";
+import FinanceSpendBreakdown from "./components/FinanceSpendBreakdown";
+import FinanceRevenueChart from "./components/FinanceRevenueChart";
+import FinanceCopilot from "./components/FinanceCopilot";
+
+// Keep ManualCostModal for adding costs
+import ManualCostModal from "./components/ManualCostModal";
+
+/**
+ * Get default date range (this month)
+ */
+function getDefaultDateRange() {
+  const now = new Date();
+  return {
+    from: startOfMonth(now),
+    to: endOfDay(now),
+  };
+}
 
 export default function FinancePage() {
   // Auth state
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // UI state
-  const [compareEnabled, setCompareEnabled] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() + 1 };
-  });
+  // Date range state (replaces year/month)
+  const [dateRange, setDateRange] = useState(getDefaultDateRange);
+
+  // Data state
   const [viewModel, setViewModel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [excludedRows, setExcludedRows] = useState(new Set());
+
+  // Manual cost modal state
   const [showAddCost, setShowAddCost] = useState(false);
   const [editingCost, setEditingCost] = useState(null);
   const [manualCosts, setManualCosts] = useState([]);
+
+  // ============================================
+  // AUTH & DATA FETCHING
+  // ============================================
 
   // Get current user
   useEffect(() => {
@@ -83,94 +98,107 @@ export default function FinancePage() {
         const costs = await listManualCosts({ workspaceId: user.workspace_id });
         setManualCosts(costs);
       } catch (err) {
-        console.error('Failed to fetch manual costs:', err);
-        toast.error("Could not load manual costs. Safe to retry.");
+        console.error("Failed to fetch manual costs:", err);
       }
     }
 
     fetchManualCosts();
   }, [user]);
 
-  // Fetch P&L data when user/period/compare changes
+  // Fetch P&L data when user/dateRange changes
   useEffect(() => {
-    if (!user) return;
+    if (!user || !dateRange?.from || !dateRange?.to) return;
 
     async function fetchData() {
       setLoading(true);
       setError(null);
 
       try {
-        const { periodStart, periodEnd } = getPeriodDatesForMonth(
-          selectedPeriod.year,
-          selectedPeriod.month
-        );
+        // Format dates for API (YYYY-MM-DD)
+        const periodStart = format(dateRange.from, "yyyy-MM-dd");
+        const periodEnd = format(dateRange.to, "yyyy-MM-dd");
 
         const apiResponse = await getPnLStatement({
           workspaceId: user.workspace_id,
-          granularity: 'month',
+          granularity: "month",
           periodStart,
           periodEnd,
-          compare: compareEnabled
+          compare: true,
         });
 
-      const adapted = adaptPnLStatement(apiResponse);
-      setViewModel(adapted);
-    } catch (err) {
-      console.error('Failed to fetch P&L:', err);
-      setError('Failed to load financial data. Please try again.');
-      toast.error("Finance data failed to load");
-    } finally {
-      setLoading(false);
+        const adapted = adaptPnLStatement(apiResponse);
+        setViewModel(adapted);
+      } catch (err) {
+        console.error("Failed to fetch P&L:", err);
+        setError("Failed to load financial data. Please try again.");
+        toast.error("Finance data failed to load");
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
     fetchData();
-  }, [user, selectedPeriod, compareEnabled]);
+  }, [user, dateRange]);
 
-  const handlePeriodChange = (period) => {
-    setSelectedPeriod(period);
-    setExcludedRows(new Set()); // Reset excluded rows when changing periods
+  // ============================================
+  // COMPUTED VALUES
+  // ============================================
+
+  // Calculate totals from viewModel
+  const totals = useMemo(() => {
+    if (!viewModel) return { totalRevenue: 0, totalSpend: 0, netProfit: 0 };
+
+    const totalRevenue = viewModel.summary?.totalRevenue?.rawValue || 0;
+    const totalSpend = viewModel.rows?.reduce((sum, row) => sum + (row.actualRaw || 0), 0) || 0;
+    const netProfit = totalRevenue - totalSpend;
+
+    return { totalRevenue, totalSpend, netProfit };
+  }, [viewModel]);
+
+  // Get selected period info for Copilot
+  const selectedPeriod = useMemo(() => {
+    if (!dateRange?.from) {
+      const now = new Date();
+      return { year: now.getFullYear(), month: now.getMonth() + 1 };
+    }
+    return {
+      year: dateRange.from.getFullYear(),
+      month: dateRange.from.getMonth() + 1,
+    };
+  }, [dateRange]);
+
+  // ============================================
+  // EVENT HANDLERS
+  // ============================================
+
+  const handleDateRangeChange = (newRange) => {
+    setDateRange(newRange);
   };
 
-  const handleCompareToggle = (enabled) => {
-    setCompareEnabled(enabled);
-  };
-
-  const handleRowToggle = (rowId) => {
-    setExcludedRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(rowId)) {
-        newSet.delete(rowId);
-      } else {
-        newSet.add(rowId);
-      }
-      return newSet;
-    });
-  };
-
-  // Add/Edit manual cost
   const handleAddCost = () => {
     setEditingCost(null);
     setShowAddCost(true);
   };
 
   const handleEditCost = (cost) => {
-    setEditingCost(cost);
-    setShowAddCost(true);
+    // Find the full cost object from manualCosts
+    const fullCost = manualCosts.find((c) => c.id === cost.id?.replace("manual-", ""));
+    if (fullCost) {
+      setEditingCost(fullCost);
+      setShowAddCost(true);
+    }
   };
 
   const handleSubmitCost = async (payload) => {
     try {
       if (editingCost) {
-        // Update existing cost
         const { updateManualCost } = await import("@/lib/financeApiClient");
         await updateManualCost({
           workspaceId: user.workspace_id,
           costId: editingCost.id,
-          updates: payload
+          updates: payload,
         });
       } else {
-        // Create new cost
         const { createManualCost } = await import("@/lib/financeApiClient");
         await createManualCost({ workspaceId: user.workspace_id, cost: payload });
       }
@@ -178,29 +206,28 @@ export default function FinancePage() {
       setShowAddCost(false);
       setEditingCost(null);
 
-      // Refetch manual costs
+      // Refetch data
       const { listManualCosts } = await import("@/lib/financeApiClient");
       const costs = await listManualCosts({ workspaceId: user.workspace_id });
       setManualCosts(costs);
 
-      // Refetch P&L
-      const { periodStart, periodEnd } = getPeriodDatesForMonth(
-        selectedPeriod.year,
-        selectedPeriod.month
-      );
+      const periodStart = format(dateRange.from, "yyyy-MM-dd");
+      const periodEnd = format(dateRange.to, "yyyy-MM-dd");
+      
       const apiResponse = await getPnLStatement({
         workspaceId: user.workspace_id,
-        granularity: 'month',
+        granularity: "month",
         periodStart,
         periodEnd,
-        compare: compareEnabled
+        compare: true,
       });
       const adapted = adaptPnLStatement(apiResponse);
       setViewModel(adapted);
+
       toast.success(editingCost ? "Cost updated" : "Cost added");
     } catch (err) {
-      console.error('Failed to save cost:', err);
-      toast.error(err?.message || 'Failed to save cost');
+      console.error("Failed to save cost:", err);
+      toast.error(err?.message || "Failed to save cost");
     }
   };
 
@@ -212,178 +239,156 @@ export default function FinancePage() {
       setShowAddCost(false);
       setEditingCost(null);
 
-      // Refetch manual costs
+      // Refetch data
       const { listManualCosts } = await import("@/lib/financeApiClient");
       const costs = await listManualCosts({ workspaceId: user.workspace_id });
       setManualCosts(costs);
 
-      // Refetch P&L
-      const { periodStart, periodEnd } = getPeriodDatesForMonth(
-        selectedPeriod.year,
-        selectedPeriod.month
-      );
+      const periodStart = format(dateRange.from, "yyyy-MM-dd");
+      const periodEnd = format(dateRange.to, "yyyy-MM-dd");
+      
       const apiResponse = await getPnLStatement({
         workspaceId: user.workspace_id,
-        granularity: 'month',
+        granularity: "month",
         periodStart,
         periodEnd,
-        compare: compareEnabled
+        compare: true,
       });
       const adapted = adaptPnLStatement(apiResponse);
       setViewModel(adapted);
+
       toast.success("Cost deleted");
     } catch (err) {
-      console.error('Failed to delete cost:', err);
-      toast.error(err?.message || 'Failed to delete cost');
+      console.error("Failed to delete cost:", err);
+      toast.error(err?.message || "Failed to delete cost");
     }
   };
 
-  // Calculate adjusted totals based on excluded rows
-  const getAdjustedTotals = () => {
-    if (!viewModel) return { totalRevenue: 0, totalSpend: 0 };
+  // ============================================
+  // RENDER
+  // ============================================
 
-    const activeSpend = viewModel.rows
-      .filter(row => !excludedRows.has(row.id))
-      .reduce((sum, row) => sum + (row.actualRaw || 0), 0);
-
-    return {
-      totalRevenue: viewModel.summary?.totalRevenue?.rawValue || 0,
-      totalSpend: activeSpend
-    };
-  };
-
-  // Auth loading state
+  // Auth loading
   if (authLoading) {
-    return <LoadingAnimation message="Checking authentication..." />;
-  }
-
-  // Not authenticated
-  if (!user) {
     return (
-      <div className="p-6">
-        <div className="max-w-2xl mx-auto glass-card rounded-3xl border border-neutral-200/60 p-6">
-          <h2 className="text-xl font-medium mb-2 text-neutral-900">You must be signed in.</h2>
-          <a href="/" className="text-cyan-600 hover:text-cyan-700 underline">Go to sign in</a>
+      <div className="flex items-center justify-center py-24">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin" />
+          <span className="text-neutral-500 text-sm">Checking authentication...</span>
         </div>
       </div>
     );
   }
 
-  // Loading P&L data
-  if (loading) {
-    return <LoadingAnimation message="Loading financial data..." />;
+  // Not authenticated
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="text-center">
+          <h2 className="text-xl font-medium mb-2 text-neutral-900">
+            You must be signed in.
+          </h2>
+          <a
+            href="/sign-in"
+            className="text-neutral-600 hover:text-neutral-900 underline"
+          >
+            Go to sign in
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Data loading
+  if (loading && !viewModel) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin" />
+          <span className="text-neutral-500 text-sm">Loading financial data...</span>
+        </div>
+      </div>
+    );
   }
 
   // Error state
-  if (error) {
+  if (error && !viewModel) {
     return (
       <div className="p-8">
-        <div className="bg-red-500/10 border border-red-500 rounded p-4 text-red-400">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
           {error}
         </div>
       </div>
     );
   }
 
-  // No data
-  if (!viewModel) {
-    return (
-      <div className="p-8 text-gray-400">
-        No financial data available for this period.
-      </div>
-    );
-  }
-
   return (
     <>
-      {/* Header / Controls */}
-      <TopBar
-        selectedPeriod={selectedPeriod}
-        onPeriodChange={handlePeriodChange}
-        compareEnabled={compareEnabled}
-        onCompareToggle={handleCompareToggle}
+      {/* Header with Date Range Picker */}
+      <FinanceHeader
+        dateRange={dateRange}
+        onDateRangeChange={handleDateRangeChange}
       />
 
-      {/* Main Finance Content */}
-      <div className=" ">
-        <div className="max-w-[1400px] mx-auto space-y-6">
-          {/* Hero Finance Strip */}
-          <FinancialSummaryCards
-            summary={{
-              ...viewModel.summary,
-              totalSpend: {
-                ...viewModel.summary.totalSpend,
-                value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(getAdjustedTotals().totalSpend),
-                rawValue: getAdjustedTotals().totalSpend
-              },
-              grossProfit: {
-                ...viewModel.summary.grossProfit,
-                value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(getAdjustedTotals().totalRevenue - getAdjustedTotals().totalSpend),
-                rawValue: getAdjustedTotals().totalRevenue - getAdjustedTotals().totalSpend
-              },
-              netRoas: {
-                ...viewModel.summary.netRoas,
-                value: getAdjustedTotals().totalSpend > 0 ? `${(getAdjustedTotals().totalRevenue / getAdjustedTotals().totalSpend).toFixed(2)}×` : 'N/A',
-                rawValue: getAdjustedTotals().totalSpend > 0 ? getAdjustedTotals().totalRevenue / getAdjustedTotals().totalSpend : 0
-              }
-            }}
-            showComparison={viewModel.hasComparison}
-          />
+      {/* Main Content */}
+      <div className="space-y-6 max-w-[1600px] mx-auto">
+        {/* KPI Cards */}
+        <FinanceKpiCards
+          summary={viewModel?.summary}
+          loading={loading}
+          currency="EUR"
+        />
 
-          {/* Middle Section: P&L + Charts + Composition + Copilot */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Left Column: P&L + Revenue charts */}
-            <div className="xl:col-span-7 flex flex-col gap-6">
-              {/* Editable P&L Grid */}
-              <PLTable
-                selectedMonth={selectedPeriod.month}
-                rows={viewModel.rows}
-                excludedRows={excludedRows}
-                onRowToggle={handleRowToggle}
-                onAddCost={handleAddCost}
-                manualCosts={manualCosts}
-                onEditCost={handleEditCost}
-                onDeleteCost={handleDeleteCost}
-              />
-
-              {/* Revenue Chart */}
-              <ChartsSection
-                composition={viewModel.composition}
-                timeseries={viewModel.timeseries}
-                totalRevenue={getAdjustedTotals().totalRevenue}
-                totalSpend={getAdjustedTotals().totalSpend}
-                excludedRows={excludedRows}
-                rows={viewModel.rows}
-                onRowToggle={handleRowToggle}
-                mode="revenueOnly"
-                selectedMonth={selectedPeriod.month}
-              />
-            </div>
-
-            {/* Right Column: Composition + Financial Copilot */}
-            <div className="xl:col-span-5 flex flex-col gap-6">
-              <ChartsSection
-                composition={viewModel.composition}
-                timeseries={viewModel.timeseries}
-                totalRevenue={getAdjustedTotals().totalRevenue}
-                totalSpend={getAdjustedTotals().totalSpend}
-                excludedRows={excludedRows}
-                rows={viewModel.rows}
-                onRowToggle={handleRowToggle}
-                mode="compositionOnly"
-                selectedMonth={selectedPeriod.month}
-              />
-
-              {/* Financial AI Summary (Copilot Integration) */}
-              <AIFinancialSummary
-                workspaceId={user.workspace_id}
-                selectedPeriod={selectedPeriod}
-              />
-            </div>
+        {/* Middle Section: P&L + Spend Breakdown */}
+        <section className="grid grid-cols-12 gap-6">
+          {/* P&L Table */}
+          <div className="col-span-12 xl:col-span-7">
+            <FinancePLTable
+              rows={viewModel?.rows || []}
+              totalRevenue={totals.totalRevenue}
+              netProfit={totals.netProfit}
+              onAddCost={handleAddCost}
+              onEditCost={handleEditCost}
+              loading={loading}
+              currency="EUR"
+            />
           </div>
-        </div>
+
+          {/* Spend Breakdown */}
+          <div className="col-span-12 xl:col-span-5">
+            <FinanceSpendBreakdown
+              composition={viewModel?.composition || []}
+              totalRevenue={totals.totalRevenue}
+              totalSpend={totals.totalSpend}
+              loading={loading}
+              currency="EUR"
+            />
+          </div>
+        </section>
+
+        {/* Bottom Section: Chart + Copilot */}
+        <section className="grid grid-cols-12 gap-6">
+          {/* Revenue Chart */}
+          <div className="col-span-12 xl:col-span-8">
+            <FinanceRevenueChart
+              timeseries={viewModel?.timeseries || []}
+              loading={loading}
+              currency="EUR"
+            />
+          </div>
+
+          {/* AI Copilot */}
+          <div className="col-span-12 xl:col-span-4">
+            <FinanceCopilot
+              workspaceId={user.workspace_id}
+              selectedPeriod={selectedPeriod}
+              summary={viewModel?.summary}
+            />
+          </div>
+        </section>
       </div>
 
+      {/* Manual Cost Modal */}
       {showAddCost && (
         <ManualCostModal
           open={showAddCost}

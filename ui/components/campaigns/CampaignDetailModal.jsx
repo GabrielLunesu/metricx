@@ -1,6 +1,6 @@
 /**
- * CampaignDetailModal Component
- * =============================
+ * CampaignDetailModal Component v3.0
+ * ===================================
  *
  * WHAT: Full-screen modal showing campaign details with KPIs, chart, adsets, and creatives
  * WHY: Replaces separate /campaigns/[id] pages - all detail in one modal
@@ -12,13 +12,8 @@
  *   4. Ad Set Selector: Dropdown to filter by adset (Meta + Google hierarchy)
  *   5. Creatives Section: Meta only - thumbnail grid with KPIs
  *
- * DATA FLOW:
- *   - Parent passes campaign row data on open
- *   - Modal fetches children (adsets/ads) and creatives via API
- *   - All calculations done server-side, UI is dumb
- *
  * REFERENCES:
- *   - ui/app/(dashboard)/analytics/page.jsx (pattern to follow)
+ *   - Metricx v3.0 design system
  *   - ui/lib/api.js (fetchEntityPerformance for children)
  *   - backend/app/routers/entity_performance.py (data source)
  */
@@ -39,7 +34,6 @@ import {
 } from "recharts";
 import StatusBadge from "./StatusBadge";
 import PlatformBadge from "./PlatformBadge";
-import TrendSparkline from "./TrendSparkline";
 import { fetchEntityPerformance } from "@/lib/api";
 import { formatMetricValue, formatDelta } from "@/lib/utils";
 
@@ -61,12 +55,12 @@ function KpiCard({ label, value, format, delta, inverse, Icon, highlight }) {
   const isPositive = deltaInfo?.isGood;
 
   return (
-    <div className={`bg-white p-5 rounded-xl border border-slate-100 shadow-sm ${highlight ? "ring-1 ring-cyan-200/50" : ""}`}>
+    <div className={`bg-white p-5 rounded-xl border border-neutral-100 shadow-sm ${highlight ? "ring-1 ring-emerald-200/50" : ""}`}>
       <div className="flex justify-between items-start mb-2">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-        {Icon && <Icon className="w-4 h-4 text-slate-300" />}
+        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{label}</p>
+        {Icon && <Icon className="w-4 h-4 text-neutral-300" />}
       </div>
-      <p className={`text-2xl font-semibold tracking-tight ${highlight ? "text-emerald-600" : "text-slate-900"}`}>
+      <p className={`text-2xl font-semibold tracking-tight ${highlight ? "text-emerald-600" : "text-neutral-900"}`}>
         {formatMetricValue(value, format)}
       </p>
       {deltaInfo ? (
@@ -75,7 +69,7 @@ function KpiCard({ label, value, format, delta, inverse, Icon, highlight }) {
           <span>{deltaInfo.text} vs prev</span>
         </div>
       ) : (
-        <span className="text-xs text-slate-400 mt-1 block">—</span>
+        <span className="text-xs text-neutral-400 mt-1 block">—</span>
       )}
     </div>
   );
@@ -89,7 +83,7 @@ function AdSetSelector({ adsets, selectedId, onSelect, loading }) {
 
   return (
     <div className="relative">
-      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+      <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2 block">
         Filter by Ad Set
       </label>
       <div className="relative">
@@ -97,7 +91,7 @@ function AdSetSelector({ adsets, selectedId, onSelect, loading }) {
           value={selectedId || "all"}
           onChange={(e) => onSelect(e.target.value === "all" ? null : e.target.value)}
           disabled={loading}
-          className="w-full px-4 py-2.5 pr-10 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50"
+          className="w-full px-4 py-2.5 pr-10 bg-white border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 appearance-none cursor-pointer hover:border-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent disabled:opacity-50"
         >
           <option value="all">All Ad Sets ({adsets.length})</option>
           {adsets.map((adset) => (
@@ -106,7 +100,7 @@ function AdSetSelector({ adsets, selectedId, onSelect, loading }) {
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
       </div>
     </div>
   );
@@ -127,13 +121,13 @@ function CreativeCard({ creative }) {
   };
   const { Icon: MediaIcon, label: mediaLabel } = mediaConfig[media_type] || mediaConfig.unknown;
 
-  // ROAS color coding
-  const roasColor = roas >= 3 ? "bg-emerald-500" : roas >= 1.5 ? "bg-amber-500" : "bg-red-500";
+  // ROAS color coding (>= 2x = green, >= 1x = amber, < 1x = red)
+  const roasColor = roas >= 2 ? "bg-emerald-500" : roas >= 1 ? "bg-amber-500" : "bg-red-500";
 
   return (
-    <div className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300">
+    <div className="group bg-white rounded-xl border border-neutral-200 overflow-hidden hover:shadow-lg transition-all duration-300">
       {/* Thumbnail */}
-      <div className="relative h-48 bg-slate-100 overflow-hidden">
+      <div className="relative h-48 bg-neutral-100 overflow-hidden">
         {thumbnail_url || image_url ? (
           <img
             src={thumbnail_url || image_url}
@@ -142,12 +136,12 @@ function CreativeCard({ creative }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <MediaIcon className="w-12 h-12 text-slate-300" />
+            <MediaIcon className="w-12 h-12 text-neutral-300" />
           </div>
         )}
 
         {/* Media type badge */}
-        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded text-[10px] font-bold text-slate-700 uppercase tracking-wide border border-white/50">
+        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded text-[10px] font-bold text-neutral-700 uppercase tracking-wide border border-white/50">
           {mediaLabel}
         </div>
 
@@ -170,22 +164,22 @@ function CreativeCard({ creative }) {
       <div className="p-4">
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-slate-900 truncate">{name || "Untitled Creative"}</h4>
+            <h4 className="text-sm font-semibold text-neutral-900 truncate">{name || "Untitled Creative"}</h4>
           </div>
-          <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 ml-2">
-            <ExternalLink className="w-3 h-3 text-slate-500" />
+          <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center flex-shrink-0 ml-2">
+            <ExternalLink className="w-3 h-3 text-neutral-500" />
           </div>
         </div>
 
         {/* Metrics */}
-        <div className="grid grid-cols-2 gap-2 py-3 border-t border-slate-50">
+        <div className="grid grid-cols-2 gap-2 py-3 border-t border-neutral-50">
           <div>
-            <p className="text-[10px] text-slate-400 uppercase">Spend</p>
-            <p className="text-sm font-medium text-slate-700">{formatMetricValue(spend, "currency")}</p>
+            <p className="text-[10px] text-neutral-400 uppercase">Spend</p>
+            <p className="text-sm font-medium text-neutral-700">{formatMetricValue(spend, "currency")}</p>
           </div>
           <div>
-            <p className="text-[10px] text-slate-400 uppercase">CTR</p>
-            <p className={`text-sm font-medium ${ctr_pct >= 1.5 ? "text-emerald-600" : "text-slate-600"}`}>
+            <p className="text-[10px] text-neutral-400 uppercase">CTR</p>
+            <p className={`text-sm font-medium ${ctr_pct >= 1.5 ? "text-emerald-600" : "text-neutral-600"}`}>
               {formatMetricValue(ctr_pct, "percent")}
             </p>
           </div>
@@ -202,10 +196,10 @@ function CreativesSection({ creatives, loading }) {
   if (loading) {
     return (
       <div className="animate-pulse">
-        <div className="h-6 w-48 bg-slate-200 rounded mb-4" />
+        <div className="h-6 w-48 bg-neutral-200 rounded mb-4" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-64 bg-slate-200 rounded-xl" />
+            <div key={i} className="h-64 bg-neutral-200 rounded-xl" />
           ))}
         </div>
       </div>
@@ -217,9 +211,9 @@ function CreativesSection({ creatives, loading }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-slate-900">Top Performing Creatives</h3>
+        <h3 className="text-base font-semibold text-neutral-900">Top Performing Creatives</h3>
         {creatives.length > 3 && (
-          <button className="text-xs font-medium text-cyan-600 hover:text-cyan-700">
+          <button className="text-xs font-medium text-blue-600 hover:text-blue-700">
             View All ({creatives.length})
           </button>
         )}
@@ -235,9 +229,6 @@ function CreativesSection({ creatives, loading }) {
 
 /**
  * PerformanceChart - Recharts-based performance chart for campaign modal.
- *
- * WHAT: Renders an area chart with revenue data over time
- * WHY: Uses Recharts for consistent chart behavior across the app
  *
  * @param {Array} trend - Array of trend data points with date and value
  */
@@ -262,16 +253,16 @@ function PerformanceChart({ trend }) {
     });
 
     return (
-      <div className="bg-white rounded-xl p-3 min-w-[150px] shadow-xl border border-slate-100">
-        <div className="text-xs font-semibold text-slate-800 mb-2">{formattedDate}</div>
+      <div className="bg-white rounded-xl p-3 min-w-[150px] shadow-xl border border-neutral-100">
+        <div className="text-xs font-semibold text-neutral-800 mb-2">{formattedDate}</div>
         <div className="space-y-1.5">
           {payload.map((entry) => (
             <div key={entry.dataKey} className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-[10px] text-slate-600">Revenue</span>
+                <span className="text-[10px] text-neutral-600">Revenue</span>
               </div>
-              <span className="text-xs font-semibold text-slate-800">
+              <span className="text-xs font-semibold text-neutral-800">
                 ${entry.value?.toLocaleString() ?? "—"}
               </span>
             </div>
@@ -282,12 +273,12 @@ function PerformanceChart({ trend }) {
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-8">
+    <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm mb-8">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-semibold text-slate-800">Performance Over Time</h3>
-        <div className="flex items-center gap-4 text-xs text-slate-500">
+        <h3 className="text-sm font-semibold text-neutral-800">Performance Over Time</h3>
+        <div className="flex items-center gap-4 text-xs text-neutral-500">
           <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-500" />
+            <span className="w-2 h-2 rounded-full bg-neutral-900" />
             Revenue
           </span>
         </div>
@@ -296,18 +287,18 @@ function PerformanceChart({ trend }) {
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ left: 0, right: 10, top: 10, bottom: 0 }}>
             <defs>
-              <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+              <linearGradient id="revenueGradientModal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#171717" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#171717" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
             <XAxis
               dataKey="date"
               tickLine={false}
               axisLine={false}
               tickMargin={10}
-              tick={{ fill: "#64748b", fontSize: 11 }}
+              tick={{ fill: "#737373", fontSize: 11 }}
               minTickGap={40}
               tickFormatter={(value) => {
                 const date = new Date(value);
@@ -319,7 +310,7 @@ function PerformanceChart({ trend }) {
               axisLine={false}
               tickMargin={8}
               width={50}
-              tick={{ fill: "#64748b", fontSize: 11 }}
+              tick={{ fill: "#737373", fontSize: 11 }}
               tickFormatter={(value) => {
                 if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
                 if (value >= 1000) return `$${(value / 1000).toFixed(0)}k`;
@@ -330,12 +321,12 @@ function PerformanceChart({ trend }) {
             <Area
               type="monotone"
               dataKey="revenue"
-              stroke="#22d3ee"
-              fill="url(#revenueGradient)"
+              stroke="#171717"
+              fill="url(#revenueGradientModal)"
               strokeWidth={2}
               connectNulls
               dot={false}
-              activeDot={{ r: 4, strokeWidth: 2, fill: "#22d3ee" }}
+              activeDot={{ r: 4, strokeWidth: 2, fill: "#171717" }}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -346,22 +337,6 @@ function PerformanceChart({ trend }) {
 
 /**
  * CampaignDetailModal - Main modal component.
- *
- * @param {Object} props
- * @param {boolean} props.isOpen - Modal visibility
- * @param {Function} props.onClose - Close handler
- * @param {Object} props.campaign - Campaign row data from parent
- * @param {string} props.workspaceId - Current workspace ID
- * @param {string} props.timeframe - Current timeframe filter
- *
- * @example
- * <CampaignDetailModal
- *   isOpen={modalOpen}
- *   onClose={() => setModalOpen(false)}
- *   campaign={selectedCampaign}
- *   workspaceId={workspaceId}
- *   timeframe="7d"
- * />
  */
 export default function CampaignDetailModal({
   isOpen,
@@ -394,9 +369,8 @@ export default function CampaignDetailModal({
         sortBy: "roas",
         sortDir: "desc",
         status: "all",
-        campaignId: campaign.id, // This maps to parent_id in the API
+        campaignId: campaign.id,
       });
-      // Map items to include required fields
       const items = (result?.items || []).map((item) => ({
         ...item,
         roas: item.roas ?? (item.spend > 0 ? item.revenue / item.spend : null),
@@ -417,7 +391,6 @@ export default function CampaignDetailModal({
     setCreativesLoading(true);
     try {
       const days = timeframe === "30d" ? 30 : 7;
-      // Fetch ads/creatives under this campaign
       const result = await fetchEntityPerformance({
         workspaceId,
         entityType: "ad",
@@ -426,9 +399,8 @@ export default function CampaignDetailModal({
         sortBy: "roas",
         sortDir: "desc",
         status: "all",
-        campaignId: campaign.id, // This maps to parent_id in the API
+        campaignId: campaign.id,
       });
-      // Map items to include required fields for creative cards
       const items = (result?.items || []).map((item) => ({
         ...item,
         roas: item.roas ?? (item.spend > 0 ? item.revenue / item.spend : null),
@@ -488,7 +460,7 @@ export default function CampaignDetailModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm" />
+          <div className="fixed inset-0 bg-neutral-900/20 backdrop-blur-sm" />
         </Transition.Child>
 
         {/* Modal */}
@@ -502,34 +474,34 @@ export default function CampaignDetailModal({
             leaveFrom="opacity-100 scale-100 translate-y-0"
             leaveTo="opacity-0 scale-95 translate-y-4"
           >
-            <Dialog.Panel className="bg-white w-full max-w-5xl h-[90vh] md:h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/40 ring-1 ring-slate-900/5">
+            <Dialog.Panel className="bg-white w-full max-w-5xl h-[90vh] md:h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-neutral-200 ring-1 ring-neutral-900/5">
               {/* Header */}
-              <div className="flex items-start justify-between p-6 md:p-8 border-b border-slate-100 bg-white/80 backdrop-blur z-10">
+              <div className="flex items-start justify-between p-6 md:p-8 border-b border-neutral-100 bg-white/80 backdrop-blur z-10">
                 <div className="flex items-start gap-5">
                   <PlatformBadge platform={campaign.platform} size="lg" />
                   <div>
                     <div className="flex items-center gap-3 mb-1">
-                      <Dialog.Title className="text-xl md:text-2xl font-semibold tracking-tight text-slate-900">
+                      <Dialog.Title className="text-xl md:text-2xl font-semibold tracking-tight text-neutral-900">
                         {campaign.name}
                       </Dialog.Title>
                       <StatusBadge status={campaign.status} size="md" />
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                    <div className="flex items-center gap-2 text-neutral-500 text-sm">
                       <span>ID: {displayId}</span>
-                      <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                      <span>{timeframe === "30d" ? "Last 30 Days" : "Last 7 Days"}</span>
+                      <span className="w-1 h-1 bg-neutral-300 rounded-full" />
+                      <span>{timeframe}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 transition-all">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    {timeframe === "30d" ? "Last 30 Days" : "Last 7 Days"}
+                  <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-all">
+                    <Calendar className="w-4 h-4 text-neutral-400" />
+                    {timeframe}
                   </button>
                   <button
                     onClick={onClose}
-                    className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                    className="p-2 hover:bg-neutral-100 rounded-full text-neutral-400 hover:text-neutral-600 transition-colors"
                   >
                     <X className="w-6 h-6" />
                   </button>
@@ -537,7 +509,7 @@ export default function CampaignDetailModal({
               </div>
 
               {/* Body (Scrollable) */}
-              <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50">
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-neutral-50/50">
                 {/* KPI Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                   {MODAL_KPIS.map((kpi) => (
@@ -578,10 +550,10 @@ export default function CampaignDetailModal({
 
                 {/* Empty state for Google without adsets */}
                 {!isMeta && adsets.length === 0 && !loading && (
-                  <div className="text-center py-12 text-slate-500">
-                    <BarChart2 className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                  <div className="text-center py-12 text-neutral-500">
+                    <BarChart2 className="w-12 h-12 mx-auto mb-4 text-neutral-300" />
                     <p className="text-sm">No ad sets found for this campaign.</p>
-                    <p className="text-xs text-slate-400 mt-1">This campaign may use a different structure.</p>
+                    <p className="text-xs text-neutral-400 mt-1">This campaign may use a different structure.</p>
                   </div>
                 )}
               </div>

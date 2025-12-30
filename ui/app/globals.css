@@ -4,7 +4,28 @@
 @font-face {
   font-family: 'SF Pro Display';
   src: local('SF Pro Display'), local('SFProDisplay-Regular'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display'), local('SFProDisplay-Regular'), local('-apple-system'), local('BlinkMacSystemFont');
   font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display Medium'), local('SFProDisplay-Medium'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display Semibold'), local('SFProDisplay-Semibold'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 600;
   font-style: normal;
 }
 
@@ -19,34 +40,37 @@
   --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* metricx Brand Colors - Black, White, Blue Gradient */
-  --color-metricx-black: #000000;
+  /* metricx Brand Colors - Neutral-first palette */
+  --color-metricx-black: #171717;
   --color-metricx-white: #ffffff;
-  --color-metricx-blue: #3B82F6;
-  --color-metricx-cyan: #06B6D4;
-  --color-metricx-blue-light: #60A5FA;
-  --color-metricx-cyan-light: #22D3EE;
+  --color-metricx-neutral-900: #171717;
+  --color-metricx-neutral-500: #737373;
+  --color-metricx-neutral-400: #a3a3a3;
+  --color-metricx-neutral-200: #e5e5e5;
+  --color-metricx-neutral-100: #f5f5f5;
+
+  /* Accent colors for delta badges */
+  --color-metricx-emerald: #10b981;
+  --color-metricx-amber: #f59e0b;
+  --color-metricx-violet: #8b5cf6;
+  --color-metricx-blue: #3b82f6;
 
   /* Semantic colors */
-  --color-metricx-text: #000000;
-  --color-metricx-text-secondary: #64748B;
+  --color-metricx-text: #171717;
+  --color-metricx-text-secondary: #737373;
   --color-metricx-glass: rgba(255, 255, 255, 0.65);
   --color-metricx-border: rgba(0, 0, 0, 0.08);
 
   --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.03);
-  --shadow-halo: 0 0 20px rgba(45, 212, 191, 0.3);
-  --shadow-glow-sm: 0 0 10px rgba(56, 189, 248, 0.2);
+  --shadow-card-soft: 0 4px 24px -1px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  --shadow-card-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.08);
 
   /* Animation Variables (v2.1 - Apple-like smooth ease) */
-  /* WHY: Replaced bouncy animations with subtle, smooth transitions */
   --animate-breathe: breathe 12s ease-in-out infinite;
   --animate-float: none;
-  /* Disabled - too decorative */
   --animate-slide-in: slideIn 0.4s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
 
   @keyframes breathe {
-
-    /* Subtle breathing - barely noticeable */
     0%,
     100% {
       transform: scale(1);
@@ -60,8 +84,6 @@
   }
 
   @keyframes float {
-
-    /* Disabled - set to no movement */
     0%,
     100% {
       transform: translateY(0);
@@ -69,8 +91,6 @@
   }
 
   @keyframes slideIn {
-
-    /* Smooth slide - Apple-like ease */
     0% {
       transform: translateX(12px);
       opacity: 0;
@@ -97,9 +117,128 @@ body {
 }
 
 body {
-  background: #ffffff;
+  background: #f9fafb;
   color: var(--color-metricx-text);
   overflow-x: hidden;
+}
+
+/* ==========================================
+   New Design System - Metricx v3.0
+   Soft, minimalistic, Apple-inspired
+   ========================================== */
+
+/* Hero Gradient Background - Soft radial gradients */
+.hero-gradient {
+  background: 
+    radial-gradient(circle at 50% 0%, rgba(250, 245, 255, 1) 0%, transparent 50%),
+    radial-gradient(circle at 100% 0%, rgba(240, 253, 244, 0.8) 0%, transparent 40%),
+    radial-gradient(circle at 0% 0%, rgba(255, 247, 237, 0.8) 0%, transparent 40%),
+    #f9fafb;
+}
+
+/* Glass Effect - Updated for new design */
+.glass {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Card Soft - Gradient cards with subtle shadows */
+.card-soft {
+  background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.card-soft:hover {
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+}
+
+/* Number Display - Tabular numerals with tight tracking */
+.number-display {
+  font-feature-settings: 'tnum' 1, 'kern' 1;
+  letter-spacing: -0.04em;
+}
+
+/* Text Glow - Subtle shadow for hero text */
+.text-glow {
+  text-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+/* Delta Badge Colors */
+.delta-positive {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.delta-negative {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.delta-neutral {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+/* Sidebar Glass */
+.sidebar-glass {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(229, 229, 229, 0.4);
+}
+
+/* Nav Item Active */
+.nav-active {
+  background: #171717;
+  color: white;
+  box-shadow: 0 10px 25px -5px rgba(23, 23, 23, 0.1), 0 8px 10px -6px rgba(23, 23, 23, 0.1);
+}
+
+/* Nav Item Inactive */
+.nav-inactive {
+  color: #737373;
+  transition: all 0.3s ease;
+}
+
+.nav-inactive:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: #171717;
+}
+
+/* Chart Container */
+.chart-container {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Search Bar Glow */
+.search-glow {
+  position: relative;
+}
+
+.search-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(to right, #e5e5e5, #f5f5f5);
+  border-radius: 20px;
+  filter: blur(8px);
+  opacity: 0.4;
+  transition: opacity 0.5s ease;
+  z-index: -1;
+}
+
+.search-glow:hover::before,
+.search-glow:focus-within::before {
+  opacity: 0.6;
 }
 
 /* Fixed shader gradient container - prevents re-render on scroll */
@@ -166,7 +305,11 @@ body {
 
 /* Utility Classes */
 .aurora-bg {
-  background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 50%, #eff6ff 100%);
+  background: 
+    radial-gradient(circle at 50% 0%, rgba(250, 245, 255, 1) 0%, transparent 50%),
+    radial-gradient(circle at 100% 0%, rgba(240, 253, 244, 0.8) 0%, transparent 40%),
+    radial-gradient(circle at 0% 0%, rgba(255, 247, 237, 0.8) 0%, transparent 40%),
+    #f9fafb;
 }
 
 .glass-panel {
@@ -540,37 +683,25 @@ body {
 }
 
 /* ==========================================
-   Dashboard 2x2 Grid Module Styles
-   Apple-inspired glassmorphism with blue primary
+   Dashboard Module Styles - Metricx v3.0
+   Soft, minimalistic design
    ========================================== */
 
-/* Base module card - glassmorphic with blue primary tint */
+/* Base module card - soft gradient with subtle shadows */
 .dashboard-module {
-  background: linear-gradient(
-    135deg,
-    rgba(239, 246, 255, 0.6) 0%,
-    rgba(255, 255, 255, 0.9) 40%,
-    rgba(248, 250, 252, 0.85) 100%
-  );
+  background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow:
-    0 4px 32px -4px rgba(59, 130, 246, 0.06),
-    0 8px 16px -8px rgba(0, 0, 0, 0.02),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 32px;
+  padding: 32px;
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dashboard-module:hover {
-  box-shadow:
-    0 12px 48px -8px rgba(59, 130, 246, 0.1),
-    0 16px 24px -12px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-  border-color: rgba(191, 219, 254, 0.6);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
 }
 
 /* Slide up animation for dashboard modules */
@@ -595,3 +726,253 @@ body {
 .dashboard-module:nth-child(2) { animation-delay: 0.1s; }
 .dashboard-module:nth-child(3) { animation-delay: 0.2s; }
 .dashboard-module:nth-child(4) { animation-delay: 0.3s; }
+
+/* ==========================================
+   Analytics Page Styles - Metricx v3.0
+   Clean, data-focused design
+   ========================================== */
+
+/* Analytics KPI Card */
+.analytics-kpi-card {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.2s ease;
+}
+
+.analytics-kpi-card:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Analytics Table */
+.analytics-table {
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+}
+
+.analytics-table thead {
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.analytics-table th {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #737373;
+}
+
+.analytics-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.analytics-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.analytics-table tbody tr:hover {
+  background-color: #fafafa;
+}
+
+.analytics-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Selected row state */
+.analytics-table tbody tr.selected {
+  background-color: #f5f5f5;
+}
+
+.analytics-table tbody tr.selected:hover {
+  background-color: #f0f0f0;
+}
+
+/* Nested row (Ad Sets) */
+.analytics-table tbody tr.nested {
+  background-color: #fafafa;
+}
+
+.analytics-table tbody tr.nested td:first-child {
+  padding-left: 48px;
+}
+
+/* Status indicators */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.active {
+  background-color: #10b981;
+}
+
+.status-dot.learning {
+  background-color: #f59e0b;
+}
+
+.status-dot.paused {
+  background-color: #a3a3a3;
+}
+
+.status-dot.removed {
+  background-color: #ef4444;
+}
+
+/* Tabular numbers for metrics */
+.tabular-nums {
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.02em;
+}
+
+/* Metric tabs (pill style) */
+.metric-tabs {
+  display: inline-flex;
+  padding: 4px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  gap: 4px;
+}
+
+.metric-tab {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #737373;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.metric-tab:hover {
+  color: #171717;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.metric-tab.active {
+  color: #171717;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Chart legend */
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: #737373;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-legend-line {
+  width: 12px;
+  height: 2px;
+  background: #171717;
+}
+
+.chart-legend-line.dashed {
+  background: linear-gradient(to right, #a3a3a3 50%, transparent 50%);
+  background-size: 6px 2px;
+}
+
+/* Filter badge */
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #f5f5f5;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #525252;
+}
+
+.filter-badge button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #737373;
+  transition: all 0.15s ease;
+}
+
+.filter-badge button:hover {
+  background: #e5e5e5;
+  color: #171717;
+}
+
+/* Platform icon container */
+.platform-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Search input for analytics */
+.analytics-search {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #171717;
+  transition: all 0.2s ease;
+}
+
+.analytics-search::placeholder {
+  color: #a3a3a3;
+}
+
+.analytics-search:focus {
+  outline: none;
+  background: white;
+  border-color: #d4d4d4;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.03);
+}
+
+/* Small button style */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #525252;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sm:hover {
+  background: #fafafa;
+  border-color: #d4d4d4;
+}

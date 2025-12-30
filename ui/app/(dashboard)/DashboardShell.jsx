@@ -22,7 +22,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar, AuroraBackground } from "./components/shared";
+import { Sidebar } from "./components/shared";
 import FooterDashboard from "../../components/FooterDashboard";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -120,7 +120,7 @@ export default function DashboardShell({ children }) {
 
   const contentClass = immersive || isCopilot
     ? "w-full h-full"
-    : "max-w-[1600px] mx-auto p-4 md:p-8 space-y-8";
+    : "p-6 lg:p-8";
 
   // Show loading while checking access
   if (checkingAccess) {
@@ -165,10 +165,7 @@ export default function DashboardShell({ children }) {
   }
 
   return (
-    <div className="min-h-screen w-full aurora-bg relative overflow-hidden text-slate-800 font-sans antialiased selection:bg-cyan-100 selection:text-cyan-900">
-      {/* metricx Aurora Layer */}
-      <AuroraBackground />
-
+    <div className="min-h-screen w-full hero-gradient relative overflow-hidden text-neutral-900 font-sans antialiased selection:bg-neutral-100 selection:text-neutral-900">
       {/* Dashboard Shell */}
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar - hidden in immersive mode */}
@@ -179,7 +176,7 @@ export default function DashboardShell({ children }) {
           className={`
             flex-1 h-full overflow-x-hidden relative
             ${!isCopilot ? 'overflow-y-auto' : 'overflow-hidden'}
-            ${immersive || isCopilot ? "p-0" : "md:pl-[90px]"}
+            ${immersive || isCopilot ? "p-0" : "ml-20 lg:ml-72"}
           `}
         >
           <div className={contentClass}>
