@@ -140,7 +140,7 @@ export default function KpiCardsModule({
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="card-soft rounded-[32px] p-8 animate-pulse">
+          <div key={i} className="bg-white/40 glass rounded-[32px] p-8 border border-white/60 animate-pulse">
             <div className="flex flex-col h-full justify-between gap-4">
               <div className="flex items-start justify-between">
                 <div className="h-4 w-20 bg-neutral-200/50 rounded"></div>
@@ -170,9 +170,8 @@ export default function KpiCardsModule({
             key={kpi.key}
             onClick={() => onMetricClick?.(kpi.key)}
             className={`
-              card-soft rounded-[32px] p-8 text-left transition-all duration-500 cursor-pointer
-              hover:-translate-y-1
-              ${isSelected ? 'ring-2 ring-neutral-900/10' : ''}
+              bg-white/40 glass rounded-[32px] p-8 text-left transition-all duration-300 cursor-pointer
+              border border-white/60 hover:bg-white/60 hover:-translate-y-0.5
             `}
           >
             <div className="flex flex-col h-full justify-between  gap-2">

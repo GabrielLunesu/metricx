@@ -24,7 +24,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
 import { currentUser } from "../../../lib/workspace";
 import { fetchUnifiedDashboard } from "../../../lib/api";
 import HeroHeader from "./components/HeroHeader";
@@ -145,21 +145,27 @@ export default function DashboardPage() {
       />
 
       {/* AI Search Bar - Centered */}
-      <div className="max-w-xl mx-auto mb-20">
-        <form onSubmit={handleSearchSubmit} className="relative search-glow">
+      <div className="max-w-lg mx-auto mb-16">
+        <form onSubmit={handleSearchSubmit} className="relative group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+            <Search className="w-4 h-4 text-neutral-400" />
+          </div>
           <input 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Ask AI anything about your metrics..." 
-            className="w-full pl-6 pr-16 py-4 bg-white/80 backdrop-blur-xl rounded-[20px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-base text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200/50 transition-all duration-300 text-center"
+            placeholder="Ask Copilot anything..." 
+            className="w-full pl-11 pr-24 py-3.5 bg-white/70 hover:bg-white/90 focus:bg-white rounded-2xl border border-neutral-200/60 hover:border-neutral-300/60 focus:border-neutral-300 shadow-sm hover:shadow-md focus:shadow-md text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none transition-all duration-200"
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-neutral-100/80 rounded text-[10px] font-medium text-neutral-400 border border-neutral-200/60">
+              <span>⌘</span>K
+            </kbd>
             <button 
               type="submit"
-              className="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center hover:scale-105 transition-transform duration-300"
+              className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center hover:bg-neutral-800 transition-colors duration-150"
             >
-              <ArrowRight className="w-4 h-4 text-white" />
+              <ArrowRight className="w-3.5 h-3.5 text-white" />
             </button>
           </div>
         </form>
