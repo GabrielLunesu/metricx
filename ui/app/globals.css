@@ -4,7 +4,28 @@
 @font-face {
   font-family: 'SF Pro Display';
   src: local('SF Pro Display'), local('SFProDisplay-Regular'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display'), local('SFProDisplay-Regular'), local('-apple-system'), local('BlinkMacSystemFont');
   font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display Medium'), local('SFProDisplay-Medium'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display Semibold'), local('SFProDisplay-Semibold'), local('-apple-system'), local('BlinkMacSystemFont');
+  font-weight: 600;
   font-style: normal;
 }
 
@@ -19,34 +40,37 @@
   --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* metricx Brand Colors - Black, White, Blue Gradient */
-  --color-metricx-black: #000000;
+  /* metricx Brand Colors - Neutral-first palette */
+  --color-metricx-black: #171717;
   --color-metricx-white: #ffffff;
-  --color-metricx-blue: #3B82F6;
-  --color-metricx-cyan: #06B6D4;
-  --color-metricx-blue-light: #60A5FA;
-  --color-metricx-cyan-light: #22D3EE;
+  --color-metricx-neutral-900: #171717;
+  --color-metricx-neutral-500: #737373;
+  --color-metricx-neutral-400: #a3a3a3;
+  --color-metricx-neutral-200: #e5e5e5;
+  --color-metricx-neutral-100: #f5f5f5;
+
+  /* Accent colors for delta badges */
+  --color-metricx-emerald: #10b981;
+  --color-metricx-amber: #f59e0b;
+  --color-metricx-violet: #8b5cf6;
+  --color-metricx-blue: #3b82f6;
 
   /* Semantic colors */
-  --color-metricx-text: #000000;
-  --color-metricx-text-secondary: #64748B;
+  --color-metricx-text: #171717;
+  --color-metricx-text-secondary: #737373;
   --color-metricx-glass: rgba(255, 255, 255, 0.65);
   --color-metricx-border: rgba(0, 0, 0, 0.08);
 
   --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.03);
-  --shadow-halo: 0 0 20px rgba(45, 212, 191, 0.3);
-  --shadow-glow-sm: 0 0 10px rgba(56, 189, 248, 0.2);
+  --shadow-card-soft: 0 4px 24px -1px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  --shadow-card-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.08);
 
   /* Animation Variables (v2.1 - Apple-like smooth ease) */
-  /* WHY: Replaced bouncy animations with subtle, smooth transitions */
   --animate-breathe: breathe 12s ease-in-out infinite;
   --animate-float: none;
-  /* Disabled - too decorative */
   --animate-slide-in: slideIn 0.4s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
 
   @keyframes breathe {
-
-    /* Subtle breathing - barely noticeable */
     0%,
     100% {
       transform: scale(1);
@@ -60,8 +84,6 @@
   }
 
   @keyframes float {
-
-    /* Disabled - set to no movement */
     0%,
     100% {
       transform: translateY(0);
@@ -69,8 +91,6 @@
   }
 
   @keyframes slideIn {
-
-    /* Smooth slide - Apple-like ease */
     0% {
       transform: translateX(12px);
       opacity: 0;
