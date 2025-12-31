@@ -33,9 +33,7 @@ function GoogleIcon({ className }) {
 
 function ShopifyIcon({ className }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M15.337 3.415c-.03-.09-.09-.12-.15-.12-.06 0-1.41-.06-1.41-.06s-.93-.93-1.05-1.05c-.12-.12-.33-.09-.42-.06 0 0-.21.06-.54.18-.33-1.02-1.11-1.95-2.4-1.95h-.09C8.807.105 8.427 0 8.067 0c-2.94 0-4.35 3.69-4.8 5.55l-2.04.63c-.63.21-.66.24-.75.84-.06.45-1.71 13.17-1.71 13.17l12.87 2.4 6.96-1.74s-3.03-16.32-3.06-16.44h.03zm-3.72.84c-.51.15-1.11.36-1.74.54 0-.51-.09-1.23-.27-1.8.66.12 1.14.84 1.41 1.26zm-2.85.87c-1.17.36-2.46.78-3.75 1.17.36-1.38 1.05-2.76 1.89-3.66.3-.33.75-.69 1.26-.9.51 1.02.6 2.46.6 3.39zm-1.71-4.38c.42 0 .78.15 1.08.42-.48.24-.93.63-1.35 1.05-.99 1.08-1.74 2.76-2.16 4.41-.99.3-1.98.63-2.88.9.6-2.43 2.88-6.72 5.31-6.78z"/>
-    </svg>
+    <img src="/shopify.svg" alt="Shopify" className={className} />
   );
 }
 
@@ -86,34 +84,26 @@ function DataFlowViz() {
         </div>
       </div>
 
-      {/* Connection lines SVG */}
-      <div className="absolute top-10 left-0 w-full h-[180px] pointer-events-none z-0 hidden sm:block">
-        <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 512 180">
-          <defs>
-            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style={{ stopColor: "#3B82F6", stopOpacity: 0.6 }} />
-              <stop offset="100%" style={{ stopColor: "#06B6D4", stopOpacity: 0.6 }} />
-            </linearGradient>
-          </defs>
-
-          {/* Background lines */}
-          <path d="M 48 24 C 48 80, 256 40, 256 120" fill="none" stroke="#E5E7EB" strokeWidth="1.5" />
-          <path d="M 120 24 C 120 80, 256 40, 256 120" fill="none" stroke="#E5E7EB" strokeWidth="1.5" />
-          <path d="M 420 24 C 420 80, 256 40, 256 120" fill="none" stroke="#E5E7EB" strokeWidth="1.5" />
-
-          {/* Animated beam lines */}
-          <path d="M 48 24 C 48 80, 256 40, 256 120" fill="none" stroke="url(#lineGradient)" strokeWidth="1.5" className="animate-beam-slow" />
-          <path d="M 120 24 C 120 80, 256 40, 256 120" fill="none" stroke="url(#lineGradient)" strokeWidth="1.5" className="animate-beam-slow" style={{ animationDelay: "-2s" }} />
-          <path d="M 420 24 C 420 80, 256 40, 256 120" fill="none" stroke="url(#lineGradient)" strokeWidth="1.5" className="animate-beam-slow" style={{ animationDelay: "-1s" }} />
-
-          {/* Center convergence node */}
-          <circle cx="256" cy="120" r="4" fill="#3B82F6" className="animate-pulse">
-            <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
-          </circle>
-
-          {/* Vertical line */}
-          <line x1="256" y1="120" x2="256" y2="160" stroke="#3B82F6" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.5" />
-        </svg>
+      {/* Connection lines - CSS based for proper alignment */}
+      <div className="absolute top-[72px] left-0 w-full h-[120px] pointer-events-none z-0 hidden sm:block">
+        {/* Line from Meta */}
+        <div className="absolute left-[32px] top-0 w-[calc(50%-32px)] h-full">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M 0 0 Q 0 80, 100 100" fill="none" stroke="#E5E7EB" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          </svg>
+        </div>
+        {/* Line from Google */}
+        <div className="absolute left-[88px] top-0 w-[calc(50%-88px)] h-full">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M 0 0 Q 0 70, 100 100" fill="none" stroke="#E5E7EB" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          </svg>
+        </div>
+        {/* Line from Shopify */}
+        <div className="absolute right-[32px] top-0 w-[calc(50%-32px)] h-full">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M 100 0 Q 100 80, 0 100" fill="none" stroke="#E5E7EB" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          </svg>
+        </div>
       </div>
 
       {/* Cards stack */}
@@ -135,7 +125,7 @@ function DataFlowViz() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
                 <h4 className="text-sm font-medium text-gray-900 font-mono">Real-time Sync</h4>
-                <span className="text-[10px] text-gray-400 font-mono">5 / 15 / 30 min</span>
+                <span className="text-[10px] text-gray-400 font-mono">15 min sync</span>
               </div>
               <p className="text-gray-500 text-xs font-mono leading-relaxed truncate opacity-70">
                 Campaigns, ad sets, ads, and metrics from all platforms
@@ -189,16 +179,6 @@ function DataFlowViz() {
         </motion.div>
       </div>
 
-      <style jsx global>{`
-        @keyframes beam-slow {
-          0% { stroke-dashoffset: 0; }
-          100% { stroke-dashoffset: -1000; }
-        }
-        .animate-beam-slow {
-          stroke-dasharray: 30 300;
-          animation: beam-slow 8s linear infinite;
-        }
-      `}</style>
     </div>
   );
 }
@@ -252,8 +232,8 @@ export default function DataIngestionSection() {
             <div className="space-y-6 mb-10">
               <FeatureItem
                 icon={RefreshCw}
-                title="Configurable sync intervals"
-                description="Choose 5, 15, or 30 minute sync intervals. Your data stays fresh without manual intervention."
+                title="15-minute sync intervals"
+                description="Your data syncs every 15 minutes, keeping your metrics fresh without manual intervention."
                 delay={0.2}
               />
               <FeatureItem

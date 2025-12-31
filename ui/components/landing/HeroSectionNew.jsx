@@ -34,28 +34,24 @@ function GoogleIcon({ className }) {
 
 function ShopifyIcon({ className }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M15.337 3.415c-.03-.09-.09-.12-.15-.12-.06 0-1.41-.06-1.41-.06s-.93-.93-1.05-1.05c-.12-.12-.33-.09-.42-.06 0 0-.21.06-.54.18-.33-1.02-1.11-1.95-2.4-1.95h-.09C8.807.105 8.427 0 8.067 0c-2.94 0-4.35 3.69-4.8 5.55l-2.04.63c-.63.21-.66.24-.75.84-.06.45-1.71 13.17-1.71 13.17l12.87 2.4 6.96-1.74s-3.03-16.32-3.06-16.44h.03zm-3.72.84c-.51.15-1.11.36-1.74.54 0-.51-.09-1.23-.27-1.8.66.12 1.14.84 1.41 1.26zm-2.85.87c-1.17.36-2.46.78-3.75 1.17.36-1.38 1.05-2.76 1.89-3.66.3-.33.75-.69 1.26-.9.51 1.02.6 2.46.6 3.39zm-1.71-4.38c.42 0 .78.15 1.08.42-.48.24-.93.63-1.35 1.05-.99 1.08-1.74 2.76-2.16 4.41-.99.3-1.98.63-2.88.9.6-2.43 2.88-6.72 5.31-6.78z" />
-    </svg>
+    <img src="/shopify.svg" alt="Shopify" className={className} />
   );
 }
 
-// Floating card component
+// Floating card component - optimized for performance
 function FloatingCard({ children, className = "", delay = 0, position = "" }) {
   return (
     <motion.div
-      className={`absolute ${position}`}
+      className={`absolute ${position} will-change-transform`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.6, ease: "easeOut" }}
     >
-      <motion.div
-        className={`bg-white/90 backdrop-blur-xl border border-gray-200/60 rounded-2xl shadow-xl shadow-gray-200/40 ${className}`}
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: delay * 2 }}
+      <div
+        className={`bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-2xl shadow-xl shadow-gray-200/40 ${className}`}
       >
         {children}
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -148,11 +144,11 @@ function InsightCard({ delay }) {
   );
 }
 
-// Data flow SVG visualization
+// Data flow SVG visualization - optimized for performance
 function DataFlowSVG() {
   return (
-    <div className="absolute inset-0 pointer-events-none w-full h-full overflow-hidden z-0 opacity-60 md:opacity-80">
-      <svg className="w-full h-full" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <div className="absolute inset-0 pointer-events-none w-full h-full overflow-hidden z-0 opacity-40 md:opacity-70 hidden md:block">
+      <svg className="w-full h-full will-change-transform" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="roadGradientLight" x1="0%" y1="100%" x2="100%" y2="0%">
             <stop offset="0%" style={{ stopColor: "#3B82F6", stopOpacity: 0.2 }} />
@@ -168,35 +164,24 @@ function DataFlowSVG() {
         {/* Main flow path */}
         <path id="pathMainLight" d="M 400 1000 C 600 900, 900 600, 1300 200" fill="none" />
 
-        {/* Background roads */}
-        <path d="M 600 1000 C 700 900, 800 700, 1300 550" fill="none" stroke="#E5E7EB" strokeWidth="30" opacity="0.5" strokeLinecap="round" />
-        <path d="M 900 1000 C 950 900, 900 700, 1300 450" fill="none" stroke="#E5E7EB" strokeWidth="20" opacity="0.4" strokeLinecap="round" />
+        {/* Background roads - simplified */}
+        <path d="M 600 1000 C 700 900, 800 700, 1300 550" fill="none" stroke="#E5E7EB" strokeWidth="30" opacity="0.4" strokeLinecap="round" />
 
         {/* Main highway */}
-        <path d="M 400 1000 C 600 900, 900 600, 1300 200" fill="none" stroke="url(#roadGradientLight)" strokeWidth="50" opacity="0.8" strokeLinecap="butt" />
-        <path d="M 400 1000 C 600 900, 900 600, 1300 200" fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="2" strokeDasharray="20 40" opacity="0.6" />
+        <path d="M 400 1000 C 600 900, 900 600, 1300 200" fill="none" stroke="url(#roadGradientLight)" strokeWidth="50" opacity="0.7" strokeLinecap="butt" />
 
-        {/* Animated data packet */}
-        <rect x="-30" y="-15" width="60" height="30" rx="4" fill="url(#lineGradientLight)" opacity="0.9" filter="drop-shadow(0 4px 12px rgba(59,130,246,0.3))">
-          <animateMotion dur="5s" repeatCount="indefinite" rotate="auto" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+        {/* Animated data packet - only on desktop */}
+        <rect className="hidden lg:block" x="-30" y="-15" width="60" height="30" rx="4" fill="url(#lineGradientLight)" opacity="0.9">
+          <animateMotion dur="6s" repeatCount="indefinite" rotate="auto" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
             <mpath href="#pathMainLight" />
           </animateMotion>
         </rect>
       </svg>
 
-      {/* Track lines - desktop only */}
-      <svg className="absolute inset-0 w-full h-full hidden lg:block" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
-        {/* Track 1 */}
-        <rect x="580" y="600" width="120" height="400" rx="60" transform="rotate(-15 640 800)" fill="none" stroke="#E5E7EB" strokeWidth="0.5" opacity="0.5" />
-        <rect x="580" y="600" width="120" height="400" rx="60" transform="rotate(-15 640 800)" fill="none" stroke="#3B82F6" strokeWidth="1" strokeLinecap="round" className="animate-beam" opacity="0.3" />
-
-        {/* Track 2 */}
-        <rect x="880" y="300" width="140" height="450" rx="70" transform="rotate(-25 950 525)" fill="none" stroke="#E5E7EB" strokeWidth="0.5" opacity="0.5" />
-        <rect x="880" y="300" width="140" height="450" rx="70" transform="rotate(-25 950 525)" fill="none" stroke="#06B6D4" strokeWidth="1" strokeLinecap="round" className="animate-beam" opacity="0.3" style={{ animationDelay: "-3s" }} />
-
-        {/* Track 3 */}
-        <rect x="1050" y="50" width="100" height="300" rx="50" transform="rotate(-35 1100 200)" fill="none" stroke="#E5E7EB" strokeWidth="0.5" opacity="0.5" />
-        <rect x="1050" y="50" width="100" height="300" rx="50" transform="rotate(-35 1100 200)" fill="none" stroke="#3B82F6" strokeWidth="1" strokeLinecap="round" className="animate-beam" opacity="0.3" style={{ animationDelay: "-6s" }} />
+      {/* Track lines - desktop only, simplified */}
+      <svg className="absolute inset-0 w-full h-full hidden xl:block will-change-transform" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+        <rect x="580" y="600" width="120" height="400" rx="60" transform="rotate(-15 640 800)" fill="none" stroke="#E5E7EB" strokeWidth="0.5" opacity="0.4" />
+        <rect x="880" y="300" width="140" height="450" rx="70" transform="rotate(-25 950 525)" fill="none" stroke="#E5E7EB" strokeWidth="0.5" opacity="0.4" />
       </svg>
     </div>
   );
@@ -205,9 +190,9 @@ function DataFlowSVG() {
 export default function HeroSectionNew() {
   return (
     <section className="relative w-full min-h-screen overflow-hidden flex flex-col">
-      {/* Subtle gradient background */}
+      {/* Subtle gradient background - optimized blur for mobile */}
       <div className="absolute inset-0 bg-gradient-to-b from-gray-50 via-white to-gray-50/50">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-radial from-blue-100/30 via-transparent to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-gradient-radial from-blue-100/20 via-transparent to-transparent rounded-full blur-2xl md:blur-3xl" />
       </div>
 
       {/* Navigation */}
@@ -254,17 +239,6 @@ export default function HeroSectionNew() {
         {/* Left: Text Content */}
         <div className="w-full md:w-[50%] lg:w-[45%] px-6 md:px-12 pt-8 md:pt-24 z-30 flex flex-col justify-start md:justify-between pb-12 h-full">
           <div className="max-w-xl mx-auto md:mx-0">
-            {/* Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-600 text-xs font-medium tracking-wide mb-6"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              NOW IN BETA
-            </motion.div>
-
             {/* Title */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -359,14 +333,6 @@ export default function HeroSectionNew() {
       <style jsx global>{`
         .bg-gradient-radial {
           background: radial-gradient(circle, var(--tw-gradient-stops));
-        }
-        @keyframes dash-flow {
-          0% { stroke-dashoffset: 0; }
-          100% { stroke-dashoffset: -1000; }
-        }
-        .animate-beam {
-          stroke-dasharray: 40 400;
-          animation: dash-flow 10s linear infinite;
         }
       `}</style>
     </section>

@@ -8,7 +8,7 @@
  */
 
 import { motion } from "framer-motion";
-import { Sparkles, SlidersHorizontal, TrendingUp, Target, DollarSign, BarChart3 } from "lucide-react";
+import { Sparkles, Search, TrendingUp, Target, DollarSign, BarChart3 } from "lucide-react";
 
 // AI Insights visualization - shows automated tagging and classification
 function AIInsightsViz() {
@@ -136,101 +136,78 @@ function AIInsightsViz() {
   );
 }
 
-// Granular control/filter visualization
-function GranularControlViz() {
+// Campaign Deep Dive visualization - chat-style copilot interaction
+function CampaignDeepDiveViz() {
   return (
     <div className="w-full bg-white rounded-xl border border-gray-200 p-5 shadow-sm relative overflow-hidden group-hover:shadow-md transition-shadow duration-500">
       {/* Window header */}
-      <div className="flex items-center justify-between mb-5 border-b border-gray-100 pb-3">
+      <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-800 tracking-wide">Filter Rules</span>
-          <span className="px-1.5 py-0.5 rounded-md bg-gray-100 text-[9px] font-medium text-gray-500 border border-gray-200">4 active</span>
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+            <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 6v6l4 2" strokeLinecap="round" />
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+          </div>
+          <span className="text-xs font-semibold text-gray-800">Campaign Analysis</span>
         </div>
-        <div className="flex gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-gray-200" />
-          <div className="w-2 h-2 rounded-full bg-gray-200" />
-        </div>
+        <span className="text-[9px] text-emerald-500 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
+        </span>
       </div>
 
-      {/* Filter rules */}
-      <div className="space-y-3 font-mono text-[10px] sm:text-xs relative z-10">
-        {/* Row 1 */}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-2"
-        >
-          <span className="w-10 text-gray-400 text-right font-medium">Where</span>
-          <div className="flex-1 h-7 bg-gray-50 border border-gray-200 rounded flex items-center px-2 text-blue-500">
-            platform
-          </div>
-          <div className="w-8 h-7 bg-gray-50 border border-gray-200 rounded flex items-center justify-center text-gray-400">
-            =
-          </div>
-          <div className="flex text-gray-700 bg-gray-50 w-20 h-7 border-gray-200 border rounded px-2 items-center text-[10px]">
-            meta
-          </div>
-          <button className="w-5 h-7 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M7 12a2 2 0 1 1-4 0a2 2 0 0 1 4 0m7 0a2 2 0 1 1-4 0a2 2 0 0 1 4 0m7 0a2 2 0 1 1-4 0a2 2 0 0 1 4 0" />
-            </svg>
-          </button>
-        </motion.div>
+      {/* User question */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.2 }}
+        className="flex justify-end mb-3"
+      >
+        <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-xl rounded-br-sm max-w-[85%]">
+          Why is my Summer Sale campaign underperforming?
+        </div>
+      </motion.div>
 
-        {/* Row 2 */}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
-          className="flex items-center gap-2"
-        >
-          <span className="w-10 text-gray-400 text-right font-medium">And</span>
-          <div className="flex-1 h-7 bg-gray-50 border border-gray-200 rounded flex items-center px-2 text-blue-500">
-            roas
-          </div>
-          <div className="w-8 h-7 bg-gray-50 border border-gray-200 rounded flex items-center justify-center text-gray-400">
-            &gt;
-          </div>
-          <div className="w-20 h-7 bg-gray-50 border border-gray-200 rounded flex items-center px-2 text-emerald-500">
-            2.0x
-          </div>
-          <button className="w-5 h-7 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M7 12a2 2 0 1 1-4 0a2 2 0 0 1 4 0m7 0a2 2 0 1 1-4 0a2 2 0 0 1 4 0m7 0a2 2 0 1 1-4 0a2 2 0 0 1 4 0" />
-            </svg>
-          </button>
-        </motion.div>
-
-        {/* Nested group */}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="pl-4 border-l border-gray-200 mt-2 pt-2 relative"
-        >
-          <span className="absolute -left-[17px] top-5 w-4 h-px bg-gray-200" />
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-gray-400 text-[9px] uppercase tracking-wider font-semibold">Or Group</span>
-          </div>
-
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-10 text-gray-400 text-right font-medium">Where</span>
-            <div className="flex-1 h-7 bg-gray-50 border border-gray-200 rounded flex items-center px-2 text-blue-500">
-              spend
+      {/* AI response */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.4 }}
+        className="space-y-2"
+      >
+        <div className="bg-gray-50 border border-gray-100 text-gray-700 text-xs px-3 py-2.5 rounded-xl rounded-bl-sm">
+          <p className="mb-2">I analyzed your <span className="text-blue-600 font-medium">Summer Sale</span> campaign:</p>
+          <div className="space-y-1.5 text-[11px]">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+              <span>CTR dropped 34% after creative change on Dec 15</span>
             </div>
-            <div className="w-8 h-7 bg-gray-50 border border-gray-200 rounded flex items-center justify-center text-gray-400">
-              &gt;
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span>CPA increased from $18 to $31</span>
             </div>
-            <div className="flex text-[10px] text-amber-500 bg-gray-50 w-20 h-7 border-gray-200 border rounded px-2 items-center">
-              $1,000
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>Recommendation: Revert to previous creative</span>
             </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
+
+      {/* Quick actions */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.6 }}
+        className="flex gap-2 mt-3"
+      >
+        <span className="text-[10px] px-2 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">Compare periods</span>
+        <span className="text-[10px] px-2 py-1 rounded-full bg-gray-50 text-gray-500 border border-gray-200">View creatives</span>
+      </motion.div>
 
       {/* Gradient glow */}
       <div className="absolute -right-5 -bottom-10 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-blue-500/10 transition-all duration-700" />
@@ -308,7 +285,7 @@ export default function FeaturesSectionNew() {
             </div>
           </motion.div>
 
-          {/* Card 2: Granular Control */}
+          {/* Card 2: Campaign Deep Dive */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -318,14 +295,14 @@ export default function FeaturesSectionNew() {
           >
             <div className="p-8 md:p-10 relative z-10 h-full flex flex-col">
               <h3 className="text-2xl font-medium text-gray-900 mb-3 flex items-center gap-3 tracking-tight">
-                <SlidersHorizontal className="w-7 h-7 text-blue-500" />
-                Granular Control
+                <Search className="w-7 h-7 text-blue-500" />
+                Campaign Deep Dive
               </h3>
               <p className="text-gray-500 font-light mb-8 text-base leading-relaxed">
-                Filter, segment, and drill down into your data with powerful boolean operators and custom rules.
+                Ask Copilot to analyze any campaign. Get instant insights on what's working and what needs fixing.
               </p>
               <div className="mt-auto">
-                <GranularControlViz />
+                <CampaignDeepDiveViz />
               </div>
             </div>
           </motion.div>

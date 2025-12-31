@@ -20,6 +20,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.0",
+    "@rudderstack/analytics-js": "^3.26.0",
     "@shadergradient/react": "^2.4.5",
     "@tabler/icons-react": "^3.35.0",
     "@xyflow/react": "^12.9.2",
