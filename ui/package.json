@@ -23,6 +23,7 @@
     "@rudderstack/analytics-js": "^3.26.0",
     "@shadergradient/react": "^2.4.5",
     "@tabler/icons-react": "^3.35.0",
+    "@vercel/analytics": "^1.6.1",
     "@xyflow/react": "^12.9.2",
     "babel-plugin-react-compiler": "^1.0.0",
     "chart.js": "^4.5.1",
