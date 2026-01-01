@@ -54,7 +54,7 @@ export default function FooterSectionNew() {
             <p className="leading-relaxed text-sm text-gray-500 mb-6">
               The unified ad analytics platform for modern growth teams. Connect, analyze, and optimize your ad spend across all platforms.
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-4 mb-4">
               <a href="https://x.com/metricxapp" className="text-gray-400 hover:text-gray-600 transition-colors">
                 <TwitterIcon className="w-5 h-5" />
               </a>
@@ -65,6 +65,12 @@ export default function FooterSectionNew() {
                 <GithubIcon className="w-5 h-5" />
               </a> */}
             </div>
+            <a
+              href="mailto:info@metricx.ai"
+              className="text-sm text-gray-500 hover:text-blue-500 transition-colors"
+            >
+              info@metricx.ai
+            </a>
           </div>
 
           {/* Product column */}
