@@ -112,8 +112,9 @@ function SubscribePageContent() {
         const data = await getBillingStatus();
         setBillingData(data);
 
-        // Already has active subscription - redirect to dashboard
-        if (data.billing?.is_access_allowed && data.billing?.billing_status === 'active') {
+        // Already has paid subscription (starter tier) - redirect to dashboard
+        // Note: billing_tier is the feature tier (free/starter), not billing_status
+        if (data.billing?.billing_tier === 'starter') {
           router.replace('/dashboard');
           return;
         }
