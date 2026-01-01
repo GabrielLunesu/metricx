@@ -9,11 +9,12 @@
  *
  * Flow:
  *   1. Free tier user clicks "Upgrade" from locked feature or nav
- *   2. User selects plan (monthly $79 / annual $569)
- *   3. Checkout created via backend
- *   4. User redirected to Polar checkout
- *   5. After success, webhook sets billing_tier = 'starter'
- *   6. Polar redirects back with ?checkout=success
+ *   2. Page checks billing status - redirects to dashboard if already subscribed
+ *   3. User selects plan (monthly $79 / annual $569)
+ *   4. Checkout created via backend
+ *   5. User redirected to Polar checkout
+ *   6. After success, webhook sets billing_tier = 'starter'
+ *   7. Polar redirects back with ?checkout=success
  *
  * Free Tier Limitations (billing_tier = 'free'):
  *   - 1 ad account (Meta OR Google)
@@ -22,7 +23,7 @@
  *
  * REFERENCES:
  *   - backend/app/routers/polar.py (checkout endpoint)
- *   - ui/lib/workspace.js (createCheckout)
+ *   - ui/lib/workspace.js (createCheckout, getBillingStatus)
  *   - docs-arch/living-docs/BILLING.md
  */
 
@@ -32,15 +33,8 @@ import { useAuth } from '@clerk/nextjs';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { createCheckout, getActiveWorkspace } from '@/lib/workspace';
+import { createCheckout, getBillingStatus } from '@/lib/workspace';
 import { Check, Loader2 } from 'lucide-react';
-
-const FREE_TIER_FEATURES = [
-  'Dashboard access',
-  '1 ad account (Meta or Google)',
-  'Shopify connection',
-  'Basic metrics',
-];
 
 const PLANS = [
   {
@@ -89,7 +83,7 @@ function SubscribePageContent() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [error, setError] = useState(null);
-  const [workspace, setWorkspace] = useState(null);
+  const [billingData, setBillingData] = useState(null);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
   // Handle checkout success callback
@@ -103,14 +97,26 @@ function SubscribePageContent() {
     }
   }, [searchParams, router]);
 
-  // Load workspace data
+  // Load billing status and check if already subscribed
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
+    
+    // Skip billing check if we're showing success state
+    if (searchParams.get('checkout') === 'success') {
+      setLoading(false);
+      return;
+    }
 
-    const loadWorkspace = async () => {
+    const checkBillingStatus = async () => {
       try {
-        const data = await getActiveWorkspace();
-        setWorkspace(data);
+        const data = await getBillingStatus();
+        setBillingData(data);
+
+        // Already has active subscription - redirect to dashboard
+        if (data.billing?.is_access_allowed && data.billing?.billing_status === 'active') {
+          router.replace('/dashboard');
+          return;
+        }
 
         // If workspace ID is in URL, verify it matches
         const urlWorkspaceId = searchParams.get('workspaceId');
@@ -118,25 +124,25 @@ function SubscribePageContent() {
           setError('You can only subscribe to your active workspace');
         }
       } catch (err) {
-        console.error('[subscribe] Failed to load workspace:', err);
+        console.error('[subscribe] Failed to check billing status:', err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    loadWorkspace();
-  }, [isLoaded, isSignedIn, searchParams]);
+    checkBillingStatus();
+  }, [isLoaded, isSignedIn, searchParams, router]);
 
   const handleSubscribe = async (planId) => {
-    if (!workspace) return;
+    if (!billingData) return;
 
     setSelectedPlan(planId);
     setCheckoutLoading(true);
     setError(null);
 
     try {
-      const { checkout_url } = await createCheckout(workspace.workspace_id, planId);
+      const { checkout_url } = await createCheckout(billingData.workspace_id, planId);
       // Redirect to Polar checkout
       window.location.href = checkout_url;
     } catch (err) {
@@ -171,6 +177,15 @@ function SubscribePageContent() {
     );
   }
 
+  // Loading state (checking billing)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Header */}
@@ -192,8 +207,8 @@ function SubscribePageContent() {
             Upgrade to Starter
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            {workspace ? (
-              <>Unlock full features for <span className="font-medium">{workspace.workspace_name}</span></>
+            {billingData ? (
+              <>Unlock full features for <span className="font-medium">{billingData.workspace_name}</span></>
             ) : (
               'Unlock all features with unlimited ad accounts'
             )}
@@ -210,72 +225,65 @@ function SubscribePageContent() {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
-        ) : (
-          /* Plan cards */
-          <div className="grid md:grid-cols-2 gap-6">
-            {PLANS.map((plan) => (
-              <Card
-                key={plan.id}
-                className={`relative bg-white ${plan.popular ? 'border-blue-500 border-2' : 'border-gray-200'}`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-                      Most Popular
-                    </span>
-                  </div>
+        {/* Plan cards */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {PLANS.map((plan) => (
+            <Card
+              key={plan.id}
+              className={`relative bg-white ${plan.popular ? 'border-blue-500 border-2' : 'border-gray-200'}`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+                    Most Popular
+                  </span>
+                </div>
+              )}
+
+              <CardHeader className="text-center pt-8">
+                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                <CardDescription>{plan.description}</CardDescription>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
+                  <span className="text-gray-500">{plan.period}</span>
+                </div>
+                {plan.savings && (
+                  <p className="text-sm text-green-600 font-medium mt-1">{plan.savings}</p>
                 )}
+              </CardHeader>
 
-                <CardHeader className="text-center pt-8">
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                    <span className="text-gray-500">{plan.period}</span>
-                  </div>
-                  {plan.savings && (
-                    <p className="text-sm text-green-600 font-medium mt-1">{plan.savings}</p>
+              <CardContent>
+                <ul className="space-y-3">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700 text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  variant={plan.popular ? 'default' : 'outline'}
+                  size="lg"
+                  disabled={checkoutLoading}
+                  onClick={() => handleSubscribe(plan.id)}
+                >
+                  {checkoutLoading && selectedPlan === plan.id ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Redirecting to checkout...
+                    </>
+                  ) : (
+                    'Upgrade Now'
                   )}
-                </CardHeader>
-
-                <CardContent>
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span className="text-gray-700 text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-
-                <CardFooter>
-                  <Button
-                    className="w-full"
-                    variant={plan.popular ? 'default' : 'outline'}
-                    size="lg"
-                    disabled={checkoutLoading}
-                    onClick={() => handleSubscribe(plan.id)}
-                  >
-                    {checkoutLoading && selectedPlan === plan.id ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Redirecting to checkout...
-                      </>
-                    ) : (
-                      'Upgrade Now'
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
 
         {/* Trust badges */}
         <div className="mt-12 text-center">

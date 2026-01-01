@@ -65,7 +65,7 @@ router = APIRouter(
         401: {"model": schemas.ErrorResponse, "description": "Unauthorized"},
         403: {"model": schemas.ErrorResponse, "description": "Forbidden"},
         500: {"model": schemas.ErrorResponse, "description": "Internal Server Error"},
-    }
+    },
 )
 
 webhook_router = APIRouter(
@@ -118,20 +118,19 @@ def _get_product_id_for_plan(plan: str) -> str:
         if not POLAR_MONTHLY_PRODUCT_ID:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Monthly product not configured"
+                detail="Monthly product not configured",
             )
         return POLAR_MONTHLY_PRODUCT_ID
     elif plan == "annual":
         if not POLAR_ANNUAL_PRODUCT_ID:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Annual product not configured"
+                detail="Annual product not configured",
             )
         return POLAR_ANNUAL_PRODUCT_ID
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid plan: {plan}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid plan: {plan}"
         )
 
 
@@ -156,7 +155,7 @@ async def _create_polar_checkout(
     if not POLAR_ACCESS_TOKEN:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Polar API not configured"
+            detail="Polar API not configured",
         )
 
     headers = {
@@ -182,10 +181,12 @@ async def _create_polar_checkout(
         )
 
         if response.status_code not in (200, 201):
-            logger.error(f"Polar checkout creation failed: {response.status_code} {response.text}")
+            logger.error(
+                f"Polar checkout creation failed: {response.status_code} {response.text}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to create checkout: {response.text}"
+                detail=f"Failed to create checkout: {response.text}",
             )
 
         data = response.json()
@@ -213,7 +214,7 @@ async def _get_polar_customer_portal_url(customer_id: str) -> str:
     if not POLAR_ACCESS_TOKEN:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Polar API not configured"
+            detail="Polar API not configured",
         )
 
     headers = {
@@ -230,10 +231,12 @@ async def _get_polar_customer_portal_url(customer_id: str) -> str:
         )
 
         if response.status_code not in (200, 201):
-            logger.error(f"Polar portal creation failed: {response.status_code} {response.text}")
+            logger.error(
+                f"Polar portal creation failed: {response.status_code} {response.text}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Failed to get billing portal URL"
+                detail="Failed to get billing portal URL",
             )
 
         data = response.json()
@@ -259,9 +262,7 @@ def _verify_webhook_signature(payload: bytes, signature: str) -> bool:
 
     # Polar uses SHA256 HMAC
     expected = hmac.new(
-        POLAR_WEBHOOK_SECRET.encode(),
-        payload,
-        hashlib.sha256
+        POLAR_WEBHOOK_SECRET.encode(), payload, hashlib.sha256
     ).hexdigest()
 
     return hmac.compare_digest(expected, signature)
@@ -286,13 +287,22 @@ def _is_event_processed(event_key: str, db: Session) -> bool:
     WHAT: Queries PolarWebhookEvent table for existing key
     WHY: Idempotency - skip duplicate events
     """
-    existing = db.query(PolarWebhookEvent).filter(
-        PolarWebhookEvent.event_key == event_key
-    ).first()
+    existing = (
+        db.query(PolarWebhookEvent)
+        .filter(PolarWebhookEvent.event_key == event_key)
+        .first()
+    )
     return existing is not None
 
 
-def _record_event(event_key: str, event_type: str, data_id: str, payload: dict, result: str, db: Session):
+def _record_event(
+    event_key: str,
+    event_type: str,
+    data_id: str,
+    payload: dict,
+    result: str,
+    db: Session,
+):
     """Record webhook event for idempotency tracking.
 
     WHAT: Inserts row into PolarWebhookEvent table
@@ -331,21 +341,20 @@ def _record_event(event_key: str, event_type: str, data_id: str, payload: dict, 
         - Gate routes (/onboarding, /dashboard)
         - Show subscription status in Settings
         - Provide "Subscribe" or "Manage" CTAs
-    """
+    """,
 )
 async def get_billing_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get billing status for current workspace."""
-    workspace = db.query(Workspace).filter(
-        Workspace.id == current_user.workspace_id
-    ).first()
+    workspace = (
+        db.query(Workspace).filter(Workspace.id == current_user.workspace_id).first()
+    )
 
     if not workspace:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
 
     can_manage = _can_manage_billing(current_user, workspace.id, db)
@@ -355,7 +364,9 @@ async def get_billing_status(
     portal_url = None
     if can_manage and workspace.polar_customer_id:
         try:
-            portal_url = await _get_polar_customer_portal_url(workspace.polar_customer_id)
+            portal_url = await _get_polar_customer_portal_url(
+                workspace.polar_customer_id
+            )
         except Exception as e:
             logger.warning(f"Failed to get portal URL: {e}")
 
@@ -399,7 +410,7 @@ async def get_billing_status(
         2. Create Polar checkout via API
         3. Persist checkout → workspace mapping
         4. Return checkout URL for redirect
-    """
+    """,
 )
 async def create_checkout(
     payload: schemas.CheckoutCreateRequest,
@@ -413,22 +424,24 @@ async def create_checkout(
     workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
     if not workspace:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
 
     # Check user can manage billing
     if not _can_manage_billing(current_user, workspace_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only workspace Owner or Admin can manage billing"
+            detail="Only workspace Owner or Admin can manage billing",
         )
 
     # Check if already subscribed
-    if workspace.billing_status in (BillingStatusEnum.trialing, BillingStatusEnum.active):
+    if workspace.billing_status in (
+        BillingStatusEnum.trialing,
+        BillingStatusEnum.active,
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Workspace already has an active subscription"
+            detail="Workspace already has an active subscription",
         )
 
     # Get product ID for plan
@@ -452,7 +465,7 @@ async def create_checkout(
     if not checkout_id or not checkout_url:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Invalid checkout response from Polar"
+            detail="Invalid checkout response from Polar",
         )
 
     # Persist checkout mapping
@@ -499,7 +512,7 @@ async def create_checkout(
         - Update payment method
         - View invoices
         - Cancel subscription
-    """
+    """,
 )
 async def get_billing_portal(
     workspace_id: str,
@@ -512,20 +525,19 @@ async def get_billing_portal(
     workspace = db.query(Workspace).filter(Workspace.id == ws_uuid).first()
     if not workspace:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
 
     if not _can_manage_billing(current_user, ws_uuid, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only workspace Owner or Admin can access billing portal"
+            detail="Only workspace Owner or Admin can access billing portal",
         )
 
     if not workspace.polar_customer_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Workspace does not have an active subscription"
+            detail="Workspace does not have an active subscription",
         )
 
     portal_url = await _get_polar_customer_portal_url(workspace.polar_customer_id)
@@ -558,7 +570,7 @@ async def get_billing_portal(
     Testing:
         - Create actual checkout to generate events
         - Use Polar webhook delivery history "Replay" to resend
-    """
+    """,
 )
 async def handle_polar_webhook(
     request: Request,
@@ -573,8 +585,7 @@ async def handle_polar_webhook(
     if not _verify_webhook_signature(body, signature):
         logger.warning("Invalid webhook signature")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid signature"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature"
         )
 
     # Parse payload
@@ -583,8 +594,7 @@ async def handle_polar_webhook(
     except Exception as e:
         logger.error(f"Failed to parse webhook payload: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid JSON payload"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload"
         )
 
     event_type = payload.get("type", "unknown")
@@ -610,7 +620,9 @@ async def handle_polar_webhook(
         return schemas.WebhookResponse(event_type=event_type, action=action)
     except Exception as e:
         logger.error(f"Webhook processing error: {e}")
-        _record_event(event_key, event_type, data.get("id"), payload, f"error: {str(e)}", db)
+        _record_event(
+            event_key, event_type, data.get("id"), payload, f"error: {str(e)}", db
+        )
         # Still return 200 to prevent Polar from retrying
         return schemas.WebhookResponse(event_type=event_type, action="error")
 
@@ -655,9 +667,11 @@ async def _handle_checkout_updated(data: dict, db: Session) -> str:
     logger.info(f"Checkout {checkout_id} updated: status={checkout_status}")
 
     # Find checkout mapping
-    mapping = db.query(PolarCheckoutMapping).filter(
-        PolarCheckoutMapping.polar_checkout_id == checkout_id
-    ).first()
+    mapping = (
+        db.query(PolarCheckoutMapping)
+        .filter(PolarCheckoutMapping.polar_checkout_id == checkout_id)
+        .first()
+    )
 
     if not mapping:
         logger.warning(f"No checkout mapping found for {checkout_id}")
@@ -668,9 +682,7 @@ async def _handle_checkout_updated(data: dict, db: Session) -> str:
     mapping.polar_subscription_id = subscription_id
 
     # Get workspace
-    workspace = db.query(Workspace).filter(
-        Workspace.id == mapping.workspace_id
-    ).first()
+    workspace = db.query(Workspace).filter(Workspace.id == mapping.workspace_id).first()
 
     if not workspace:
         logger.error(f"Workspace not found for mapping: {mapping.workspace_id}")
@@ -684,7 +696,9 @@ async def _handle_checkout_updated(data: dict, db: Session) -> str:
         workspace.billing_tier = BillingPlanEnum.starter  # Upgrade to paid tier
         workspace.billing_plan = mapping.requested_plan
         workspace.pending_since = None  # Clear pending state
-        logger.info(f"Workspace {workspace.id} upgraded to starter tier with subscription {subscription_id}")
+        logger.info(
+            f"Workspace {workspace.id} upgraded to starter tier with subscription {subscription_id}"
+        )
     elif checkout_status == "failed":
         workspace.billing_status = BillingStatusEnum.locked
         logger.info(f"Checkout failed for workspace {workspace.id}")
@@ -709,17 +723,23 @@ async def _handle_subscription_active(data: dict, db: Session) -> str:
     current_period_end = data.get("current_period_end")
     trial_end = data.get("trial_end")
 
-    workspace = db.query(Workspace).filter(
-        Workspace.polar_subscription_id == subscription_id
-    ).first()
+    workspace = (
+        db.query(Workspace)
+        .filter(Workspace.polar_subscription_id == subscription_id)
+        .first()
+    )
 
     if not workspace:
         # Try to find by checkout mapping
-        mapping = db.query(PolarCheckoutMapping).filter(
-            PolarCheckoutMapping.polar_subscription_id == subscription_id
-        ).first()
+        mapping = (
+            db.query(PolarCheckoutMapping)
+            .filter(PolarCheckoutMapping.polar_subscription_id == subscription_id)
+            .first()
+        )
         if mapping:
-            workspace = db.query(Workspace).filter(Workspace.id == mapping.workspace_id).first()
+            workspace = (
+                db.query(Workspace).filter(Workspace.id == mapping.workspace_id).first()
+            )
 
     if not workspace:
         logger.warning(f"No workspace found for subscription {subscription_id}")
@@ -733,9 +753,13 @@ async def _handle_subscription_active(data: dict, db: Session) -> str:
 
     # Update period timestamps
     if current_period_start:
-        workspace.current_period_start = datetime.fromisoformat(current_period_start.replace("Z", "+00:00"))
+        workspace.current_period_start = datetime.fromisoformat(
+            current_period_start.replace("Z", "+00:00")
+        )
     if current_period_end:
-        workspace.current_period_end = datetime.fromisoformat(current_period_end.replace("Z", "+00:00"))
+        workspace.current_period_end = datetime.fromisoformat(
+            current_period_end.replace("Z", "+00:00")
+        )
     if trial_end:
         workspace.trial_end = datetime.fromisoformat(trial_end.replace("Z", "+00:00"))
 
@@ -756,9 +780,11 @@ async def _handle_subscription_canceled(data: dict, db: Session) -> str:
     cancel_at_period_end = data.get("cancel_at_period_end", True)
     current_period_end = data.get("current_period_end")
 
-    workspace = db.query(Workspace).filter(
-        Workspace.polar_subscription_id == subscription_id
-    ).first()
+    workspace = (
+        db.query(Workspace)
+        .filter(Workspace.polar_subscription_id == subscription_id)
+        .first()
+    )
 
     if not workspace:
         logger.warning(f"No workspace found for subscription {subscription_id}")
@@ -769,11 +795,15 @@ async def _handle_subscription_canceled(data: dict, db: Session) -> str:
 
     # Update period end if provided
     if current_period_end:
-        workspace.current_period_end = datetime.fromisoformat(current_period_end.replace("Z", "+00:00"))
+        workspace.current_period_end = datetime.fromisoformat(
+            current_period_end.replace("Z", "+00:00")
+        )
 
     db.commit()
 
-    logger.info(f"Workspace {workspace.id} subscription canceled (cancel_at_period_end={cancel_at_period_end})")
+    logger.info(
+        f"Workspace {workspace.id} subscription canceled (cancel_at_period_end={cancel_at_period_end})"
+    )
     return "processed"
 
 
@@ -785,9 +815,11 @@ async def _handle_subscription_revoked(data: dict, db: Session) -> str:
     """
     subscription_id = data.get("id")
 
-    workspace = db.query(Workspace).filter(
-        Workspace.polar_subscription_id == subscription_id
-    ).first()
+    workspace = (
+        db.query(Workspace)
+        .filter(Workspace.polar_subscription_id == subscription_id)
+        .first()
+    )
 
     if not workspace:
         logger.warning(f"No workspace found for subscription {subscription_id}")
@@ -812,9 +844,11 @@ async def _handle_subscription_updated(data: dict, db: Session) -> str:
     current_period_end = data.get("current_period_end")
     trial_end = data.get("trial_end")
 
-    workspace = db.query(Workspace).filter(
-        Workspace.polar_subscription_id == subscription_id
-    ).first()
+    workspace = (
+        db.query(Workspace)
+        .filter(Workspace.polar_subscription_id == subscription_id)
+        .first()
+    )
 
     if not workspace:
         logger.warning(f"No workspace found for subscription {subscription_id}")
@@ -833,9 +867,13 @@ async def _handle_subscription_updated(data: dict, db: Session) -> str:
 
     # Update timestamps
     if current_period_start:
-        workspace.current_period_start = datetime.fromisoformat(current_period_start.replace("Z", "+00:00"))
+        workspace.current_period_start = datetime.fromisoformat(
+            current_period_start.replace("Z", "+00:00")
+        )
     if current_period_end:
-        workspace.current_period_end = datetime.fromisoformat(current_period_end.replace("Z", "+00:00"))
+        workspace.current_period_end = datetime.fromisoformat(
+            current_period_end.replace("Z", "+00:00")
+        )
     if trial_end:
         workspace.trial_end = datetime.fromisoformat(trial_end.replace("Z", "+00:00"))
 

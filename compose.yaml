@@ -41,6 +41,9 @@ services:
       # Shopify OAuth Configuration
       SHOPIFY_API_KEY: ${SHOPIFY_API_KEY:-}
       SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET:-}
+      
+      # Pixel/Attribution
+      PIXEL_ENDPOINT: ${PIXEL_ENDPOINT:-https://backend.beta.adnavi.t8zgrthold5r2.defang.app/v1/pixel-events}
 
        # OAuth Redirect URIs
       META_OAUTH_REDIRECT_URI:
@@ -78,6 +81,15 @@ services:
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
       LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+
+      # ===========================================
+      # Polar Billing
+      # ===========================================
+      POLAR_ACCESS_TOKEN: ${POLAR_ACCESS_TOKEN:-}
+      POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET:-}
+      POLAR_ORGANIZATION_ID: ${POLAR_ORGANIZATION_ID:-}
+      POLAR_MONTHLY_PRODUCT_ID: ${POLAR_MONTHLY_PRODUCT_ID:-}
+      POLAR_ANNUAL_PRODUCT_ID: ${POLAR_ANNUAL_PRODUCT_ID:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s

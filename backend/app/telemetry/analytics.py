@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 # RudderStack SDK import - gracefully handle if not installed
 try:
     from rudderstack import analytics as rudderstack_analytics
+
     RUDDERSTACK_AVAILABLE = True
 except ImportError:
     RUDDERSTACK_AVAILABLE = False
@@ -91,13 +92,17 @@ def init_analytics() -> bool:
     global _initialized
 
     if not RUDDERSTACK_AVAILABLE:
-        logger.warning("[ANALYTICS] rudderstack-sdk-python not installed - user tracking disabled")
+        logger.warning(
+            "[ANALYTICS] rudderstack-sdk-python not installed - user tracking disabled"
+        )
         return False
 
     write_key, data_plane_url = get_rudderstack_config()
 
     if not write_key or not data_plane_url:
-        logger.warning("[ANALYTICS] RudderStack not configured - user tracking disabled")
+        logger.warning(
+            "[ANALYTICS] RudderStack not configured - user tracking disabled"
+        )
         return False
 
     try:
@@ -105,7 +110,9 @@ def init_analytics() -> bool:
         rudderstack_analytics.dataPlaneUrl = data_plane_url
 
         # Configure for async operation
-        rudderstack_analytics.debug = os.environ.get("RUDDERSTACK_DEBUG", "false").lower() == "true"
+        rudderstack_analytics.debug = (
+            os.environ.get("RUDDERSTACK_DEBUG", "false").lower() == "true"
+        )
         rudderstack_analytics.on_error = _on_rudderstack_error
         rudderstack_analytics.send = True
         rudderstack_analytics.sync_mode = False  # Async for better performance
@@ -128,7 +135,7 @@ def identify(
     user_id: str,
     email: Optional[str] = None,
     name: Optional[str] = None,
-    traits: Optional[Dict[str, Any]] = None
+    traits: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     Identify a user in the analytics system.
@@ -166,9 +173,7 @@ def identify(
 
 
 def track(
-    user_id: str,
-    event: str,
-    properties: Optional[Dict[str, Any]] = None
+    user_id: str, event: str, properties: Optional[Dict[str, Any]] = None
 ) -> None:
     """
     Track a user event.
@@ -217,7 +222,7 @@ def track_user_signed_up(
     user_id: str,
     email: str,
     name: Optional[str] = None,
-    workspace_id: Optional[str] = None
+    workspace_id: Optional[str] = None,
 ) -> None:
     """Track user signup event.
 
@@ -232,7 +237,7 @@ def track_user_signed_up(
         user_id=user_id,
         email=email,
         name=name,
-        traits={"workspace_id": workspace_id} if workspace_id else None
+        traits={"workspace_id": workspace_id} if workspace_id else None,
     )
 
     # Then track the signup event
@@ -243,14 +248,12 @@ def track_user_signed_up(
             "email": email,
             "name": name,
             "workspace_id": workspace_id,
-        }
+        },
     )
 
 
 def track_user_logged_in(
-    user_id: str,
-    email: str,
-    workspace_id: Optional[str] = None
+    user_id: str, email: str, workspace_id: Optional[str] = None
 ) -> None:
     """Track user login event.
 
@@ -263,7 +266,10 @@ def track_user_logged_in(
     identify(
         user_id=user_id,
         email=email,
-        traits={"workspace_id": workspace_id, "last_login": datetime.utcnow().isoformat()}
+        traits={
+            "workspace_id": workspace_id,
+            "last_login": datetime.utcnow().isoformat(),
+        },
     )
 
     track(
@@ -272,7 +278,7 @@ def track_user_logged_in(
         properties={
             "email": email,
             "workspace_id": workspace_id,
-        }
+        },
     )
 
 
@@ -280,7 +286,7 @@ def track_connected_google_ads(
     user_id: str,
     workspace_id: str,
     account_id: Optional[str] = None,
-    account_name: Optional[str] = None
+    account_name: Optional[str] = None,
 ) -> None:
     """Track Google Ads connection event.
 
@@ -298,7 +304,7 @@ def track_connected_google_ads(
             "account_id": account_id,
             "account_name": account_name,
             "provider": "google",
-        }
+        },
     )
 
 
@@ -306,7 +312,7 @@ def track_connected_meta_ads(
     user_id: str,
     workspace_id: str,
     account_id: Optional[str] = None,
-    account_name: Optional[str] = None
+    account_name: Optional[str] = None,
 ) -> None:
     """Track Meta Ads connection event.
 
@@ -324,14 +330,12 @@ def track_connected_meta_ads(
             "account_id": account_id,
             "account_name": account_name,
             "provider": "meta",
-        }
+        },
     )
 
 
 def track_connected_shopify(
-    user_id: str,
-    workspace_id: str,
-    shop_domain: Optional[str] = None
+    user_id: str, workspace_id: str, shop_domain: Optional[str] = None
 ) -> None:
     """Track Shopify connection event.
 
@@ -347,7 +351,7 @@ def track_connected_shopify(
             "workspace_id": workspace_id,
             "shop_domain": shop_domain,
             "provider": "shopify",
-        }
+        },
     )
 
 
@@ -357,7 +361,7 @@ def track_copilot_query_sent(
     question_length: int,
     has_context: bool = False,
     success: Optional[bool] = None,
-    latency_ms: Optional[int] = None
+    latency_ms: Optional[int] = None,
 ) -> None:
     """Track AI copilot query event.
 
@@ -378,7 +382,7 @@ def track_copilot_query_sent(
             "has_context": has_context,
             "success": success,
             "latency_ms": latency_ms,
-        }
+        },
     )
 
 
