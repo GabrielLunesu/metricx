@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Check, X, ChevronDown } from 'lucide-react';
 
 import { getApiBase } from '../lib/config';
+import { authFetch } from '../lib/api';
 
 /**
  * MetaAccountSelectionModal Component
@@ -36,15 +37,19 @@ export default function MetaAccountSelectionModal({
   useEffect(() => {
     if (!open || !sessionId) return;
 
-    // Fetch accounts from backend
+    // Fetch accounts from backend using authFetch (handles Clerk token automatically)
     const fetchAccounts = async () => {
       try {
         setLoading(true);
         setError(null);
+        
         const baseUrl = getApiBase();
-        const response = await fetch(`${baseUrl}/auth/meta/accounts?session_id=${sessionId}`, {
-          credentials: 'include',
-        });
+        const response = await authFetch(`${baseUrl}/auth/meta/accounts?session_id=${sessionId}`);
+
+        if (response.status === 401) {
+          // Session expired - user needs to refresh or re-authenticate
+          throw new Error('Session expired. Please refresh the page and try again.');
+        }
 
         if (!response.ok) {
           throw new Error('Failed to fetch accounts');
@@ -109,13 +114,10 @@ export default function MetaAccountSelectionModal({
     try {
       setSubmitting(true);
       setError(null);
+      
       const baseUrl = getApiBase();
-      const response = await fetch(`${baseUrl}/auth/meta/connect-selected`, {
+      const response = await authFetch(`${baseUrl}/auth/meta/connect-selected`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({
           selections: Array.from(selectedIds).map(id => ({
             account_id: id,

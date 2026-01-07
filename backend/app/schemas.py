@@ -1597,6 +1597,132 @@ class WorkspaceBillingUpdate(BaseModel):
     current_period_end: Optional[datetime] = None
 
 
+# ==========================================================================
+# ADMIN DASHBOARD SCHEMAS
+# ==========================================================================
+# WHAT: Request/response schemas for admin dashboard operations
+# WHY: Platform-level admin needs to manage users and workspaces
+# REFERENCES: backend/app/routers/admin.py
+
+
+class AdminWorkspaceSummary(BaseModel):
+    """Summary of a workspace for admin listing.
+
+    WHAT: Workspace info with billing status and member count
+    WHY: Admin dashboard needs to see all workspaces at a glance
+    """
+
+    id: str
+    name: str
+    billing_status: str
+    billing_tier: str
+    member_count: int
+    owner_email: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserWorkspace(BaseModel):
+    """Workspace info attached to a user in admin view.
+
+    WHAT: Minimal workspace info for user listing
+    WHY: Shows which workspaces a user belongs to
+    """
+
+    id: str
+    name: str
+    role: str
+    billing_tier: str
+
+
+class AdminUserOut(BaseModel):
+    """User details for admin dashboard.
+
+    WHAT: Full user info including superuser status and workspaces
+    WHY: Admin needs to see all user details for management
+    """
+
+    id: str
+    email: str
+    name: str
+    clerk_id: Optional[str] = None
+    is_superuser: bool
+    is_verified: bool
+    avatar_url: Optional[str] = None
+    workspaces: List[AdminUserWorkspace] = []
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUsersResponse(BaseModel):
+    """Response for admin users list.
+
+    WHAT: Paginated list of users
+    WHY: Admin dashboard needs to display all users
+    """
+
+    users: List[AdminUserOut]
+    total: int
+
+
+class AdminWorkspacesResponse(BaseModel):
+    """Response for admin workspaces list.
+
+    WHAT: Paginated list of workspaces
+    WHY: Admin dashboard needs to display all workspaces
+    """
+
+    workspaces: List[AdminWorkspaceSummary]
+    total: int
+
+
+class AdminSuperuserUpdate(BaseModel):
+    """Request to update user superuser status.
+
+    WHAT: Toggle superuser flag
+    WHY: Admin needs to grant/revoke platform admin access
+    """
+
+    is_superuser: bool
+
+
+class AdminBillingUpdate(BaseModel):
+    """Request to update workspace billing tier.
+
+    WHAT: Update billing_tier (free/starter)
+    WHY: Admin needs to grant premium access or downgrade workspaces
+    """
+
+    billing_tier: Literal["free", "starter"]
+
+
+class AdminDeleteUserResponse(BaseModel):
+    """Response from user deletion.
+
+    WHAT: Confirmation of user deletion with details
+    WHY: Admin needs to know what was deleted
+    """
+
+    success: bool
+    user_id: str
+    clerk_deleted: bool
+    workspaces_deleted: int
+    message: str
+
+
+class AdminMeResponse(BaseModel):
+    """Response for admin status check.
+
+    WHAT: Current user's superuser status
+    WHY: Frontend needs to know if user can access admin dashboard
+    """
+
+    is_superuser: bool
+    user_id: str
+    email: str
+
+
 # Resolve forward references for nested models
 WorkspaceMemberOutLite.model_rebuild()
 WorkspaceMemberOut.model_rebuild()

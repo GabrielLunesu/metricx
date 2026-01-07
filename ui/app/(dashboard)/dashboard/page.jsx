@@ -24,7 +24,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Search, ArrowRight, Zap, X } from "lucide-react";
 import { currentUser } from "../../../lib/workspace";
 import { fetchUnifiedDashboard } from "../../../lib/api";
 import HeroHeader from "./components/HeroHeader";
@@ -48,6 +49,23 @@ export default function DashboardPage() {
 
   // AI Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Connect banner dismissal state
+  const [showConnectBanner, setShowConnectBanner] = useState(true);
+
+  // Check localStorage for dismissed banner on mount
+  useEffect(() => {
+    const dismissed = localStorage.getItem('dismissedConnectBanner');
+    if (dismissed === 'true') {
+      setShowConnectBanner(false);
+    }
+  }, []);
+
+  // Handle dismiss banner
+  const handleDismissConnectBanner = () => {
+    localStorage.setItem('dismissedConnectBanner', 'true');
+    setShowConnectBanner(false);
+  };
 
   // Fetch user on mount
   useEffect(() => {
@@ -170,6 +188,38 @@ export default function DashboardPage() {
           </div>
         </form>
       </div>
+
+      {/* Connect Ad Accounts Banner - shows when no connections and not dismissed */}
+      {!showSkeleton && showConnectBanner && 
+       (!dashboardData?.connected_platforms || dashboardData.connected_platforms.length === 0) && (
+        <div className="max-w-2xl mx-auto mb-8 p-5 bg-gradient-to-r from-indigo-50 to-cyan-50 rounded-2xl border border-indigo-100/60 relative">
+          <button
+            onClick={handleDismissConnectBanner}
+            className="absolute top-3 right-3 p-1 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="flex items-start gap-4 pr-6">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <Zap className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-slate-900 mb-1">Connect your ad accounts</h3>
+              <p className="text-sm text-slate-600 mb-3">
+                Start tracking your advertising performance by connecting Meta Ads or Google Ads.
+              </p>
+              <Link 
+                href="/settings?tab=connections" 
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+              >
+                Go to Settings → Connections
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error Banner */}
       {error && (

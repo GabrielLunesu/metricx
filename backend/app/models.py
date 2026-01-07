@@ -9,7 +9,21 @@ import uuid
 from datetime import datetime, timezone
 import enum
 
-from sqlalchemy import Column, String, DateTime, Date, Enum, Integer, BigInteger, ForeignKey, Numeric, JSON, Text, Boolean, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    String,
+    DateTime,
+    Date,
+    Enum,
+    Integer,
+    BigInteger,
+    ForeignKey,
+    Numeric,
+    JSON,
+    Text,
+    Boolean,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
 
@@ -19,6 +33,7 @@ Base = declarative_base()
 
 
 # Enums ---------------------------------------------------------
+
 
 class RoleEnum(str, enum.Enum):
     owner = "Owner"
@@ -35,13 +50,16 @@ class BillingStatusEnum(str, enum.Enum):
     Allowed states (grant access): trialing, active
     Blocked states (deny access): locked, canceled, past_due, incomplete, revoked
     """
-    locked = "locked"          # Default state - no subscription yet
-    trialing = "trialing"      # Free trial active
-    active = "active"          # Paid subscription active
-    canceled = "canceled"      # Subscription canceled (may still be active until period end)
-    past_due = "past_due"      # Payment failed, grace period
+
+    locked = "locked"  # Default state - no subscription yet
+    trialing = "trialing"  # Free trial active
+    active = "active"  # Paid subscription active
+    canceled = (
+        "canceled"  # Subscription canceled (may still be active until period end)
+    )
+    past_due = "past_due"  # Payment failed, grace period
     incomplete = "incomplete"  # Checkout started but not completed
-    revoked = "revoked"        # Access revoked (e.g., fraud, chargeback)
+    revoked = "revoked"  # Access revoked (e.g., fraud, chargeback)
 
 
 class BillingPlanEnum(str, enum.Enum):
@@ -53,7 +71,8 @@ class BillingPlanEnum(str, enum.Enum):
     free: Limited features (1 ad account, dashboard only, no team invites)
     starter: Full features ($79/month or $569/year)
     """
-    free = "free"        # Free tier - limited features
+
+    free = "free"  # Free tier - limited features
     starter = "starter"  # Paid tier - full features
 
 
@@ -96,7 +115,7 @@ class ComputeRunTypeEnum(str, enum.Enum):
 
 class GoalEnum(str, enum.Enum):
     """Campaign/entity objective type.
-    
+
     Used to determine which derived metrics are most relevant:
     - awareness: Focus on CPM, impressions, reach
     - traffic: Focus on CPC, CTR, clicks
@@ -106,6 +125,7 @@ class GoalEnum(str, enum.Enum):
     - conversions: Focus on CPA, CVR, ROAS (generic conversions)
     - other: No specific objective
     """
+
     awareness = "awareness"
     traffic = "traffic"
     leads = "leads"
@@ -117,6 +137,7 @@ class GoalEnum(str, enum.Enum):
 
 # Core models ----------------------------------------------------
 
+
 class Workspace(Base):
     """Workspace represents a company/organization account.
 
@@ -127,6 +148,7 @@ class Workspace(Base):
     Current relationship: One workspace can have many users (ONE-to-MANY)
     TODO: Should be MANY-to-MANY (users can belong to multiple workspaces)
     """
+
     __tablename__ = "workspaces"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -143,11 +165,19 @@ class Workspace(Base):
     # WHY: Copilot uses this to give contextually relevant answers
     # REFERENCES: backend/app/routers/onboarding.py, backend/app/agent/nodes.py
     domain = Column(String, nullable=True)  # e.g., "acme.com"
-    domain_description = Column(Text, nullable=True)  # AI-extracted business description
+    domain_description = Column(
+        Text, nullable=True
+    )  # AI-extracted business description
     niche = Column(String, nullable=True)  # e.g., "Fashion", "SaaS", "E-commerce"
-    target_markets = Column(JSON, nullable=True)  # e.g., ["United States", "Europe", "Worldwide"]
-    brand_voice = Column(String, nullable=True)  # e.g., "Professional", "Casual", "Luxury"
-    business_size = Column(String, nullable=True)  # e.g., "startup", "smb", "enterprise"
+    target_markets = Column(
+        JSON, nullable=True
+    )  # e.g., ["United States", "Europe", "Worldwide"]
+    brand_voice = Column(
+        String, nullable=True
+    )  # e.g., "Professional", "Casual", "Luxury"
+    business_size = Column(
+        String, nullable=True
+    )  # e.g., "startup", "smb", "enterprise"
 
     # Onboarding tracking
     # WHAT: Tracks whether user has completed onboarding flow
@@ -170,7 +200,7 @@ class Workspace(Base):
     billing_status = Column(
         Enum(BillingStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
         default=BillingStatusEnum.locked,
-        nullable=False
+        nullable=False,
     )
 
     # Feature tier: free (limited) or starter (full features)
@@ -179,7 +209,7 @@ class Workspace(Base):
     billing_tier = Column(
         Enum(BillingPlanEnum, values_callable=lambda obj: [e.value for e in obj]),
         default=BillingPlanEnum.free,
-        nullable=False
+        nullable=False,
     )
 
     # Plan type: monthly or annual (only set for paid tiers)
@@ -202,14 +232,30 @@ class Workspace(Base):
     pending_since = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships - these create reverse lookups
-    users = relationship("User", back_populates="workspace")  # Active workspace for the user (legacy single workspace)
-    memberships = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
-    invites = relationship("WorkspaceInvite", back_populates="workspace", cascade="all, delete-orphan")
-    connections = relationship("Connection", back_populates="workspace")  # All ad platform connections
-    entities = relationship("Entity", back_populates="workspace")  # All entities (campaigns, ads, etc)
-    compute_runs = relationship("ComputeRun", back_populates="workspace")  # All compute runs
-    queries = relationship("QaQueryLog", back_populates="workspace")  # All queries made in workspace
-    manual_costs = relationship("ManualCost", back_populates="workspace")  # All manual costs (non-ad costs)
+    users = relationship(
+        "User", back_populates="workspace"
+    )  # Active workspace for the user (legacy single workspace)
+    memberships = relationship(
+        "WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan"
+    )
+    invites = relationship(
+        "WorkspaceInvite", back_populates="workspace", cascade="all, delete-orphan"
+    )
+    connections = relationship(
+        "Connection", back_populates="workspace"
+    )  # All ad platform connections
+    entities = relationship(
+        "Entity", back_populates="workspace"
+    )  # All entities (campaigns, ads, etc)
+    compute_runs = relationship(
+        "ComputeRun", back_populates="workspace"
+    )  # All compute runs
+    queries = relationship(
+        "QaQueryLog", back_populates="workspace"
+    )  # All queries made in workspace
+    manual_costs = relationship(
+        "ManualCost", back_populates="workspace"
+    )  # All manual costs (non-ad costs)
 
     # This is used to display the model in the admin interface.
     def __str__(self):
@@ -225,6 +271,7 @@ class User(Base):
     CURRENT ISSUE: User can only belong to ONE workspace (via workspace_id)
     This should be changed to MANY-to-MANY relationship.
     """
+
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -236,7 +283,10 @@ class User(Base):
 
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
-    role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    role = Column(
+        Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
 
     # Profile fields
     avatar_url = Column(String, nullable=True)
@@ -244,15 +294,24 @@ class User(Base):
     # Security / Verification fields
     is_verified = Column(Boolean, default=False)
     verification_token = Column(String, nullable=True)
-    
+
     # Password Reset
     reset_token = Column(String, nullable=True)
     reset_token_expires_at = Column(DateTime, nullable=True)
 
+    # Platform-level admin flag (distinct from workspace-level Admin role)
+    # WHAT: Grants access to /admin endpoints for user/workspace management
+    # WHY: Workspace role is scoped to workspace; this is platform-wide superuser access
+    is_superuser = Column(Boolean, default=False, nullable=False)
+
     # Active workspace context (legacy single-workspace field; now treated as "active workspace")
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     workspace = relationship("Workspace", back_populates="users")
-    memberships = relationship("WorkspaceMember", back_populates="user", cascade="all, delete-orphan")
+    memberships = relationship(
+        "WorkspaceMember", back_populates="user", cascade="all, delete-orphan"
+    )
 
     # 1:1 credential for local password-based auth
     credential = relationship("AuthCredential", back_populates="user", uselist=False)
@@ -270,16 +329,24 @@ class User(Base):
 
 class WorkspaceMember(Base):
     """Join table mapping users to workspaces with a role.
-    
+
     NOTE: We retain the `users.workspace_id` field as the active workspace pointer for compatibility.
     """
+
     __tablename__ = "workspace_members"
-    __table_args__ = (UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),)
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    role = Column(
+        Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     status = Column(String, default="active")  # active, removed
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -290,14 +357,24 @@ class WorkspaceMember(Base):
 
 class WorkspaceInvite(Base):
     """Pending invites for existing users (email-based)."""
+
     __tablename__ = "workspace_invites"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     invited_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     email = Column(String, nullable=False)
-    role = Column(Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
-    status = Column(Enum(InviteStatusEnum, values_callable=lambda obj: [e.value for e in obj]), default=InviteStatusEnum.pending, nullable=False)
+    role = Column(
+        Enum(RoleEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
+    status = Column(
+        Enum(InviteStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
+        default=InviteStatusEnum.pending,
+        nullable=False,
+    )
     created_at = Column(DateTime, default=datetime.utcnow)
     responded_at = Column(DateTime, nullable=True)
 
@@ -306,17 +383,23 @@ class WorkspaceInvite(Base):
 
 class Connection(Base):
     """Connection represents a link to an advertising platform account.
-    
+
     Each connection belongs to ONE workspace. When you create a connection
     in the admin panel, you MUST select which workspace it belongs to.
-    
+
     Examples: Google Ads account, Facebook Ads account, TikTok Ads account
     """
+
     __tablename__ = "connections"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    provider = Column(Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
-    external_account_id = Column(String, nullable=False)  # The account ID in the external platform
+    provider = Column(
+        Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
+    external_account_id = Column(
+        String, nullable=False
+    )  # The account ID in the external platform
     name = Column(String, nullable=False)  # Friendly name for this connection
     status = Column(String, nullable=False)  # active, paused, disconnected, etc.
     connected_at = Column(DateTime, default=datetime.utcnow)
@@ -354,11 +437,19 @@ class Connection(Base):
         String,
         default="15min",
     )  # 15min (default), 5min, 10min, 30min, hourly, daily, manual
-    last_sync_attempted_at = Column(DateTime, nullable=True)  # Last sync start (success or failure)
-    last_sync_completed_at = Column(DateTime, nullable=True)  # Last successful completion
-    last_metrics_changed_at = Column(DateTime, nullable=True)  # Last actual data change (freshness)
+    last_sync_attempted_at = Column(
+        DateTime, nullable=True
+    )  # Last sync start (success or failure)
+    last_sync_completed_at = Column(
+        DateTime, nullable=True
+    )  # Last successful completion
+    last_metrics_changed_at = Column(
+        DateTime, nullable=True
+    )  # Last actual data change (freshness)
     total_syncs_attempted = Column(Integer, default=0)  # Counter: all attempts
-    total_syncs_with_changes = Column(Integer, default=0)  # Counter: syncs with DB writes
+    total_syncs_with_changes = Column(
+        Integer, default=0
+    )  # Counter: syncs with DB writes
     sync_status = Column(String, default="idle")  # idle, syncing, error, rate_limited
     last_sync_error = Column(Text, nullable=True)  # Error message from last failure
 
@@ -371,7 +462,9 @@ class Connection(Base):
 
     # Foreign key - EVERY connection belongs to exactly ONE workspace
     # This ensures data isolation between different companies
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     workspace = relationship("Workspace", back_populates="connections")
 
     # Optional link to authentication token
@@ -379,16 +472,20 @@ class Connection(Base):
     token = relationship("Token", back_populates="connections")
 
     # Reverse relationships
-    entities = relationship("Entity", back_populates="connection")  # All campaigns/ads from this connection
-    fetches = relationship("Fetch", back_populates="connection")  # All data fetch operations
-    
+    entities = relationship(
+        "Entity", back_populates="connection"
+    )  # All campaigns/ads from this connection
+    fetches = relationship(
+        "Fetch", back_populates="connection"
+    )  # All data fetch operations
+
     def __str__(self):
         return f"{self.name} ({self.provider.value})"
 
 
 class Token(Base):
     """Encrypted provider credential bundle.
-    
+
     WHAT:
         Stores Meta tokens (Phase 2.1) with symmetric encryption applied.
     WHY:
@@ -397,10 +494,14 @@ class Token(Base):
         - backend/app/security.py (encrypt_secret / decrypt_secret)
         - docs/living-docs/META_INTEGRATION_STATUS.md (Phase 2.1)
     """
+
     __tablename__ = "tokens"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    provider = Column(Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    provider = Column(
+        Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     access_token_enc = Column(String, nullable=True)
     refresh_token_enc = Column(String, nullable=True)
     expires_at = Column(DateTime, nullable=True)
@@ -408,9 +509,13 @@ class Token(Base):
     ad_account_ids = Column(JSON, nullable=True)
 
     connections = relationship("Connection", back_populates="token")
-    
+
     def __str__(self):
-        expires = self.expires_at.strftime('%Y-%m-%d %H:%M') if self.expires_at else 'no-expiry'
+        expires = (
+            self.expires_at.strftime("%Y-%m-%d %H:%M")
+            if self.expires_at
+            else "no-expiry"
+        )
         return f"{self.provider.value} token (expires: {expires})"
 
 
@@ -425,11 +530,13 @@ class Fetch(Base):
     range_start = Column(DateTime, nullable=True)
     range_end = Column(DateTime, nullable=True)
 
-    connection_id = Column(UUID(as_uuid=True), ForeignKey("connections.id"), nullable=False)
+    connection_id = Column(
+        UUID(as_uuid=True), ForeignKey("connections.id"), nullable=False
+    )
     connection = relationship("Connection", back_populates="fetches")
 
     imports = relationship("Import", back_populates="fetch")
-    
+
     def __str__(self):
         return f"{self.kind} ({self.status}) - {self.started_at.strftime('%Y-%m-%d %H:%M')}"
 
@@ -446,13 +553,14 @@ class Import(Base):
     fetch = relationship("Fetch", back_populates="imports")
 
     facts = relationship("MetricFact", back_populates="import_")
-    
+
     def __str__(self):
         return f"Import as of {self.as_of.strftime('%Y-%m-%d')}{' - ' + self.note if self.note else ''}"
 
 
 class MediaTypeEnum(str, enum.Enum):
     """Type of creative media asset."""
+
     image = "image"
     video = "video"
     carousel = "carousel"
@@ -478,22 +586,32 @@ class Entity(Base):
     - QA system can recommend metrics based on goal
     - Seed data generates appropriate base measures based on goal
     """
+
     __tablename__ = "entities"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    level = Column(Enum(LevelEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    level = Column(
+        Enum(LevelEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     external_id = Column(String, nullable=False)
     name = Column(String, nullable=False)
     status = Column(String, nullable=False)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
 
     # Derived Metrics v1: Campaign objective
-    goal = Column(Enum(GoalEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=True)
+    goal = Column(
+        Enum(GoalEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=True,
+    )
 
     # Creative Support v2.5: Image URLs for ad creatives (Meta only for now)
     thumbnail_url = Column(String, nullable=True)  # Small preview image
     image_url = Column(String, nullable=True)  # Full-size creative image
-    media_type = Column(Enum(MediaTypeEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=True)
+    media_type = Column(
+        Enum(MediaTypeEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=True,
+    )
 
     # UTM Tracking Detection (proactive attribution warnings)
     # WHAT: Stores URL tracking configuration from ad platforms
@@ -512,10 +630,14 @@ class Entity(Base):
     # }
     tracking_params = Column(JSON, nullable=True)
 
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     workspace = relationship("Workspace", back_populates="entities")
 
-    connection_id = Column(UUID(as_uuid=True), ForeignKey("connections.id"), nullable=True)
+    connection_id = Column(
+        UUID(as_uuid=True), ForeignKey("connections.id"), nullable=True
+    )
     connection = relationship("Connection", back_populates="entities")
 
     # Timestamps for tracking entity lifecycle
@@ -525,7 +647,7 @@ class Entity(Base):
     children = relationship("Entity", backref="parent", remote_side=[id])
     facts = relationship("MetricFact", back_populates="entity")
     pnls = relationship("Pnl", back_populates="entity")
-    
+
     def __str__(self):
         return f"{self.name} ({self.level.value})"
 
@@ -569,29 +691,36 @@ class MetricFact(Base):
     - app/dsl/executor.py: Aggregates these for ad-hoc queries
     - app/services/compute_service.py: Aggregates these for Pnl snapshots
     """
+
     __tablename__ = "metric_facts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
-    provider = Column(Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
-    level = Column(Enum(LevelEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    provider = Column(
+        Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
+    level = Column(
+        Enum(LevelEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     event_at = Column(DateTime, nullable=False)
     event_date = Column(DateTime, nullable=False)
-    
+
     # Original base measures
     spend = Column(Numeric(18, 4), nullable=False)
     impressions = Column(Integer, nullable=False)
     clicks = Column(Integer, nullable=False)
     conversions = Column(Numeric(18, 4), nullable=True)
     revenue = Column(Numeric(18, 4), nullable=True)
-    
+
     # Derived Metrics v1: New base measures
     leads = Column(Numeric(18, 4), nullable=True)  # Lead form submissions
     installs = Column(Integer, nullable=True)  # App installs
     purchases = Column(Integer, nullable=True)  # Purchase events
     visitors = Column(Integer, nullable=True)  # Landing page visitors
     profit = Column(Numeric(18, 4), nullable=True)  # Net profit (revenue - costs)
-    
+
     currency = Column(String, nullable=False)
     natural_key = Column(String, nullable=False)
     ingested_at = Column(DateTime, default=datetime.utcnow)
@@ -600,7 +729,7 @@ class MetricFact(Base):
     import_ = relationship("Import", back_populates="facts")
 
     entity = relationship("Entity", back_populates="facts")
-    
+
     def __str__(self):
         return f"{self.event_date.strftime('%Y-%m-%d')} - {self.provider.value} - ${self.spend}"
 
@@ -632,10 +761,15 @@ class MetricSnapshot(Base):
         - Migration: alembic/versions/20251207_000001_add_metric_snapshots.py
         - Service: app/services/snapshot_sync_service.py
     """
+
     __tablename__ = "metric_snapshots"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
+    entity_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("entities.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     provider = Column(String(20), nullable=False)  # 'meta', 'google', 'tiktok'
     captured_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -658,18 +792,24 @@ class MetricSnapshot(Base):
     profit = Column(Numeric(18, 4), nullable=True)
 
     # Currency
-    currency = Column(String(10), default='USD')
+    currency = Column(String(10), default="USD")
 
     # Audit timestamp
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
     # Relationships
     entity = relationship("Entity", backref="snapshots")
 
     # Unique constraint for UPSERT
     __table_args__ = (
-        UniqueConstraint('entity_id', 'provider', 'captured_at',
-                         name='uq_metric_snapshots_entity_provider_time'),
+        UniqueConstraint(
+            "entity_id",
+            "provider",
+            "captured_at",
+            name="uq_metric_snapshots_entity_provider_time",
+        ),
     )
 
     def __str__(self):
@@ -684,138 +824,164 @@ class ComputeRun(Base):
     computed_at = Column(DateTime, default=datetime.utcnow)
     reason = Column(String, nullable=False)
     status = Column(String, nullable=False)
-    type = Column(Enum(ComputeRunTypeEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    type = Column(
+        Enum(ComputeRunTypeEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
 
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     workspace = relationship("Workspace", back_populates="compute_runs")
 
     pnls = relationship("Pnl", back_populates="compute_run")
-    
+
     def __str__(self):
         return f"{self.type.value} - {self.as_of.strftime('%Y-%m-%d')} ({self.status})"
 
 
 class Pnl(Base):
     """Pnl (Profit & Loss) stores SNAPSHOT/EOD aggregations with BOTH base and derived metrics.
-    
+
     Derived Metrics v1 philosophy:
     - Store base measures + derived metrics for FAST dashboard queries
     - Materialize expensive computations (no real-time calculation overhead)
     - "Locked" historical reports → snapshots don't change
     - Can recompute if formulas change (track formula_version if needed)
-    
+
     WHY store derived in Pnl but not MetricFact?
     - Pnl: Snapshot/EOD → performance matters, data is historical
     - MetricFact: Source of truth → keep raw, avoid formula drift
-    
+
     Original columns:
     - Base: spend, revenue, conversions, clicks, impressions
     - Derived: cpa, roas
-    
+
     Derived Metrics v1 additions:
     - Base: leads, installs, purchases, visitors, profit
     - Derived: cpc, cpm, cpl, cpi, cpp, poas, arpv, aov, ctr, cvr
-    
+
     Related:
     - app/services/compute_service.py: Computes these snapshots using app/metrics/registry
     - app/metrics/formulas.py: Pure functions for computing derived metrics
     """
+
     __tablename__ = "pnls"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
     run_id = Column(UUID(as_uuid=True), ForeignKey("compute_runs.id"), nullable=False)
-    provider = Column(Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
-    level = Column(Enum(LevelEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
-    kind = Column(Enum(KindEnum, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    provider = Column(
+        Enum(ProviderEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
+    level = Column(
+        Enum(LevelEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
+    kind = Column(
+        Enum(KindEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     as_of = Column(DateTime, nullable=True)
     event_date = Column(DateTime, nullable=True)
-    
+
     # Original base measures
     spend = Column(Numeric(18, 4), nullable=False)
     revenue = Column(Numeric(18, 4), nullable=True)
     conversions = Column(Numeric(18, 4), nullable=True)
     clicks = Column(Integer, nullable=False)
     impressions = Column(Integer, nullable=False)
-    
+
     # Derived Metrics v1: New base measures
     leads = Column(Numeric(18, 4), nullable=True)
     installs = Column(Integer, nullable=True)
     purchases = Column(Integer, nullable=True)
     visitors = Column(Integer, nullable=True)
     profit = Column(Numeric(18, 4), nullable=True)
-    
+
     # Original derived metrics
     cpa = Column(Numeric(18, 4), nullable=True)
     roas = Column(Numeric(18, 4), nullable=True)
-    
+
     # Derived Metrics v1: New derived metrics (Cost/Efficiency)
     cpc = Column(Numeric(18, 4), nullable=True)  # spend / clicks
     cpm = Column(Numeric(18, 4), nullable=True)  # (spend / impressions) * 1000
     cpl = Column(Numeric(18, 4), nullable=True)  # spend / leads
     cpi = Column(Numeric(18, 4), nullable=True)  # spend / installs
     cpp = Column(Numeric(18, 4), nullable=True)  # spend / purchases
-    
+
     # Derived Metrics v1: New derived metrics (Revenue/Value)
     poas = Column(Numeric(18, 4), nullable=True)  # profit / spend
     arpv = Column(Numeric(18, 4), nullable=True)  # revenue / visitors
     aov = Column(Numeric(18, 4), nullable=True)  # revenue / conversions
-    
+
     # Derived Metrics v1: New derived metrics (Performance/Engagement)
-    ctr = Column(Numeric(18, 6), nullable=True)  # clicks / impressions (higher precision)
-    cvr = Column(Numeric(18, 6), nullable=True)  # conversions / clicks (higher precision)
-    
+    ctr = Column(
+        Numeric(18, 6), nullable=True
+    )  # clicks / impressions (higher precision)
+    cvr = Column(
+        Numeric(18, 6), nullable=True
+    )  # conversions / clicks (higher precision)
+
     computed_at = Column(DateTime, default=datetime.utcnow)
 
     entity = relationship("Entity", back_populates="pnls")
     compute_run = relationship("ComputeRun", back_populates="pnls")
-    
+
     def __str__(self):
-        date_str = self.event_date.strftime('%Y-%m-%d') if self.event_date else 'N/A'
+        date_str = self.event_date.strftime("%Y-%m-%d") if self.event_date else "N/A"
         return f"{self.kind.value} P&L - {date_str} - ${self.spend}"
 
 
 class ManualCost(Base):
     """Manual costs entered by users (non-ad costs like SaaS, agency fees).
-    
+
     WHAT: Stores user-entered costs with flexible date allocation
     WHY: Finance P&L needs to combine ad spend (from MetricFact) with operational costs
-    REFERENCES: 
+    REFERENCES:
       - app/routers/finance.py: CRUD endpoints
       - app/schemas.py: ManualCostCreate, ManualCostOut
       - app/services/cost_allocation.py: Pro-rating logic
-    
+
     Allocation types:
       - one_off: Single date cost (marketing event, one-time purchase)
       - range: Spread cost across date range (monthly subscription pro-rated daily)
     """
+
     __tablename__ = "manual_costs"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
+
     # Display
     label = Column(String, nullable=False)  # "HubSpot", "Consultant Fee"
-    category = Column(String, nullable=False)  # "Tools / SaaS", "Agency Fees", "Miscellaneous"
+    category = Column(
+        String, nullable=False
+    )  # "Tools / SaaS", "Agency Fees", "Miscellaneous"
     notes = Column(String, nullable=True)
-    
+
     # Amount (always in USD - in future when we support multiple currencies, convert to USD before saving)
     amount_dollar = Column(Numeric(12, 2), nullable=False)  # Total cost amount in USD
-    
+
     # Allocation (determines which dates to include cost)
     allocation_type = Column(String, nullable=False)  # "one_off" or "range"
     allocation_date = Column(DateTime, nullable=True)  # For one_off: the single date
     allocation_start = Column(DateTime, nullable=True)  # For range: inclusive start
     allocation_end = Column(DateTime, nullable=True)  # For range: exclusive end
-    
+
     # Workspace scoping
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     workspace = relationship("Workspace", back_populates="manual_costs")
-    
+
     # Audit
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    
+    created_by_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+
     def __str__(self):
         return f"{self.label} ({self.category}): ${self.amount_dollar}"
 
@@ -829,17 +995,22 @@ class QaQueryLog(Base):
 
     This creates an audit trail of who asked what questions and when.
     """
+
     __tablename__ = "qa_query_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Foreign keys - BOTH are required to track query context
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
     question_text = Column(String, nullable=False)  # The natural language question
     dsl_json = Column(JSON, nullable=False)  # The parsed query structure
-    answer_text = Column(Text, nullable=True)  # The generated answer (for feedback tracking)
+    answer_text = Column(
+        Text, nullable=True
+    )  # The generated answer (for feedback tracking)
     created_at = Column(DateTime, default=datetime.utcnow)
     duration_ms = Column(Integer, nullable=True)  # How long the query took to execute
 
@@ -854,10 +1025,11 @@ class QaQueryLog(Base):
 
 class FeedbackTypeEnum(str, enum.Enum):
     """Type of feedback provided on a QA answer."""
-    accuracy = "accuracy"        # Was the data/answer correct?
-    relevance = "relevance"      # Did it answer the question asked?
+
+    accuracy = "accuracy"  # Was the data/answer correct?
+    relevance = "relevance"  # Did it answer the question asked?
     visualization = "visualization"  # Was the chart/table appropriate?
-    completeness = "completeness"    # Was the answer complete enough?
+    completeness = "completeness"  # Was the answer complete enough?
     other = "other"
 
 
@@ -870,19 +1042,24 @@ class QaFeedback(Base):
     3. Building few-shot examples from highly-rated answers
     4. Continuous improvement of the QA system
     """
+
     __tablename__ = "qa_feedback"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Link to the original query
-    query_log_id = Column(UUID(as_uuid=True), ForeignKey("qa_query_logs.id"), nullable=False)
+    query_log_id = Column(
+        UUID(as_uuid=True), ForeignKey("qa_query_logs.id"), nullable=False
+    )
 
     # Who provided the feedback
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
     # Feedback data
     rating = Column(Integer, nullable=False)  # 1-5 scale (1=bad, 5=excellent)
-    feedback_type = Column(Enum(FeedbackTypeEnum), nullable=True)  # What aspect is feedback about
+    feedback_type = Column(
+        Enum(FeedbackTypeEnum), nullable=True
+    )  # What aspect is feedback about
     comment = Column(Text, nullable=True)  # Optional free-text comment
     corrected_answer = Column(Text, nullable=True)  # What should the answer have been
 
@@ -918,6 +1095,7 @@ class ShopifyFinancialStatusEnum(str, enum.Enum):
     WHY: Track payment lifecycle for accurate revenue reporting
     REFERENCES: https://shopify.dev/docs/api/admin-graphql/2024-07/enums/OrderDisplayFinancialStatus
     """
+
     pending = "pending"
     authorized = "authorized"
     partially_paid = "partially_paid"
@@ -934,6 +1112,7 @@ class ShopifyFulfillmentStatusEnum(str, enum.Enum):
     WHY: Track order lifecycle for operational reporting
     REFERENCES: https://shopify.dev/docs/api/admin-graphql/2024-07/enums/OrderDisplayFulfillmentStatus
     """
+
     unfulfilled = "unfulfilled"
     partial = "partial"
     fulfilled = "fulfilled"
@@ -955,18 +1134,25 @@ class ShopifyShop(Base):
         - Shopify Shop API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Shop
         - Similar pattern: Connection model stores external_account_id
     """
+
     __tablename__ = "shopify_shops"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Workspace scoping (required for data isolation)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
 
     # Link to Connection (one shop per connection)
-    connection_id = Column(UUID(as_uuid=True), ForeignKey("connections.id"), nullable=False, unique=True)
+    connection_id = Column(
+        UUID(as_uuid=True), ForeignKey("connections.id"), nullable=False, unique=True
+    )
 
     # Shopify identifiers
-    external_shop_id = Column(String, nullable=False)  # Shopify's internal shop ID (gid://shopify/Shop/xxx)
+    external_shop_id = Column(
+        String, nullable=False
+    )  # Shopify's internal shop ID (gid://shopify/Shop/xxx)
     shop_domain = Column(String, nullable=False)  # e.g., "mystore.myshopify.com"
     shop_name = Column(String, nullable=False)  # Display name from Shopify
 
@@ -976,7 +1162,9 @@ class ShopifyShop(Base):
     country_code = Column(String, nullable=True)  # ISO country code
 
     # Shop metadata
-    plan_name = Column(String, nullable=True)  # Shopify plan (Basic, Shopify, Advanced, Plus)
+    plan_name = Column(
+        String, nullable=True
+    )  # Shopify plan (Basic, Shopify, Advanced, Plus)
     email = Column(String, nullable=True)  # Shop contact email
 
     # Sync tracking
@@ -986,9 +1174,15 @@ class ShopifyShop(Base):
 
     # Relationships
     connection = relationship("Connection", backref="shopify_shop")
-    products = relationship("ShopifyProduct", back_populates="shop", cascade="all, delete-orphan")
-    customers = relationship("ShopifyCustomer", back_populates="shop", cascade="all, delete-orphan")
-    orders = relationship("ShopifyOrder", back_populates="shop", cascade="all, delete-orphan")
+    products = relationship(
+        "ShopifyProduct", back_populates="shop", cascade="all, delete-orphan"
+    )
+    customers = relationship(
+        "ShopifyCustomer", back_populates="shop", cascade="all, delete-orphan"
+    )
+    orders = relationship(
+        "ShopifyOrder", back_populates="shop", cascade="all, delete-orphan"
+    )
 
     def __str__(self):
         return f"{self.shop_name} ({self.shop_domain})"
@@ -1004,6 +1198,7 @@ class ShopifyProduct(Base):
         - Shopify Product API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Product
         - Cost metafield: https://shopify.dev/docs/apps/selling-strategies/pricing/cost-per-item
     """
+
     __tablename__ = "shopify_products"
     __table_args__ = (
         UniqueConstraint("shop_id", "external_product_id", name="uq_shopify_product"),
@@ -1012,7 +1207,9 @@ class ShopifyProduct(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Workspace scoping
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
 
     # Link to shop
     shop_id = Column(UUID(as_uuid=True), ForeignKey("shopify_shops.id"), nullable=False)
@@ -1029,14 +1226,20 @@ class ShopifyProduct(Base):
 
     # Pricing (representative price - variants may differ)
     price = Column(Numeric(18, 4), nullable=True)  # Primary variant price
-    compare_at_price = Column(Numeric(18, 4), nullable=True)  # Original price (for sales)
+    compare_at_price = Column(
+        Numeric(18, 4), nullable=True
+    )  # Original price (for sales)
 
     # COGS - Cost of Goods Sold (critical for profit calculation)
     # WHAT: Product cost used to calculate profit = revenue - COGS
     # WHY: Without COGS, we can only report revenue, not actual profit
     # PRIORITY: 1) variant.inventoryItem.unitCost 2) metafield 3) None (QA warns user)
-    cost_per_item = Column(Numeric(18, 4), nullable=True)  # From metafield or inventory item
-    cost_source = Column(String, nullable=True)  # "inventory_item", "metafield", "manual", None
+    cost_per_item = Column(
+        Numeric(18, 4), nullable=True
+    )  # From metafield or inventory item
+    cost_source = Column(
+        String, nullable=True
+    )  # "inventory_item", "metafield", "manual", None
 
     # Inventory (for future use)
     total_inventory = Column(Integer, nullable=True)  # Sum across all variants
@@ -1065,6 +1268,7 @@ class ShopifyCustomer(Base):
         - Shopify Customer API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Customer
         - LTV calculation: revenue per customer over their entire history
     """
+
     __tablename__ = "shopify_customers"
     __table_args__ = (
         UniqueConstraint("shop_id", "external_customer_id", name="uq_shopify_customer"),
@@ -1073,7 +1277,9 @@ class ShopifyCustomer(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Workspace scoping
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
 
     # Link to shop
     shop_id = Column(UUID(as_uuid=True), ForeignKey("shopify_shops.id"), nullable=False)
@@ -1097,7 +1303,9 @@ class ShopifyCustomer(Base):
     # WHY: Avoid expensive aggregation queries; update on each order sync
     total_spent = Column(Numeric(18, 4), default=0)  # Sum of all order totals
     order_count = Column(Integer, default=0)  # Number of orders
-    average_order_value = Column(Numeric(18, 4), nullable=True)  # total_spent / order_count
+    average_order_value = Column(
+        Numeric(18, 4), nullable=True
+    )  # total_spent / order_count
 
     # Temporal metrics (for cohort analysis)
     first_order_at = Column(DateTime, nullable=True)  # Date of first purchase
@@ -1130,6 +1338,7 @@ class ShopifyOrder(Base):
         - Shopify Order API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/Order
         - Only last 60 days accessible by default; need read_all_orders scope for historical
     """
+
     __tablename__ = "shopify_orders"
     __table_args__ = (
         UniqueConstraint("shop_id", "external_order_id", name="uq_shopify_order"),
@@ -1138,13 +1347,17 @@ class ShopifyOrder(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Workspace scoping
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
 
     # Link to shop
     shop_id = Column(UUID(as_uuid=True), ForeignKey("shopify_shops.id"), nullable=False)
 
     # Link to customer (nullable for guest checkouts)
-    customer_id = Column(UUID(as_uuid=True), ForeignKey("shopify_customers.id"), nullable=True)
+    customer_id = Column(
+        UUID(as_uuid=True), ForeignKey("shopify_customers.id"), nullable=True
+    )
 
     # Shopify identifiers
     external_order_id = Column(String, nullable=False)  # gid://shopify/Order/xxx
@@ -1152,7 +1365,9 @@ class ShopifyOrder(Base):
     name = Column(String, nullable=True)  # Display name (e.g., "#1001")
 
     # Order totals (in shop currency)
-    total_price = Column(Numeric(18, 4), nullable=False)  # Final total including tax/shipping
+    total_price = Column(
+        Numeric(18, 4), nullable=False
+    )  # Final total including tax/shipping
     subtotal_price = Column(Numeric(18, 4), nullable=True)  # Before tax/shipping
     total_tax = Column(Numeric(18, 4), nullable=True)
     total_shipping = Column(Numeric(18, 4), nullable=True)
@@ -1164,16 +1379,24 @@ class ShopifyOrder(Base):
     # WHY: Avoid joins to line_items for aggregate profit queries
     total_cost = Column(Numeric(18, 4), nullable=True)  # Sum of line item costs
     total_profit = Column(Numeric(18, 4), nullable=True)  # subtotal - total_cost
-    has_missing_costs = Column(Boolean, default=False)  # True if any line item missing COGS
+    has_missing_costs = Column(
+        Boolean, default=False
+    )  # True if any line item missing COGS
 
     # Order status
     financial_status = Column(
-        Enum(ShopifyFinancialStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
-        nullable=True
+        Enum(
+            ShopifyFinancialStatusEnum,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=True,
     )
     fulfillment_status = Column(
-        Enum(ShopifyFulfillmentStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
-        nullable=True
+        Enum(
+            ShopifyFulfillmentStatusEnum,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=True,
     )
     cancelled_at = Column(DateTime, nullable=True)
     cancel_reason = Column(String, nullable=True)
@@ -1206,14 +1429,18 @@ class ShopifyOrder(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)  # When synced to our DB
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    order_created_at = Column(DateTime, nullable=False)  # When order was placed in Shopify
+    order_created_at = Column(
+        DateTime, nullable=False
+    )  # When order was placed in Shopify
     order_processed_at = Column(DateTime, nullable=True)  # When order was processed
     order_closed_at = Column(DateTime, nullable=True)  # When order was closed
 
     # Relationships
     shop = relationship("ShopifyShop", back_populates="orders")
     customer = relationship("ShopifyCustomer", back_populates="orders")
-    line_items = relationship("ShopifyOrderLineItem", back_populates="order", cascade="all, delete-orphan")
+    line_items = relationship(
+        "ShopifyOrderLineItem", back_populates="order", cascade="all, delete-orphan"
+    )
 
     def __str__(self):
         return f"Order {self.name or self.external_order_id} - ${self.total_price}"
@@ -1229,15 +1456,20 @@ class ShopifyOrderLineItem(Base):
         - Shopify LineItem API: https://shopify.dev/docs/api/admin-graphql/2024-07/objects/LineItem
         - Cost from variant.inventoryItem.unitCost or product metafield
     """
+
     __tablename__ = "shopify_order_line_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Link to order (required)
-    order_id = Column(UUID(as_uuid=True), ForeignKey("shopify_orders.id"), nullable=False)
+    order_id = Column(
+        UUID(as_uuid=True), ForeignKey("shopify_orders.id"), nullable=False
+    )
 
     # Link to product (nullable - product may be deleted)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("shopify_products.id"), nullable=True)
+    product_id = Column(
+        UUID(as_uuid=True), ForeignKey("shopify_products.id"), nullable=True
+    )
 
     # Shopify identifiers
     external_line_item_id = Column(String, nullable=False)  # gid://shopify/LineItem/xxx
@@ -1258,7 +1490,9 @@ class ShopifyOrderLineItem(Base):
     # WHAT: Cost per item at time of order
     # WHY: Product cost may change; we snapshot cost at order time for accurate profit
     cost_per_item = Column(Numeric(18, 4), nullable=True)  # From inventory or metafield
-    cost_source = Column(String, nullable=True)  # "inventory_item", "metafield", "product", None
+    cost_source = Column(
+        String, nullable=True
+    )  # "inventory_item", "metafield", "product", None
 
     # Computed profit for this line (price * qty - cost * qty - discount)
     line_profit = Column(Numeric(18, 4), nullable=True)
@@ -1298,10 +1532,13 @@ class PixelEvent(Base):
         - Shopify Web Pixels API: https://shopify.dev/docs/api/web-pixels-api
         - docs/living-docs/ATTRIBUTION_ENGINE.md
     """
+
     __tablename__ = "pixel_events"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     visitor_id = Column(String, nullable=False)
 
     # Client-generated UUID for deduplication
@@ -1340,13 +1577,16 @@ class CustomerJourney(Base):
     REFERENCES:
         - docs/living-docs/ATTRIBUTION_ENGINE.md
     """
+
     __tablename__ = "customer_journeys"
     __table_args__ = (
         UniqueConstraint("workspace_id", "visitor_id", name="uq_journey_visitor"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
 
     # Identity
     visitor_id = Column(String, nullable=False)
@@ -1360,13 +1600,17 @@ class CustomerJourney(Base):
     first_touch_source = Column(String, nullable=True)
     first_touch_medium = Column(String, nullable=True)
     first_touch_campaign = Column(String, nullable=True)
-    first_touch_entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
+    first_touch_entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True
+    )
 
     # Last touch (updated on each touchpoint)
     last_touch_source = Column(String, nullable=True)
     last_touch_medium = Column(String, nullable=True)
     last_touch_campaign = Column(String, nullable=True)
-    last_touch_entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
+    last_touch_entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True
+    )
 
     # Journey state
     first_seen_at = Column(DateTime, nullable=False)
@@ -1382,7 +1626,9 @@ class CustomerJourney(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    touchpoints = relationship("JourneyTouchpoint", back_populates="journey", cascade="all, delete-orphan")
+    touchpoints = relationship(
+        "JourneyTouchpoint", back_populates="journey", cascade="all, delete-orphan"
+    )
     attributions = relationship("Attribution", back_populates="journey")
 
     def __str__(self):
@@ -1397,10 +1643,15 @@ class JourneyTouchpoint(Base):
     REFERENCES:
         - docs/living-docs/ATTRIBUTION_ENGINE.md
     """
+
     __tablename__ = "journey_touchpoints"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    journey_id = Column(UUID(as_uuid=True), ForeignKey("customer_journeys.id", ondelete="CASCADE"), nullable=False)
+    journey_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("customer_journeys.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     # Event info
     event_type = Column(String, nullable=False)
@@ -1436,6 +1687,7 @@ class JourneyTouchpoint(Base):
 
 class AttributionModelEnum(str, enum.Enum):
     """Attribution model types."""
+
     first_click = "first_click"
     last_click = "last_click"
     linear = "linear"
@@ -1443,10 +1695,11 @@ class AttributionModelEnum(str, enum.Enum):
 
 class AttributionConfidenceEnum(str, enum.Enum):
     """Attribution confidence levels."""
-    high = "high"      # gclid resolved, exact UTM match
+
+    high = "high"  # gclid resolved, exact UTM match
     medium = "medium"  # fbclid, partial UTM match
-    low = "low"        # utm_source only, referrer inference
-    none = "none"      # No attribution data
+    low = "low"  # utm_source only, referrer inference
+    none = "none"  # No attribution data
 
 
 class Attribution(Base):
@@ -1457,18 +1710,27 @@ class Attribution(Base):
     REFERENCES:
         - docs/living-docs/ATTRIBUTION_ENGINE.md
     """
+
     __tablename__ = "attributions"
     __table_args__ = (
         # One attribution per order per model
-        UniqueConstraint("shopify_order_id", "attribution_model", name="uq_attribution_order_model"),
+        UniqueConstraint(
+            "shopify_order_id", "attribution_model", name="uq_attribution_order_model"
+        ),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
 
     # Links
-    journey_id = Column(UUID(as_uuid=True), ForeignKey("customer_journeys.id"), nullable=True)
-    shopify_order_id = Column(UUID(as_uuid=True), ForeignKey("shopify_orders.id"), nullable=True)
+    journey_id = Column(
+        UUID(as_uuid=True), ForeignKey("customer_journeys.id"), nullable=True
+    )
+    shopify_order_id = Column(
+        UUID(as_uuid=True), ForeignKey("shopify_orders.id"), nullable=True
+    )
 
     # Attribution result
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True)
@@ -1527,10 +1789,13 @@ class PolarCheckoutMapping(Base):
         2. checkout.updated webhook → lookup workspace by checkout_id, update subscription_id
         3. After successful link → mapping can be archived or kept for audit
     """
+
     __tablename__ = "polar_checkout_mappings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
 
     # Polar identifiers
     polar_checkout_id = Column(String, nullable=False, unique=True, index=True)
@@ -1539,7 +1804,9 @@ class PolarCheckoutMapping(Base):
     requested_plan = Column(String, nullable=False)
 
     # Who initiated the checkout
-    created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
 
     # Checkout status tracking
     status = Column(String, default="pending")  # pending, completed, expired, failed
@@ -1548,8 +1815,14 @@ class PolarCheckoutMapping(Base):
     polar_subscription_id = Column(String, nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     def __str__(self):
         return f"Checkout {self.polar_checkout_id} → Workspace {self.workspace_id}"
@@ -1570,6 +1843,7 @@ class PolarWebhookEvent(Base):
     REFERENCES:
         - openspec/changes/add-polar-workspace-billing/design.md (Idempotency section)
     """
+
     __tablename__ = "polar_webhook_events"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -1579,14 +1853,18 @@ class PolarWebhookEvent(Base):
     event_key = Column(String, nullable=False, unique=True, index=True)
 
     # Event metadata for debugging/audit
-    event_type = Column(String, nullable=False)  # e.g., "checkout.updated", "subscription.active"
+    event_type = Column(
+        String, nullable=False
+    )  # e.g., "checkout.updated", "subscription.active"
     polar_data_id = Column(String, nullable=True)  # data.id from payload
 
     # Raw payload (for debugging/replay if needed)
     payload_json = Column(JSON, nullable=True)
 
     # Processing result
-    processed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    processed_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     processing_result = Column(String, default="success")  # success, error, skipped
 
     def __str__(self):
@@ -1594,6 +1872,7 @@ class PolarWebhookEvent(Base):
 
 
 # Local auth credential (password hash stored separately) ----------
+
 
 class AuthCredential(Base):
     __tablename__ = "auth_credentials"
@@ -1603,6 +1882,6 @@ class AuthCredential(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="credential")
-    
+
     def __str__(self):
         return f"Credential for {self.user.email if self.user else 'Unknown'}"
