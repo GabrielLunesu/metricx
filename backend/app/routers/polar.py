@@ -13,10 +13,17 @@ REFERENCES:
     - openspec/changes/add-polar-workspace-billing/proposal.md
     - openspec/changes/add-polar-workspace-billing/design.md
     - .codex/polar.md (Polar API reference)
+    - https://docs.polar.sh/developers/webhooks
+
+WEBHOOK EVENTS HANDLED:
+    - checkout.created: Checkout session created (informational)
+    - checkout.updated: Checkout completed/failed - this is the main upgrade event
+    - subscription.created: New subscription created (may be pending payment)
+    - subscription.updated: Subscription status changed (active, canceled, etc.)
+    - subscription.canceled: Subscription canceled
+    - subscription.revoked: Subscription revoked (fraud, chargeback)
 """
 
-import hashlib
-import hmac
 import logging
 import os
 from datetime import datetime, timezone
@@ -25,6 +32,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from polar_sdk.webhooks import validate_event, WebhookVerificationError
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -222,7 +230,7 @@ async def _get_polar_customer_portal_url(customer_id: str) -> str:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         response = await client.post(
             f"{POLAR_API_URL}/v1/customer-sessions",
             json={"customer_id": customer_id},
@@ -243,29 +251,8 @@ async def _get_polar_customer_portal_url(customer_id: str) -> str:
         return data.get("customer_portal_url", "")
 
 
-def _verify_webhook_signature(payload: bytes, signature: str) -> bool:
-    """Verify Polar webhook signature.
-
-    WHAT: Validates the webhook came from Polar
-    WHY: Security - prevent forged webhook attacks
-
-    Args:
-        payload: Raw request body bytes
-        signature: Value from Polar-Signature header
-
-    Returns:
-        True if signature is valid
-    """
-    if not POLAR_WEBHOOK_SECRET:
-        logger.warning("POLAR_WEBHOOK_SECRET not set, skipping signature verification")
-        return True  # Allow in dev mode
-
-    # Polar uses SHA256 HMAC
-    expected = hmac.new(
-        POLAR_WEBHOOK_SECRET.encode(), payload, hashlib.sha256
-    ).hexdigest()
-
-    return hmac.compare_digest(expected, signature)
+# Note: Signature verification is now handled by polar_sdk.webhooks.validate_event
+# which uses standard webhook signatures (Svix-based)
 
 
 def _compute_event_key(event_type: str, data: dict) -> str:
@@ -434,14 +421,13 @@ async def create_checkout(
             detail="Only workspace Owner or Admin can manage billing",
         )
 
-    # Check if already subscribed
-    if workspace.billing_status in (
-        BillingStatusEnum.trialing,
-        BillingStatusEnum.active,
-    ):
+    # Check if already on paid tier (starter)
+    # Note: billing_status='active' + billing_tier='free' is valid (free plan user)
+    # Only block if they're already on a paid tier
+    if workspace.billing_tier == BillingPlanEnum.starter:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Workspace already has an active subscription",
+            detail="Workspace already has a paid subscription",
         )
 
     # Get product ID for plan
@@ -478,8 +464,9 @@ async def create_checkout(
     )
     db.add(mapping)
 
-    # Update workspace to incomplete state
-    workspace.billing_status = BillingStatusEnum.incomplete
+    # Note: Don't change billing_status here - free tier users should keep 'active' status
+    # The webhook will update status when checkout completes/fails
+    # Only store the pending plan for reference
     workspace.billing_plan = payload.plan
 
     db.commit()
@@ -558,14 +545,15 @@ async def get_billing_portal(
     Receives and processes Polar webhook events.
 
     Handled events:
-        - checkout.updated: Link subscription to workspace
-        - subscription.active: Mark workspace as active
+        - checkout.updated: Link subscription to workspace, upgrade to starter tier
+        - subscription.created: New subscription created (may be pending payment)
+        - subscription.updated: Subscription status changed
         - subscription.canceled: Mark workspace as canceled
-        - subscription.revoked: Mark workspace as revoked
+        - subscription.revoked: Mark workspace as revoked (immediate access cut)
 
     Security:
-        - Verifies Polar-Signature header
-        - Idempotent: skips duplicate events
+        - Uses polar_sdk.webhooks.validate_event for signature verification
+        - Idempotent: skips duplicate events via event_key
 
     Testing:
         - Create actual checkout to generate events
@@ -576,29 +564,62 @@ async def handle_polar_webhook(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    """Process Polar webhook events."""
+    """Process Polar webhook events using Polar SDK validation."""
     # Get raw body for signature verification
     body = await request.body()
 
-    # Verify signature
-    signature = request.headers.get("Polar-Signature", "")
-    if not _verify_webhook_signature(body, signature):
-        logger.warning("Invalid webhook signature")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature"
-        )
+    # Validate webhook using Polar SDK (handles signature verification)
+    # IMPORTANT: Always use raw JSON for storage to avoid datetime serialization issues
+    import json
 
-    # Parse payload
+    raw_payload = json.loads(body)
+
     try:
-        payload = await request.json()
-    except Exception as e:
-        logger.error(f"Failed to parse webhook payload: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload"
-        )
+        if not POLAR_WEBHOOK_SECRET:
+            logger.warning(
+                "POLAR_WEBHOOK_SECRET not set - webhook verification disabled (dev mode)"
+            )
+            # In dev mode, use raw payload directly
+            event_type = raw_payload.get("type", "unknown")
+            data = raw_payload.get("data", {})
+            payload = raw_payload  # Store raw JSON (strings, not datetime objects)
+        else:
+            # Use Polar SDK for signature verification only
+            # We still use the raw JSON for data to avoid datetime serialization issues
+            event = validate_event(
+                body=body,
+                headers=dict(request.headers),
+                secret=POLAR_WEBHOOK_SECRET,
+            )
 
-    event_type = payload.get("type", "unknown")
-    data = payload.get("data", {})
+            # Polar SDK v0.28+ uses TYPE (uppercase) as the discriminator field
+            if hasattr(event, "TYPE"):
+                event_type = event.TYPE
+            elif hasattr(event, "type"):
+                event_type = event.type
+            else:
+                event_type = raw_payload.get("type", "unknown")
+
+            # CRITICAL: Use raw JSON data, NOT the Pydantic model
+            # Pydantic converts datetime strings to datetime objects which can't be JSON serialized
+            data = raw_payload.get("data", {})
+            payload = raw_payload  # Store raw JSON (strings, not datetime objects)
+
+            logger.info(
+                f"Parsed webhook: type={event_type}, data_keys={list(data.keys()) if isinstance(data, dict) else 'N/A'}"
+            )
+
+    except WebhookVerificationError as e:
+        logger.warning(f"Webhook signature verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook signature"
+        )
+    except Exception as e:
+        logger.error(f"Failed to parse/validate webhook: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid webhook payload: {str(e)}",
+        )
 
     logger.info(f"Received Polar webhook: {event_type}")
 
@@ -614,15 +635,14 @@ async def handle_polar_webhook(
         )
 
     # Process event
+    data_id = data.get("id", "unknown")
     try:
         action = await _process_webhook_event(event_type, data, db)
-        _record_event(event_key, event_type, data.get("id"), payload, "success", db)
+        _record_event(event_key, event_type, data_id, payload, "success", db)
         return schemas.WebhookResponse(event_type=event_type, action=action)
     except Exception as e:
-        logger.error(f"Webhook processing error: {e}")
-        _record_event(
-            event_key, event_type, data.get("id"), payload, f"error: {str(e)}", db
-        )
+        logger.error(f"Webhook processing error: {e}", exc_info=True)
+        _record_event(event_key, event_type, data_id, payload, f"error: {str(e)}", db)
         # Still return 200 to prevent Polar from retrying
         return schemas.WebhookResponse(event_type=event_type, action="error")
 
@@ -632,10 +652,24 @@ async def _process_webhook_event(event_type: str, data: dict, db: Session) -> st
 
     WHAT: Routes event to appropriate handler
     WHY: Different events update workspace billing in different ways
+
+    Event types from Polar:
+        - checkout.created: Checkout session started (informational)
+        - checkout.updated: Checkout completed/failed - MAIN UPGRADE PATH
+        - subscription.created: New subscription created (may be pending)
+        - subscription.updated: Status change (active, canceled, past_due, etc.)
+        - subscription.canceled: Subscription canceled
+        - subscription.revoked: Subscription revoked (fraud, chargeback)
     """
-    if event_type == "checkout.updated":
+    if event_type == "checkout.created":
+        logger.info(f"Checkout created: {data.get('id')}")
+        return "acknowledged"
+    elif event_type == "checkout.updated":
         return await _handle_checkout_updated(data, db)
+    elif event_type == "subscription.created":
+        return await _handle_subscription_created(data, db)
     elif event_type == "subscription.active":
+        # subscription.active is sent when subscription becomes active
         return await _handle_subscription_active(data, db)
     elif event_type == "subscription.canceled":
         return await _handle_subscription_canceled(data, db)
@@ -657,14 +691,21 @@ async def _handle_checkout_updated(data: dict, db: Session) -> str:
     Flow:
         1. Lookup checkout mapping by checkout_id
         2. If found, update workspace with subscription_id, customer_id
-        3. Set billing_status based on checkout status
+        3. Set billing_status based on checkout state/status
+
+    IMPORTANT: Polar uses 'status' field with values like 'succeeded', 'confirmed', 'open',
+    'expired', 'failed'. Check for success states to upgrade.
     """
     checkout_id = data.get("id")
-    checkout_status = data.get("status")
+    # Polar SDK uses 'status' field - check for various success indicators
+    checkout_status = data.get("status", "")
     subscription_id = data.get("subscription_id")
     customer_id = data.get("customer_id")
+    metadata = data.get("metadata", {})
 
-    logger.info(f"Checkout {checkout_id} updated: status={checkout_status}")
+    logger.info(
+        f"Checkout {checkout_id} updated: status={checkout_status}, metadata={metadata}, data keys={list(data.keys())}"
+    )
 
     # Find checkout mapping
     mapping = (
@@ -673,56 +714,103 @@ async def _handle_checkout_updated(data: dict, db: Session) -> str:
         .first()
     )
 
+    # Fallback: If no mapping found, try to find workspace directly via metadata
+    workspace = None
     if not mapping:
-        logger.warning(f"No checkout mapping found for {checkout_id}")
-        return "no_mapping"
+        workspace_id_str = metadata.get("workspace_id")
+        if workspace_id_str:
+            logger.info(
+                f"No checkout mapping for {checkout_id}, trying metadata workspace_id={workspace_id_str}"
+            )
+            try:
+                workspace = (
+                    db.query(Workspace)
+                    .filter(Workspace.id == UUID(workspace_id_str))
+                    .first()
+                )
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid workspace_id in metadata: {workspace_id_str}")
 
-    # Update mapping
-    mapping.status = checkout_status
-    mapping.polar_subscription_id = subscription_id
-
-    # Get workspace
-    workspace = db.query(Workspace).filter(Workspace.id == mapping.workspace_id).first()
+        if not workspace:
+            logger.warning(
+                f"No checkout mapping found for {checkout_id} and no valid workspace in metadata"
+            )
+            return "no_mapping"
+    else:
+        # We have a mapping - update it and get workspace from it
+        mapping.status = checkout_status
+        mapping.polar_subscription_id = subscription_id
+        workspace = (
+            db.query(Workspace).filter(Workspace.id == mapping.workspace_id).first()
+        )
 
     if not workspace:
-        logger.error(f"Workspace not found for mapping: {mapping.workspace_id}")
+        logger.error(f"Workspace not found for checkout {checkout_id}")
         return "workspace_not_found"
 
     # Update workspace based on checkout status
-    if checkout_status == "succeeded":
+    # Polar checkout status values: 'open', 'expired', 'confirmed', 'succeeded', 'failed'
+    # Success states: 'succeeded', 'confirmed' (payment completed)
+    success_states = ("succeeded", "confirmed")
+    failure_states = ("failed",)
+    expired_states = ("expired",)
+
+    # Get plan from mapping if available, otherwise from metadata
+    requested_plan = (
+        mapping.requested_plan if mapping else metadata.get("plan", "monthly")
+    )
+
+    if checkout_status in success_states:
         workspace.polar_subscription_id = subscription_id
         workspace.polar_customer_id = customer_id
         workspace.billing_status = BillingStatusEnum.active
         workspace.billing_tier = BillingPlanEnum.starter  # Upgrade to paid tier
-        workspace.billing_plan = mapping.requested_plan
+        workspace.billing_plan = requested_plan
         workspace.pending_since = None  # Clear pending state
         logger.info(
             f"Workspace {workspace.id} upgraded to starter tier with subscription {subscription_id}"
         )
-    elif checkout_status == "failed":
-        workspace.billing_status = BillingStatusEnum.locked
+    elif checkout_status in failure_states:
+        # Don't lock the workspace on checkout failure - they can try again
         logger.info(f"Checkout failed for workspace {workspace.id}")
-    elif checkout_status == "expired":
-        workspace.billing_status = BillingStatusEnum.locked
-        mapping.status = "expired"
+    elif checkout_status in expired_states:
+        if mapping:
+            mapping.status = "expired"
         logger.info(f"Checkout expired for workspace {workspace.id}")
+    elif checkout_status == "open":
+        # Checkout is still open, user hasn't completed payment yet
+        logger.info(f"Checkout {checkout_id} still open for workspace {workspace.id}")
+    else:
+        logger.warning(
+            f"Unknown checkout status: {checkout_status} for checkout {checkout_id}"
+        )
 
     db.commit()
     return "processed"
 
 
-async def _handle_subscription_active(data: dict, db: Session) -> str:
-    """Handle subscription.active webhook.
+async def _handle_subscription_created(data: dict, db: Session) -> str:
+    """Handle subscription.created webhook.
 
-    WHAT: Updates workspace when subscription becomes active
-    WHY: May occur after trial period ends or payment succeeds
+    WHAT: Updates workspace when a new subscription is created
+    WHY: Subscription may be created before or after checkout.updated - ensures upgrade
+
+    IMPORTANT: This sets billing_tier = starter to grant full features.
+    Even if checkout.updated already ran, this is idempotent.
     """
     subscription_id = data.get("id")
     customer_id = data.get("customer_id")
+    subscription_status = data.get("status", "active")  # Polar subscription status
     current_period_start = data.get("current_period_start")
     current_period_end = data.get("current_period_end")
     trial_end = data.get("trial_end")
+    metadata = data.get("metadata", {})
 
+    logger.info(
+        f"Subscription created: {subscription_id} status={subscription_status}, metadata={metadata}"
+    )
+
+    # Try to find workspace by subscription ID first
     workspace = (
         db.query(Workspace)
         .filter(Workspace.polar_subscription_id == subscription_id)
@@ -742,11 +830,37 @@ async def _handle_subscription_active(data: dict, db: Session) -> str:
             )
 
     if not workspace:
+        # Try to find by customer_id (fallback)
+        if customer_id:
+            workspace = (
+                db.query(Workspace)
+                .filter(Workspace.polar_customer_id == customer_id)
+                .first()
+            )
+
+    if not workspace:
+        # Final fallback: try metadata.workspace_id
+        workspace_id_str = metadata.get("workspace_id")
+        if workspace_id_str:
+            logger.info(
+                f"Trying metadata workspace_id={workspace_id_str} for subscription {subscription_id}"
+            )
+            try:
+                workspace = (
+                    db.query(Workspace)
+                    .filter(Workspace.id == UUID(workspace_id_str))
+                    .first()
+                )
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid workspace_id in metadata: {workspace_id_str}")
+
+    if not workspace:
         logger.warning(f"No workspace found for subscription {subscription_id}")
         return "workspace_not_found"
 
-    # Update billing state
+    # Update billing state - ALWAYS upgrade to starter tier when subscription is created
     workspace.billing_status = BillingStatusEnum.active
+    workspace.billing_tier = BillingPlanEnum.starter  # CRITICAL: Upgrade to paid tier
     workspace.polar_subscription_id = subscription_id
     if customer_id:
         workspace.polar_customer_id = customer_id
@@ -766,7 +880,98 @@ async def _handle_subscription_active(data: dict, db: Session) -> str:
     workspace.pending_since = None
     db.commit()
 
-    logger.info(f"Workspace {workspace.id} subscription active")
+    logger.info(
+        f"Workspace {workspace.id} upgraded to starter tier with subscription {subscription_id}"
+    )
+    return "processed"
+
+
+async def _handle_subscription_active(data: dict, db: Session) -> str:
+    """Handle subscription.active webhook.
+
+    WHAT: Updates workspace when subscription becomes active
+    WHY: This is sent when trial converts to paid, or payment succeeds
+
+    IMPORTANT: This sets billing_tier = starter to grant full features.
+    """
+    subscription_id = data.get("id")
+    customer_id = data.get("customer_id")
+    current_period_start = data.get("current_period_start")
+    current_period_end = data.get("current_period_end")
+    metadata = data.get("metadata", {})
+
+    logger.info(f"Subscription active: {subscription_id}, metadata={metadata}")
+
+    # Try to find workspace by subscription ID
+    workspace = (
+        db.query(Workspace)
+        .filter(Workspace.polar_subscription_id == subscription_id)
+        .first()
+    )
+
+    if not workspace:
+        # Try to find by checkout mapping
+        mapping = (
+            db.query(PolarCheckoutMapping)
+            .filter(PolarCheckoutMapping.polar_subscription_id == subscription_id)
+            .first()
+        )
+        if mapping:
+            workspace = (
+                db.query(Workspace).filter(Workspace.id == mapping.workspace_id).first()
+            )
+
+    if not workspace and customer_id:
+        # Try to find by customer_id (fallback)
+        workspace = (
+            db.query(Workspace)
+            .filter(Workspace.polar_customer_id == customer_id)
+            .first()
+        )
+
+    if not workspace:
+        # Final fallback: try metadata.workspace_id
+        workspace_id_str = metadata.get("workspace_id")
+        if workspace_id_str:
+            logger.info(
+                f"Trying metadata workspace_id={workspace_id_str} for subscription {subscription_id}"
+            )
+            try:
+                workspace = (
+                    db.query(Workspace)
+                    .filter(Workspace.id == UUID(workspace_id_str))
+                    .first()
+                )
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid workspace_id in metadata: {workspace_id_str}")
+
+    if not workspace:
+        logger.warning(f"No workspace found for subscription {subscription_id}")
+        return "workspace_not_found"
+
+    # Update billing state - subscription is now active
+    workspace.billing_status = BillingStatusEnum.active
+    workspace.billing_tier = BillingPlanEnum.starter  # CRITICAL: Upgrade to paid tier
+    workspace.polar_subscription_id = subscription_id
+    if customer_id:
+        workspace.polar_customer_id = customer_id
+
+    # Update period timestamps
+    if current_period_start:
+        workspace.current_period_start = datetime.fromisoformat(
+            current_period_start.replace("Z", "+00:00")
+        )
+    if current_period_end:
+        workspace.current_period_end = datetime.fromisoformat(
+            current_period_end.replace("Z", "+00:00")
+        )
+
+    workspace.pending_since = None
+    db.commit()
+
+    logger.info(
+        f"Workspace {workspace.id} subscription active - upgraded to starter tier"
+    )
     return "processed"
 
 
@@ -836,14 +1041,25 @@ async def _handle_subscription_updated(data: dict, db: Session) -> str:
     """Handle subscription.updated webhook.
 
     WHAT: Updates workspace when subscription details change
-    WHY: Plan change, period renewal, etc.
+    WHY: Plan change, period renewal, status changes (active, trialing, canceled, etc.)
+
+    IMPORTANT: When status is 'active' or 'trialing', ensure billing_tier = starter
+    to grant full features. This handles cases where subscription becomes active
+    after payment processing completes.
     """
     subscription_id = data.get("id")
     status_str = data.get("status")
     current_period_start = data.get("current_period_start")
     current_period_end = data.get("current_period_end")
     trial_end = data.get("trial_end")
+    customer_id = data.get("customer_id")
+    metadata = data.get("metadata", {})
 
+    logger.info(
+        f"Subscription updated: {subscription_id} status={status_str}, metadata={metadata}"
+    )
+
+    # Try to find workspace by subscription ID first
     workspace = (
         db.query(Workspace)
         .filter(Workspace.polar_subscription_id == subscription_id)
@@ -851,8 +1067,50 @@ async def _handle_subscription_updated(data: dict, db: Session) -> str:
     )
 
     if not workspace:
+        # Try to find by checkout mapping (subscription_id may be set there first)
+        mapping = (
+            db.query(PolarCheckoutMapping)
+            .filter(PolarCheckoutMapping.polar_subscription_id == subscription_id)
+            .first()
+        )
+        if mapping:
+            workspace = (
+                db.query(Workspace).filter(Workspace.id == mapping.workspace_id).first()
+            )
+
+    if not workspace and customer_id:
+        # Try to find by customer_id (fallback)
+        workspace = (
+            db.query(Workspace)
+            .filter(Workspace.polar_customer_id == customer_id)
+            .first()
+        )
+
+    if not workspace:
+        # Final fallback: try metadata.workspace_id
+        workspace_id_str = metadata.get("workspace_id")
+        if workspace_id_str:
+            logger.info(
+                f"Trying metadata workspace_id={workspace_id_str} for subscription {subscription_id}"
+            )
+            try:
+                workspace = (
+                    db.query(Workspace)
+                    .filter(Workspace.id == UUID(workspace_id_str))
+                    .first()
+                )
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid workspace_id in metadata: {workspace_id_str}")
+
+    if not workspace:
         logger.warning(f"No workspace found for subscription {subscription_id}")
         return "workspace_not_found"
+
+    # Update workspace with subscription_id if not set
+    if not workspace.polar_subscription_id:
+        workspace.polar_subscription_id = subscription_id
+    if customer_id and not workspace.polar_customer_id:
+        workspace.polar_customer_id = customer_id
 
     # Map Polar status to our billing status
     status_map = {
@@ -864,6 +1122,14 @@ async def _handle_subscription_updated(data: dict, db: Session) -> str:
     }
     if status_str in status_map:
         workspace.billing_status = status_map[status_str]
+
+        # CRITICAL: When subscription is active or trialing, ensure starter tier
+        # This handles: trial start, trial-to-active conversion, payment success
+        if status_str in ("active", "trialing"):
+            workspace.billing_tier = BillingPlanEnum.starter
+            logger.info(
+                f"Workspace {workspace.id} upgraded to starter tier (status: {status_str})"
+            )
 
     # Update timestamps
     if current_period_start:

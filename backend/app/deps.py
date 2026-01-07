@@ -43,7 +43,9 @@ class Settings(BaseSettings):
     SHOPIFY_CLIENT_ID: Optional[str] = None
     SHOPIFY_CLIENT_SECRET: Optional[str] = None
     SHOPIFY_SCOPES: str = "read_orders,read_all_orders,read_products,read_customers,read_analytics,read_inventory,read_marketing_events"
-    SHOPIFY_REDIRECT_URI: Optional[str] = None  # e.g., https://api.yourapp.com/shopify/callback
+    SHOPIFY_REDIRECT_URI: Optional[str] = (
+        None  # e.g., https://api.yourapp.com/shopify/callback
+    )
 
     # Clerk Authentication Configuration
     # WHAT: Clerk API keys for JWT validation and webhook verification
@@ -59,7 +61,9 @@ class Settings(BaseSettings):
     # Set to True in .env for local development
     DEV_AUTO_PROVISION_USERS: bool = False
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
 
 @lru_cache()
@@ -114,18 +118,21 @@ async def _fetch_clerk_jwks(issuer: Optional[str] = None) -> dict:
         if not settings.CLERK_PUBLISHABLE_KEY:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Clerk not configured"
+                detail="Clerk not configured",
             )
 
         try:
             import base64
-            key_parts = settings.CLERK_PUBLISHABLE_KEY.split('_')
+
+            key_parts = settings.CLERK_PUBLISHABLE_KEY.split("_")
             if len(key_parts) >= 3:
                 encoded_domain = key_parts[-1]
                 padding = 4 - len(encoded_domain) % 4
                 if padding != 4:
-                    encoded_domain += '=' * padding
-                frontend_api = base64.b64decode(encoded_domain).decode('utf-8').rstrip('$')
+                    encoded_domain += "=" * padding
+                frontend_api = (
+                    base64.b64decode(encoded_domain).decode("utf-8").rstrip("$")
+                )
                 jwks_url = f"https://{frontend_api}/.well-known/jwks.json"
         except Exception as e:
             logger.warning(f"[CLERK] Could not decode frontend API from key: {e}")
@@ -133,7 +140,7 @@ async def _fetch_clerk_jwks(issuer: Optional[str] = None) -> dict:
     if not jwks_url:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not determine Clerk JWKS URL"
+            detail="Could not determine Clerk JWKS URL",
         )
 
     logger.info(f"[CLERK] Fetching JWKS from {jwks_url}")
@@ -150,13 +157,14 @@ async def _fetch_clerk_jwks(issuer: Optional[str] = None) -> dict:
         logger.error(f"[CLERK] Failed to fetch JWKS from {jwks_url}: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service unavailable"
+            detail="Authentication service unavailable",
         )
 
 
 # -----------------------------------------------------------------------------
 # Clerk Authentication Dependency
 # -----------------------------------------------------------------------------
+
 
 async def get_current_user(
     request: Request,
@@ -207,8 +215,7 @@ async def get_current_user(
 
     if not token:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
         )
 
     try:
@@ -247,8 +254,7 @@ async def get_current_user(
             if not rsa_key:
                 logger.error(f"[CLERK] Key {kid} not found even after refresh")
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token"
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
                 )
 
         # Decode and validate JWT
@@ -256,21 +262,19 @@ async def get_current_user(
             token,
             rsa_key,
             algorithms=["RS256"],
-            options={"verify_aud": False}  # Clerk doesn't require audience
+            options={"verify_aud": False},  # Clerk doesn't require audience
         )
 
         clerk_user_id = payload.get("sub")
         if not clerk_user_id:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
             )
 
     except JWTError as e:
         logger.warning(f"[CLERK] JWT validation failed: {e}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
 
     # Look up user by clerk_id
@@ -282,7 +286,9 @@ async def get_current_user(
 
         # In development mode, auto-provision the user
         if settings.DEV_AUTO_PROVISION_USERS:
-            logger.warning(f"[CLERK] Auto-provisioning user for clerk_id={clerk_user_id} (DEV_AUTO_PROVISION_USERS=True)")
+            logger.warning(
+                f"[CLERK] Auto-provisioning user for clerk_id={clerk_user_id} (DEV_AUTO_PROVISION_USERS=True)"
+            )
             user = await _auto_provision_clerk_user(db, clerk_user_id, settings)
             if user:
                 return user
@@ -291,7 +297,7 @@ async def get_current_user(
         logger.error(f"[CLERK] User not found for clerk_id={clerk_user_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found. Please try signing out and back in."
+            detail="User not found. Please try signing out and back in.",
         )
 
     return user
@@ -329,7 +335,9 @@ async def _auto_provision_clerk_user(
             )
 
             if response.status_code != 200:
-                logger.error(f"[CLERK] Failed to fetch user from Clerk API: {response.status_code}")
+                logger.error(
+                    f"[CLERK] Failed to fetch user from Clerk API: {response.status_code}"
+                )
                 return None
 
             clerk_user = response.json()
@@ -385,7 +393,9 @@ async def _auto_provision_clerk_user(
 
         db.commit()
 
-        logger.info(f"[CLERK] Auto-provisioned user {user.id} with workspace {workspace.id}")
+        logger.info(
+            f"[CLERK] Auto-provisioned user {user.id} with workspace {workspace.id}"
+        )
         return user
 
     except Exception as e:
@@ -408,13 +418,12 @@ async def _get_current_user_legacy(
 
     if not access_token:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
         )
 
     # Remove optional "Bearer " prefix
     if access_token.startswith("Bearer "):
-        token = access_token[len("Bearer "):]
+        token = access_token[len("Bearer ") :]
     else:
         token = access_token
 
@@ -422,24 +431,52 @@ async def _get_current_user_legacy(
         payload = decode_token(token)
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
 
     subject = payload.get("sub")
     if not subject:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
         )
 
     user = db.query(User).filter(User.email == subject).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
+    return user
+
+
+# =============================================================================
+# SUPERUSER DEPENDENCY
+# =============================================================================
+# WHAT: Require platform-level superuser access for admin endpoints
+# WHY: Admin endpoints need elevated privileges beyond workspace roles
+
+
+async def require_superuser(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Require superuser status for admin endpoints.
+
+    WHAT: FastAPI dependency that enforces superuser access
+    WHY: Admin dashboard needs platform-level access (distinct from workspace roles)
+
+    Parameters:
+        user: Authenticated user from get_current_user
+
+    Returns:
+        User: Same user, if superuser check passes
+
+    Raises:
+        HTTPException 403: If user is not a superuser
+    """
+    if not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Superuser access required"
+        )
     return user
 
 
@@ -491,15 +528,14 @@ async def require_active_subscription(
         HTTPException 403: User is member but cannot manage billing
     """
     # Get user's active workspace
-    workspace = db.query(Workspace).filter(
-        Workspace.id == current_user.workspace_id
-    ).first()
+    workspace = (
+        db.query(Workspace).filter(Workspace.id == current_user.workspace_id).first()
+    )
 
     if not workspace:
         logger.error(f"[BILLING] Workspace not found for user {current_user.id}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
 
     # Check if billing status allows access
@@ -517,7 +553,10 @@ async def require_active_subscription(
         .first()
     )
 
-    can_manage_billing = membership and membership.role in (RoleEnum.owner, RoleEnum.admin)
+    can_manage_billing = membership and membership.role in (
+        RoleEnum.owner,
+        RoleEnum.admin,
+    )
 
     # Build response based on user role
     if can_manage_billing:
@@ -531,7 +570,7 @@ async def require_active_subscription(
                 "billing_status": workspace.billing_status.value,
                 "can_manage_billing": True,
                 "redirect_url": f"/subscribe?workspaceId={workspace.id}",
-            }
+            },
         )
     else:
         # Viewer/Member cannot manage billing
@@ -543,5 +582,5 @@ async def require_active_subscription(
                 "workspace_id": str(workspace.id),
                 "billing_status": workspace.billing_status.value,
                 "can_manage_billing": False,
-            }
+            },
         )
