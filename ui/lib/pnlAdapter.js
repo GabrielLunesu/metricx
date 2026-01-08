@@ -110,7 +110,9 @@ export function adaptPnLStatement(apiResponse) {
       notes: row.notes || '',
       source: row.source,
       isAdSpend: row.source === 'ads',
-      isManual: row.source === 'manual'
+      isManual: row.source === 'manual',
+      // For manual costs: list of individual cost UUIDs that make up this aggregated row
+      costIds: row.cost_ids || []
     })),
     
     // Composition pie chart

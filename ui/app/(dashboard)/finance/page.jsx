@@ -180,12 +180,34 @@ export default function FinancePage() {
     setShowAddCost(true);
   };
 
-  const handleEditCost = (cost) => {
-    // Find the full cost object from manualCosts
-    const fullCost = manualCosts.find((c) => c.id === cost.id?.replace("manual-", ""));
-    if (fullCost) {
-      setEditingCost(fullCost);
-      setShowAddCost(true);
+  const handleEditCost = (row) => {
+    // Row contains costIds array from backend (list of UUIDs that make up this aggregated category)
+    // If there's exactly one cost in this category, open the edit modal directly
+    // If there are multiple, we could show a list picker (future enhancement)
+    const costIds = row.costIds || [];
+    
+    if (costIds.length === 0) {
+      // Fallback: try to find by category (for backward compatibility)
+      const byCategory = manualCosts.filter((c) => c.category === row.category);
+      if (byCategory.length === 1) {
+        setEditingCost(byCategory[0]);
+        setShowAddCost(true);
+      } else if (byCategory.length > 1) {
+        toast.info(`${byCategory.length} costs in this category. Please manage them individually from the costs list.`);
+      }
+      return;
+    }
+    
+    if (costIds.length === 1) {
+      // Single cost - open edit modal directly
+      const fullCost = manualCosts.find((c) => c.id === costIds[0]);
+      if (fullCost) {
+        setEditingCost(fullCost);
+        setShowAddCost(true);
+      }
+    } else {
+      // Multiple costs aggregated - inform user
+      toast.info(`${costIds.length} costs in "${row.category}". Click "Add Cost" to manage individual entries.`);
     }
   };
 

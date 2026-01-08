@@ -1016,6 +1016,9 @@ class PnLRow(BaseModel):
     variance_pct: Optional[float] = None
     notes: Optional[str] = None
     source: Literal["ads", "manual"]
+    # For manual costs: list of individual cost UUIDs that make up this row
+    # Enables frontend to edit individual costs when aggregated by category
+    cost_ids: Optional[List[str]] = None
 
 
 # Test 4: Add PnLStatementResponse

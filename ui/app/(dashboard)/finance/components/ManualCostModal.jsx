@@ -63,8 +63,9 @@ export default function ManualCostModal({
       amount_dollar: Number(values.amount_dollar),
       allocation: {
         type: "one_off",
+        date: values.date, // Include the date for proper allocation
       },
-      notes: values.notes ? `${values.notes} (Date: ${values.date})` : `Date: ${values.date}`,
+      notes: values.notes || "",
     };
     onSubmit?.(payload);
   });
@@ -92,7 +93,7 @@ export default function ManualCostModal({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-bold text-slate-900">
-                {editingCost ? "✏️ Edit Cost" : "Add New Cost"}
+                {editingCost ? "Edit Cost" : "Add New Cost"}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 {editingCost ? "Update cost details below" : "Track a manual expense or cost"}
@@ -214,7 +215,7 @@ export default function ManualCostModal({
               disabled={form.formState.isSubmitting}
               className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all disabled:opacity-60"
             >
-              {editingCost ? "💾 Update" : "Add Cost"}
+              {editingCost ? "Update" : "Add Cost"}
             </button>
           </div>
         </form>

@@ -120,3 +120,28 @@ def get_allocated_costs(
             category_totals[category] = category_totals.get(category, 0) + allocated
 
     return category_totals
+
+
+def get_allocated_costs_with_ids(
+    costs: List[ManualCost], period_start: date, period_end: date
+) -> Dict[str, Dict]:
+    """Get all costs allocated to a period, grouped by category, with cost IDs.
+
+    WHAT: Aggregates manual costs by category for P&L table, tracking individual cost IDs
+    WHY: P&L needs one row per category with total, but also needs IDs for editing
+
+    Returns:
+        Dict mapping category → {"amount": float, "cost_ids": List[str]}
+    """
+    category_data = {}
+
+    for cost in costs:
+        allocated = calculate_allocated_amount(cost, period_start, period_end)
+        if allocated > 0:
+            category = cost.category
+            if category not in category_data:
+                category_data[category] = {"amount": 0, "cost_ids": []}
+            category_data[category]["amount"] += allocated
+            category_data[category]["cost_ids"].append(str(cost.id))
+
+    return category_data

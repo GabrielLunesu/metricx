@@ -5,9 +5,13 @@
  * Two large cards with interactive visualizations
  * White theme with blue/cyan accents
  * Related: page.jsx, HeroSectionNew.jsx
+ *
+ * FIX: Added hasMounted state to prevent animation flicker during hydration.
+ * Animations only run after component has mounted on client.
  */
 
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import { Sparkles, Search, TrendingUp, Target, DollarSign, BarChart3 } from "lucide-react";
 
 // AI Insights visualization - shows automated tagging and classification
@@ -216,7 +220,8 @@ function CampaignDeepDiveViz() {
 }
 
 // Feature card component
-function FeatureCard({ icon: Icon, title, description, color = "blue", index = 0 }) {
+// PROPS: hasMounted - prevents animation flicker during hydration
+function FeatureCard({ icon: Icon, title, description, color = "blue", index = 0, hasMounted = true }) {
   const colorClasses = {
     blue: "from-blue-500 to-cyan-500 shadow-blue-500/20",
     purple: "from-purple-500 to-pink-500 shadow-purple-500/20",
@@ -226,7 +231,7 @@ function FeatureCard({ icon: Icon, title, description, color = "blue", index = 0
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={hasMounted ? { opacity: 0, y: 30 } : false}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
@@ -242,12 +247,20 @@ function FeatureCard({ icon: Icon, title, description, color = "blue", index = 0
 }
 
 export default function FeaturesSectionNew() {
+  // Prevent animation flicker during hydration
+  // WHY: whileInView animations can trigger during SSR→client hydration
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   return (
     <section id="features" className="relative w-full py-24 lg:py-32 bg-gray-50/50 border-t border-gray-100">
       <div className="max-w-[1400px] mx-auto px-6 md:px-12">
         {/* Section header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={hasMounted ? { opacity: 0, y: 20 } : false}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="max-w-3xl mx-auto text-center mb-20"
@@ -265,7 +278,7 @@ export default function FeaturesSectionNew() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
           {/* Card 1: AI-Powered Insights */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={hasMounted ? { opacity: 0, y: 30 } : false}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
@@ -287,7 +300,7 @@ export default function FeaturesSectionNew() {
 
           {/* Card 2: Campaign Deep Dive */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={hasMounted ? { opacity: 0, y: 30 } : false}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1, duration: 0.5 }}
@@ -316,6 +329,7 @@ export default function FeaturesSectionNew() {
             description="Watch your metrics update live. Catch opportunities as they happen."
             color="green"
             index={0}
+            hasMounted={hasMounted}
           />
           <FeatureCard
             icon={Target}
@@ -323,6 +337,7 @@ export default function FeaturesSectionNew() {
             description="Track conversions across the entire customer journey with server-side tracking."
             color="purple"
             index={1}
+            hasMounted={hasMounted}
           />
           <FeatureCard
             icon={DollarSign}
@@ -330,6 +345,7 @@ export default function FeaturesSectionNew() {
             description="Know your true profitability with real-time revenue and cost tracking."
             color="amber"
             index={2}
+            hasMounted={hasMounted}
           />
           <FeatureCard
             icon={BarChart3}
@@ -337,6 +353,7 @@ export default function FeaturesSectionNew() {
             description="Build and schedule reports tailored to your exact needs."
             color="blue"
             index={3}
+            hasMounted={hasMounted}
           />
         </div>
       </div>

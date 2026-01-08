@@ -29,7 +29,11 @@ from sqlalchemy import func
 from app import models, schemas
 from app.database import get_db
 from app.deps import get_current_user
-from app.services.cost_allocation import calculate_allocated_amount, get_allocated_costs
+from app.services.cost_allocation import (
+    calculate_allocated_amount,
+    get_allocated_costs,
+    get_allocated_costs_with_ids,
+)
 
 router = APIRouter(
     prefix="/workspaces",
@@ -144,7 +148,14 @@ def get_pnl_statement(
         .all()
     )
 
-    manual_by_category = get_allocated_costs(manual_costs, period_start, period_end)
+    # Use the version that includes cost IDs for frontend editing
+    manual_by_category_with_ids = get_allocated_costs_with_ids(
+        manual_costs, period_start, period_end
+    )
+    # For backwards compatibility, also create the simple dict
+    manual_by_category = {
+        cat: data["amount"] for cat, data in manual_by_category_with_ids.items()
+    }
 
     # ========================================================================
     # 3. COMPUTE SUMMARY KPIS
@@ -191,17 +202,18 @@ def get_pnl_statement(
             )
         )
 
-    # Manual cost rows
-    for category, amount in manual_by_category.items():
+    # Manual cost rows - include cost_ids for frontend editing
+    for category, data in manual_by_category_with_ids.items():
         rows.append(
             schemas.PnLRow(
                 id=f"manual-{category}",
                 category=category,
-                actual_dollar=amount,
+                actual_dollar=data["amount"],
                 planned_dollar=None,
                 variance_pct=None,
                 notes=None,
                 source="manual",
+                cost_ids=data["cost_ids"],  # List of UUIDs for editing
             )
         )
 
