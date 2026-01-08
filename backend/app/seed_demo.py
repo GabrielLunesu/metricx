@@ -58,11 +58,11 @@ GOOGLE_CAMPAIGNS = [
     {
         "name": "Search - Brand Terms",
         "goal": models.GoalEnum.traffic,
-        "revenue_share": 0.20,
+        "revenue_share": 0.35,
         "roas": 5.0,
-        "ctr_range": (0.08, 0.12),  # High CTR for brand
-        "cvr_range": (0.04, 0.08),
-        "cpm_range": (15, 25),
+        "ctr_range": (0.06, 0.14),  # High CTR for brand, wider range
+        "cvr_range": (0.03, 0.10),
+        "cpm_range": (12, 30),
         "ad_groups": [
             {
                 "name": "Exact Match Brand",
@@ -75,29 +75,22 @@ GOOGLE_CAMPAIGNS = [
         ],
     },
     {
-        "name": "Search - Non-Brand",
-        "goal": models.GoalEnum.conversions,
-        "revenue_share": 0.15,
-        "roas": 2.5,
-        "ctr_range": (0.03, 0.06),
-        "cvr_range": (0.02, 0.05),
-        "cpm_range": (20, 35),
-        "ad_groups": [
-            {"name": "Product Categories", "ads": ["RSA Category 1", "RSA Category 2"]},
-            {"name": "Generic Terms", "ads": ["RSA Generic 1", "RSA Generic 2"]},
-        ],
-    },
-    {
         "name": "Shopping - Standard",
         "goal": models.GoalEnum.purchases,
-        "revenue_share": 0.25,
+        "revenue_share": 0.40,
         "roas": 3.5,
-        "ctr_range": (0.01, 0.025),
-        "cvr_range": (0.02, 0.04),
-        "cpm_range": (8, 15),
+        "ctr_range": (0.008, 0.035),
+        "cvr_range": (0.015, 0.06),
+        "cpm_range": (6, 18),
         "ad_groups": [
-            {"name": "All Products", "ads": ["Shopping Feed Main"]},
-            {"name": "Best Sellers", "ads": ["Shopping Featured"]},
+            {
+                "name": "All Products",
+                "ads": ["Shopping Feed Main", "Shopping Feed Secondary"],
+            },
+            {
+                "name": "Best Sellers",
+                "ads": ["Shopping Featured", "Shopping Top Picks"],
+            },
         ],
     },
     {
@@ -105,134 +98,83 @@ GOOGLE_CAMPAIGNS = [
         "goal": models.GoalEnum.purchases,
         "revenue_share": 0.25,
         "roas": 3.0,
-        "ctr_range": (0.015, 0.03),
-        "cvr_range": (0.025, 0.05),
-        "cpm_range": (10, 20),
+        "ctr_range": (0.01, 0.04),
+        "cvr_range": (0.02, 0.07),
+        "cpm_range": (8, 25),
         "is_pmax": True,
         "asset_groups": [
             {"name": "Best Sellers"},
             {"name": "New Arrivals"},
         ],
     },
-    {
-        "name": "Display - Retargeting",
-        "goal": models.GoalEnum.conversions,
-        "revenue_share": 0.10,
-        "roas": 4.0,
-        "ctr_range": (0.005, 0.015),
-        "cvr_range": (0.03, 0.06),
-        "cpm_range": (3, 8),
-        "ad_groups": [
-            {
-                "name": "Cart Abandoners",
-                "ads": ["Display Retarget 1", "Display Retarget 2"],
-            },
-            {
-                "name": "Past Purchasers",
-                "ads": ["Display Cross-sell 1", "Display Cross-sell 2"],
-            },
-        ],
-    },
-    {
-        "name": "Display - Prospecting",
-        "goal": models.GoalEnum.awareness,
-        "revenue_share": 0.05,
-        "roas": 1.5,
-        "ctr_range": (0.003, 0.008),
-        "cvr_range": (0.005, 0.015),
-        "cpm_range": (2, 5),
-        "ad_groups": [
-            {
-                "name": "In-Market Audiences",
-                "ads": ["Display Prospect 1", "Display Prospect 2"],
-            },
-            {
-                "name": "Affinity Audiences",
-                "ads": ["Display Affinity 1", "Display Affinity 2"],
-            },
-        ],
-    },
 ]
 
 META_CAMPAIGNS = [
-    {
-        "name": "Awareness - Top Funnel",
-        "goal": models.GoalEnum.awareness,
-        "revenue_share": 0.05,
-        "roas": 1.2,
-        "ctr_range": (0.005, 0.015),
-        "cvr_range": (0.003, 0.01),
-        "cpm_range": (8, 15),
-        "ad_sets": [
-            {
-                "name": "Broad Interests",
-                "ads": ["Video Awareness 1", "Image Awareness 1"],
-            },
-            {"name": "Lookalike 1%", "ads": ["Video Awareness 2", "Image Awareness 2"]},
-        ],
-    },
-    {
-        "name": "Traffic - Website Visitors",
-        "goal": models.GoalEnum.traffic,
-        "revenue_share": 0.10,
-        "roas": 1.8,
-        "ctr_range": (0.015, 0.03),
-        "cvr_range": (0.01, 0.025),
-        "cpm_range": (5, 12),
-        "ad_sets": [
-            {
-                "name": "Engaged Shoppers",
-                "ads": ["Carousel Traffic 1", "Single Image Traffic 1"],
-            },
-            {
-                "name": "Custom Audience",
-                "ads": ["Carousel Traffic 2", "Single Image Traffic 2"],
-            },
-        ],
-    },
-    {
-        "name": "Lead Gen - Email Capture",
-        "goal": models.GoalEnum.leads,
-        "revenue_share": 0.10,
-        "roas": 2.0,
-        "ctr_range": (0.01, 0.025),
-        "cvr_range": (0.10, 0.25),  # High CVR for lead forms
-        "cpm_range": (6, 14),
-        "ad_sets": [
-            {"name": "Lead Form - Discount", "ads": ["Lead Ad 1", "Lead Ad 2"]},
-            {"name": "Lead Form - Newsletter", "ads": ["Lead Ad 3", "Lead Ad 4"]},
-        ],
-    },
     {
         "name": "Catalog Sales - DPA",
         "goal": models.GoalEnum.purchases,
         "revenue_share": 0.50,
         "roas": 4.0,
-        "ctr_range": (0.01, 0.025),
-        "cvr_range": (0.025, 0.05),
-        "cpm_range": (8, 18),
+        "ctr_range": (0.008, 0.035),
+        "cvr_range": (0.02, 0.07),
+        "cpm_range": (6, 22),
         "ad_sets": [
-            {"name": "DPA - All Products", "ads": ["DPA Dynamic 1", "DPA Dynamic 2"]},
+            {
+                "name": "DPA - All Products",
+                "ads": ["DPA Dynamic 1", "DPA Dynamic 2", "DPA Dynamic 3"],
+            },
             {"name": "DPA - Retargeting", "ads": ["DPA Retarget 1", "DPA Retarget 2"]},
+            {"name": "DPA - Lookalikes", "ads": ["DPA Lookalike 1", "DPA Lookalike 2"]},
         ],
     },
     {
-        "name": "Conversions - Mid Funnel",
+        "name": "Conversions - Prospecting",
         "goal": models.GoalEnum.conversions,
-        "revenue_share": 0.25,
-        "roas": 3.0,
-        "ctr_range": (0.012, 0.028),
-        "cvr_range": (0.03, 0.06),
-        "cpm_range": (10, 20),
+        "revenue_share": 0.30,
+        "roas": 2.5,
+        "ctr_range": (0.01, 0.04),
+        "cvr_range": (0.02, 0.08),
+        "cpm_range": (8, 25),
         "ad_sets": [
             {
-                "name": "Website Converters",
-                "ads": ["Conversion Ad 1", "Conversion Ad 2"],
+                "name": "Broad Interests",
+                "ads": ["Conversion Ad 1", "Conversion Ad 2", "Conversion Ad 3"],
             },
             {
-                "name": "Lookalike Purchasers",
-                "ads": ["Conversion Ad 3", "Conversion Ad 4"],
+                "name": "Lookalike Purchasers 1%",
+                "ads": ["Lookalike Ad 1", "Lookalike Ad 2"],
             },
+        ],
+    },
+    {
+        "name": "Retargeting - Website Visitors",
+        "goal": models.GoalEnum.conversions,
+        "revenue_share": 0.20,
+        "roas": 5.5,
+        "ctr_range": (0.015, 0.05),
+        "cvr_range": (0.04, 0.12),
+        "cpm_range": (10, 30),
+        "ad_sets": [
+            {
+                "name": "Cart Abandoners",
+                "ads": ["Retarget Cart 1", "Retarget Cart 2"],
+            },
+            {
+                "name": "Product Viewers",
+                "ads": ["Retarget Viewer 1", "Retarget Viewer 2"],
+            },
+        ],
+    },
+    {
+        "name": "Awareness - Video",
+        "goal": models.GoalEnum.awareness,
+        "revenue_share": 0.00,  # No direct revenue attribution
+        "roas": 0.8,
+        "ctr_range": (0.003, 0.015),
+        "cvr_range": (0.002, 0.01),
+        "cpm_range": (4, 12),
+        "ad_sets": [
+            {"name": "Video Views - Broad", "ads": ["Brand Video 1", "Brand Video 2"]},
         ],
     },
 ]
@@ -459,10 +401,24 @@ def generate_hourly_curve(hour: int) -> float:
 
 def apply_trend(day_offset: int) -> float:
     """Apply upward trend based on day offset (30 = oldest, 1 = yesterday).
-    5% improvement per week."""
+    5% improvement per week with added daily fluctuations."""
     weeks_ago = day_offset / 7
     # More recent = higher multiplier
-    return 1.0 + (WEEKLY_TREND_IMPROVEMENT * (4 - weeks_ago))  # 4 weeks ago vs now
+    base_trend = 1.0 + (
+        WEEKLY_TREND_IMPROVEMENT * (4 - weeks_ago)
+    )  # 4 weeks ago vs now
+
+    # Add daily fluctuation (+/- 25%)
+    daily_noise = random.uniform(-0.25, 0.25)
+
+    # Add day-of-week effect (weekends slightly lower)
+    day_of_week = (30 - day_offset) % 7  # 0=Mon, 6=Sun
+    if day_of_week >= 5:  # Weekend
+        weekend_effect = random.uniform(-0.15, 0.05)
+    else:
+        weekend_effect = random.uniform(-0.05, 0.10)
+
+    return base_trend * (1 + daily_noise + weekend_effect)
 
 
 def generate_campaign_metrics(
@@ -471,36 +427,48 @@ def generate_campaign_metrics(
     day_offset: int,
     provider_daily_revenue: float,
 ) -> dict:
-    """Generate realistic metrics for a campaign based on config."""
+    """Generate realistic metrics for a campaign based on config with high variance."""
 
     # Base revenue for this campaign
     base_daily_revenue = provider_daily_revenue * config["revenue_share"]
 
-    # Apply trend (older days have lower metrics)
+    # Apply trend (older days have lower metrics) - now includes daily fluctuations
     trend = apply_trend(day_offset)
-    daily_revenue = base_daily_revenue * trend
 
-    # Calculate spend from ROAS
-    roas = config["roas"] * (1 + random.uniform(-0.1, 0.1))  # +/- 10% variance
-    daily_spend = daily_revenue / roas
+    # Add campaign-specific random spike/dip days (occasional big wins or losses)
+    if random.random() < 0.15:  # 15% chance of a spike day
+        spike = random.choice([0.5, 0.6, 1.4, 1.5, 1.8])  # Big dip or big spike
+    else:
+        spike = 1.0
 
-    # Calculate impressions from CPM
-    cpm = random.uniform(*config["cpm_range"])
-    impressions = int((daily_spend / cpm) * 1000)
+    daily_revenue = base_daily_revenue * trend * spike
 
-    # Calculate clicks from CTR
-    ctr = random.uniform(*config["ctr_range"])
+    # Calculate spend from ROAS with much higher variance (+/- 35%)
+    roas = config["roas"] * (1 + random.uniform(-0.35, 0.35))
+
+    # Occasionally have terrible or amazing ROAS days
+    if random.random() < 0.10:
+        roas *= random.choice([0.4, 0.5, 1.6, 2.0])
+
+    daily_spend = daily_revenue / max(roas, 0.5)  # Prevent division issues
+
+    # Calculate impressions from CPM with variance
+    cpm = random.uniform(*config["cpm_range"]) * random.uniform(0.7, 1.4)
+    impressions = int((daily_spend / max(cpm, 1)) * 1000)
+
+    # Calculate clicks from CTR with variance
+    ctr = random.uniform(*config["ctr_range"]) * random.uniform(0.6, 1.5)
     clicks = int(impressions * ctr)
 
-    # Calculate conversions from CVR
-    cvr = random.uniform(*config["cvr_range"])
+    # Calculate conversions from CVR with variance
+    cvr = random.uniform(*config["cvr_range"]) * random.uniform(0.5, 1.6)
     conversions = clicks * cvr
 
     # Goal-specific metrics
     leads = None
     purchases = None
     installs = None
-    visitors = int(clicks * random.uniform(0.85, 0.95))
+    visitors = int(clicks * random.uniform(0.75, 0.98))
 
     goal = config["goal"]
     if goal == models.GoalEnum.leads:
@@ -512,20 +480,20 @@ def generate_campaign_metrics(
         installs = int(conversions)
         conversions = installs
 
-    # Profit (assuming 30% margin after COGS)
-    profit = daily_revenue * 0.30
+    # Profit with variance (20-40% margin)
+    profit = daily_revenue * random.uniform(0.20, 0.40)
 
     return {
-        "spend": round(Decimal(str(daily_spend)), 4),
-        "impressions": impressions,
-        "clicks": clicks,
-        "conversions": round(Decimal(str(conversions)), 4),
-        "revenue": round(Decimal(str(daily_revenue)), 4),
+        "spend": round(Decimal(str(max(daily_spend, 0))), 4),
+        "impressions": max(impressions, 0),
+        "clicks": max(clicks, 0),
+        "conversions": round(Decimal(str(max(conversions, 0))), 4),
+        "revenue": round(Decimal(str(max(daily_revenue, 0))), 4),
         "leads": round(Decimal(str(leads)), 4) if leads else None,
         "purchases": purchases if purchases else None,
         "installs": installs if installs else None,
-        "visitors": visitors,
-        "profit": round(Decimal(str(profit)), 4),
+        "visitors": max(visitors, 0),
+        "profit": round(Decimal(str(max(profit, 0))), 4),
     }
 
 
@@ -554,6 +522,29 @@ def distribute_metrics_to_children(
         children_metrics.append(child)
 
     return children_metrics
+
+
+def _distribute_metrics_with_variance(parent_metrics: dict, weight: float) -> dict:
+    """Distribute a portion of parent metrics to a child with added variance."""
+    child = {}
+
+    # Add variance to the weight
+    actual_weight = weight * random.uniform(0.6, 1.5)
+
+    for key, value in parent_metrics.items():
+        if value is None:
+            child[key] = None
+        elif isinstance(value, Decimal):
+            # Add extra variance for each metric
+            metric_variance = random.uniform(0.7, 1.4)
+            child[key] = round(value * Decimal(str(actual_weight * metric_variance)), 4)
+        elif isinstance(value, int):
+            metric_variance = random.uniform(0.7, 1.4)
+            child[key] = max(0, int(value * actual_weight * metric_variance))
+        else:
+            child[key] = value
+
+    return child
 
 
 # =============================================================================
@@ -880,51 +871,132 @@ def generate_metric_snapshots(
                 tzinfo=timezone.utc
             )
 
-        # Generate Google metrics - ONLY at campaign level (dashboard queries campaign level)
+        # Generate Google metrics for ALL entity levels
+        # First, generate campaign-level metrics, then distribute to children
+        google_campaign_metrics = {}
         for entity, config in google_entities:
-            if entity.level != models.LevelEnum.campaign:
-                continue
+            if entity.level == models.LevelEnum.campaign:
+                campaign_metrics = generate_campaign_metrics(
+                    config=config,
+                    provider="google",
+                    day_offset=day_offset,
+                    provider_daily_revenue=google_daily_revenue,
+                )
+                google_campaign_metrics[entity.id] = campaign_metrics
 
-            campaign_metrics = generate_campaign_metrics(
-                config=config,
-                provider="google",
-                day_offset=day_offset,
-                provider_daily_revenue=google_daily_revenue,
-            )
+                _insert_snapshot(
+                    db,
+                    entity.id,
+                    "google",
+                    captured_at,
+                    metrics_date,
+                    campaign_metrics,
+                )
+                total_snapshots += 1
 
-            # Store campaign-level snapshot (dashboard queries this!)
-            _insert_snapshot(
-                db,
-                entity.id,
-                "google",
-                captured_at,
-                metrics_date,
-                campaign_metrics,
-            )
-            total_snapshots += 1
+        # Generate ad group/ad set level metrics (distribute from campaign)
+        google_adset_metrics = {}
+        for entity, config in google_entities:
+            if entity.level in [models.LevelEnum.adset, models.LevelEnum.asset_group]:
+                parent_metrics = google_campaign_metrics.get(entity.parent_id)
+                if parent_metrics:
+                    # Distribute with variance
+                    child_metrics = _distribute_metrics_with_variance(
+                        parent_metrics, random.uniform(0.3, 0.7)
+                    )
+                    google_adset_metrics[entity.id] = child_metrics
 
-        # Generate Meta metrics - ONLY at campaign level
+                    _insert_snapshot(
+                        db,
+                        entity.id,
+                        "google",
+                        captured_at,
+                        metrics_date,
+                        child_metrics,
+                    )
+                    total_snapshots += 1
+
+        # Generate ad level metrics (distribute from ad group)
+        for entity, config in google_entities:
+            if entity.level == models.LevelEnum.ad:
+                parent_metrics = google_adset_metrics.get(entity.parent_id)
+                if parent_metrics:
+                    # Distribute with variance
+                    child_metrics = _distribute_metrics_with_variance(
+                        parent_metrics, random.uniform(0.2, 0.8)
+                    )
+
+                    _insert_snapshot(
+                        db,
+                        entity.id,
+                        "google",
+                        captured_at,
+                        metrics_date,
+                        child_metrics,
+                    )
+                    total_snapshots += 1
+
+        # Generate Meta metrics for ALL entity levels
+        meta_campaign_metrics = {}
         for entity, config in meta_entities:
-            if entity.level != models.LevelEnum.campaign:
-                continue
+            if entity.level == models.LevelEnum.campaign:
+                campaign_metrics = generate_campaign_metrics(
+                    config=config,
+                    provider="meta",
+                    day_offset=day_offset,
+                    provider_daily_revenue=meta_daily_revenue,
+                )
+                meta_campaign_metrics[entity.id] = campaign_metrics
 
-            campaign_metrics = generate_campaign_metrics(
-                config=config,
-                provider="meta",
-                day_offset=day_offset,
-                provider_daily_revenue=meta_daily_revenue,
-            )
+                _insert_snapshot(
+                    db,
+                    entity.id,
+                    "meta",
+                    captured_at,
+                    metrics_date,
+                    campaign_metrics,
+                )
+                total_snapshots += 1
 
-            # Store campaign-level snapshot (dashboard queries this!)
-            _insert_snapshot(
-                db,
-                entity.id,
-                "meta",
-                captured_at,
-                metrics_date,
-                campaign_metrics,
-            )
-            total_snapshots += 1
+        # Generate ad set level metrics
+        meta_adset_metrics = {}
+        for entity, config in meta_entities:
+            if entity.level == models.LevelEnum.adset:
+                parent_metrics = meta_campaign_metrics.get(entity.parent_id)
+                if parent_metrics:
+                    child_metrics = _distribute_metrics_with_variance(
+                        parent_metrics, random.uniform(0.3, 0.7)
+                    )
+                    meta_adset_metrics[entity.id] = child_metrics
+
+                    _insert_snapshot(
+                        db,
+                        entity.id,
+                        "meta",
+                        captured_at,
+                        metrics_date,
+                        child_metrics,
+                    )
+                    total_snapshots += 1
+
+        # Generate ad level metrics
+        for entity, config in meta_entities:
+            if entity.level == models.LevelEnum.ad:
+                parent_metrics = meta_adset_metrics.get(entity.parent_id)
+                if parent_metrics:
+                    child_metrics = _distribute_metrics_with_variance(
+                        parent_metrics, random.uniform(0.2, 0.8)
+                    )
+
+                    _insert_snapshot(
+                        db,
+                        entity.id,
+                        "meta",
+                        captured_at,
+                        metrics_date,
+                        child_metrics,
+                    )
+                    total_snapshots += 1
 
         # Commit every 5 days to avoid memory issues
         if day_offset % 5 == 0:

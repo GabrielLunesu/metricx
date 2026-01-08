@@ -237,7 +237,7 @@ EXAMPLE: "What's my spend today?" → query_metrics(metrics=["spend"], time_rang
                     },
                     "limit": {
                         "type": "integer",
-                        "description": "Number of entities to return for breakdown. Default: 5",
+                        "description": "Number of entities to return for breakdown. Default: 20. Max: 50. Use 50 for 'all' requests.",
                     },
                     "compare_to_previous": {
                         "type": "boolean",
@@ -517,7 +517,7 @@ class SemanticTools:
         metrics: List[str],
         time_range: str = "7d",
         breakdown_level: Optional[str] = None,
-        limit: int = 5,
+        limit: int = 20,
         compare_to_previous: bool = False,
         include_timeseries: bool = False,
         filters: Optional[Dict[str, Any]] = None,
@@ -644,12 +644,21 @@ class SemanticTools:
                 data_providers = [c.provider.value for c in connections]
 
             # Convert to dict
+            result_dict = result.to_dict()
+
+            # Generate pre-formatted text summary for LLM to use directly
+            # This prevents LLM from misinterpreting or missing data
+            formatted_summary = self._format_result_summary(
+                result_dict, metrics, breakdown_level, data_providers
+            )
+
             response = {
                 "success": True,
                 "query": query.to_dict(),
-                "data": result.to_dict(),
-                "data_providers": data_providers,  # Tell LLM which providers this data comes from
+                "data": result_dict,
+                "data_providers": data_providers,
                 "data_providers_note": f"This data is from: {', '.join(data_providers) if data_providers else 'no connected providers'}. Do NOT attribute this data to any other provider.",
+                "formatted_summary": formatted_summary,  # USE THIS IN YOUR RESPONSE - it's pre-formatted and accurate
             }
             return response
 
@@ -816,9 +825,93 @@ class SemanticTools:
             logger.exception(f"[TOOLS] analyze_change failed: {e}")
             return {"error": str(e)}
 
+    def _format_result_summary(
+        self,
+        result_dict: Dict[str, Any],
+        metrics: List[str],
+        breakdown_level: Optional[str],
+        data_providers: List[str],
+    ) -> str:
+        """
+        Generate a pre-formatted text summary of the query results.
+
+        This ensures the LLM has an accurate, complete summary to use
+        rather than interpreting raw data (which can lead to errors).
+
+        RETURNS:
+            Human-readable summary string that the LLM should use verbatim.
+        """
+        lines = []
+
+        # Get summary data
+        summary = result_dict.get("summary", {})
+        breakdown = result_dict.get("breakdown", [])
+        time_range = result_dict.get("time_range_resolved", {})
+
+        start_date = time_range.get("start", "")
+        end_date = time_range.get("end", "")
+        date_range_str = (
+            f"({start_date} to {end_date})" if start_date and end_date else ""
+        )
+
+        provider_str = ", ".join(data_providers) if data_providers else "all providers"
+
+        # Format summary metrics
+        if summary:
+            metric_parts = []
+            for metric in metrics:
+                metric_data = summary.get(metric, {})
+                value = metric_data.get("value")
+                if value is not None:
+                    if metric in ["spend", "revenue", "profit", "cpc", "cpa"]:
+                        metric_parts.append(f"{metric}: ${value:,.2f}")
+                    elif metric in ["roas"]:
+                        metric_parts.append(f"{metric}: {value:.2f}x")
+                    elif metric in ["ctr"]:
+                        metric_parts.append(f"{metric}: {value:.2%}")
+                    else:
+                        metric_parts.append(f"{metric}: {value:,.0f}")
+
+            if metric_parts:
+                lines.append(f"TOTALS {date_range_str}: {', '.join(metric_parts)}")
+
+        # Format breakdown if present
+        if breakdown and breakdown_level:
+            lines.append(
+                f"\n{breakdown_level.upper()} BREAKDOWN ({len(breakdown)} total):"
+            )
+
+            for i, item in enumerate(breakdown, 1):
+                name = (
+                    item.get("label")
+                    or item.get("name")
+                    or item.get("entity_name")
+                    or "Unknown"
+                )
+
+                # Format each metric for this entity
+                item_metrics = []
+                for metric in metrics:
+                    value = item.get(metric)
+                    if value is not None:
+                        if metric in ["spend", "revenue", "profit", "cpc", "cpa"]:
+                            item_metrics.append(f"{metric}: ${value:,.2f}")
+                        elif metric in ["roas"]:
+                            item_metrics.append(f"{metric}: {value:.2f}x")
+                        elif metric in ["ctr"]:
+                            item_metrics.append(f"{metric}: {value:.2%}")
+                        else:
+                            item_metrics.append(f"{metric}: {value:,.0f}")
+
+                metrics_str = ", ".join(item_metrics) if item_metrics else "no data"
+                lines.append(f"  {i}. {name}: {metrics_str}")
+
+        lines.append(f"\nData source: {provider_str}")
+
+        return "\n".join(lines)
+
     def _parse_time_range(self, time_range: str) -> int:
         """Parse time range string to days."""
-        time_range = time_range.lower().strip()
         if time_range.endswith("d"):
             try:
                 return int(time_range[:-1])
