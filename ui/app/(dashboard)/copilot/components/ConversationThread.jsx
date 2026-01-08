@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUser } from "@clerk/nextjs";
 import AnswerVisuals from "./AnswerVisuals";
 import ThinkingAccordion from "@/components/copilot/ThinkingAccordion";
 
@@ -126,7 +127,21 @@ function AIMessage({ text, isTyping, visuals, stage, toolEvents = [] }) {
 // User Message Bubble (v2.1 - Subtle Glass Design)
 // WHAT: Clean white bubble with subtle border
 // WHY: Apple-inspired minimal aesthetic
-function UserMessage({ text }) {
+// PROPS:
+//   - text: Message content
+//   - user: Clerk user object (for avatar and name)
+function UserMessage({ text, user }) {
+  // Get user initials for fallback avatar
+  const getInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+    }
+    if (user?.firstName) {
+      return user.firstName.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -134,9 +149,13 @@ function UserMessage({ text }) {
       transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
       className="flex flex-row-reverse gap-4 group"
     >
-      {/* Avatar */}
-      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200/60 shadow-sm shrink-0 mt-1">
-        <span className="text-xs font-bold">JD</span>
+      {/* Avatar - Shows user profile image or initials */}
+      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200/60 shadow-sm shrink-0 mt-1 overflow-hidden">
+        {user?.imageUrl ? (
+          <img src={user.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-xs font-bold">{getInitials()}</span>
+        )}
       </div>
       {/* Bubble - Clean white with subtle border */}
       <div className="max-w-[80%] lg:max-w-[70%]">
@@ -159,6 +178,7 @@ function UserMessage({ text }) {
 //   - toolEvents: Current tool events during streaming (for live typing indicator)
 export default function ConversationThread({ messages = [], isLoading, stage, streamingText = '', toolEvents = [] }) {
   const messagesEndRef = useRef(null);
+  const { user } = useUser();
 
   // Auto-scroll to bottom when new message arrives, stage changes, or streaming text updates
   useEffect(() => {
@@ -219,13 +239,13 @@ export default function ConversationThread({ messages = [], isLoading, stage, st
             key={msg.timestamp || `${msg.type}-${idx}`}
           >
             {msg.type === 'ai' ? (
-              <AIMessage 
-                text={msg.text} 
-                visuals={msg.visuals} 
+              <AIMessage
+                text={msg.text}
+                visuals={msg.visuals}
                 toolEvents={msg.toolEvents || []}
               />
             ) : (
-              <UserMessage text={msg.text} />
+              <UserMessage text={msg.text} user={user} />
             )}
           </div>
         ))}

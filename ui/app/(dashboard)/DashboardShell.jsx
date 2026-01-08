@@ -176,7 +176,7 @@ export default function DashboardShell({ children }) {
           className={`
             flex-1 h-full overflow-x-hidden relative
             ${!isCopilot ? 'overflow-y-auto' : 'overflow-hidden'}
-            ${immersive || isCopilot ? "p-0" : "ml-20 lg:ml-72"}
+            ${!immersive ? "ml-20 lg:ml-72" : ""}
           `}
         >
           <div className={contentClass}>
