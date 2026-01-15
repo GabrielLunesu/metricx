@@ -222,6 +222,9 @@ class Workspace(Base):
     polar_customer_id = Column(String, nullable=True)
 
     # Trial and period timestamps
+    # WHAT: trial_started_at tracks when 7-day trial began
+    # WHY: For trial expiry calculation and preventing re-trials
+    trial_started_at = Column(DateTime(timezone=True), nullable=True)
     trial_end = Column(DateTime(timezone=True), nullable=True)
     current_period_start = Column(DateTime(timezone=True), nullable=True)
     current_period_end = Column(DateTime(timezone=True), nullable=True)

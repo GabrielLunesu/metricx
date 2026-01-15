@@ -15,7 +15,7 @@ Events handled:
 import hashlib
 import hmac
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -23,7 +23,8 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_settings
-from ..models import RoleEnum, User, Workspace, WorkspaceMember, BillingStatusEnum, BillingPlanEnum
+from ..models import RoleEnum, User, Workspace, WorkspaceMember
+from ..services.workspace_factory import create_workspace_with_trial, generate_workspace_name
 
 logger = logging.getLogger(__name__)
 
@@ -272,16 +273,9 @@ async def _handle_user_created(db: Session, data: dict[str, Any]) -> dict:
     if not full_name:
         full_name = primary_email.split("@")[0]
 
-    # Create workspace with "FirstName's Workspace" pattern
-    # Free tier gets immediate access (billing_status=active, billing_tier=free)
-    workspace_name = f"{first_name or 'My'}'s Workspace"
-    workspace = Workspace(
-        name=workspace_name,
-        billing_status=BillingStatusEnum.active,
-        billing_tier=BillingPlanEnum.free,
-    )
-    db.add(workspace)
-    db.flush()  # Get workspace.id without committing
+    # Create workspace with 7-day trial via factory (full access)
+    workspace_name = generate_workspace_name(first_name)
+    workspace = create_workspace_with_trial(db=db, name=workspace_name)
 
     # Create user linked to Clerk
     user = User(
@@ -296,7 +290,7 @@ async def _handle_user_created(db: Session, data: dict[str, Any]) -> dict:
     db.add(user)
     db.flush()  # Get user.id without committing
 
-    # Create workspace membership
+    # Create workspace membership (user must exist first)
     membership = WorkspaceMember(
         workspace_id=workspace.id,
         user_id=user.id,
@@ -628,15 +622,9 @@ async def repair_user_from_clerk(
     last_name = clerk_user.get("last_name") or ""
     full_name = f"{first_name} {last_name}".strip() or primary_email.split("@")[0]
 
-    # Create workspace (free tier with active status for immediate access)
-    workspace_name = f"{first_name or 'My'}'s Workspace"
-    workspace = Workspace(
-        name=workspace_name,
-        billing_status=BillingStatusEnum.active,
-        billing_tier=BillingPlanEnum.free,
-    )
-    db.add(workspace)
-    db.flush()
+    # Create workspace with 7-day trial via factory (full access)
+    workspace_name = generate_workspace_name(first_name)
+    workspace = create_workspace_with_trial(db=db, name=workspace_name)
 
     # Create user
     user = User(
@@ -651,7 +639,7 @@ async def repair_user_from_clerk(
     db.add(user)
     db.flush()
 
-    # Create workspace membership
+    # Create workspace membership (user must exist first)
     membership = WorkspaceMember(
         workspace_id=workspace.id,
         user_id=user.id,

@@ -31,6 +31,10 @@ from ..models import (
     QaQueryLog,
     QaFeedback,
     PolarCheckoutMapping,
+    Connection,
+    Entity,
+    ComputeRun,
+    ManualCost,
 )
 from ..schemas import (
     AdminUserOut,
@@ -230,7 +234,24 @@ async def delete_user(
                 WorkspaceMember.workspace_id == workspace.id
             ).delete()
 
-            # Delete the workspace (cascade handles connections, entities, etc.)
+            # Delete related data (no cascade configured on these)
+            db.query(Connection).filter(
+                Connection.workspace_id == workspace.id
+            ).delete()
+            db.query(Entity).filter(
+                Entity.workspace_id == workspace.id
+            ).delete()
+            db.query(ComputeRun).filter(
+                ComputeRun.workspace_id == workspace.id
+            ).delete()
+            db.query(ManualCost).filter(
+                ManualCost.workspace_id == workspace.id
+            ).delete()
+            db.query(QaQueryLog).filter(
+                QaQueryLog.workspace_id == workspace.id
+            ).delete()
+
+            # Delete the workspace (cascade handles invites)
             db.delete(workspace)
             workspaces_deleted += 1
 
@@ -428,8 +449,11 @@ async def update_workspace_billing(
     workspace.billing_tier = new_tier
 
     # Also set status to active if upgrading to starter
+    # Clear trial fields so trial expiry check doesn't affect gifted users
     if payload.billing_tier == "starter":
         workspace.billing_status = BillingStatusEnum.active
+        workspace.trial_started_at = None
+        workspace.trial_end = None
 
     db.commit()
     db.refresh(workspace)
@@ -552,6 +576,10 @@ async def bulk_upgrade_workspaces(
             if workspace:
                 workspace.billing_tier = tier
                 workspace.billing_status = BillingStatusEnum.active
+                # Clear trial fields for gifted upgrades
+                if tier == BillingPlanEnum.starter:
+                    workspace.trial_started_at = None
+                    workspace.trial_end = None
                 upgraded += 1
                 details.append(
                     {
@@ -600,6 +628,10 @@ async def bulk_upgrade_workspaces(
                 if workspace:
                     workspace.billing_tier = tier
                     workspace.billing_status = BillingStatusEnum.active
+                    # Clear trial fields for gifted upgrades
+                    if tier == BillingPlanEnum.starter:
+                        workspace.trial_started_at = None
+                        workspace.trial_end = None
                     upgraded += 1
                     details.append(
                         {
