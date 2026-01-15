@@ -12,7 +12,7 @@ const ROLE_OPTIONS = [
   { value: 'Viewer', label: 'Viewer' },
 ];
 
-export default function UsersTab({ user, view = 'members', billingTier }) {
+export default function UsersTab({ user, view = 'members', billingTier, billingStatus }) {
   const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -189,8 +189,8 @@ export default function UsersTab({ user, view = 'members', billingTier }) {
         <h3 className="text-lg font-semibold text-neutral-900">Workspace Members</h3>
       </div>
 
-      {/* Free tier restriction message */}
-      {canManage && billingTier === 'free' && (
+      {/* Free tier restriction message (only shown for expired trial / free tier, not during active trial) */}
+      {canManage && billingTier === 'free' && billingStatus !== 'trialing' && (
         <div className="p-4 border border-amber-200 bg-amber-50 rounded-xl flex items-start gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
             <Lock className="w-4 h-4 text-amber-600" />
@@ -209,8 +209,23 @@ export default function UsersTab({ user, view = 'members', billingTier }) {
         </div>
       )}
 
-      {/* Invite form - only for paid tier with manage permissions */}
-      {canManage && billingTier !== 'free' && (
+      {/* Trial tier info message - show trial member limit */}
+      {canManage && billingStatus === 'trialing' && (
+        <div className="p-4 border border-blue-200 bg-blue-50 rounded-xl flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <Users className="w-4 h-4 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-blue-800">Trial: 3 team members max</p>
+            <p className="text-xs text-blue-600 mt-1">
+              Upgrade to invite up to 10 team members and unlock all features.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Invite form - for paid tier or trialing users with manage permissions */}
+      {canManage && (billingTier !== 'free' || billingStatus === 'trialing') && (
         <div className="p-4 border border-neutral-200 rounded-xl bg-white flex flex-col md:flex-row gap-3 items-center">
           <input
             type="email"

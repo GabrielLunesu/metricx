@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [billingTier, setBillingTier] = useState(null);
+  const [billingStatus, setBillingStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('connections');
   const [error, setError] = useState(null);
@@ -40,8 +41,9 @@ export default function SettingsPage() {
         ]);
         if (mounted) {
           setUser(userData);
-          if (billingData?.billing?.billing_tier) {
+          if (billingData?.billing) {
             setBillingTier(billingData.billing.billing_tier);
+            setBillingStatus(billingData.billing.billing_status);
           }
         }
       } catch (err) {
@@ -122,8 +124,8 @@ export default function SettingsPage() {
         {activeTab === 'profile' && <ProfileTab />}
         {activeTab === 'business' && <BusinessProfileTab user={user} />}
         {activeTab === 'workspaces' && <WorkspacesTab user={user} />}
-        {activeTab === 'users' && <UsersTab user={user} billingTier={billingTier} />}
-        {activeTab === 'invites' && <UsersTab user={user} view="invites" billingTier={billingTier} />}
+        {activeTab === 'users' && <UsersTab user={user} billingTier={billingTier} billingStatus={billingStatus} />}
+        {activeTab === 'invites' && <UsersTab user={user} view="invites" billingTier={billingTier} billingStatus={billingStatus} />}
         {activeTab === 'billing' && <BillingTab user={user} />}
       </div>
     </div>

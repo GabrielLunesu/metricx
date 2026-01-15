@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import User, Workspace, WorkspaceMember, RoleEnum, BillingStatusEnum
 from .security import decode_token
+from .services.workspace_factory import create_workspace_with_trial, generate_workspace_name
 
 logger = logging.getLogger(__name__)
 
@@ -358,16 +359,10 @@ async def _auto_provision_clerk_user(
         last_name = clerk_user.get("last_name") or ""
         full_name = f"{first_name} {last_name}".strip() or "User"
 
-        # Generate workspace name
-        workspace_name = f"{first_name}'s Workspace" if first_name else "My Workspace"
-
-        # Create workspace
-        workspace = Workspace(
-            name=workspace_name,
-            onboarding_completed=False,  # New user needs onboarding
-        )
-        db.add(workspace)
-        db.flush()
+        # Create workspace with 7-day trial via factory
+        # Name will be updated during onboarding to user's business name
+        workspace_name = generate_workspace_name(first_name)
+        workspace = create_workspace_with_trial(db=db, name=workspace_name)
 
         # Create user
         user = User(
@@ -382,7 +377,7 @@ async def _auto_provision_clerk_user(
         db.add(user)
         db.flush()
 
-        # Create workspace membership
+        # Create workspace membership (user must exist first)
         membership = WorkspaceMember(
             workspace_id=workspace.id,
             user_id=user.id,

@@ -344,6 +344,19 @@ async def get_billing_status(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
 
+    # Check trial expiry on each billing status request
+    # WHY: Frontend-driven expiry - no scheduled job needed
+    # WHAT: If trial has expired, downgrade to free tier
+    if workspace.billing_status == BillingStatusEnum.trialing:
+        if workspace.trial_end and workspace.trial_end < datetime.now(timezone.utc):
+            workspace.billing_status = BillingStatusEnum.active
+            workspace.billing_tier = BillingPlanEnum.free
+            db.commit()
+            logger.info(
+                f"[BILLING] Workspace {workspace.id} trial expired, "
+                f"downgraded to free tier"
+            )
+
     can_manage = _can_manage_billing(current_user, workspace.id, db)
     is_allowed = _is_access_allowed(workspace.billing_status)
 
@@ -361,6 +374,7 @@ async def get_billing_status(
         billing_status=workspace.billing_status,
         billing_tier=workspace.billing_tier,
         billing_plan=workspace.billing_plan,
+        trial_started_at=workspace.trial_started_at,
         trial_end=workspace.trial_end,
         current_period_start=workspace.current_period_start,
         current_period_end=workspace.current_period_end,

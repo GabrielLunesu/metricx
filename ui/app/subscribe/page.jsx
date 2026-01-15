@@ -71,6 +71,21 @@ const PLANS = [
 ];
 
 /**
+ * Format trial end date for display
+ * @param {string} trialEnd - ISO date string
+ * @returns {string} Human-readable relative date
+ */
+function formatTrialEnd(trialEnd) {
+  if (!trialEnd) return 'ends soon';
+  const date = new Date(trialEnd);
+  const now = new Date();
+  const days = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return 'has ended';
+  if (days === 1) return 'ends tomorrow';
+  return `ends in ${days} days`;
+}
+
+/**
  * SubscribePageContent - Inner component that uses useSearchParams
  * Wrapped in Suspense by the parent to avoid SSR issues
  */
@@ -112,9 +127,9 @@ function SubscribePageContent() {
         const data = await getBillingStatus();
         setBillingData(data);
 
-        // Already has paid subscription (starter tier) - redirect to dashboard
-        // Note: billing_tier is the feature tier (free/starter), not billing_status
-        if (data.billing?.billing_tier === 'starter') {
+        // Already has PAID subscription (active + starter) - redirect to dashboard
+        // Trialing users should still be able to view this page to upgrade early
+        if (data.billing?.billing_status === 'active' && data.billing?.billing_tier === 'starter') {
           router.replace('/dashboard');
           return;
         }
@@ -205,10 +220,17 @@ function SubscribePageContent() {
       <main className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Upgrade to Starter
+            {billingData?.billing?.billing_status === 'trialing'
+              ? 'Continue Your Access'
+              : 'Upgrade to Starter'}
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            {billingData ? (
+            {billingData?.billing?.billing_status === 'trialing' ? (
+              <>
+                Your trial {formatTrialEnd(billingData.billing.trial_end)}.{' '}
+                <span className="font-medium">Subscribe to keep all features.</span>
+              </>
+            ) : billingData ? (
               <>Unlock full features for <span className="font-medium">{billingData.workspace_name}</span></>
             ) : (
               'Unlock all features with unlimited ad accounts'

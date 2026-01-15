@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { deleteUserAccount } from '@/lib/api';
 
 export default function ProfileTab() {
-  const { user } = useClerk();
+  const { user, signOut } = useClerk();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -47,9 +47,17 @@ export default function ProfileTab() {
       // Entity, Connection, Token, WorkspaceMember, User, and Workspace (if sole member)
       await deleteUserAccount();
 
-      // Step 2: Delete Clerk user (this also triggers user.deleted webhook as backup)
-      await user.delete();
+      // Step 2: Try to delete Clerk user (may fail for OAuth-only users)
+      // This is optional - orphaned Clerk users are fine
+      try {
+        await user.delete();
+      } catch (clerkErr) {
+        // OAuth users can't delete via client SDK - that's OK, data is gone
+        console.warn('[ProfileTab] Clerk user deletion failed (OAuth user):', clerkErr);
+      }
 
+      // Sign out and redirect (user data is deleted regardless of Clerk deletion)
+      await signOut();
       toast.success('Account deleted successfully');
       window.location.href = '/';
     } catch (err) {

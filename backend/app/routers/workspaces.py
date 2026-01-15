@@ -1,6 +1,6 @@
 """Workspace management endpoints."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from typing import List
 from uuid import UUID
@@ -26,8 +26,8 @@ from ..models import (
     RoleEnum,
     InviteStatusEnum,
     BillingStatusEnum,
-    BillingPlanEnum,
 )
+from ..services.workspace_factory import create_workspace_with_trial, generate_workspace_name
 
 # =============================================================================
 # BILLING CAPS CONFIGURATION
@@ -36,7 +36,8 @@ from ..models import (
 # WHY: Prevent abuse, control costs
 # REFERENCES: openspec/changes/add-polar-workspace-billing/design.md
 
-MAX_ACTIVE_MEMBERS_PER_WORKSPACE = 10  # Members cap per workspace
+MAX_ACTIVE_MEMBERS_PER_WORKSPACE = 10  # Members cap per workspace (paid tier)
+MAX_ACTIVE_MEMBERS_TRIAL = 3           # Members cap per workspace (trial tier)
 MAX_PENDING_WORKSPACES_PER_USER = 2    # Pending (locked) workspaces cap per owner/admin
 from sqlalchemy.orm import joinedload
 
@@ -73,16 +74,33 @@ def _check_member_cap(db: Session, workspace_id: UUID):
     """Check if workspace has reached member cap.
 
     WHAT: Raises HTTPException if at cap
-    WHY: Enforce max 10 active members per workspace
+    WHY: Enforce max members per workspace (3 for trial, 10 for paid)
 
     Raises:
         HTTPException 400 if cap reached
     """
+    # Get workspace to check billing status
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    if not workspace:
+        return  # Let caller handle missing workspace
+
+    # Determine cap based on billing status
+    # WHY: Trial workspaces have 3-member limit, paid have 10
+    if workspace.billing_status == BillingStatusEnum.trialing:
+        cap = MAX_ACTIVE_MEMBERS_TRIAL
+        limit_type = "trial"
+    else:
+        cap = MAX_ACTIVE_MEMBERS_PER_WORKSPACE
+        limit_type = None
+
     count = _get_active_member_count(db, workspace_id)
-    if count >= MAX_ACTIVE_MEMBERS_PER_WORKSPACE:
+    if count >= cap:
+        detail = f"Workspace has reached maximum of {cap} members"
+        if limit_type == "trial":
+            detail += " (trial limit). Upgrade to invite up to 10 members."
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Workspace has reached maximum of {MAX_ACTIVE_MEMBERS_PER_WORKSPACE} members"
+            detail=detail
         )
 
 
@@ -302,35 +320,12 @@ def create_workspace(
     # Check pending workspace cap before creating
     _check_pending_workspace_cap(db, current_user.id)
 
-    workspace = Workspace(
+    # Create workspace with 7-day trial via factory (includes owner membership)
+    workspace = create_workspace_with_trial(
+        db=db,
         name=payload.name,
-        # New workspaces start with free tier and active status (immediate access)
-        billing_status=BillingStatusEnum.active,
-        billing_tier=BillingPlanEnum.free,
+        owner_user_id=current_user.id,
     )
-    db.add(workspace)
-    db.flush()
-
-    # Enforce single owner: creator becomes the sole owner if none exists yet
-    existing_owner = (
-        db.query(WorkspaceMember)
-        .filter(
-            WorkspaceMember.workspace_id == workspace.id,
-            WorkspaceMember.role == RoleEnum.owner,
-            WorkspaceMember.status == "active",
-        )
-        .first()
-    )
-    if existing_owner:
-        raise HTTPException(status_code=400, detail="Workspace already has an owner")
-
-    membership = WorkspaceMember(
-        workspace_id=workspace.id,
-        user_id=current_user.id,
-        role=RoleEnum.owner,
-        status="active",
-    )
-    db.add(membership)
 
     # Update active workspace context and role for compatibility
     current_user.workspace_id = workspace.id
@@ -344,8 +339,8 @@ def create_workspace(
         id=workspace.id,
         name=workspace.name,
         created_at=workspace.created_at,
-        role=membership.role,
-        status=membership.status,
+        role=RoleEnum.owner,
+        status="active",
     )
 
 
@@ -1123,23 +1118,17 @@ def delete_workspace(
                 user.workspace_id = other_membership.workspace_id
                 user.role = other_membership.role
             else:
-                # Create a new default workspace for them
-                first_name = ((user.name or "").split(" ")[0] or "My").strip().title()
-                new_ws = Workspace(name=f"{first_name}'s Workspace")
-                db.add(new_ws)
-                db.flush()
-                
-                new_member = WorkspaceMember(
-                    workspace_id=new_ws.id,
-                    user_id=user.id,
-                    role=RoleEnum.owner,
-                    status="active"
+                # Create a new default workspace via factory (includes owner membership)
+                first_name = (user.name or "").split(" ")[0]
+                workspace_name = generate_workspace_name(first_name)
+                new_ws = create_workspace_with_trial(
+                    db=db,
+                    name=workspace_name,
+                    owner_user_id=user.id,
                 )
-                db.add(new_member)
-                
+
                 user.workspace_id = new_ws.id
                 user.role = RoleEnum.owner
-                
                 db.add(user)
 
     # 3. Delete all workspace data (Cascade logic)

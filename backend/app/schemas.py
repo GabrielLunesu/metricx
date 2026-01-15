@@ -1488,6 +1488,9 @@ class BillingInfo(BaseModel):
         description="Feature tier: free (limited) or starter (full)"
     )
     billing_plan: Optional[str] = Field(None, description="Plan type: monthly | annual")
+    trial_started_at: Optional[datetime] = Field(
+        None, description="When 7-day trial started (for expiry calculation)"
+    )
     trial_end: Optional[datetime] = Field(None, description="When trial expires")
     current_period_start: Optional[datetime] = Field(
         None, description="Current billing period start"
