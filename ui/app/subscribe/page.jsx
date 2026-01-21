@@ -10,7 +10,7 @@
  * Flow:
  *   1. Free tier user clicks "Upgrade" from locked feature or nav
  *   2. Page checks billing status - redirects to dashboard if already subscribed
- *   3. User selects plan (monthly $79 / annual $569)
+ *   3. User selects plan (monthly $29.99 / annual $196)
  *   4. Checkout created via backend
  *   5. User redirected to Polar checkout
  *   6. After success, webhook sets billing_tier = 'starter'
@@ -40,7 +40,7 @@ const PLANS = [
   {
     id: 'monthly',
     name: 'Starter Monthly',
-    price: '$79',
+    price: '$29.99',
     period: '/month',
     description: 'Full access to all features',
     features: [
@@ -55,9 +55,9 @@ const PLANS = [
   {
     id: 'annual',
     name: 'Starter Annual',
-    price: '$569',
+    price: '$196',
     period: '/year',
-    description: 'Best value - save 40%',
+    description: 'Best value - save 45%',
     features: [
       'Everything in Monthly',
       '2 months free',
@@ -66,7 +66,7 @@ const PLANS = [
       'Custom integrations',
     ],
     popular: true,
-    savings: 'Save $379/year',
+    savings: 'Save $164/year',
   },
 ];
 

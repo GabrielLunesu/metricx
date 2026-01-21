@@ -17,7 +17,7 @@ metricx uses **Polar** for per-workspace subscription billing. Workspaces start 
 | Billing provider | Polar | Developer-focused, simple API, handles tax/invoicing |
 | Billing unit | Per workspace | Teams share subscription, not per-user |
 | Tiers | Free / Starter | Free tier for onboarding, Starter for power users |
-| Starter pricing | Monthly $79 / Annual $569 | Annual saves 40% |
+| Starter pricing | Monthly $29.99 / Annual $196 | Annual saves 45% |
 | Free tier access | Dashboard only | Get users hooked, then upsell |
 | Access gating | Server-side + UI locks | Prevents bypass, clear UX for locked features |
 
@@ -37,7 +37,7 @@ metricx uses a **7-day free trial** model with two billing tiers:
 | **Campaigns** | Locked | Full access | Full access |
 | **Copilot AI** | Locked | Full access | Full access |
 | **Team invites** | No | Up to 3 members | Up to 10 members |
-| **Price** | Free | Free (7 days) | $79/mo or $569/yr |
+| **Price** | Free | Free (7 days) | $29.99/mo or $196/yr |
 
 ### How It Works
 
@@ -434,8 +434,8 @@ Create two products in Polar:
 
 | Product | Price | Billing |
 |---------|-------|---------|
-| metricx Monthly | $79/month | Recurring monthly |
-| metricx Annual | $569/year | Recurring yearly |
+| metricx Monthly | $29.99/month | Recurring monthly |
+| metricx Annual | $196/year | Recurring yearly |
 
 Copy the **Product IDs** (not Price IDs) to your environment.
 

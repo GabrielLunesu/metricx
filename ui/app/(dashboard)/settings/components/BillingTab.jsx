@@ -35,8 +35,8 @@ const STATUS_DISPLAY = {
 };
 
 const PLAN_DISPLAY = {
-  monthly: { label: 'Monthly', price: '$79/month' },
-  annual: { label: 'Annual', price: '$569/year' },
+  monthly: { label: 'Monthly', price: '$29.99/month' },
+  annual: { label: 'Annual', price: '$196/year' },
 };
 
 export default function BillingTab({ user }) {
@@ -228,7 +228,7 @@ export default function BillingTab({ user }) {
                     {checkoutLoading ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : null}
-                    Monthly ($79/mo)
+                    Monthly ($29.99/mo)
                   </Button>
                   <Button
                     onClick={() => handleSubscribe('annual')}
@@ -237,7 +237,7 @@ export default function BillingTab({ user }) {
                     {checkoutLoading ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : null}
-                    Annual ($569/yr)
+                    Annual ($196/yr)
                   </Button>
                 </div>
               </div>
