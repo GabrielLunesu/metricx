@@ -12,7 +12,7 @@
 
 import { NextResponse } from "next/server";
 
-const INDEXNOW_KEY = process.env.INDEXNOW_KEY || "metricx-indexnow-key-2024";
+const INDEXNOW_KEY = process.env.INDEXNOW_KEY || "metricx-indexnow-key-2026";
 const SITE_HOST = "www.metricx.ai";
 
 /**

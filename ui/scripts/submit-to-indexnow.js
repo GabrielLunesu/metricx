@@ -9,10 +9,10 @@
  *
  * Related files:
  * - app/api/indexnow/route.js - IndexNow API endpoint
- * - public/metricx-indexnow-key-2024.txt - IndexNow key file
+ * - public/metricx-indexnow-key-2026.txt - IndexNow key file
  */
 
-const INDEXNOW_KEY = "metricx-indexnow-key-2024";
+const INDEXNOW_KEY = "metricx-indexnow-key-2026";
 const SITE_HOST = "www.metricx.ai";
 const INDEXNOW_URL = "https://api.indexnow.org/indexnow";
 
