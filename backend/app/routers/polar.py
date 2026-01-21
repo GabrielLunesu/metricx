@@ -172,14 +172,10 @@ async def _create_polar_checkout(
     }
 
     # Polar API uses 'products' array with product IDs
-    # NOTE: We disable Polar's trial since we handle trials ourselves
     payload = {
         "products": [product_id],
         "success_url": success_url,
         "customer_email": customer_email,
-        "subscription_data": {
-            "free_trial_days": 0,  # No Polar trial - we have our own 7-day trial
-        },
     }
     if metadata:
         payload["metadata"] = metadata
