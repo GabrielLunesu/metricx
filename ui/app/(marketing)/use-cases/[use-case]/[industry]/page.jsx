@@ -35,7 +35,15 @@ import {
 } from "lucide-react";
 
 /**
- * Generate all use case × industry combinations for static generation.
+ * Enable on-demand generation for pages not pre-rendered at build time.
+ * This allows ISR to generate pages when first requested.
+ */
+export const dynamicParams = true;
+
+/**
+ * Generate top use case × industry combinations for static generation.
+ * Only pre-renders ~50 highest-value pages to stay under Vercel size limits.
+ * Remaining 10,000+ pages are generated on-demand via ISR.
  */
 export async function generateStaticParams() {
   const [useCases, industries] = await Promise.all([
@@ -43,9 +51,14 @@ export async function generateStaticParams() {
     getIndustries(),
   ]);
 
+  // Pre-render only top 5 use cases × top 10 industries = 50 pages
+  // Rest will be generated on-demand (ISR)
+  const topUseCases = useCases.slice(0, 5);
+  const topIndustries = industries.slice(0, 10);
+
   const params = [];
-  for (const useCase of useCases) {
-    for (const industry of industries) {
+  for (const useCase of topUseCases) {
+    for (const industry of topIndustries) {
       params.push({
         "use-case": useCase.slug,
         industry: industry.slug,

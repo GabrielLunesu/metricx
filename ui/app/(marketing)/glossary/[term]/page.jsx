@@ -25,11 +25,20 @@ import {
 import { Calculator, BookOpen, ArrowRight, Lightbulb, ExternalLink } from "lucide-react";
 
 /**
- * Generate static params for all glossary terms.
+ * Enable on-demand generation for pages not pre-rendered at build time.
+ */
+export const dynamicParams = true;
+
+/**
+ * Generate static params for top glossary terms only.
+ * Pre-renders only 50 highest-value terms to stay under Vercel size limits.
+ * Remaining 350+ terms are generated on-demand via ISR.
  */
 export async function generateStaticParams() {
   const terms = await getGlossaryTerms();
-  return terms.map((term) => ({
+  // Pre-render only top 50 terms (sorted by importance/common usage)
+  const topTerms = terms.slice(0, 50);
+  return topTerms.map((term) => ({
     term: term.slug,
   }));
 }
