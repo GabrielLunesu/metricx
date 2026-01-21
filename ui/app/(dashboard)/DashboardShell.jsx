@@ -29,8 +29,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getBillingStatus } from "@/lib/workspace";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CreditCard } from "lucide-react";
+import { AlertCircle, CreditCard, Clock, Zap } from "lucide-react";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import Link from "next/link";
 
 // Routes that require paid tier (free tier users are redirected)
 const PAID_ONLY_ROUTES = ['/analytics', '/finance', '/campaigns', '/copilot'];
@@ -41,6 +42,7 @@ export default function DashboardShell({ children }) {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [billingBlocked, setBillingBlocked] = useState(null);
   const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: null });
+  const [billing, setBilling] = useState(null); // Store billing status for trial banner
 
   // Check billing and onboarding status on mount
   // WHY: Ensure users can't bypass billing or onboarding by navigating directly
@@ -49,11 +51,12 @@ export default function DashboardShell({ children }) {
       try {
         // Step 1: Check billing status
         const billingData = await getBillingStatus();
-        const { billing, workspace_id } = billingData;
+        const { billing: billingInfo, workspace_id } = billingData;
+        setBilling(billingInfo); // Store for trial banner
 
-        if (!billing.is_access_allowed) {
+        if (!billingInfo.is_access_allowed) {
           // Billing blocked
-          if (billing.can_manage_billing) {
+          if (billingInfo.can_manage_billing) {
             // Owner/Admin - redirect to subscribe
             router.replace(`/subscribe?workspaceId=${workspace_id}`);
             return;
@@ -70,7 +73,7 @@ export default function DashboardShell({ children }) {
 
         // Step 2: Free tier page gating
         // WHY: Free tier users only get Dashboard access
-        if (billing.billing_tier === 'free') {
+        if (billingInfo.billing_tier === 'free') {
           const isPaidRoute = PAID_ONLY_ROUTES.some(route => pathname?.startsWith(route));
           if (isPaidRoute) {
             // Get feature name from route for upgrade modal
@@ -166,8 +169,13 @@ export default function DashboardShell({ children }) {
 
   return (
     <div className="min-h-screen w-full hero-gradient relative overflow-hidden text-neutral-900 font-sans antialiased selection:bg-neutral-100 selection:text-neutral-900">
+      {/* Trial Banner - shows countdown for trialing users */}
+      {billing?.billing_status === 'trialing' && billing?.trial_end && (
+        <TrialBanner trialEnd={billing.trial_end} />
+      )}
+
       {/* Dashboard Shell */}
-      <div className="flex h-screen overflow-hidden">
+      <div className={`flex h-screen overflow-hidden ${billing?.billing_status === 'trialing' ? 'pt-10' : ''}`}>
         {/* Sidebar - hidden in immersive mode */}
         {!immersive && <Sidebar />}
 
@@ -207,6 +215,50 @@ export default function DashboardShell({ children }) {
         onClose={() => setUpgradeModal({ open: false, feature: null })}
         feature={upgradeModal.feature}
       />
+    </div>
+  );
+}
+
+/**
+ * TrialBanner - Shows countdown for trial users
+ *
+ * WHAT: Fixed banner at top of dashboard showing trial days remaining
+ * WHY: Creates urgency and provides clear CTA for conversion
+ *
+ * @param {string} trialEnd - ISO date string when trial expires
+ */
+function TrialBanner({ trialEnd }) {
+  const now = new Date();
+  const end = new Date(trialEnd);
+  const daysLeft = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+
+  // Don't show if already expired (backend will handle downgrade)
+  if (daysLeft <= 0) return null;
+
+  const isUrgent = daysLeft <= 2;
+
+  return (
+    <div
+      className={`fixed top-0 left-0 md:left-20 lg:left-72 right-0 z-40 px-4 py-2.5 text-center text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
+        isUrgent
+          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+          : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
+      }`}
+    >
+      <Clock className="w-4 h-4" />
+      <span>
+        <span className="font-semibold">
+          {daysLeft === 1 ? 'Last day' : `${daysLeft} days left`}
+        </span>
+        {' '}of your free trial.
+      </span>
+      <Link
+        href="/subscribe"
+        className="inline-flex items-center gap-1 ml-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs font-medium transition-colors"
+      >
+        <Zap className="w-3 h-3" />
+        Upgrade now
+      </Link>
     </div>
   );
 }

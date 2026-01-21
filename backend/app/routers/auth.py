@@ -10,6 +10,7 @@ from ..database import get_db
 from ..deps import get_current_user, get_settings
 from ..models import User, Workspace, WorkspaceMember, WorkspaceInvite, AuthCredential, RoleEnum, InviteStatusEnum
 from ..security import create_access_token, get_password_hash, verify_password
+from ..services.workspace_factory import create_workspace_with_trial, generate_workspace_name
 from ..telemetry import (
     track_user_signed_up,
     track_user_logged_in,
@@ -136,20 +137,18 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
-    # Create a workspace for the new user (FirstName's Workspace)
-    first_name = (payload.name.split(" ")[0] or "My").strip().title()
-    workspace = Workspace(name=f"{first_name}'s Workspace")
-    db.add(workspace)
-    db.flush()  # assign workspace.id without committing yet
+    # Create workspace with 7-day trial via factory
+    first_name = payload.name.split(" ")[0]
+    workspace_name = generate_workspace_name(first_name)
+    workspace = create_workspace_with_trial(db=db, name=workspace_name)
 
     # Generate verification token
     verification_token = secrets.token_urlsafe(32)
 
-    # NOTE: All new users are Owner of their default workspace
+    # Create user (must exist before membership)
     user = User(
         email=payload.email,
         name=payload.name,
-        # Persist Owner temporarily for all signups (future: invites/roles)
         role=RoleEnum.owner,
         workspace_id=workspace.id,
         verification_token=verification_token,
@@ -158,7 +157,7 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.flush()  # assign user.id
 
-    # Add membership record (single owner per workspace)
+    # Add membership record (user must exist first)
     membership = WorkspaceMember(
         workspace_id=workspace.id,
         user_id=user.id,

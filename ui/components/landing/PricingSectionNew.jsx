@@ -38,12 +38,12 @@ export default function PricingSectionNew() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">Monthly</h3>
-                  <p className="mt-1 text-sm text-gray-500">14-day free trial</p>
+                  <p className="mt-1 text-sm text-gray-500">7-day free trial</p>
                 </div>
               </div>
 
               <div className="mt-6 flex items-baseline gap-2">
-                <span className="text-5xl font-semibold text-gray-900">$79</span>
+                <span className="text-5xl font-semibold text-gray-900">$29.99</span>
                 <span className="text-gray-500">/mo</span>
               </div>
 
@@ -67,12 +67,12 @@ export default function PricingSectionNew() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">Annual</h3>
-                  <p className="mt-1 text-sm text-gray-500">Save 40% (~$47/mo)</p>
+                  <p className="mt-1 text-sm text-gray-500">Save 45% (~$16/mo)</p>
                 </div>
               </div>
 
               <div className="mt-6 flex items-baseline gap-2">
-                <span className="text-5xl font-semibold text-gray-900">$569</span>
+                <span className="text-5xl font-semibold text-gray-900">$196</span>
                 <span className="text-gray-500">/yr</span>
               </div>
 
@@ -84,7 +84,7 @@ export default function PricingSectionNew() {
               </a>
 
               <div className="mt-6 text-sm text-gray-500">
-                Equivalent to about $47/mo when billed annually.
+                Equivalent to about $16/mo when billed annually.
               </div>
             </div>
           </div>

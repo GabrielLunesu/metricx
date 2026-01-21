@@ -65,10 +65,10 @@ export function UpgradeModal({ open, onClose, feature }) {
 
         <div className="flex flex-col gap-2 pt-2">
           <Button onClick={handleUpgrade} className="w-full bg-cyan-600 hover:bg-cyan-700">
-            Upgrade Now - $79/month
+            Upgrade Now - $29.99/month
           </Button>
           <p className="text-xs text-center text-neutral-500">
-            Or save 40% with annual billing ($569/year)
+            Or save 45% with annual billing ($196/year)
           </p>
         </div>
       </DialogContent>

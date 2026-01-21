@@ -17,46 +17,52 @@ metricx uses **Polar** for per-workspace subscription billing. Workspaces start 
 | Billing provider | Polar | Developer-focused, simple API, handles tax/invoicing |
 | Billing unit | Per workspace | Teams share subscription, not per-user |
 | Tiers | Free / Starter | Free tier for onboarding, Starter for power users |
-| Starter pricing | Monthly $79 / Annual $569 | Annual saves 40% |
+| Starter pricing | Monthly $29.99 / Annual $196 | Annual saves 45% |
 | Free tier access | Dashboard only | Get users hooked, then upsell |
 | Access gating | Server-side + UI locks | Prevents bypass, clear UX for locked features |
 
 ---
 
-## Free Tier vs Starter
+## Trial-Based Billing Model
 
-metricx uses a **freemium model** with two billing tiers:
+metricx uses a **7-day free trial** model with two billing tiers:
 
-| Feature | Free Tier | Starter Tier |
-|---------|-----------|--------------|
-| **Ad accounts** | 1 total (Meta OR Google) | Unlimited |
-| **Shopify** | Yes | Yes |
-| **Dashboard** | Full access | Full access |
-| **Analytics** | Locked | Full access |
-| **Finance** | Locked | Full access |
-| **Campaigns** | Locked | Full access |
-| **Copilot AI** | Locked | Full access |
-| **Team invites** | No | Up to 10 members |
-| **Price** | Free | $79/mo or $569/yr |
+| Feature | Free Tier | Trial (7 days) | Starter Tier |
+|---------|-----------|----------------|--------------|
+| **Ad accounts** | 1 total (Meta OR Google) | Unlimited | Unlimited |
+| **Shopify** | Yes | Yes | Yes |
+| **Dashboard** | Full access | Full access | Full access |
+| **Analytics** | Locked | Full access | Full access |
+| **Finance** | Locked | Full access | Full access |
+| **Campaigns** | Locked | Full access | Full access |
+| **Copilot AI** | Locked | Full access | Full access |
+| **Team invites** | No | Up to 3 members | Up to 10 members |
+| **Price** | Free | Free (7 days) | $29.99/mo or $196/yr |
 
 ### How It Works
 
-1. **New signups** start with `billing_tier = 'free'` and `billing_status = 'active'`
-2. **Free users** can access Dashboard and connect 1 ad account
-3. **Locked features** show lock icons in nav; clicking shows UpgradeModal
-4. **Direct URL access** to locked pages redirects to Dashboard with upgrade prompt
-5. **Upgrading** via Polar checkout sets `billing_tier = 'starter'`
+1. **New signups** start with `billing_status = 'trialing'` and `billing_tier = 'starter'`
+2. **Trial users** get FULL access for 7 days (all pages, unlimited ad accounts, 3 team members)
+3. **Trial banner** shows at top of dashboard: "X days left of your free trial"
+4. **On day 7**, trial expires → `billing_status = 'active'`, `billing_tier = 'free'`
+5. **After expiry**, user sees lock icons and limited features (same as free tier)
+6. **Upgrading** via Polar checkout keeps `billing_tier = 'starter'`
 
 ### Database Fields
 
-The workspace has two billing-related fields:
+The workspace has key billing-related fields:
 
 | Field | Purpose | Values |
 |-------|---------|--------|
 | `billing_status` | Payment/subscription state | locked, trialing, active, canceled, etc. |
 | `billing_tier` | Feature access tier | `free`, `starter` |
+| `trial_started_at` | When 7-day trial began | DateTime (set on signup) |
+| `trial_end` | When trial expires | DateTime (trial_started_at + 7 days) |
 
-**Important:** A workspace can have `billing_status = 'active'` AND `billing_tier = 'free'`. This means they have access (not locked out) but are on the free tier with limited features.
+**Trial Flow:**
+- New signups: `billing_status = 'trialing'`, `billing_tier = 'starter'`, `trial_end = now + 7 days`
+- On expiry: `billing_status = 'active'`, `billing_tier = 'free'` (checked on each `/billing/status` call)
+- After payment: `billing_status = 'active'`, `billing_tier = 'starter'`
 
 ---
 
@@ -428,8 +434,8 @@ Create two products in Polar:
 
 | Product | Price | Billing |
 |---------|-------|---------|
-| metricx Monthly | $79/month | Recurring monthly |
-| metricx Annual | $569/year | Recurring yearly |
+| metricx Monthly | $29.99/month | Recurring monthly |
+| metricx Annual | $196/year | Recurring yearly |
 
 Copy the **Product IDs** (not Price IDs) to your environment.
 

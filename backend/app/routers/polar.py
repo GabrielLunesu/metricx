@@ -172,10 +172,14 @@ async def _create_polar_checkout(
     }
 
     # Polar API uses 'products' array with product IDs
+    # NOTE: We disable Polar's trial since we handle trials ourselves
     payload = {
         "products": [product_id],
         "success_url": success_url,
         "customer_email": customer_email,
+        "subscription_data": {
+            "free_trial_days": 0,  # No Polar trial - we have our own 7-day trial
+        },
     }
     if metadata:
         payload["metadata"] = metadata
@@ -344,6 +348,19 @@ async def get_billing_status(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
 
+    # Check trial expiry on each billing status request
+    # WHY: Frontend-driven expiry - no scheduled job needed
+    # WHAT: If trial has expired, downgrade to free tier
+    if workspace.billing_status == BillingStatusEnum.trialing:
+        if workspace.trial_end and workspace.trial_end < datetime.now(timezone.utc):
+            workspace.billing_status = BillingStatusEnum.active
+            workspace.billing_tier = BillingPlanEnum.free
+            db.commit()
+            logger.info(
+                f"[BILLING] Workspace {workspace.id} trial expired, "
+                f"downgraded to free tier"
+            )
+
     can_manage = _can_manage_billing(current_user, workspace.id, db)
     is_allowed = _is_access_allowed(workspace.billing_status)
 
@@ -361,6 +378,7 @@ async def get_billing_status(
         billing_status=workspace.billing_status,
         billing_tier=workspace.billing_tier,
         billing_plan=workspace.billing_plan,
+        trial_started_at=workspace.trial_started_at,
         trial_end=workspace.trial_end,
         current_period_start=workspace.current_period_start,
         current_period_end=workspace.current_period_end,
@@ -421,10 +439,12 @@ async def create_checkout(
             detail="Only workspace Owner or Admin can manage billing",
         )
 
-    # Check if already on paid tier (starter)
-    # Note: billing_status='active' + billing_tier='free' is valid (free plan user)
-    # Only block if they're already on a paid tier
-    if workspace.billing_tier == BillingPlanEnum.starter:
+    # Only block ACTUALLY PAID users (active status + starter tier + has subscription ID)
+    # Allow: trialing users (want to upgrade early)
+    # Allow: free tier users (trial expired, want to subscribe)
+    if (workspace.billing_status == BillingStatusEnum.active
+        and workspace.billing_tier == BillingPlanEnum.starter
+        and workspace.polar_subscription_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Workspace already has a paid subscription",

@@ -69,7 +69,7 @@ class BillingPlanEnum(str, enum.Enum):
     WHY: Determines feature limits (ad accounts, pages, team invites)
 
     free: Limited features (1 ad account, dashboard only, no team invites)
-    starter: Full features ($79/month or $569/year)
+    starter: Full features ($29.99/month or $196/year)
     """
 
     free = "free"  # Free tier - limited features
@@ -190,7 +190,7 @@ class Workspace(Base):
     # BILLING FIELDS (Polar Integration)
     # ==========================================================================
     # WHAT: Per-workspace subscription state for access gating
-    # WHY: Each workspace requires its own subscription (Monthly $79 / Annual $569)
+    # WHY: Each workspace requires its own subscription (Monthly $29.99 / Annual $196)
     # REFERENCES:
     #   - openspec/changes/add-polar-workspace-billing/proposal.md
     #   - backend/app/routers/polar.py (webhook handler)
@@ -222,6 +222,9 @@ class Workspace(Base):
     polar_customer_id = Column(String, nullable=True)
 
     # Trial and period timestamps
+    # WHAT: trial_started_at tracks when 7-day trial began
+    # WHY: For trial expiry calculation and preventing re-trials
+    trial_started_at = Column(DateTime(timezone=True), nullable=True)
     trial_end = Column(DateTime(timezone=True), nullable=True)
     current_period_start = Column(DateTime(timezone=True), nullable=True)
     current_period_end = Column(DateTime(timezone=True), nullable=True)
