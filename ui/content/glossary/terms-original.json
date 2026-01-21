@@ -1,0 +1,594 @@
+[
+  {
+    "term": "ROAS",
+    "fullName": "Return on Ad Spend",
+    "slug": "roas",
+    "definition": "ROAS (Return on Ad Spend) measures the revenue generated for every dollar spent on advertising. It's one of the most important metrics for evaluating advertising efficiency and profitability.",
+    "formula": "ROAS = Revenue from Ads / Ad Spend",
+    "example": "If you spend $1,000 on ads and generate $5,000 in revenue, your ROAS is 5x or 500%. This means you earned $5 for every $1 spent on advertising.",
+    "category": "performance-metrics",
+    "relatedTerms": ["cac", "ltv", "cpa", "acos", "roi"],
+    "faqs": [
+      {
+        "q": "What is a good ROAS?",
+        "a": "A good ROAS varies by industry and business model. Generally, 3x-4x is considered good for e-commerce, while 2x is often the break-even point. High-margin products can be profitable at lower ROAS."
+      },
+      {
+        "q": "How do I improve my ROAS?",
+        "a": "Improve ROAS by: 1) Refining audience targeting, 2) Testing better ad creatives, 3) Optimizing landing pages, 4) Adjusting bid strategies, 5) Focusing on high-intent keywords/audiences, 6) Improving product-market fit."
+      },
+      {
+        "q": "What's the difference between ROAS and ROI?",
+        "a": "ROAS measures revenue per ad dollar spent, while ROI (Return on Investment) considers all costs including product costs, overhead, and operations. ROAS focuses on advertising efficiency; ROI measures overall profitability."
+      }
+    ],
+    "metricxFeature": "Real-time ROAS tracking across all ad platforms with AI-powered optimization recommendations"
+  },
+  {
+    "term": "CPA",
+    "fullName": "Cost Per Acquisition",
+    "slug": "cpa",
+    "definition": "CPA (Cost Per Acquisition) is the average cost to acquire one customer or conversion through advertising. It measures how efficiently your ad spend converts into actual customers.",
+    "formula": "CPA = Total Ad Spend / Number of Conversions",
+    "example": "If you spend $1,000 on ads and get 50 conversions, your CPA is $20. This means each new customer costs you $20 in advertising.",
+    "category": "performance-metrics",
+    "relatedTerms": ["cac", "cpc", "roas", "conversion-rate"],
+    "faqs": [
+      {
+        "q": "What's a good CPA?",
+        "a": "A good CPA depends on your customer lifetime value (LTV). Your CPA should be less than your LTV for profitability. E-commerce typically sees $10-50 CPA, while SaaS can be $50-200+."
+      },
+      {
+        "q": "How do I lower my CPA?",
+        "a": "Lower CPA by: 1) Improving targeting precision, 2) A/B testing ad creatives, 3) Optimizing landing page conversion rates, 4) Using retargeting for warm audiences, 5) Focusing on high-intent keywords."
+      }
+    ],
+    "metricxFeature": "Track CPA across all campaigns with automated alerts when costs exceed targets"
+  },
+  {
+    "term": "CTR",
+    "fullName": "Click-Through Rate",
+    "slug": "ctr",
+    "definition": "CTR (Click-Through Rate) is the percentage of people who click on your ad after seeing it. It indicates how engaging and relevant your ads are to your target audience.",
+    "formula": "CTR = (Clicks / Impressions) × 100",
+    "example": "If your ad gets 1,000 impressions and 25 clicks, your CTR is 2.5%. This means 2.5% of people who saw your ad clicked on it.",
+    "category": "engagement-metrics",
+    "relatedTerms": ["cpm", "impressions", "conversion-rate", "cpc"],
+    "faqs": [
+      {
+        "q": "What's a good CTR?",
+        "a": "CTR varies by platform and ad type. Search ads: 2-5%, Display ads: 0.5-1%, Social ads: 1-2%. Higher CTR typically indicates more relevant, engaging ads."
+      },
+      {
+        "q": "Why is CTR important?",
+        "a": "High CTR can lower costs (better Quality Score on Google), improve ad delivery algorithms, and indicates your targeting is effective. It's a leading indicator of campaign health."
+      }
+    ],
+    "metricxFeature": "Compare CTR across platforms and creatives to identify top performers"
+  },
+  {
+    "term": "CPM",
+    "fullName": "Cost Per Mille",
+    "slug": "cpm",
+    "definition": "CPM (Cost Per Mille) is the cost per 1,000 ad impressions. 'Mille' is Latin for thousand. It's the standard metric for measuring the cost-efficiency of brand awareness campaigns.",
+    "formula": "CPM = (Ad Spend / Impressions) × 1,000",
+    "example": "If you spend $500 and get 100,000 impressions, your CPM is $5. This means you pay $5 for every 1,000 people who see your ad.",
+    "category": "cost-metrics",
+    "relatedTerms": ["ctr", "impressions", "reach", "frequency"],
+    "faqs": [
+      {
+        "q": "What affects CPM?",
+        "a": "CPM is affected by: audience targeting (niche = higher CPM), competition, ad placement, time of year (Q4 is expensive), ad quality, and platform algorithms."
+      },
+      {
+        "q": "When should I optimize for CPM?",
+        "a": "Optimize for CPM in awareness campaigns where reach matters more than conversions. For performance campaigns, focus on CPA or ROAS instead."
+      }
+    ],
+    "metricxFeature": "Track CPM trends across platforms to optimize budget allocation"
+  },
+  {
+    "term": "CPC",
+    "fullName": "Cost Per Click",
+    "slug": "cpc",
+    "definition": "CPC (Cost Per Click) is the amount you pay for each click on your advertisement. It's a fundamental metric for understanding traffic acquisition costs.",
+    "formula": "CPC = Total Ad Spend / Total Clicks",
+    "example": "If you spend $200 and get 400 clicks, your CPC is $0.50. Each visitor from your ads costs you 50 cents.",
+    "category": "cost-metrics",
+    "relatedTerms": ["ctr", "cpm", "cpa", "ppc"],
+    "faqs": [
+      {
+        "q": "What's a good CPC?",
+        "a": "Good CPC varies dramatically by industry. E-commerce: $0.50-$2, B2B: $2-$10, Legal/Finance: $5-$50+. Focus on CPA and ROAS rather than CPC alone."
+      },
+      {
+        "q": "How do I lower my CPC?",
+        "a": "Lower CPC by: improving Quality Score, refining targeting, using long-tail keywords, improving ad relevance, and adjusting bid strategies."
+      }
+    ],
+    "metricxFeature": "Monitor CPC across all campaigns with competitive benchmarking"
+  },
+  {
+    "term": "CAC",
+    "fullName": "Customer Acquisition Cost",
+    "slug": "cac",
+    "definition": "CAC (Customer Acquisition Cost) is the total cost to acquire a new customer, including all marketing and sales expenses. It's broader than CPA as it includes non-advertising costs.",
+    "formula": "CAC = Total Sales & Marketing Costs / Number of New Customers",
+    "example": "If you spend $10,000 on marketing and sales in a month and acquire 100 new customers, your CAC is $100 per customer.",
+    "category": "business-metrics",
+    "relatedTerms": ["cpa", "ltv", "roas", "ltv-cac-ratio"],
+    "faqs": [
+      {
+        "q": "What's the difference between CAC and CPA?",
+        "a": "CPA typically refers to cost per conversion from ads only. CAC includes all customer acquisition costs: advertising, sales team, tools, content creation, etc."
+      },
+      {
+        "q": "What's a good CAC:LTV ratio?",
+        "a": "A healthy CAC:LTV ratio is 1:3 or better, meaning your customer lifetime value is at least 3x your acquisition cost. Below 1:1 means you're losing money per customer."
+      }
+    ],
+    "metricxFeature": "Calculate true CAC by combining ad data with Shopify revenue"
+  },
+  {
+    "term": "LTV",
+    "fullName": "Lifetime Value",
+    "slug": "ltv",
+    "definition": "LTV (Lifetime Value) or CLV (Customer Lifetime Value) is the total revenue expected from a customer throughout their relationship with your business. It's crucial for determining how much you can spend to acquire customers.",
+    "formula": "LTV = Average Order Value × Purchase Frequency × Customer Lifespan",
+    "example": "If customers spend $50 on average, buy 4 times per year, and stay for 3 years, LTV = $50 × 4 × 3 = $600.",
+    "category": "business-metrics",
+    "relatedTerms": ["cac", "aov", "retention-rate", "ltv-cac-ratio"],
+    "faqs": [
+      {
+        "q": "Why is LTV important for ads?",
+        "a": "LTV determines your maximum profitable CPA. If LTV is $100, you can spend up to $100 to acquire a customer and still break even (though you'd want to spend less for profit)."
+      },
+      {
+        "q": "How do I increase LTV?",
+        "a": "Increase LTV through: email marketing, loyalty programs, upselling/cross-selling, improving product quality, subscription models, and excellent customer service."
+      }
+    ],
+    "metricxFeature": "Connect Shopify data to track true LTV and inform acquisition strategy"
+  },
+  {
+    "term": "AOV",
+    "fullName": "Average Order Value",
+    "slug": "aov",
+    "definition": "AOV (Average Order Value) is the average amount customers spend per order. It's a key metric for e-commerce that directly impacts revenue and profitability.",
+    "formula": "AOV = Total Revenue / Number of Orders",
+    "example": "If you had $50,000 in revenue from 1,000 orders, your AOV is $50.",
+    "category": "business-metrics",
+    "relatedTerms": ["ltv", "revenue", "conversion-rate", "cart-size"],
+    "faqs": [
+      {
+        "q": "How do I increase AOV?",
+        "a": "Increase AOV through: upselling, cross-selling, bundle offers, free shipping thresholds, loyalty rewards, and product recommendations."
+      },
+      {
+        "q": "Why does AOV matter for ads?",
+        "a": "Higher AOV means you can afford higher CPAs while maintaining profitability. It also improves ROAS since each conversion generates more revenue."
+      }
+    ],
+    "metricxFeature": "Track AOV by traffic source to identify highest-value acquisition channels"
+  },
+  {
+    "term": "Conversion Rate",
+    "fullName": "Conversion Rate",
+    "slug": "conversion-rate",
+    "definition": "Conversion Rate is the percentage of visitors who complete a desired action (purchase, signup, etc.). It measures how effectively your website or landing page turns traffic into customers.",
+    "formula": "Conversion Rate = (Conversions / Total Visitors) × 100",
+    "example": "If 1,000 people visit your site and 30 make a purchase, your conversion rate is 3%.",
+    "category": "performance-metrics",
+    "relatedTerms": ["ctr", "cpa", "landing-page", "funnel"],
+    "faqs": [
+      {
+        "q": "What's a good conversion rate?",
+        "a": "E-commerce averages 2-3%. Top performers achieve 5%+. It varies by industry, product price, and traffic source. Focus on improving your own rate over time."
+      },
+      {
+        "q": "How do I improve conversion rate?",
+        "a": "Improve through: A/B testing, faster page speed, clearer CTAs, social proof, simplified checkout, better product photos, and trust signals."
+      }
+    ],
+    "metricxFeature": "Compare conversion rates across traffic sources and campaigns"
+  },
+  {
+    "term": "Impressions",
+    "fullName": "Impressions",
+    "slug": "impressions",
+    "definition": "Impressions are the number of times your ad is displayed to users. Each time your ad appears on a screen, it counts as one impression, regardless of whether it was clicked.",
+    "formula": "Total count of ad displays",
+    "example": "If your ad appears 10,000 times across Facebook feeds, you have 10,000 impressions.",
+    "category": "reach-metrics",
+    "relatedTerms": ["reach", "frequency", "cpm", "viewability"],
+    "faqs": [
+      {
+        "q": "What's the difference between impressions and reach?",
+        "a": "Impressions count total displays (same person can see ad multiple times). Reach counts unique people who saw your ad. Impressions ÷ Reach = Frequency."
+      },
+      {
+        "q": "Are all impressions equal?",
+        "a": "No. Consider viewability (was the ad actually visible?), placement quality, and whether the impression reached your target audience."
+      }
+    ],
+    "metricxFeature": "Track impressions across all platforms in one unified dashboard"
+  },
+  {
+    "term": "Reach",
+    "fullName": "Reach",
+    "slug": "reach",
+    "definition": "Reach is the number of unique users who saw your ad at least once. Unlike impressions, reach counts each person only once regardless of how many times they saw your ad.",
+    "formula": "Unique users who saw the ad",
+    "example": "If 5,000 different people saw your ad (some multiple times), your reach is 5,000.",
+    "category": "reach-metrics",
+    "relatedTerms": ["impressions", "frequency", "audience-size", "cpm"],
+    "faqs": [
+      {
+        "q": "Why is reach important?",
+        "a": "Reach shows how many potential customers you're exposing to your brand. High reach with controlled frequency prevents ad fatigue while maximizing awareness."
+      },
+      {
+        "q": "Reach vs impressions: which matters more?",
+        "a": "Depends on goals. Brand awareness campaigns focus on reach. Conversion campaigns may prioritize impression frequency to qualified audiences."
+      }
+    ],
+    "metricxFeature": "Monitor reach and frequency to prevent ad fatigue"
+  },
+  {
+    "term": "Frequency",
+    "fullName": "Ad Frequency",
+    "slug": "frequency",
+    "definition": "Frequency is the average number of times each person in your reach sees your ad. It's calculated by dividing impressions by reach and helps monitor ad fatigue.",
+    "formula": "Frequency = Impressions / Reach",
+    "example": "If you have 50,000 impressions and 10,000 reach, your frequency is 5 (each person saw the ad 5 times on average).",
+    "category": "reach-metrics",
+    "relatedTerms": ["reach", "impressions", "ad-fatigue", "cpm"],
+    "faqs": [
+      {
+        "q": "What's the ideal ad frequency?",
+        "a": "Depends on campaign type. Awareness: 1-3x. Consideration: 3-5x. Retargeting: up to 7x. Beyond that, ad fatigue typically sets in."
+      },
+      {
+        "q": "What is ad fatigue?",
+        "a": "Ad fatigue occurs when your audience sees your ad too many times, leading to decreased engagement, higher costs, and negative brand perception."
+      }
+    ],
+    "metricxFeature": "Automated alerts when frequency exceeds optimal thresholds"
+  },
+  {
+    "term": "Attribution",
+    "fullName": "Marketing Attribution",
+    "slug": "attribution",
+    "definition": "Attribution is the process of identifying which marketing touchpoints deserve credit for a conversion. It helps understand which channels and campaigns drive results.",
+    "formula": "Varies by attribution model",
+    "example": "A customer sees a Facebook ad, clicks a Google ad, then converts. Attribution determines how to split credit between Facebook and Google.",
+    "category": "analytics",
+    "relatedTerms": ["first-click", "last-click", "multi-touch", "conversion-path"],
+    "faqs": [
+      {
+        "q": "What are the main attribution models?",
+        "a": "Common models: Last-click (100% to final touchpoint), First-click (100% to first), Linear (equal split), Time-decay (recent gets more), Data-driven (algorithmic)."
+      },
+      {
+        "q": "Why is attribution difficult?",
+        "a": "Cross-device tracking, iOS privacy changes, cookie deprecation, and walled gardens make it hard to track the full customer journey accurately."
+      }
+    ],
+    "metricxFeature": "First-party attribution tracking with Shopify integration"
+  },
+  {
+    "term": "ACOS",
+    "fullName": "Advertising Cost of Sales",
+    "slug": "acos",
+    "definition": "ACOS (Advertising Cost of Sales) is the percentage of revenue spent on advertising. It's essentially the inverse of ROAS and commonly used in Amazon advertising.",
+    "formula": "ACOS = (Ad Spend / Revenue) × 100",
+    "example": "If you spend $200 on ads and generate $1,000 in revenue, your ACOS is 20%.",
+    "category": "performance-metrics",
+    "relatedTerms": ["roas", "tacos", "profit-margin", "break-even"],
+    "faqs": [
+      {
+        "q": "What's a good ACOS?",
+        "a": "Good ACOS depends on your profit margin. If your profit margin is 30%, ACOS must be below 30% to be profitable. Lower ACOS = higher profitability."
+      },
+      {
+        "q": "ACOS vs ROAS: which should I use?",
+        "a": "They're inverses. ROAS of 4x = ACOS of 25%. Use whichever your team prefers. Amazon sellers typically use ACOS; most other advertisers use ROAS."
+      }
+    ],
+    "metricxFeature": "Track ACOS alongside ROAS for complete profitability picture"
+  },
+  {
+    "term": "Quality Score",
+    "fullName": "Quality Score",
+    "slug": "quality-score",
+    "definition": "Quality Score is Google's rating (1-10) of your ad's relevance and quality. It affects your ad rank and CPC, with higher scores leading to lower costs and better positions.",
+    "formula": "Based on CTR, ad relevance, and landing page experience",
+    "example": "An ad with Quality Score 8 will typically pay less per click and rank higher than a competitor with Quality Score 5.",
+    "category": "platform-metrics",
+    "relatedTerms": ["cpc", "ad-rank", "relevance-score", "ctr"],
+    "faqs": [
+      {
+        "q": "How do I improve Quality Score?",
+        "a": "Improve by: 1) Writing highly relevant ads, 2) Using keywords in ad copy, 3) Creating fast, relevant landing pages, 4) Improving CTR through better targeting."
+      },
+      {
+        "q": "Why does Quality Score matter?",
+        "a": "Higher Quality Score = lower CPC + better ad positions. A score of 8 vs 5 can mean 30-50% lower costs for the same ad placement."
+      }
+    ],
+    "metricxFeature": "Monitor Quality Score trends across your Google Ads campaigns"
+  },
+  {
+    "term": "Relevance Score",
+    "fullName": "Relevance Score",
+    "slug": "relevance-score",
+    "definition": "Relevance Score (now Quality Ranking on Facebook) measures how well your ad resonates with your target audience. It's based on positive and negative feedback from ad recipients.",
+    "formula": "Based on expected engagement, conversions, and quality signals",
+    "example": "An ad with high engagement and low negative feedback will have a higher relevance score, leading to lower costs and better delivery.",
+    "category": "platform-metrics",
+    "relatedTerms": ["quality-score", "engagement-rate", "cpm", "ad-fatigue"],
+    "faqs": [
+      {
+        "q": "How does relevance score affect my ads?",
+        "a": "Higher scores = lower CPM, better delivery, more impressions. Low scores may result in limited delivery or higher costs."
+      },
+      {
+        "q": "How do I improve relevance score?",
+        "a": "Improve by: targeting the right audience, using engaging creative, keeping copy concise, and refreshing ads before fatigue sets in."
+      }
+    ],
+    "metricxFeature": "Track ad quality metrics across Meta campaigns"
+  },
+  {
+    "term": "Pixel",
+    "fullName": "Tracking Pixel",
+    "slug": "pixel",
+    "definition": "A tracking pixel is a small piece of code installed on your website that tracks visitor behavior and conversions. It enables retargeting and accurate conversion tracking for ad platforms.",
+    "formula": "N/A - Technical implementation",
+    "example": "The Meta Pixel tracks when someone views a product, adds to cart, or purchases on your site, allowing you to measure ad effectiveness and build retargeting audiences.",
+    "category": "tracking",
+    "relatedTerms": ["conversion-tracking", "retargeting", "capi", "attribution"],
+    "faqs": [
+      {
+        "q": "Why is pixel tracking important?",
+        "a": "Pixels enable: conversion tracking, audience building, retargeting, ad optimization, and attribution. Without pixels, you can't measure ad effectiveness."
+      },
+      {
+        "q": "What about iOS 14 and pixel tracking?",
+        "a": "iOS 14+ limits tracking through App Tracking Transparency. Use Conversions API (CAPI), first-party data, and server-side tracking to maintain accuracy."
+      }
+    ],
+    "metricxFeature": "Automated pixel health monitoring and setup guidance"
+  },
+  {
+    "term": "Retargeting",
+    "fullName": "Retargeting/Remarketing",
+    "slug": "retargeting",
+    "definition": "Retargeting shows ads to people who have previously visited your website or interacted with your brand. It's highly effective because these users are already familiar with you.",
+    "formula": "N/A - Campaign strategy",
+    "example": "A visitor views a product on your site but doesn't purchase. Retargeting shows them ads for that product on Facebook or Google, reminding them to complete the purchase.",
+    "category": "campaign-types",
+    "relatedTerms": ["pixel", "audience", "conversion-rate", "cart-abandonment"],
+    "faqs": [
+      {
+        "q": "Why is retargeting effective?",
+        "a": "Retargeting targets warm audiences who know your brand, resulting in higher CTR, conversion rates, and ROAS compared to cold prospecting."
+      },
+      {
+        "q": "How long should retargeting audiences be?",
+        "a": "Depends on your sales cycle. E-commerce: 7-30 days. B2B: 30-90 days. Too short misses potential buyers; too long wastes budget on cold users."
+      }
+    ],
+    "metricxFeature": "Track retargeting vs prospecting performance separately"
+  },
+  {
+    "term": "Lookalike Audience",
+    "fullName": "Lookalike Audience",
+    "slug": "lookalike-audience",
+    "definition": "A Lookalike Audience is a targeting option that finds new people similar to your existing customers. Platforms analyze your customer data and find users with matching characteristics.",
+    "formula": "N/A - Algorithmic targeting",
+    "example": "Upload your customer email list to Facebook. It creates a Lookalike Audience of 1-2 million users who share similar traits with your customers.",
+    "category": "targeting",
+    "relatedTerms": ["custom-audience", "seed-audience", "prospecting", "targeting"],
+    "faqs": [
+      {
+        "q": "How do I create effective lookalikes?",
+        "a": "Use high-quality seed audiences: recent purchasers, high LTV customers, or highly engaged users. Quality of seed > quantity."
+      },
+      {
+        "q": "What lookalike percentage should I use?",
+        "a": "1% is most similar to your seed (highest quality, smallest reach). 5-10% expands reach but reduces similarity. Test different sizes."
+      }
+    ],
+    "metricxFeature": "Identify best-performing audience segments for lookalike creation"
+  },
+  {
+    "term": "A/B Testing",
+    "fullName": "A/B Testing (Split Testing)",
+    "slug": "ab-testing",
+    "definition": "A/B testing compares two versions of an ad, landing page, or campaign element to determine which performs better. It's essential for data-driven optimization.",
+    "formula": "Compare metrics between variant A and variant B",
+    "example": "Test two ad headlines: A='Save 50% Today' vs B='Free Shipping on All Orders'. Run both to equal audiences and measure which has better CTR/conversions.",
+    "category": "optimization",
+    "relatedTerms": ["statistical-significance", "conversion-rate", "creative-testing", "multivariate"],
+    "faqs": [
+      {
+        "q": "How long should I run an A/B test?",
+        "a": "Until you reach statistical significance, typically 1-2 weeks with sufficient volume. Don't stop tests early based on initial results."
+      },
+      {
+        "q": "What should I A/B test?",
+        "a": "Test: headlines, images/video, CTAs, ad copy, audiences, landing pages, offers, and ad formats. Test one variable at a time for clear results."
+      }
+    ],
+    "metricxFeature": "Compare creative and audience performance across campaigns"
+  },
+  {
+    "term": "Ad Creative",
+    "fullName": "Ad Creative",
+    "slug": "ad-creative",
+    "definition": "Ad creative refers to the visual and written elements of your advertisement, including images, videos, headlines, body copy, and calls-to-action.",
+    "formula": "N/A - Design and copywriting",
+    "example": "A Facebook ad creative might include: a product video, headline 'Transform Your Skin in 7 Days', body copy describing benefits, and a 'Shop Now' CTA button.",
+    "category": "creative",
+    "relatedTerms": ["ctr", "engagement-rate", "ad-fatigue", "ab-testing"],
+    "faqs": [
+      {
+        "q": "What makes a good ad creative?",
+        "a": "Effective creative: grabs attention in 3 seconds, clearly communicates value, has a strong CTA, matches audience intent, and feels native to the platform."
+      },
+      {
+        "q": "How often should I refresh creatives?",
+        "a": "Refresh every 2-4 weeks or when performance declines (rising CPM, falling CTR). Continuous creative testing is essential for sustained performance."
+      }
+    ],
+    "metricxFeature": "Track creative performance and identify top performers"
+  },
+  {
+    "term": "Landing Page",
+    "fullName": "Landing Page",
+    "slug": "landing-page",
+    "definition": "A landing page is the destination webpage where visitors arrive after clicking your ad. It's designed to convert visitors into leads or customers with a specific call-to-action.",
+    "formula": "N/A - Web design and CRO",
+    "example": "A Facebook ad promotes a free ebook. Clicking leads to a landing page with the ebook preview, benefits, and an email signup form to download.",
+    "category": "conversion",
+    "relatedTerms": ["conversion-rate", "cro", "cta", "quality-score"],
+    "faqs": [
+      {
+        "q": "What makes a high-converting landing page?",
+        "a": "Key elements: clear headline, compelling offer, benefit-focused copy, social proof, fast load time, mobile optimization, single CTA, and message match with the ad."
+      },
+      {
+        "q": "Should I use my homepage as a landing page?",
+        "a": "Usually no. Dedicated landing pages with focused messaging convert better than generic homepages. Match the landing page to the specific ad offer."
+      }
+    ],
+    "metricxFeature": "Compare conversion rates by landing page source"
+  },
+  {
+    "term": "Bid Strategy",
+    "fullName": "Bid Strategy",
+    "slug": "bid-strategy",
+    "definition": "Bid strategy is the approach you use to bid in ad auctions. Strategies range from manual CPC bidding to automated options like target CPA, maximize conversions, or target ROAS.",
+    "formula": "Varies by strategy type",
+    "example": "Target ROAS bidding tells Google to automatically set bids to achieve your desired return on ad spend, like 400% ROAS.",
+    "category": "campaign-management",
+    "relatedTerms": ["cpc", "cpa", "roas", "auction"],
+    "faqs": [
+      {
+        "q": "Which bid strategy should I use?",
+        "a": "Depends on goals and data. New campaigns: Maximize Clicks or Conversions. Established campaigns with conversion data: Target CPA or Target ROAS."
+      },
+      {
+        "q": "How much conversion data do I need for smart bidding?",
+        "a": "Google recommends 30+ conversions in last 30 days for Target CPA, 50+ for Target ROAS. Less data = less effective automated bidding."
+      }
+    ],
+    "metricxFeature": "Track bid strategy performance and optimization recommendations"
+  },
+  {
+    "term": "Ad Rank",
+    "fullName": "Ad Rank",
+    "slug": "ad-rank",
+    "definition": "Ad Rank determines your ad's position in search results. It's calculated using your bid, Quality Score, ad extensions, and expected impact of ad formats.",
+    "formula": "Ad Rank = Bid × Quality Score × Expected Impact of Extensions",
+    "example": "Two advertisers bid $2 for the same keyword. Advertiser A has Quality Score 8, Advertiser B has Quality Score 4. A wins the top spot despite equal bids.",
+    "category": "platform-metrics",
+    "relatedTerms": ["quality-score", "cpc", "auction", "ad-position"],
+    "faqs": [
+      {
+        "q": "How do I improve my Ad Rank?",
+        "a": "Improve Quality Score (biggest impact), increase bids, use all relevant ad extensions, improve landing page experience, and write highly relevant ads."
+      },
+      {
+        "q": "Why do I have low impression share?",
+        "a": "Low impression share usually means your Ad Rank is too low. Check if it's budget-limited or rank-limited in Google Ads to know which to improve."
+      }
+    ],
+    "metricxFeature": "Monitor impression share and competitive metrics"
+  },
+  {
+    "term": "Funnel",
+    "fullName": "Marketing/Sales Funnel",
+    "slug": "funnel",
+    "definition": "A marketing funnel represents the customer journey from awareness to purchase. It typically includes stages: Awareness, Interest, Consideration, Intent, Evaluation, and Purchase (TOFU, MOFU, BOFU).",
+    "formula": "N/A - Strategic framework",
+    "example": "TOFU: Blog post awareness ad. MOFU: Product comparison guide. BOFU: Retargeting ad with discount code for cart abandoners.",
+    "category": "strategy",
+    "relatedTerms": ["tofu", "mofu", "bofu", "customer-journey", "attribution"],
+    "faqs": [
+      {
+        "q": "How should I allocate budget across the funnel?",
+        "a": "Common split: 60% prospecting (top), 30% consideration (middle), 10% conversion (bottom). Adjust based on your funnel performance data."
+      },
+      {
+        "q": "What metrics matter at each funnel stage?",
+        "a": "Top: Reach, CPM, engagement. Middle: CTR, time on site, content engagement. Bottom: Conversion rate, CPA, ROAS."
+      }
+    ],
+    "metricxFeature": "Track performance by funnel stage across all campaigns"
+  },
+  {
+    "term": "CAPI",
+    "fullName": "Conversions API",
+    "slug": "capi",
+    "definition": "CAPI (Conversions API) is server-side tracking that sends conversion data directly from your server to ad platforms. It bypasses browser limitations and improves tracking accuracy.",
+    "formula": "N/A - Technical implementation",
+    "example": "Instead of relying solely on the Meta Pixel in the browser, CAPI sends purchase events directly from your Shopify server to Meta, ensuring the conversion is tracked even if the pixel is blocked.",
+    "category": "tracking",
+    "relatedTerms": ["pixel", "attribution", "ios14", "server-side-tracking"],
+    "faqs": [
+      {
+        "q": "Why is CAPI important?",
+        "a": "Browser-based tracking is increasingly blocked by iOS, ad blockers, and browser privacy features. CAPI provides more reliable conversion data for optimization."
+      },
+      {
+        "q": "Should I use CAPI or Pixel?",
+        "a": "Use both. CAPI and Pixel together provide redundancy and the most complete data. Meta recommends running both for best results."
+      }
+    ],
+    "metricxFeature": "CAPI integration monitoring and health checks"
+  },
+  {
+    "term": "View-Through Conversion",
+    "fullName": "View-Through Conversion",
+    "slug": "view-through-conversion",
+    "definition": "A view-through conversion occurs when someone sees your ad (but doesn't click) and later converts through another channel. It measures the influence of ad impressions on conversions.",
+    "formula": "Conversions from users who saw (not clicked) an ad",
+    "example": "A user sees your display ad but doesn't click. Later that day, they search your brand name and make a purchase. This can be counted as a view-through conversion.",
+    "category": "attribution",
+    "relatedTerms": ["click-through-conversion", "attribution-window", "assisted-conversion"],
+    "faqs": [
+      {
+        "q": "Are view-through conversions reliable?",
+        "a": "They can be inflated. Use shorter attribution windows (1-7 days) and don't rely solely on them. They're more meaningful for awareness campaigns."
+      },
+      {
+        "q": "How do I set view-through windows?",
+        "a": "Shorter windows (1 day) are more conservative. Longer windows (7-28 days) capture more influence but risk over-attribution. Test different windows."
+      }
+    ],
+    "metricxFeature": "Compare click-through vs view-through attribution"
+  },
+  {
+    "term": "DPA",
+    "fullName": "Dynamic Product Ads",
+    "slug": "dpa",
+    "definition": "DPA (Dynamic Product Ads) automatically show products from your catalog to users who've shown interest. They pull product images, prices, and descriptions from your product feed.",
+    "formula": "N/A - Automated ad type",
+    "example": "A visitor views running shoes on your site. DPA automatically shows them an ad featuring those exact shoes (and similar products) in their Facebook feed.",
+    "category": "ad-types",
+    "relatedTerms": ["product-feed", "retargeting", "catalog", "shopping-ads"],
+    "faqs": [
+      {
+        "q": "What's needed for DPA?",
+        "a": "You need: product catalog/feed, pixel or SDK installed, product IDs tracked on your site, and Facebook Business Manager setup."
+      },
+      {
+        "q": "How effective are DPAs?",
+        "a": "DPAs are highly effective for e-commerce, often outperforming static ads due to relevance and personalization. They're essential for retargeting."
+      }
+    ],
+    "metricxFeature": "Track DPA performance by product category"
+  }
+]

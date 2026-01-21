@@ -1,0 +1,117 @@
+[
+  {
+    "id": "metricx-team",
+    "name": "metricx Team",
+    "slug": "metricx-team",
+    "role": "metricx Editorial Team",
+    "bio": "The metricx team brings together expertise in ad analytics, e-commerce growth, and data science to help merchants maximize their advertising ROI.",
+    "avatar": "/images/authors/metricx-team.png",
+    "social": {
+      "twitter": "metricxai",
+      "linkedin": "company/metricx"
+    },
+    "expertise": ["Ad Analytics", "E-commerce", "Data Science"],
+    "isDefault": true
+  },
+  {
+    "id": "sarah-chen",
+    "name": "Sarah Chen",
+    "slug": "sarah-chen",
+    "role": "Head of Growth",
+    "bio": "Sarah has 10+ years of experience in e-commerce marketing, having led growth at multiple DTC brands before joining metricx. She specializes in paid acquisition strategy and attribution.",
+    "avatar": "/images/authors/sarah-chen.png",
+    "social": {
+      "twitter": "sarahchen_growth",
+      "linkedin": "sarahchenmarketing"
+    },
+    "expertise": ["Meta Ads", "Growth Strategy", "Attribution"],
+    "credentials": [
+      "Former Head of Growth at leading DTC brand",
+      "Meta Blueprint Certified",
+      "Google Ads Certified"
+    ]
+  },
+  {
+    "id": "marcus-johnson",
+    "name": "Marcus Johnson",
+    "slug": "marcus-johnson",
+    "role": "Senior Analytics Engineer",
+    "bio": "Marcus is a data engineer and analytics expert who has built attribution systems for Fortune 500 retailers. He leads metricx's data infrastructure and analytics product.",
+    "avatar": "/images/authors/marcus-johnson.png",
+    "social": {
+      "twitter": "marcusjdata",
+      "linkedin": "marcusjohnsondata"
+    },
+    "expertise": ["Data Engineering", "Attribution Models", "Analytics"],
+    "credentials": [
+      "Former Analytics Lead at major retailer",
+      "15+ years in marketing analytics",
+      "MS in Computer Science"
+    ]
+  },
+  {
+    "id": "emma-rodriguez",
+    "name": "Emma Rodriguez",
+    "slug": "emma-rodriguez",
+    "role": "E-commerce Strategist",
+    "bio": "Emma has helped 100+ Shopify brands scale their advertising. She brings hands-on experience from running her own e-commerce business and consulting for growing brands.",
+    "avatar": "/images/authors/emma-rodriguez.png",
+    "social": {
+      "twitter": "emmarodriguezec",
+      "linkedin": "emmarodriguezcommerce"
+    },
+    "expertise": ["Shopify", "DTC Strategy", "Scaling"],
+    "credentials": [
+      "Founded and sold e-commerce brand",
+      "Shopify Partner",
+      "Consulted for 100+ brands"
+    ]
+  },
+  {
+    "id": "david-kim",
+    "name": "David Kim",
+    "slug": "david-kim",
+    "role": "Performance Marketing Lead",
+    "bio": "David specializes in Google Ads and Performance Max optimization. He previously managed $50M+ in annual ad spend for major e-commerce clients at a leading agency.",
+    "avatar": "/images/authors/david-kim.png",
+    "social": {
+      "twitter": "davidkimppc",
+      "linkedin": "davidkimmarketing"
+    },
+    "expertise": ["Google Ads", "Performance Max", "Shopping Ads"],
+    "credentials": [
+      "Managed $50M+ in ad spend",
+      "Google Ads Premier Partner certified",
+      "Former agency performance lead"
+    ]
+  },
+  {
+    "id": "alex-thompson",
+    "name": "Alex Thompson",
+    "slug": "alex-thompson",
+    "role": "Creative Strategist",
+    "bio": "Alex combines creative direction with data analysis to help brands develop high-performing ad creative. Background in both brand marketing and performance creative.",
+    "avatar": "/images/authors/alex-thompson.png",
+    "social": {
+      "twitter": "alexthompsoncreative",
+      "linkedin": "alexthompsoncreative"
+    },
+    "expertise": ["Creative Strategy", "TikTok Ads", "Video Marketing"],
+    "credentials": [
+      "Former Creative Director",
+      "TikTok Creative Partner",
+      "Built viral campaigns with 100M+ views"
+    ]
+  },
+  {
+    "id": "guest-contributor",
+    "name": "Guest Contributor",
+    "slug": "guest-contributor",
+    "role": "Industry Expert",
+    "bio": "Expert contributors from the e-commerce and digital marketing community sharing their insights and experiences.",
+    "avatar": "/images/authors/guest.png",
+    "social": {},
+    "expertise": ["Various"],
+    "isGuest": true
+  }
+]

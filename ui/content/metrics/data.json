@@ -1,0 +1,715 @@
+[
+  {
+    "name": "Return on Ad Spend",
+    "slug": "roas",
+    "abbreviation": "ROAS",
+    "category": "performance",
+    "description": "ROAS measures the revenue generated for every dollar spent on advertising. It's the most important metric for evaluating ad campaign profitability.",
+    "formula": "Revenue from Ads / Ad Spend",
+    "formulaExample": "$5,000 revenue / $1,000 spend = 5x ROAS",
+    "benchmarks": {
+      "poor": { "value": "< 2x", "description": "Likely unprofitable after costs" },
+      "average": { "value": "2x - 4x", "description": "Breaking even to moderate profit" },
+      "good": { "value": "4x - 6x", "description": "Strong performance" },
+      "excellent": { "value": "> 6x", "description": "Exceptional returns" }
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Optimize targeting to reach high-intent audiences",
+      "Test different ad creatives to find top performers",
+      "Improve landing page conversion rates",
+      "Adjust bidding strategies based on performance data",
+      "Focus budget on best-performing campaigns"
+    ],
+    "relatedMetrics": ["cpa", "ctr", "aov", "conversion-rate"],
+    "faqs": [
+      {
+        "question": "What is a good ROAS for e-commerce?",
+        "answer": "For most e-commerce businesses, a ROAS of 4x or higher is considered good. However, this depends on your profit margins - businesses with higher margins can be profitable at lower ROAS."
+      },
+      {
+        "question": "How is ROAS different from ROI?",
+        "answer": "ROAS measures revenue per ad dollar spent, while ROI (Return on Investment) measures profit after all costs. ROAS = Revenue/Ad Spend, ROI = (Profit - Cost)/Cost × 100%."
+      },
+      {
+        "question": "Why is my ROAS different across platforms?",
+        "answer": "Each platform has different attribution models, audience demographics, and conversion tracking methods. Platform-reported ROAS may vary from actual ROAS due to these differences."
+      }
+    ],
+    "metricxFeature": "Real-time ROAS tracking across Meta, Google, and TikTok with AI-powered optimization recommendations"
+  },
+  {
+    "name": "Cost Per Acquisition",
+    "slug": "cpa",
+    "abbreviation": "CPA",
+    "category": "cost",
+    "description": "CPA measures the average cost to acquire a customer or conversion through advertising. Lower CPA means more efficient ad spend.",
+    "formula": "Total Ad Spend / Number of Conversions",
+    "formulaExample": "$1,000 spend / 50 purchases = $20 CPA",
+    "benchmarks": {
+      "poor": { "value": "> $50", "description": "May exceed customer value" },
+      "average": { "value": "$25 - $50", "description": "Typical for most industries" },
+      "good": { "value": "$10 - $25", "description": "Efficient acquisition" },
+      "excellent": { "value": "< $10", "description": "Highly efficient campaigns" }
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Refine audience targeting to reduce wasted spend",
+      "A/B test ad creatives to improve conversion rates",
+      "Optimize landing pages for better user experience",
+      "Use lookalike audiences based on existing customers",
+      "Implement retargeting for warm audiences"
+    ],
+    "relatedMetrics": ["roas", "cpc", "conversion-rate", "cac"],
+    "faqs": [
+      {
+        "question": "What's a good CPA for my business?",
+        "answer": "A good CPA should be lower than your customer's lifetime value (LTV). Aim for CPA that's 1/3 or less of your average order value for single-purchase products."
+      },
+      {
+        "question": "How do I lower my CPA?",
+        "answer": "Focus on improving conversion rates through better targeting, compelling creatives, and optimized landing pages. Also test different bidding strategies and exclude low-performing audiences."
+      }
+    ],
+    "metricxFeature": "Track CPA across all campaigns with AI alerts when costs exceed your targets"
+  },
+  {
+    "name": "Click-Through Rate",
+    "slug": "ctr",
+    "abbreviation": "CTR",
+    "category": "engagement",
+    "description": "CTR measures the percentage of people who click on your ad after seeing it. Higher CTR indicates more engaging ad creative and targeting.",
+    "formula": "(Clicks / Impressions) × 100",
+    "formulaExample": "500 clicks / 50,000 impressions × 100 = 1% CTR",
+    "benchmarks": {
+      "poor": { "value": "< 0.5%", "description": "Ad needs improvement" },
+      "average": { "value": "0.5% - 1%", "description": "Typical performance" },
+      "good": { "value": "1% - 2%", "description": "Above average engagement" },
+      "excellent": { "value": "> 2%", "description": "Highly engaging ad" }
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Write compelling headlines that speak to pain points",
+      "Use high-quality, eye-catching visuals",
+      "Include clear calls-to-action",
+      "Test different ad formats (video vs image)",
+      "Improve audience targeting relevance"
+    ],
+    "relatedMetrics": ["cpc", "cpm", "impressions", "conversion-rate"],
+    "faqs": [
+      {
+        "question": "What affects CTR?",
+        "answer": "CTR is influenced by ad creative quality, headline copy, targeting accuracy, ad placement, and offer relevance. Better alignment between these factors increases CTR."
+      },
+      {
+        "question": "Is high CTR always good?",
+        "answer": "Not necessarily. High CTR with low conversions may indicate clickbait or misleading ads. Focus on quality clicks that convert, not just click volume."
+      }
+    ],
+    "metricxFeature": "Monitor CTR trends with AI recommendations for creative optimization"
+  },
+  {
+    "name": "Cost Per Mille",
+    "slug": "cpm",
+    "abbreviation": "CPM",
+    "category": "cost",
+    "description": "CPM is the cost per 1,000 ad impressions. It measures how expensive it is to reach your target audience on a platform.",
+    "formula": "(Ad Spend / Impressions) × 1,000",
+    "formulaExample": "$100 spend / 50,000 impressions × 1,000 = $2 CPM",
+    "benchmarks": {
+      "poor": { "value": "> $20", "description": "Expensive reach" },
+      "average": { "value": "$10 - $20", "description": "Typical costs" },
+      "good": { "value": "$5 - $10", "description": "Efficient reach" },
+      "excellent": { "value": "< $5", "description": "Very cost-effective" }
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Broaden targeting to increase available inventory",
+      "Avoid over-saturated audiences",
+      "Test different placements (feed vs stories)",
+      "Adjust bidding strategy based on goals",
+      "Target during lower-competition time periods"
+    ],
+    "relatedMetrics": ["cpc", "ctr", "impressions", "reach"],
+    "faqs": [
+      {
+        "question": "Why does CPM vary so much?",
+        "answer": "CPM is affected by audience competition, seasonality (Q4 is most expensive), platform, placement, and targeting specificity. Narrower targeting typically increases CPM."
+      },
+      {
+        "question": "Should I optimize for CPM?",
+        "answer": "CPM optimization is best for brand awareness campaigns. For conversion-focused campaigns, optimize for CPA or ROAS instead."
+      }
+    ],
+    "metricxFeature": "Track CPM trends across platforms and identify cost-saving opportunities"
+  },
+  {
+    "name": "Cost Per Click",
+    "slug": "cpc",
+    "abbreviation": "CPC",
+    "category": "cost",
+    "description": "CPC measures the average cost each time someone clicks on your ad. Lower CPC means more efficient traffic acquisition.",
+    "formula": "Total Ad Spend / Number of Clicks",
+    "formulaExample": "$500 spend / 250 clicks = $2 CPC",
+    "benchmarks": {
+      "poor": { "value": "> $3", "description": "Expensive clicks" },
+      "average": { "value": "$1 - $3", "description": "Typical costs" },
+      "good": { "value": "$0.50 - $1", "description": "Efficient clicks" },
+      "excellent": { "value": "< $0.50", "description": "Very cost-effective" }
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Improve ad relevance score",
+      "Test different ad creatives",
+      "Refine audience targeting",
+      "Use manual bidding with caps",
+      "Focus on high-performing placements"
+    ],
+    "relatedMetrics": ["ctr", "cpm", "cpa", "quality-score"],
+    "faqs": [
+      {
+        "question": "Is lower CPC always better?",
+        "answer": "Not always. Cheap clicks that don't convert waste budget. Focus on cost per conversion (CPA) as the ultimate efficiency metric."
+      },
+      {
+        "question": "How do I reduce CPC?",
+        "answer": "Improve ad quality scores by creating relevant, engaging ads. Better CTR typically leads to lower CPC as platforms reward engaging content."
+      }
+    ],
+    "metricxFeature": "Monitor CPC across campaigns with automated alerts for cost spikes"
+  },
+  {
+    "name": "Conversion Rate",
+    "slug": "conversion-rate",
+    "abbreviation": "CVR",
+    "category": "performance",
+    "description": "Conversion rate measures the percentage of visitors who complete a desired action (purchase, sign-up, etc.) after clicking an ad.",
+    "formula": "(Conversions / Clicks) × 100",
+    "formulaExample": "50 purchases / 1,000 clicks × 100 = 5% CVR",
+    "benchmarks": {
+      "poor": { "value": "< 1%", "description": "Needs optimization" },
+      "average": { "value": "1% - 3%", "description": "Typical e-commerce" },
+      "good": { "value": "3% - 5%", "description": "Above average" },
+      "excellent": { "value": "> 5%", "description": "Excellent performance" }
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Optimize landing page load speed",
+      "Ensure ad-to-landing page message match",
+      "Simplify checkout process",
+      "Add trust signals and reviews",
+      "Use urgency and scarcity appropriately"
+    ],
+    "relatedMetrics": ["cpa", "roas", "ctr", "aov"],
+    "faqs": [
+      {
+        "question": "What's a good conversion rate?",
+        "answer": "Average e-commerce conversion rates are 1-3%. Top performers achieve 5%+. Your target depends on product type, price point, and traffic quality."
+      },
+      {
+        "question": "Why is my conversion rate low?",
+        "answer": "Common causes: poor landing page experience, slow load times, complicated checkout, unclear value proposition, or mismatched audience targeting."
+      }
+    ],
+    "metricxFeature": "Track conversion rates with AI insights on optimization opportunities"
+  },
+  {
+    "name": "Average Order Value",
+    "slug": "aov",
+    "abbreviation": "AOV",
+    "category": "revenue",
+    "description": "AOV measures the average amount spent per order. Increasing AOV improves ROAS without increasing ad spend.",
+    "formula": "Total Revenue / Number of Orders",
+    "formulaExample": "$10,000 revenue / 200 orders = $50 AOV",
+    "benchmarks": {
+      "poor": { "value": "< $30", "description": "Low ticket items" },
+      "average": { "value": "$30 - $75", "description": "Typical e-commerce" },
+      "good": { "value": "$75 - $150", "description": "Healthy basket size" },
+      "excellent": { "value": "> $150", "description": "High-value orders" }
+    },
+    "platforms": ["shopify", "meta", "google"],
+    "improvementTips": [
+      "Implement upsells and cross-sells",
+      "Offer free shipping thresholds",
+      "Create product bundles",
+      "Use tiered discounts (spend more, save more)",
+      "Recommend complementary products"
+    ],
+    "relatedMetrics": ["roas", "ltv", "conversion-rate", "cpa"],
+    "faqs": [
+      {
+        "question": "How do I increase AOV?",
+        "answer": "Use upsells, cross-sells, bundles, free shipping thresholds, and quantity discounts. Post-purchase upsells can increase AOV by 10-30%."
+      },
+      {
+        "question": "What affects AOV?",
+        "answer": "Product pricing, catalog mix, promotional strategy, and customer segment all impact AOV. Different traffic sources often have different AOV."
+      }
+    ],
+    "metricxFeature": "Track AOV by traffic source to identify highest-value channels"
+  },
+  {
+    "name": "Customer Acquisition Cost",
+    "slug": "cac",
+    "abbreviation": "CAC",
+    "category": "cost",
+    "description": "CAC is the total cost to acquire a new customer, including all marketing and sales expenses. It's broader than CPA.",
+    "formula": "Total Marketing & Sales Costs / New Customers Acquired",
+    "formulaExample": "$10,000 marketing / 200 new customers = $50 CAC",
+    "benchmarks": {
+      "poor": { "value": "> LTV", "description": "Unsustainable" },
+      "average": { "value": "50% of LTV", "description": "Typical ratio" },
+      "good": { "value": "33% of LTV", "description": "Healthy ratio" },
+      "excellent": { "value": "< 25% of LTV", "description": "Excellent efficiency" }
+    },
+    "platforms": ["all"],
+    "improvementTips": [
+      "Optimize conversion funnel",
+      "Focus on organic acquisition channels",
+      "Improve customer referral programs",
+      "Reduce sales cycle length",
+      "Target higher-intent audiences"
+    ],
+    "relatedMetrics": ["ltv", "cpa", "roas", "payback-period"],
+    "faqs": [
+      {
+        "question": "What's the difference between CAC and CPA?",
+        "answer": "CAC includes all costs (ads, salaries, tools, etc.) to acquire a customer. CPA typically refers only to advertising costs per conversion."
+      },
+      {
+        "question": "What's a good LTV:CAC ratio?",
+        "answer": "A 3:1 ratio (LTV 3x higher than CAC) is considered healthy. Below 1:1 means you're losing money on each customer."
+      }
+    ],
+    "metricxFeature": "Calculate true CAC by combining ad spend with Shopify customer data"
+  },
+  {
+    "name": "Customer Lifetime Value",
+    "slug": "ltv",
+    "abbreviation": "LTV",
+    "category": "revenue",
+    "description": "LTV predicts the total revenue a customer will generate during their entire relationship with your business.",
+    "formula": "Average Order Value × Purchase Frequency × Customer Lifespan",
+    "formulaExample": "$50 AOV × 4 orders/year × 3 years = $600 LTV",
+    "benchmarks": {
+      "poor": { "value": "< CAC", "description": "Losing money" },
+      "average": { "value": "2-3x CAC", "description": "Sustainable" },
+      "good": { "value": "3-5x CAC", "description": "Healthy growth" },
+      "excellent": { "value": "> 5x CAC", "description": "Excellent retention" }
+    },
+    "platforms": ["shopify", "all"],
+    "improvementTips": [
+      "Implement customer loyalty programs",
+      "Improve product quality and experience",
+      "Use email marketing for retention",
+      "Offer subscription options",
+      "Personalize the customer journey"
+    ],
+    "relatedMetrics": ["cac", "aov", "retention-rate", "purchase-frequency"],
+    "faqs": [
+      {
+        "question": "Why is LTV important for ads?",
+        "answer": "LTV determines how much you can afford to spend acquiring customers. Higher LTV means you can outbid competitors and still be profitable."
+      },
+      {
+        "question": "How do I increase LTV?",
+        "answer": "Focus on retention through great products, customer service, email marketing, loyalty programs, and expanding product offerings."
+      }
+    ],
+    "metricxFeature": "Track LTV cohorts by acquisition source to identify most valuable channels"
+  },
+  {
+    "name": "Impressions",
+    "slug": "impressions",
+    "abbreviation": "IMPR",
+    "category": "reach",
+    "description": "Impressions count the total number of times your ad was displayed, including multiple views by the same person.",
+    "formula": "Total times ad was shown",
+    "formulaExample": "100,000 impressions = ad shown 100,000 times",
+    "benchmarks": {
+      "context": "Impressions vary widely based on budget and goals",
+      "note": "Focus on impression quality (reaching right audience) over quantity"
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Increase budget to reach more people",
+      "Broaden targeting criteria",
+      "Test different placements",
+      "Improve ad quality for better delivery",
+      "Optimize for reach objective"
+    ],
+    "relatedMetrics": ["reach", "frequency", "cpm", "ctr"],
+    "faqs": [
+      {
+        "question": "What's the difference between impressions and reach?",
+        "answer": "Impressions count total ad views (including repeats). Reach counts unique people who saw your ad. 1,000 impressions to 500 people = 500 reach."
+      },
+      {
+        "question": "Are more impressions always better?",
+        "answer": "Not necessarily. Quality impressions to your target audience matter more than total volume. High impressions with low engagement indicates targeting issues."
+      }
+    ],
+    "metricxFeature": "Track impression share and frequency across all platforms"
+  },
+  {
+    "name": "Reach",
+    "slug": "reach",
+    "abbreviation": "REACH",
+    "category": "reach",
+    "description": "Reach measures the number of unique people who saw your ad at least once during a campaign period.",
+    "formula": "Number of unique users who saw the ad",
+    "formulaExample": "50,000 reach = 50,000 unique people saw your ad",
+    "benchmarks": {
+      "context": "Reach goals depend on audience size and campaign objectives",
+      "note": "Balance reach with frequency for optimal impact"
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Use reach-optimized campaign objectives",
+      "Broaden audience targeting",
+      "Increase budget allocation",
+      "Use multiple ad placements",
+      "Refresh creatives to avoid saturation"
+    ],
+    "relatedMetrics": ["impressions", "frequency", "cpm", "brand-awareness"],
+    "faqs": [
+      {
+        "question": "How much reach do I need?",
+        "answer": "For brand awareness, aim to reach 50-70% of your target audience over time. For conversion campaigns, quality of reach matters more than quantity."
+      },
+      {
+        "question": "Why is my reach limited?",
+        "answer": "Limited reach is often caused by: narrow targeting, low budget, poor ad quality scores, or audience saturation. Check these factors first."
+      }
+    ],
+    "metricxFeature": "Monitor reach and frequency balance to avoid ad fatigue"
+  },
+  {
+    "name": "Frequency",
+    "slug": "frequency",
+    "abbreviation": "FREQ",
+    "category": "reach",
+    "description": "Frequency measures how many times on average each person saw your ad. Too high frequency can cause ad fatigue.",
+    "formula": "Impressions / Reach",
+    "formulaExample": "100,000 impressions / 50,000 reach = 2.0 frequency",
+    "benchmarks": {
+      "low": { "value": "1-2", "description": "May need more exposure" },
+      "optimal": { "value": "2-4", "description": "Good balance" },
+      "high": { "value": "4-7", "description": "Monitor for fatigue" },
+      "excessive": { "value": "> 7", "description": "Likely causing fatigue" }
+    },
+    "platforms": ["meta", "google", "tiktok"],
+    "improvementTips": [
+      "Set frequency caps in campaign settings",
+      "Rotate ad creatives regularly",
+      "Expand audience targeting",
+      "Use sequence-based advertising",
+      "Monitor CTR for fatigue signals"
+    ],
+    "relatedMetrics": ["reach", "impressions", "ctr", "ad-fatigue"],
+    "faqs": [
+      {
+        "question": "What's the ideal ad frequency?",
+        "answer": "For most campaigns, 2-4 frequency is optimal. Brand awareness may benefit from higher frequency (4-7), while conversion campaigns should stay lower."
+      },
+      {
+        "question": "How do I know if frequency is too high?",
+        "answer": "Signs of ad fatigue: declining CTR, increasing CPC, negative comments, and decreasing ROAS. Refresh creatives when you see these patterns."
+      }
+    ],
+    "metricxFeature": "AI-powered frequency alerts to prevent ad fatigue"
+  },
+  {
+    "name": "Attribution",
+    "slug": "attribution",
+    "abbreviation": "ATTR",
+    "category": "measurement",
+    "description": "Attribution assigns credit to marketing touchpoints that contributed to a conversion. Different models give different insights.",
+    "formula": "Varies by attribution model",
+    "formulaExample": "Last-click: 100% credit to final touchpoint",
+    "benchmarks": {
+      "note": "No universal benchmarks - compare your data across models"
+    },
+    "platforms": ["meta", "google", "tiktok", "shopify"],
+    "types": [
+      { "name": "Last Click", "description": "100% credit to final touchpoint" },
+      { "name": "First Click", "description": "100% credit to first touchpoint" },
+      { "name": "Linear", "description": "Equal credit to all touchpoints" },
+      { "name": "Time Decay", "description": "More credit to recent touchpoints" },
+      { "name": "Data-Driven", "description": "ML-based credit distribution" }
+    ],
+    "improvementTips": [
+      "Compare multiple attribution models",
+      "Use longer attribution windows for high-ticket items",
+      "Implement server-side tracking (CAPI)",
+      "Understand each platform's default model",
+      "Don't over-optimize for any single model"
+    ],
+    "relatedMetrics": ["roas", "cpa", "conversion-rate", "customer-journey"],
+    "faqs": [
+      {
+        "question": "Which attribution model should I use?",
+        "answer": "It depends on your business. Last-click is simple but undervalues awareness. Data-driven is most accurate but needs volume. Use multiple models for full picture."
+      },
+      {
+        "question": "Why do platforms report different conversions?",
+        "answer": "Each platform uses its own attribution model and window. A single purchase might be claimed by Meta (7-day click) and Google (30-day click) simultaneously."
+      }
+    ],
+    "metricxFeature": "Compare platform-reported vs Shopify-verified attribution across all channels"
+  },
+  {
+    "name": "Add to Cart Rate",
+    "slug": "add-to-cart-rate",
+    "abbreviation": "ATC",
+    "category": "funnel",
+    "description": "Add to Cart Rate measures the percentage of visitors who add products to their shopping cart. It's a key mid-funnel metric.",
+    "formula": "(Add to Carts / Sessions) × 100",
+    "formulaExample": "500 ATCs / 10,000 sessions × 100 = 5% ATC rate",
+    "benchmarks": {
+      "poor": { "value": "< 3%", "description": "Product page issues" },
+      "average": { "value": "3% - 6%", "description": "Typical e-commerce" },
+      "good": { "value": "6% - 10%", "description": "Above average" },
+      "excellent": { "value": "> 10%", "description": "Excellent engagement" }
+    },
+    "platforms": ["shopify", "meta", "google"],
+    "improvementTips": [
+      "Improve product photography",
+      "Add customer reviews and ratings",
+      "Clarify pricing and shipping costs",
+      "Optimize product descriptions",
+      "Reduce page load time"
+    ],
+    "relatedMetrics": ["conversion-rate", "cart-abandonment", "checkout-rate"],
+    "faqs": [
+      {
+        "question": "What's a good add to cart rate?",
+        "answer": "Average e-commerce ATC rate is 5-8%. If yours is below 3%, focus on product pages. Above 10% is excellent."
+      },
+      {
+        "question": "High ATC but low conversion - why?",
+        "answer": "This indicates checkout friction: unexpected costs (shipping, taxes), complicated checkout, lack of payment options, or trust issues."
+      }
+    ],
+    "metricxFeature": "Track ATC rates by traffic source to identify high-intent channels"
+  },
+  {
+    "name": "Cart Abandonment Rate",
+    "slug": "cart-abandonment",
+    "abbreviation": "CAR",
+    "category": "funnel",
+    "description": "Cart Abandonment Rate measures the percentage of shoppers who add items to cart but don't complete purchase.",
+    "formula": "((Carts Created - Purchases) / Carts Created) × 100",
+    "formulaExample": "(1000 carts - 300 purchases) / 1000 × 100 = 70% abandonment",
+    "benchmarks": {
+      "excellent": { "value": "< 60%", "description": "Great checkout" },
+      "good": { "value": "60% - 70%", "description": "Above average" },
+      "average": { "value": "70% - 80%", "description": "Typical rate" },
+      "poor": { "value": "> 80%", "description": "Major friction" }
+    },
+    "platforms": ["shopify", "all"],
+    "improvementTips": [
+      "Show shipping costs early",
+      "Simplify checkout process",
+      "Offer guest checkout",
+      "Add multiple payment options",
+      "Send abandoned cart emails"
+    ],
+    "relatedMetrics": ["add-to-cart-rate", "conversion-rate", "checkout-rate"],
+    "faqs": [
+      {
+        "question": "Is 70% cart abandonment normal?",
+        "answer": "Yes, the average cart abandonment rate is 69-70%. Focus on reducing it incrementally - even small improvements significantly impact revenue."
+      },
+      {
+        "question": "How do I recover abandoned carts?",
+        "answer": "Use automated email sequences, retargeting ads, and SMS reminders. Offer incentives like free shipping or small discounts in follow-ups."
+      }
+    ],
+    "metricxFeature": "Track cart abandonment with AI recommendations for recovery"
+  },
+  {
+    "name": "Return on Investment",
+    "slug": "roi",
+    "abbreviation": "ROI",
+    "category": "performance",
+    "description": "ROI measures the profitability of an investment relative to its cost. Unlike ROAS, ROI accounts for all costs and profits.",
+    "formula": "((Revenue - Costs) / Costs) × 100",
+    "formulaExample": "(($5,000 revenue - $2,000 costs) / $2,000) × 100 = 150% ROI",
+    "benchmarks": {
+      "negative": { "value": "< 0%", "description": "Losing money" },
+      "break_even": { "value": "0%", "description": "No profit or loss" },
+      "good": { "value": "50% - 100%", "description": "Healthy returns" },
+      "excellent": { "value": "> 100%", "description": "Strong profitability" }
+    },
+    "platforms": ["all"],
+    "improvementTips": [
+      "Reduce product costs",
+      "Optimize operational efficiency",
+      "Improve conversion rates",
+      "Increase average order value",
+      "Focus on high-margin products"
+    ],
+    "relatedMetrics": ["roas", "profit-margin", "cac", "ltv"],
+    "faqs": [
+      {
+        "question": "What's the difference between ROI and ROAS?",
+        "answer": "ROAS = Revenue/Ad Spend (measures ad efficiency). ROI = (Profit-Cost)/Cost × 100 (measures overall profitability including all costs)."
+      },
+      {
+        "question": "What ROI should I target?",
+        "answer": "This depends on your business model. Generally, aim for ROI above your cost of capital. For most businesses, 50%+ ROI on marketing is good."
+      }
+    ],
+    "metricxFeature": "Calculate true ROI by combining ad data with Shopify costs"
+  },
+  {
+    "name": "Quality Score",
+    "slug": "quality-score",
+    "abbreviation": "QS",
+    "category": "platform",
+    "description": "Quality Score (Google Ads) rates the quality of your ads, keywords, and landing pages. Higher scores lead to lower costs.",
+    "formula": "Google's proprietary algorithm (1-10 scale)",
+    "formulaExample": "Quality Score of 7/10 is considered good",
+    "benchmarks": {
+      "poor": { "value": "1-4", "description": "Needs improvement" },
+      "average": { "value": "5-6", "description": "Room for optimization" },
+      "good": { "value": "7-8", "description": "Solid performance" },
+      "excellent": { "value": "9-10", "description": "Top tier quality" }
+    },
+    "platforms": ["google"],
+    "components": [
+      { "name": "Expected CTR", "description": "Likelihood of your ad being clicked" },
+      { "name": "Ad Relevance", "description": "How well ad matches search intent" },
+      { "name": "Landing Page Experience", "description": "Page relevance and usability" }
+    ],
+    "improvementTips": [
+      "Ensure keyword relevance in ad copy",
+      "Create tightly themed ad groups",
+      "Optimize landing page for keywords",
+      "Improve page load speed",
+      "Ensure mobile-friendly experience"
+    ],
+    "relatedMetrics": ["cpc", "ad-rank", "ctr", "conversion-rate"],
+    "faqs": [
+      {
+        "question": "Why does Quality Score matter?",
+        "answer": "Higher Quality Score = lower CPC and better ad positions. Google rewards relevant, high-quality ads with cheaper clicks and more visibility."
+      },
+      {
+        "question": "How do I improve Quality Score?",
+        "answer": "Focus on the three components: improve CTR with compelling ads, ensure ad relevance to keywords, and optimize landing page experience."
+      }
+    ],
+    "metricxFeature": "Track Quality Score trends with actionable improvement recommendations"
+  },
+  {
+    "name": "Ad Relevance Score",
+    "slug": "relevance-score",
+    "abbreviation": "REL",
+    "category": "platform",
+    "description": "Ad Relevance (Meta) measures how well your ad resonates with your target audience based on expected engagement.",
+    "formula": "Meta's proprietary algorithm (Below Average, Average, Above Average)",
+    "formulaExample": "Above Average relevance indicates strong audience fit",
+    "benchmarks": {
+      "below_average": { "value": "Below Average", "description": "Ad needs work" },
+      "average": { "value": "Average", "description": "Acceptable performance" },
+      "above_average": { "value": "Above Average", "description": "Strong relevance" }
+    },
+    "platforms": ["meta"],
+    "components": [
+      { "name": "Quality Ranking", "description": "Ad quality vs competitors" },
+      { "name": "Engagement Ranking", "description": "Expected engagement rate" },
+      { "name": "Conversion Ranking", "description": "Expected conversion rate" }
+    ],
+    "improvementTips": [
+      "Target more specific audiences",
+      "Use engaging creative formats",
+      "Test different ad copy angles",
+      "Ensure landing page matches ad promise",
+      "Refresh creative regularly"
+    ],
+    "relatedMetrics": ["cpm", "ctr", "reach", "frequency"],
+    "faqs": [
+      {
+        "question": "What affects Meta ad relevance?",
+        "answer": "Positive engagement (likes, shares, saves), negative feedback (hide ad), and conversion rates all impact your relevance scores."
+      },
+      {
+        "question": "How do I improve ad relevance?",
+        "answer": "Better audience targeting, more engaging creative, clear value proposition, and ensuring ad matches landing page expectations."
+      }
+    ],
+    "metricxFeature": "Monitor relevance scores with AI-powered creative recommendations"
+  },
+  {
+    "name": "Advertising Cost of Sales",
+    "slug": "acos",
+    "abbreviation": "ACoS",
+    "category": "performance",
+    "description": "ACoS measures ad spend as a percentage of attributed sales. Common in Amazon advertising, but applicable to all e-commerce.",
+    "formula": "(Ad Spend / Sales) × 100",
+    "formulaExample": "$200 ad spend / $1,000 sales × 100 = 20% ACoS",
+    "benchmarks": {
+      "excellent": { "value": "< 15%", "description": "Highly profitable" },
+      "good": { "value": "15% - 25%", "description": "Profitable" },
+      "average": { "value": "25% - 35%", "description": "Break-even zone" },
+      "poor": { "value": "> 35%", "description": "Losing money" }
+    },
+    "platforms": ["all"],
+    "improvementTips": [
+      "Optimize targeting for high-intent users",
+      "Improve product listing quality",
+      "Test different bid strategies",
+      "Focus on high-converting products",
+      "Reduce wasted spend on poor performers"
+    ],
+    "relatedMetrics": ["roas", "cpa", "profit-margin", "tacos"],
+    "faqs": [
+      {
+        "question": "How is ACoS related to ROAS?",
+        "answer": "ACoS and ROAS are inverses. ACoS = 1/ROAS × 100. A 20% ACoS equals 5x ROAS. A 25% ACoS equals 4x ROAS."
+      },
+      {
+        "question": "What ACoS should I target?",
+        "answer": "Your target ACoS should be below your profit margin. If margin is 30%, keep ACoS under 30% to stay profitable."
+      }
+    ],
+    "metricxFeature": "Track ACoS alongside ROAS for complete profitability picture"
+  },
+  {
+    "name": "Total Advertising Cost of Sales",
+    "slug": "tacos",
+    "abbreviation": "TACoS",
+    "category": "performance",
+    "description": "TACoS measures ad spend as a percentage of total sales (not just attributed sales). Shows true ad dependency.",
+    "formula": "(Ad Spend / Total Revenue) × 100",
+    "formulaExample": "$200 ad spend / $2,000 total sales × 100 = 10% TACoS",
+    "benchmarks": {
+      "excellent": { "value": "< 10%", "description": "Low ad dependency" },
+      "good": { "value": "10% - 15%", "description": "Balanced growth" },
+      "concerning": { "value": "15% - 25%", "description": "High ad dependency" },
+      "risky": { "value": "> 25%", "description": "Over-reliant on ads" }
+    },
+    "platforms": ["all"],
+    "improvementTips": [
+      "Build organic traffic channels",
+      "Develop email marketing",
+      "Encourage repeat purchases",
+      "Build brand awareness",
+      "Optimize for customer retention"
+    ],
+    "relatedMetrics": ["acos", "roas", "organic-revenue", "ltv"],
+    "faqs": [
+      {
+        "question": "Why is TACoS important?",
+        "answer": "TACoS shows how dependent your business is on paid ads. Decreasing TACoS while growing revenue means you're building organic momentum."
+      },
+      {
+        "question": "What's a healthy TACoS trend?",
+        "answer": "Ideally, TACoS should decrease over time as organic sales grow. Increasing TACoS may indicate over-reliance on advertising."
+      }
+    ],
+    "metricxFeature": "Track TACoS trends to measure organic business growth"
+  }
+]

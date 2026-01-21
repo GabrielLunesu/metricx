@@ -1,0 +1,586 @@
+[
+  {
+    "name": "Shopify",
+    "slug": "shopify",
+    "icon": "shopify",
+    "category": "e-commerce",
+    "description": "Shopify is the leading e-commerce platform, powering millions of online stores worldwide. metricx's deep Shopify integration provides verified revenue data for accurate ad attribution.",
+    "popularity": "Most Popular",
+    "setupTime": "5 minutes",
+    "dataSync": "Real-time",
+    "features": [
+      "Automatic order data sync",
+      "Return/refund tracking",
+      "Customer lifetime value calculation",
+      "Product-level attribution",
+      "UTM parameter tracking"
+    ],
+    "dataPoints": [
+      "Orders and revenue",
+      "Refunds and returns",
+      "Customer data (new vs returning)",
+      "Product performance",
+      "Discount code usage",
+      "Shipping costs"
+    ],
+    "setupSteps": [
+      "Click 'Connect Shopify' in metricx",
+      "Authorize the app in your Shopify admin",
+      "Select which data to sync",
+      "Wait for initial data import (usually 5-10 minutes)",
+      "Verify data in your dashboard"
+    ],
+    "useCases": [
+      "Verify platform-reported ROAS with actual revenue",
+      "Track returns to calculate true profitability",
+      "Build customer cohorts by acquisition source",
+      "Identify which products perform best from ads",
+      "Calculate accurate LTV by marketing channel"
+    ],
+    "faqs": [
+      {
+        "question": "Does metricx work with Shopify Plus?",
+        "answer": "Yes, metricx works with all Shopify plans including Shopify Plus. Plus merchants get access to additional checkout customization tracking."
+      },
+      {
+        "question": "How does metricx handle Shopify returns?",
+        "answer": "metricx automatically syncs refund data from Shopify and adjusts your ROAS calculations. You'll see both gross and net ROAS."
+      },
+      {
+        "question": "Can I track specific products from ads?",
+        "answer": "Yes, metricx tracks product-level data from Shopify, showing which products are purchased from each ad campaign."
+      }
+    ],
+    "requirements": [
+      "Active Shopify store",
+      "Store admin access",
+      "metricx account"
+    ],
+    "relatedIntegrations": ["klaviyo", "meta-ads", "google-ads"],
+    "metricxFeature": "One-click Shopify connection with automatic revenue verification"
+  },
+  {
+    "name": "WooCommerce",
+    "slug": "woocommerce",
+    "icon": "woocommerce",
+    "category": "e-commerce",
+    "description": "WooCommerce is the most popular WordPress e-commerce plugin. metricx connects to your WooCommerce store to verify ad-attributed revenue.",
+    "popularity": "Popular",
+    "setupTime": "10 minutes",
+    "dataSync": "Hourly",
+    "features": [
+      "Order data sync via API",
+      "Customer segmentation",
+      "Product attribution",
+      "Revenue tracking",
+      "Refund handling"
+    ],
+    "dataPoints": [
+      "Orders and revenue",
+      "Customer information",
+      "Product data",
+      "Refunds",
+      "Coupon usage"
+    ],
+    "setupSteps": [
+      "Install the metricx plugin in WordPress",
+      "Generate WooCommerce API keys",
+      "Enter API keys in metricx dashboard",
+      "Configure sync settings",
+      "Wait for initial data import"
+    ],
+    "useCases": [
+      "Verify ROAS with actual WooCommerce sales",
+      "Track customer acquisition across channels",
+      "Analyze product performance by ad source",
+      "Calculate accurate margins"
+    ],
+    "faqs": [
+      {
+        "question": "Is WooCommerce setup harder than Shopify?",
+        "answer": "Slightly, as it requires API key generation and plugin installation. But it's still straightforward - about 10 minutes total."
+      },
+      {
+        "question": "Does metricx work with WooCommerce Subscriptions?",
+        "answer": "Yes, we track subscription orders and can calculate subscription LTV by acquisition source."
+      }
+    ],
+    "requirements": [
+      "WooCommerce 5.0+",
+      "WordPress 5.0+",
+      "REST API enabled",
+      "Admin access"
+    ],
+    "relatedIntegrations": ["wordpress", "meta-ads", "google-ads"],
+    "metricxFeature": "WooCommerce API integration with subscription support"
+  },
+  {
+    "name": "BigCommerce",
+    "slug": "bigcommerce",
+    "icon": "bigcommerce",
+    "category": "e-commerce",
+    "description": "BigCommerce is an enterprise-grade e-commerce platform. metricx integrates to provide accurate revenue attribution for your ad campaigns.",
+    "popularity": "Growing",
+    "setupTime": "10 minutes",
+    "dataSync": "Hourly",
+    "features": [
+      "API-based order sync",
+      "Multi-channel tracking",
+      "Customer data import",
+      "Product attribution",
+      "B2B support"
+    ],
+    "dataPoints": [
+      "Orders and revenue",
+      "Customer segments",
+      "Product performance",
+      "Channel attribution",
+      "Refunds"
+    ],
+    "setupSteps": [
+      "Create BigCommerce API credentials",
+      "Enter credentials in metricx",
+      "Select data sync preferences",
+      "Complete initial import",
+      "Verify data accuracy"
+    ],
+    "useCases": [
+      "Track ad performance against BigCommerce sales",
+      "Analyze B2B vs B2C ad effectiveness",
+      "Multi-storefront attribution",
+      "Enterprise reporting integration"
+    ],
+    "faqs": [
+      {
+        "question": "Does metricx support BigCommerce multi-storefront?",
+        "answer": "Yes, you can connect multiple BigCommerce storefronts and view consolidated or separate analytics."
+      }
+    ],
+    "requirements": [
+      "BigCommerce Pro plan or higher",
+      "API access",
+      "Store admin credentials"
+    ],
+    "relatedIntegrations": ["meta-ads", "google-ads"],
+    "metricxFeature": "BigCommerce API integration with multi-storefront support"
+  },
+  {
+    "name": "Klaviyo",
+    "slug": "klaviyo",
+    "icon": "klaviyo",
+    "category": "email-marketing",
+    "description": "Klaviyo is the leading email and SMS marketing platform for e-commerce. metricx integration shows how email impacts your ad-driven customer journey.",
+    "popularity": "Very Popular",
+    "setupTime": "5 minutes",
+    "dataSync": "Real-time",
+    "features": [
+      "Email campaign performance",
+      "Flow attribution",
+      "SMS tracking",
+      "Segment sync",
+      "Revenue attribution"
+    ],
+    "dataPoints": [
+      "Campaign sends and opens",
+      "Click-through rates",
+      "Email-attributed revenue",
+      "Flow performance",
+      "List growth"
+    ],
+    "setupSteps": [
+      "Connect Klaviyo via OAuth",
+      "Select which data to sync",
+      "Configure attribution settings",
+      "View email data alongside ad data"
+    ],
+    "useCases": [
+      "See full customer journey (ads + email)",
+      "Attribute revenue to both ads and email",
+      "Identify customers acquired via ads who convert via email",
+      "Optimize ad spend based on email LTV"
+    ],
+    "faqs": [
+      {
+        "question": "How does metricx attribute sales between ads and email?",
+        "answer": "metricx shows assisted conversions - you can see when a customer was acquired via ads but converted after email touches."
+      },
+      {
+        "question": "Can I see Klaviyo segments in metricx?",
+        "answer": "Yes, we sync Klaviyo segments so you can analyze ad performance for different customer cohorts."
+      }
+    ],
+    "requirements": [
+      "Klaviyo account",
+      "API access",
+      "Admin permissions"
+    ],
+    "relatedIntegrations": ["shopify", "meta-ads"],
+    "metricxFeature": "Full-funnel attribution combining paid ads and email marketing"
+  },
+  {
+    "name": "Attentive",
+    "slug": "attentive",
+    "icon": "attentive",
+    "category": "sms-marketing",
+    "description": "Attentive is a leading SMS marketing platform. metricx integration helps you understand how SMS impacts your ad-driven acquisition funnel.",
+    "popularity": "Popular",
+    "setupTime": "10 minutes",
+    "dataSync": "Hourly",
+    "features": [
+      "SMS campaign tracking",
+      "Subscriber growth",
+      "Revenue attribution",
+      "Journey analytics"
+    ],
+    "dataPoints": [
+      "SMS sends and deliveries",
+      "Click rates",
+      "SMS-attributed revenue",
+      "Subscriber counts",
+      "Opt-out rates"
+    ],
+    "setupSteps": [
+      "Generate Attentive API key",
+      "Enter API key in metricx",
+      "Configure attribution settings",
+      "Start tracking SMS alongside ads"
+    ],
+    "useCases": [
+      "Track ad-to-SMS-to-purchase journeys",
+      "Measure SMS impact on ad-acquired customers",
+      "Optimize ad spend based on SMS engagement"
+    ],
+    "faqs": [
+      {
+        "question": "Can I see which ad campaigns drive SMS subscribers?",
+        "answer": "Yes, when customers sign up for SMS through your site, metricx can attribute that subscription to the ad that drove the visit."
+      }
+    ],
+    "requirements": [
+      "Attentive account",
+      "API access"
+    ],
+    "relatedIntegrations": ["shopify", "klaviyo"],
+    "metricxFeature": "SMS marketing attribution in your unified dashboard"
+  },
+  {
+    "name": "Postscript",
+    "slug": "postscript",
+    "icon": "postscript",
+    "category": "sms-marketing",
+    "description": "Postscript is a Shopify-focused SMS marketing platform. metricx shows how your SMS campaigns complement your paid advertising.",
+    "popularity": "Popular",
+    "setupTime": "5 minutes",
+    "dataSync": "Hourly",
+    "features": [
+      "SMS performance metrics",
+      "Shopify-native attribution",
+      "Campaign tracking",
+      "Revenue sync"
+    ],
+    "dataPoints": [
+      "Message sends",
+      "Click-through rates",
+      "Attributed revenue",
+      "Subscriber growth"
+    ],
+    "setupSteps": [
+      "Connect Postscript via Shopify",
+      "Authorize data sharing",
+      "View SMS data in metricx"
+    ],
+    "useCases": [
+      "Unified view of ads + SMS performance",
+      "Track full customer journey",
+      "Attribute revenue across channels"
+    ],
+    "faqs": [
+      {
+        "question": "Is Postscript integration automatic with Shopify?",
+        "answer": "Yes, if you've connected Shopify, Postscript data flows through the Shopify integration automatically."
+      }
+    ],
+    "requirements": [
+      "Postscript account",
+      "Shopify store"
+    ],
+    "relatedIntegrations": ["shopify", "klaviyo"],
+    "metricxFeature": "Automatic Postscript tracking via Shopify"
+  },
+  {
+    "name": "Recharge",
+    "slug": "recharge",
+    "icon": "recharge",
+    "category": "subscriptions",
+    "description": "Recharge is the leading subscription management platform for Shopify. metricx tracks subscription revenue to calculate true customer LTV from ads.",
+    "popularity": "Popular",
+    "setupTime": "5 minutes",
+    "dataSync": "Real-time",
+    "features": [
+      "Subscription order tracking",
+      "LTV calculation",
+      "Churn analysis",
+      "Cohort tracking by acquisition source"
+    ],
+    "dataPoints": [
+      "Subscription orders",
+      "Recurring revenue",
+      "Churn events",
+      "Reactivations",
+      "Subscription LTV"
+    ],
+    "setupSteps": [
+      "Connect Recharge via Shopify",
+      "Verify subscription data sync",
+      "Configure LTV calculation settings",
+      "Start tracking subscription metrics"
+    ],
+    "useCases": [
+      "Track which ads drive highest-LTV subscribers",
+      "Analyze churn by acquisition channel",
+      "Calculate true ROAS including future subscription value",
+      "Identify campaigns that attract long-term subscribers"
+    ],
+    "faqs": [
+      {
+        "question": "How does metricx calculate subscription LTV?",
+        "answer": "metricx tracks all subscription orders over time and calculates actual LTV by cohort, attributing value back to the original acquisition source."
+      },
+      {
+        "question": "Can I see predicted LTV from ad campaigns?",
+        "answer": "Yes, metricx uses historical cohort data to predict LTV for recently acquired subscribers."
+      }
+    ],
+    "requirements": [
+      "Recharge account",
+      "Shopify store",
+      "Connected Shopify integration"
+    ],
+    "relatedIntegrations": ["shopify", "klaviyo"],
+    "metricxFeature": "Subscription LTV tracking with cohort analysis by ad source"
+  },
+  {
+    "name": "Gorgias",
+    "slug": "gorgias",
+    "icon": "gorgias",
+    "category": "customer-support",
+    "description": "Gorgias is an e-commerce customer support platform. metricx integration helps you understand support costs by acquisition channel.",
+    "popularity": "Growing",
+    "setupTime": "10 minutes",
+    "dataSync": "Daily",
+    "features": [
+      "Support ticket tracking",
+      "Cost per customer analysis",
+      "Channel attribution",
+      "CSAT by source"
+    ],
+    "dataPoints": [
+      "Ticket volume",
+      "Resolution time",
+      "Customer satisfaction",
+      "Support costs"
+    ],
+    "setupSteps": [
+      "Connect Gorgias API",
+      "Link customer data",
+      "Configure cost settings",
+      "View support metrics by acquisition source"
+    ],
+    "useCases": [
+      "Identify which ad channels attract high-support customers",
+      "Factor support costs into true CPA",
+      "Optimize for quality customers, not just volume"
+    ],
+    "faqs": [
+      {
+        "question": "Why track support costs with ad data?",
+        "answer": "Some acquisition channels attract customers who need more support, increasing true cost. Knowing this helps optimize for profitable customers."
+      }
+    ],
+    "requirements": [
+      "Gorgias account",
+      "API access"
+    ],
+    "relatedIntegrations": ["shopify", "zendesk"],
+    "metricxFeature": "Support cost analysis by acquisition channel"
+  },
+  {
+    "name": "Google Analytics 4",
+    "slug": "google-analytics-4",
+    "icon": "google",
+    "category": "analytics",
+    "description": "GA4 is Google's analytics platform. metricx imports GA4 data to provide a complete view of your traffic and conversions alongside ad platform data.",
+    "popularity": "Very Popular",
+    "setupTime": "10 minutes",
+    "dataSync": "Daily",
+    "features": [
+      "Session data import",
+      "Event tracking",
+      "Conversion data",
+      "Audience sync"
+    ],
+    "dataPoints": [
+      "Sessions and users",
+      "Traffic sources",
+      "Conversion events",
+      "Engagement metrics"
+    ],
+    "setupSteps": [
+      "Connect Google account",
+      "Select GA4 property",
+      "Configure data mapping",
+      "Verify data import"
+    ],
+    "useCases": [
+      "Compare GA4 attribution to platform attribution",
+      "Import organic traffic data",
+      "Track custom events alongside ad data",
+      "Build comprehensive reports"
+    ],
+    "faqs": [
+      {
+        "question": "Why use metricx if I have GA4?",
+        "answer": "metricx provides unified ad platform data, e-commerce revenue verification, and AI insights that GA4 doesn't offer. Use them together for complete analytics."
+      }
+    ],
+    "requirements": [
+      "GA4 property",
+      "Google account access"
+    ],
+    "relatedIntegrations": ["google-ads", "shopify"],
+    "metricxFeature": "GA4 data import for comprehensive analytics"
+  },
+  {
+    "name": "Triple Pixel",
+    "slug": "triple-pixel",
+    "icon": "code",
+    "category": "tracking",
+    "description": "Triple Pixel is a first-party tracking solution. metricx can import Triple Pixel data for enhanced attribution accuracy.",
+    "popularity": "Growing",
+    "setupTime": "15 minutes",
+    "dataSync": "Real-time",
+    "features": [
+      "First-party data import",
+      "Enhanced attribution",
+      "Cross-device tracking"
+    ],
+    "dataPoints": [
+      "First-party events",
+      "Attribution data",
+      "Customer journeys"
+    ],
+    "setupSteps": [
+      "Set up Triple Pixel on your site",
+      "Connect API to metricx",
+      "Configure event mapping",
+      "Verify data flow"
+    ],
+    "useCases": [
+      "Enhance attribution with first-party data",
+      "Recover iOS 14+ tracking losses",
+      "Build more accurate customer journeys"
+    ],
+    "faqs": [
+      {
+        "question": "Do I need Triple Pixel if I use metricx?",
+        "answer": "Not necessarily. metricx's Shopify integration and platform APIs provide strong attribution. Triple Pixel adds another data layer if you want maximum accuracy."
+      }
+    ],
+    "requirements": [
+      "Triple Pixel installed",
+      "API access"
+    ],
+    "relatedIntegrations": ["shopify", "meta-ads"],
+    "metricxFeature": "First-party data enhancement for improved attribution"
+  },
+  {
+    "name": "Slack",
+    "slug": "slack",
+    "icon": "slack",
+    "category": "communication",
+    "description": "Slack integration sends metricx alerts and reports directly to your team's Slack channels.",
+    "popularity": "Popular",
+    "setupTime": "2 minutes",
+    "dataSync": "Real-time alerts",
+    "features": [
+      "Performance alerts",
+      "Daily/weekly summaries",
+      "Anomaly notifications",
+      "Custom channel routing"
+    ],
+    "dataPoints": [
+      "Alert notifications",
+      "Summary reports",
+      "Anomaly flags"
+    ],
+    "setupSteps": [
+      "Click 'Add to Slack'",
+      "Select channel",
+      "Configure alert preferences",
+      "Start receiving updates"
+    ],
+    "useCases": [
+      "Get real-time alerts when ROAS drops",
+      "Receive daily performance summaries",
+      "Keep team informed without login",
+      "Route alerts to relevant channels"
+    ],
+    "faqs": [
+      {
+        "question": "What alerts can I receive in Slack?",
+        "answer": "ROAS drops, budget pacing issues, CPA spikes, anomaly detection, and custom threshold alerts you configure."
+      }
+    ],
+    "requirements": [
+      "Slack workspace",
+      "Admin permission to add apps"
+    ],
+    "relatedIntegrations": ["email-alerts"],
+    "metricxFeature": "Real-time Slack notifications for your ad performance"
+  },
+  {
+    "name": "Zapier",
+    "slug": "zapier",
+    "icon": "zapier",
+    "category": "automation",
+    "description": "Zapier connects metricx to 5,000+ apps, enabling custom automations based on your ad performance data.",
+    "popularity": "Growing",
+    "setupTime": "10 minutes",
+    "dataSync": "Event-based",
+    "features": [
+      "Custom triggers",
+      "Multi-step zaps",
+      "Data mapping",
+      "Conditional logic"
+    ],
+    "dataPoints": [
+      "Performance events",
+      "Alert triggers",
+      "Campaign data"
+    ],
+    "setupSteps": [
+      "Connect metricx in Zapier",
+      "Select trigger event",
+      "Build your automation",
+      "Test and activate"
+    ],
+    "useCases": [
+      "Send data to Google Sheets automatically",
+      "Create tasks when ROAS drops",
+      "Update CRM based on ad performance",
+      "Build custom reporting workflows"
+    ],
+    "faqs": [
+      {
+        "question": "What can I automate with Zapier?",
+        "answer": "Any workflow triggered by metricx events - alert notifications, data exports, task creation, team notifications, and more."
+      }
+    ],
+    "requirements": [
+      "Zapier account",
+      "metricx Pro plan"
+    ],
+    "relatedIntegrations": ["slack", "google-sheets"],
+    "metricxFeature": "5,000+ app integrations via Zapier"
+  }
+]

@@ -20,6 +20,16 @@ import { NextResponse } from 'next/server'
  * - /sign-in, /sign-up (auth pages)
  * - /privacy, /terms (legal pages)
  * - /login (redirects to /sign-in for backwards compatibility)
+ * - /glossary(.*) (SEO glossary pages)
+ * - /vs(.*) (SEO competitor comparison pages)
+ * - /alternatives(.*) (SEO alternative pages)
+ * - /tools(.*) (SEO calculator tool pages)
+ * - /metrics(.*) (SEO metric deep-dive pages)
+ * - /platforms(.*) (SEO platform guide pages)
+ * - /industries(.*) (SEO industry pages)
+ * - /integrations(.*) (SEO integration pages)
+ * - /use-cases(.*) (SEO use case pages)
+ * - /blog(.*) (SEO blog pages)
  */
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -28,6 +38,18 @@ const isPublicRoute = createRouteMatcher([
   '/login',
   '/privacy',
   '/terms',
+  '/about',
+  // SEO marketing pages (programmatic content)
+  '/glossary(.*)',
+  '/vs(.*)',
+  '/alternatives(.*)',
+  '/tools(.*)',
+  '/metrics(.*)',
+  '/platforms(.*)',
+  '/industries(.*)',
+  '/integrations(.*)',
+  '/use-cases(.*)',
+  '/blog(.*)',
 ])
 
 export default clerkMiddleware(async (auth, request) => {

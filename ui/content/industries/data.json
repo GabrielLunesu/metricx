@@ -1,0 +1,3964 @@
+[
+  {
+    "name": "Fashion & Apparel",
+    "slug": "fashion-apparel",
+    "icon": "shirt",
+    "description": "Fashion and apparel e-commerce requires sophisticated ad analytics to track seasonal trends, size returns, and multi-channel attribution across visually-driven platforms.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$60 - $120",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "aov",
+      "return-rate",
+      "ltv"
+    ],
+    "challenges": [
+      "High return rates (20-40%) skew attribution",
+      "Seasonal demand fluctuations",
+      "Size and fit issues affect conversion",
+      "Heavy visual content requirements",
+      "Fast fashion trends require agile campaigns"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "tiktok",
+      "pinterest",
+      "google-shopping"
+    ],
+    "strategies": [
+      "Use CAPI to track post-return revenue",
+      "Build lookalike audiences from low-return customers",
+      "Invest in video content showcasing fit and fabric",
+      "Retarget cart abandoners with size guides",
+      "Test TikTok and Instagram Reels for discovery"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$25-40",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Fashion brands using metricx see 23% better ROAS accuracy by factoring in returns.",
+    "faqs": [
+      {
+        "question": "How do I account for returns in ROAS?",
+        "answer": "True ROAS should subtract returns. With metricx, Shopify integration automatically adjusts revenue for returned items, giving you accurate profitability."
+      },
+      {
+        "question": "Which platform works best for fashion?",
+        "answer": "Meta (Instagram) and TikTok drive discovery. Google Shopping captures high-intent searches. Use all three for full-funnel coverage."
+      }
+    ],
+    "relatedIndustries": [
+      "beauty-cosmetics",
+      "jewelry-accessories",
+      "luxury-goods"
+    ],
+    "metricxFeature": "Return-adjusted ROAS tracking with Shopify refund data integration"
+  },
+  {
+    "name": "Beauty & Cosmetics",
+    "slug": "beauty-cosmetics",
+    "icon": "sparkles",
+    "description": "Beauty and cosmetics brands thrive on visual platforms with strong UGC and influencer content, requiring analytics that track both new customer acquisition and replenishment cycles.",
+    "targetROAS": "4x - 6x",
+    "averageAOV": "$40 - $80",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "ltv",
+      "repurchase-rate",
+      "subscription-rate"
+    ],
+    "challenges": [
+      "Long consideration cycles for premium products",
+      "Heavy influencer/UGC content investment",
+      "Subscription vs one-time purchase tracking",
+      "Shade matching challenges online",
+      "Regulatory restrictions on ad claims"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "tiktok",
+      "youtube",
+      "pinterest"
+    ],
+    "strategies": [
+      "Track LTV by acquisition channel, not just first purchase",
+      "Measure influencer campaigns with unique tracking",
+      "Build subscription cohort analysis",
+      "Use quiz funnels for personalized product matching",
+      "Leverage before/after content (within guidelines)"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$15-30",
+      "ctr": "2-3%",
+      "conversionRate": "3-4%"
+    },
+    "caseStudySnippet": "Beauty brands see 35% higher ROAS when optimizing for LTV instead of first-purchase CPA.",
+    "faqs": [
+      {
+        "question": "How should I measure influencer campaigns?",
+        "answer": "Use unique discount codes, UTM parameters, and branded landing pages for each influencer. Track both direct sales and assisted conversions in the attribution window."
+      },
+      {
+        "question": "How do I track subscription revenue from ads?",
+        "answer": "metricx tracks subscription orders from Shopify, letting you see which ad campaigns drive recurring revenue, not just one-time purchases."
+      }
+    ],
+    "relatedIndustries": [
+      "health-wellness",
+      "skincare",
+      "haircare"
+    ],
+    "metricxFeature": "LTV-based optimization with subscription revenue tracking"
+  },
+  {
+    "name": "Health & Wellness",
+    "slug": "health-wellness",
+    "icon": "heart-pulse",
+    "description": "Health and wellness e-commerce includes supplements, fitness equipment, and wellness products, requiring compliant advertising and trust-building content.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$50 - $100",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "ltv",
+      "subscription-rate",
+      "review-score"
+    ],
+    "challenges": [
+      "Strict advertising restrictions on health claims",
+      "Subscription churn management",
+      "Competing with Amazon prices",
+      "Building trust for ingestible products",
+      "Compliance across platforms"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "google",
+      "youtube",
+      "podcast"
+    ],
+    "strategies": [
+      "Focus on education over direct claims",
+      "Build email lists for compliant direct communication",
+      "Track subscription churn by acquisition source",
+      "Use testimonials and social proof heavily",
+      "Invest in content marketing for organic traffic"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$30-50",
+      "ctr": "1-2%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Supplement brands achieve 40% lower churn when acquiring customers through educational content vs direct response.",
+    "faqs": [
+      {
+        "question": "How do I advertise supplements compliantly?",
+        "answer": "Focus on ingredient benefits, lifestyle imagery, and testimonials. Avoid medical claims. Each platform has specific policies - review Meta's and Google's health product guidelines."
+      },
+      {
+        "question": "How should I track subscription LTV?",
+        "answer": "metricx calculates LTV cohorts by acquisition source, showing which campaigns bring subscribers who stay longest."
+      }
+    ],
+    "relatedIndustries": [
+      "fitness-equipment",
+      "supplements",
+      "beauty-cosmetics"
+    ],
+    "metricxFeature": "Subscription LTV tracking with churn prediction by acquisition channel"
+  },
+  {
+    "name": "Home & Garden",
+    "slug": "home-garden",
+    "icon": "home",
+    "description": "Home and garden e-commerce involves high-consideration purchases with longer buying cycles, requiring attribution that captures the full customer journey.",
+    "targetROAS": "4x - 7x",
+    "averageAOV": "$100 - $300",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "aov",
+      "time-to-purchase",
+      "cart-value"
+    ],
+    "challenges": [
+      "Long consideration periods (weeks to months)",
+      "High AOV but lower purchase frequency",
+      "Seasonal demand patterns",
+      "Shipping costs affect conversion",
+      "Showrooming (research online, buy in-store)"
+    ],
+    "bestPlatforms": [
+      "pinterest",
+      "meta",
+      "google-shopping",
+      "google-search"
+    ],
+    "strategies": [
+      "Use longer attribution windows (30-60 days)",
+      "Retarget across the entire consideration period",
+      "Invest heavily in Pinterest for discovery",
+      "Create room visualizers and planning tools",
+      "Optimize for add-to-cart, not just purchases"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$40-80",
+      "ctr": "0.8-1.5%",
+      "conversionRate": "1-2%"
+    },
+    "caseStudySnippet": "Home brands using 30-day attribution see 60% more attributed conversions than 7-day windows.",
+    "faqs": [
+      {
+        "question": "Why do my Meta Ads show low ROAS for home products?",
+        "answer": "Home purchases have long consideration cycles. Meta's default 7-day window misses conversions. Use longer attribution windows and view-through attribution."
+      },
+      {
+        "question": "Is Pinterest worth it for home products?",
+        "answer": "Absolutely. Pinterest users plan home projects months in advance. CPMs are lower and purchase intent is high."
+      }
+    ],
+    "relatedIndustries": [
+      "furniture",
+      "home-decor",
+      "garden-outdoor"
+    ],
+    "metricxFeature": "Extended attribution modeling with 30/60/90-day windows"
+  },
+  {
+    "name": "Food & Beverage",
+    "slug": "food-beverage",
+    "icon": "utensils",
+    "description": "Food and beverage DTC brands face unique challenges with perishability, subscription models, and repeat purchase patterns that require specialized analytics.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$40 - $80",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "ltv",
+      "subscription-rate",
+      "reorder-rate"
+    ],
+    "challenges": [
+      "Perishability limits shipping windows",
+      "Heavy competition from grocery retail",
+      "Subscription fatigue and churn",
+      "High CAC for consumables",
+      "Seasonal and regional demand"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "tiktok",
+      "youtube",
+      "podcast"
+    ],
+    "strategies": [
+      "Optimize for subscription sign-ups, not one-time",
+      "Track cohort LTV religiously",
+      "Use urgency (freshness, limited batches)",
+      "Build strong brand storytelling",
+      "Partner with food influencers authentically"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$20-40",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-4%"
+    },
+    "caseStudySnippet": "DTC food brands break even on first order but generate 4x return through subscription LTV.",
+    "faqs": [
+      {
+        "question": "Should I acquire at a loss on first order?",
+        "answer": "If your subscription data shows strong retention, yes. Track CAC payback period. Most food brands recover CAC by order 2-3."
+      },
+      {
+        "question": "How do I reduce subscription churn?",
+        "answer": "Analyze churn by acquisition channel. Some sources (discount-heavy) churn 2x faster. Focus ad spend on quality cohorts."
+      }
+    ],
+    "relatedIndustries": [
+      "coffee-tea",
+      "snacks",
+      "meal-kits",
+      "beverages"
+    ],
+    "metricxFeature": "Subscription cohort analysis with CAC payback tracking"
+  },
+  {
+    "name": "Electronics & Tech",
+    "slug": "electronics-tech",
+    "icon": "laptop",
+    "description": "Electronics and tech products require detailed product comparison content and analytics that track high-consideration, research-heavy purchase journeys.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$150 - $500",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "aov",
+      "research-time",
+      "comparison-rate"
+    ],
+    "challenges": [
+      "Long research and comparison cycles",
+      "Heavy competition from Amazon/Best Buy",
+      "Rapid product obsolescence",
+      "Complex product specifications",
+      "Price sensitivity and deal-hunting"
+    ],
+    "bestPlatforms": [
+      "google-search",
+      "google-shopping",
+      "youtube",
+      "meta"
+    ],
+    "strategies": [
+      "Capture search traffic for product comparisons",
+      "Use YouTube for product demonstrations",
+      "Retarget research-phase visitors aggressively",
+      "Highlight unique value vs Amazon",
+      "Time campaigns around product launches"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$50-100",
+      "ctr": "1-2%",
+      "conversionRate": "1-2%"
+    },
+    "caseStudySnippet": "Electronics brands see 50% of conversions from visitors who researched 3+ times before purchase.",
+    "faqs": [
+      {
+        "question": "How do I compete with Amazon for electronics?",
+        "answer": "Focus on unique products, bundles, expert service, and warranty. Track customers who research on Amazon but buy from you."
+      },
+      {
+        "question": "What attribution window for electronics?",
+        "answer": "Use 30-60 day click windows. Electronics purchases often take 2-4 weeks of research before conversion."
+      }
+    ],
+    "relatedIndustries": [
+      "mobile-accessories",
+      "smart-home",
+      "audio-video"
+    ],
+    "metricxFeature": "Research-to-purchase path tracking with multi-touch attribution"
+  },
+  {
+    "name": "Jewelry & Accessories",
+    "slug": "jewelry-accessories",
+    "icon": "gem",
+    "description": "Jewelry and accessories e-commerce combines impulse purchases (costume jewelry) with high-consideration luxury items, requiring segmented analytics approaches.",
+    "targetROAS": "4x - 8x",
+    "averageAOV": "$80 - $300",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "aov",
+      "gift-purchase-rate",
+      "seasonal-lift"
+    ],
+    "challenges": [
+      "Wide price range requires segmented strategy",
+      "Heavy seasonal peaks (holidays, Valentine's)",
+      "Gift purchases complicate attribution",
+      "Size/fit concerns for rings",
+      "Trust requirements for precious metals/stones"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "pinterest",
+      "google-shopping",
+      "tiktok"
+    ],
+    "strategies": [
+      "Segment campaigns by price tier",
+      "Build gift-focused campaigns for holidays",
+      "Use AR try-on technology",
+      "Create urgency with limited editions",
+      "Invest in high-quality product photography"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$30-60",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Jewelry brands see 3x ROAS during gift-giving seasons compared to off-peak periods.",
+    "faqs": [
+      {
+        "question": "How do I track gift purchases?",
+        "answer": "Implement gift options at checkout and track separately. Gift purchasers have different LTV patterns than self-purchasers."
+      },
+      {
+        "question": "When should I scale ad spend for jewelry?",
+        "answer": "Begin scaling 4-6 weeks before major holidays. Competition peaks last 2 weeks - consider securing inventory of winning creatives early."
+      }
+    ],
+    "relatedIndustries": [
+      "watches",
+      "fashion-apparel",
+      "luxury-goods"
+    ],
+    "metricxFeature": "Seasonal demand forecasting with gift purchase tracking"
+  },
+  {
+    "name": "Pet Products",
+    "slug": "pet-products",
+    "icon": "dog",
+    "description": "Pet products e-commerce benefits from highly passionate customers with strong repeat purchase patterns and subscription potential.",
+    "targetROAS": "4x - 6x",
+    "averageAOV": "$50 - $100",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "ltv",
+      "subscription-rate",
+      "reorder-cycle"
+    ],
+    "challenges": [
+      "Heavy Amazon competition",
+      "Subscription fatigue in market",
+      "Product safety and recall concerns",
+      "Price competition on commodities",
+      "Pet-specific sizing and preferences"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "google-shopping",
+      "tiktok",
+      "pinterest"
+    ],
+    "strategies": [
+      "Build subscription for consumables (food, treats)",
+      "Use pet photos in UGC campaigns",
+      "Target life events (new puppy, moving)",
+      "Create breed-specific targeting",
+      "Partner with pet influencers"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$20-40",
+      "ctr": "2-3%",
+      "conversionRate": "3-4%"
+    },
+    "caseStudySnippet": "Pet brands with subscription models see 5x higher LTV than one-time purchase customers.",
+    "faqs": [
+      {
+        "question": "How do I compete with Chewy and Amazon?",
+        "answer": "Focus on premium/specialty products, personalization, and community. Track customers who value expertise over lowest price."
+      },
+      {
+        "question": "What's the best targeting for pet products?",
+        "answer": "Use interest-based (pet owners) + behavior (pet supply purchasers) + life event (new pet adoption) targeting in combination."
+      }
+    ],
+    "relatedIndustries": [
+      "pet-food",
+      "pet-accessories",
+      "pet-health"
+    ],
+    "metricxFeature": "Subscription cohort tracking with reorder cycle analysis"
+  },
+  {
+    "name": "Sports & Outdoor",
+    "slug": "sports-outdoor",
+    "icon": "mountain",
+    "description": "Sports and outdoor e-commerce serves passionate enthusiasts with specific needs, requiring analytics that track both seasonal patterns and activity-based segments.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$80 - $200",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "aov",
+      "seasonal-lift",
+      "cross-sell-rate"
+    ],
+    "challenges": [
+      "Strong seasonal demand patterns",
+      "Activity-specific product needs",
+      "Competition from specialty retailers",
+      "Weather-dependent demand",
+      "Size and fit for performance gear"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "google",
+      "youtube",
+      "strava-partnerships"
+    ],
+    "strategies": [
+      "Segment by activity/sport type",
+      "Time campaigns to seasons and events",
+      "Use athlete/enthusiast content",
+      "Build email for weather-triggered campaigns",
+      "Cross-sell within activity categories"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$35-70",
+      "ctr": "1-2%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Outdoor brands see 80% of annual revenue in 4 months - analytics must plan for seasonality.",
+    "faqs": [
+      {
+        "question": "How do I plan for seasonal sports demand?",
+        "answer": "Build 12-month demand calendars by sport. Start campaigns 6-8 weeks before peak seasons. Reserve budget for shoulder seasons."
+      },
+      {
+        "question": "Should I run ads in the off-season?",
+        "answer": "Yes, but shift objectives. Off-season is for list building, content engagement, and acquiring deal-hunters at lower CPAs."
+      }
+    ],
+    "relatedIndustries": [
+      "fitness-equipment",
+      "outdoor-gear",
+      "athleisure"
+    ],
+    "metricxFeature": "Seasonal demand planning with year-over-year comparison"
+  },
+  {
+    "name": "Baby & Kids",
+    "slug": "baby-kids",
+    "icon": "baby",
+    "description": "Baby and kids e-commerce serves parents through distinct life stages, requiring analytics that track the evolving needs of growing families.",
+    "targetROAS": "4x - 6x",
+    "averageAOV": "$60 - $120",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "ltv",
+      "life-stage-progression",
+      "referral-rate"
+    ],
+    "challenges": [
+      "Rapid product aging out (kids grow fast)",
+      "Heavy safety and trust requirements",
+      "Registry competition",
+      "Wide age range with different needs",
+      "Gift purchases common"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "pinterest",
+      "google-shopping",
+      "parenting-sites"
+    ],
+    "strategies": [
+      "Track customers through life stages",
+      "Create age-based email sequences",
+      "Target expecting parents (new customer acquisition)",
+      "Partner with parenting influencers",
+      "Build strong referral programs"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$25-50",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-4%"
+    },
+    "caseStudySnippet": "Baby brands that track life-stage progression see 3x higher LTV by age-appropriate upselling.",
+    "faqs": [
+      {
+        "question": "How do I acquire expecting parents?",
+        "answer": "Target pregnancy and parenting interests, registry-related searches, and life-event signals. Offer registry or welcome boxes."
+      },
+      {
+        "question": "How should I track LTV for baby products?",
+        "answer": "LTV is highly age-dependent. Track by child's birth date and measure purchases through each stage (infant, toddler, preschool)."
+      }
+    ],
+    "relatedIndustries": [
+      "baby-gear",
+      "kids-clothing",
+      "toys-games",
+      "maternity"
+    ],
+    "metricxFeature": "Life-stage tracking with age-based cohort analysis"
+  },
+  {
+    "name": "Luxury Goods",
+    "slug": "luxury-goods",
+    "icon": "crown",
+    "description": "Luxury e-commerce requires sophisticated attribution for high-value, long-consideration purchases with affluent audiences.",
+    "targetROAS": "5x - 10x",
+    "averageAOV": "$500 - $2000+",
+    "keyMetrics": [
+      "roas",
+      "cpa",
+      "aov",
+      "consideration-time",
+      "vip-rate"
+    ],
+    "challenges": [
+      "Very long consideration cycles",
+      "Offline/in-store component to purchases",
+      "Affluent audience targeting precision",
+      "Brand image in ad placements",
+      "Counterfeiting and trust concerns"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "google",
+      "youtube",
+      "programmatic"
+    ],
+    "strategies": [
+      "Use extended attribution windows (90+ days)",
+      "Track store visits from digital campaigns",
+      "Build VIP customer segments",
+      "Invest in brand storytelling over direct response",
+      "Use contextual targeting for brand-safe placement"
+    ],
+    "kpiBenchmarks": {
+      "roas": "7x average",
+      "cpa": "$200-500",
+      "ctr": "0.5-1%",
+      "conversionRate": "0.5-1%"
+    },
+    "caseStudySnippet": "Luxury brands see 40% of conversions attributed to touchpoints 30+ days prior to purchase.",
+    "faqs": [
+      {
+        "question": "What attribution model for luxury?",
+        "answer": "Use linear or time-decay models with 90-day windows. Last-click dramatically undervalues awareness campaigns for luxury."
+      },
+      {
+        "question": "How do I target affluent audiences?",
+        "answer": "Use income targeting where available, interest-based (luxury brands, travel), and lookalikes from your VIP customers."
+      }
+    ],
+    "relatedIndustries": [
+      "jewelry-accessories",
+      "fashion-apparel",
+      "watches"
+    ],
+    "metricxFeature": "90-day attribution with VIP customer tracking"
+  },
+  {
+    "name": "Subscription Boxes",
+    "slug": "subscription-boxes",
+    "icon": "package",
+    "description": "Subscription box e-commerce requires analytics focused on CAC payback, churn prediction, and cohort lifetime value optimization.",
+    "targetROAS": "2x - 4x (first box)",
+    "averageAOV": "$30 - $60",
+    "keyMetrics": [
+      "cac-payback",
+      "churn-rate",
+      "ltv",
+      "box-ltv-ratio",
+      "pause-rate"
+    ],
+    "challenges": [
+      "Acquiring at a loss on first box",
+      "Subscription fatigue in market",
+      "Churn prediction and prevention",
+      "Content fatigue (same box concept)",
+      "Logistics complexity"
+    ],
+    "bestPlatforms": [
+      "meta",
+      "tiktok",
+      "youtube",
+      "podcast"
+    ],
+    "strategies": [
+      "Optimize for LTV, not first-box ROAS",
+      "Track churn by acquisition channel",
+      "Build cohort analysis dashboards",
+      "Offer pause instead of cancel",
+      "Use surprise/delight marketing"
+    ],
+    "kpiBenchmarks": {
+      "ltv": "5-8 boxes average",
+      "churnRate": "8-15% monthly",
+      "cpa": "$15-40",
+      "cacPayback": "2-3 boxes"
+    },
+    "caseStudySnippet": "Subscription boxes that track churn by source reduce CAC payback by 30% by shifting spend.",
+    "faqs": [
+      {
+        "question": "What CAC is acceptable for subscription boxes?",
+        "answer": "CAC should payback within 2-3 boxes (3-4 months). If average LTV is $200 over 5 boxes, CAC under $50 is healthy."
+      },
+      {
+        "question": "How do I reduce subscription churn?",
+        "answer": "Analyze churn timing (month 2-3 is critical), offer pause options, personalize boxes, and identify at-risk subscribers early."
+      }
+    ],
+    "relatedIndustries": [
+      "beauty-cosmetics",
+      "food-beverage",
+      "pet-products"
+    ],
+    "metricxFeature": "Cohort LTV tracking with churn prediction by acquisition source"
+  },
+  {
+    "name": "Fashion",
+    "slug": "fashion",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Fashion industry. Learn how Fashion brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Fashion space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Fashion?",
+        "a": "ROAS benchmarks for Fashion typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Fashion?",
+        "a": "Most Fashion brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Clothing",
+    "slug": "clothing",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Clothing industry. Learn how Clothing brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Clothing space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Clothing?",
+        "a": "ROAS benchmarks for Clothing typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Clothing?",
+        "a": "Most Clothing brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Footwear",
+    "slug": "footwear",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Footwear industry. Learn how Footwear brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Footwear space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Footwear?",
+        "a": "ROAS benchmarks for Footwear typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Footwear?",
+        "a": "Most Footwear brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Sneakers",
+    "slug": "sneakers",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Sneakers industry. Learn how Sneakers brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Sneakers space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Sneakers?",
+        "a": "ROAS benchmarks for Sneakers typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Sneakers?",
+        "a": "Most Sneakers brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Activewear",
+    "slug": "activewear",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Activewear industry. Learn how Activewear brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Activewear space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Activewear?",
+        "a": "ROAS benchmarks for Activewear typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Activewear?",
+        "a": "Most Activewear brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Athleisure",
+    "slug": "athleisure",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Athleisure industry. Learn how Athleisure brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Athleisure space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Athleisure?",
+        "a": "ROAS benchmarks for Athleisure typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Athleisure?",
+        "a": "Most Athleisure brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Streetwear",
+    "slug": "streetwear",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Streetwear industry. Learn how Streetwear brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Streetwear space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Streetwear?",
+        "a": "ROAS benchmarks for Streetwear typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Streetwear?",
+        "a": "Most Streetwear brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Luxury Fashion",
+    "slug": "luxury-fashion",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Luxury Fashion industry. Learn how Luxury Fashion brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Luxury Fashion space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Luxury Fashion?",
+        "a": "ROAS benchmarks for Luxury Fashion typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Luxury Fashion?",
+        "a": "Most Luxury Fashion brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Plus Size Fashion",
+    "slug": "plus-size-fashion",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Plus Size Fashion industry. Learn how Plus Size Fashion brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Plus Size Fashion space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Plus Size Fashion?",
+        "a": "ROAS benchmarks for Plus Size Fashion typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Plus Size Fashion?",
+        "a": "Most Plus Size Fashion brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Sustainable Fashion",
+    "slug": "sustainable-fashion",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Sustainable Fashion industry. Learn how Sustainable Fashion brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Sustainable Fashion space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Sustainable Fashion?",
+        "a": "ROAS benchmarks for Sustainable Fashion typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Sustainable Fashion?",
+        "a": "Most Sustainable Fashion brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Kids Fashion",
+    "slug": "kids-fashion",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Kids Fashion industry. Learn how Kids Fashion brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Kids Fashion space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Kids Fashion?",
+        "a": "ROAS benchmarks for Kids Fashion typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Kids Fashion?",
+        "a": "Most Kids Fashion brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Maternity Wear",
+    "slug": "maternity-wear",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Maternity Wear industry. Learn how Maternity Wear brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Maternity Wear space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Maternity Wear?",
+        "a": "ROAS benchmarks for Maternity Wear typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Maternity Wear?",
+        "a": "Most Maternity Wear brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Swimwear",
+    "slug": "swimwear",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Swimwear industry. Learn how Swimwear brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Swimwear space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Swimwear?",
+        "a": "ROAS benchmarks for Swimwear typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Swimwear?",
+        "a": "Most Swimwear brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Lingerie",
+    "slug": "lingerie",
+    "category": "apparel",
+    "description": "Ad analytics insights and benchmarks for the Lingerie industry. Learn how Lingerie brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Lingerie space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Lingerie?",
+        "a": "ROAS benchmarks for Lingerie typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Lingerie?",
+        "a": "Most Lingerie brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Jewelry",
+    "slug": "jewelry",
+    "category": "accessories",
+    "description": "Ad analytics insights and benchmarks for the Jewelry industry. Learn how Jewelry brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Jewelry space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Jewelry?",
+        "a": "ROAS benchmarks for Jewelry typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Jewelry?",
+        "a": "Most Jewelry brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Watches",
+    "slug": "watches",
+    "category": "accessories",
+    "description": "Ad analytics insights and benchmarks for the Watches industry. Learn how Watches brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Watches space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Watches?",
+        "a": "ROAS benchmarks for Watches typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Watches?",
+        "a": "Most Watches brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Handbags",
+    "slug": "handbags",
+    "category": "accessories",
+    "description": "Ad analytics insights and benchmarks for the Handbags industry. Learn how Handbags brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Handbags space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Handbags?",
+        "a": "ROAS benchmarks for Handbags typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Handbags?",
+        "a": "Most Handbags brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Sunglasses",
+    "slug": "sunglasses",
+    "category": "accessories",
+    "description": "Ad analytics insights and benchmarks for the Sunglasses industry. Learn how Sunglasses brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Sunglasses space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Sunglasses?",
+        "a": "ROAS benchmarks for Sunglasses typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Sunglasses?",
+        "a": "Most Sunglasses brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Beauty",
+    "slug": "beauty",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Beauty industry. Learn how Beauty brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Beauty space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Beauty?",
+        "a": "ROAS benchmarks for Beauty typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Beauty?",
+        "a": "Most Beauty brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Skincare",
+    "slug": "skincare",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Skincare industry. Learn how Skincare brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Skincare space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Skincare?",
+        "a": "ROAS benchmarks for Skincare typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Skincare?",
+        "a": "Most Skincare brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Cosmetics",
+    "slug": "cosmetics",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Cosmetics industry. Learn how Cosmetics brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Cosmetics space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Cosmetics?",
+        "a": "ROAS benchmarks for Cosmetics typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Cosmetics?",
+        "a": "Most Cosmetics brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Makeup",
+    "slug": "makeup",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Makeup industry. Learn how Makeup brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Makeup space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Makeup?",
+        "a": "ROAS benchmarks for Makeup typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Makeup?",
+        "a": "Most Makeup brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Haircare",
+    "slug": "haircare",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Haircare industry. Learn how Haircare brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Haircare space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Haircare?",
+        "a": "ROAS benchmarks for Haircare typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Haircare?",
+        "a": "Most Haircare brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Fragrance",
+    "slug": "fragrance",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Fragrance industry. Learn how Fragrance brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Fragrance space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Fragrance?",
+        "a": "ROAS benchmarks for Fragrance typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Fragrance?",
+        "a": "Most Fragrance brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Men's Grooming",
+    "slug": "mens-grooming",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Men's Grooming industry. Learn how Men's Grooming brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Men's Grooming space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Men's Grooming?",
+        "a": "ROAS benchmarks for Men's Grooming typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Men's Grooming?",
+        "a": "Most Men's Grooming brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Clean Beauty",
+    "slug": "clean-beauty",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Clean Beauty industry. Learn how Clean Beauty brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Clean Beauty space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Clean Beauty?",
+        "a": "ROAS benchmarks for Clean Beauty typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Clean Beauty?",
+        "a": "Most Clean Beauty brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "K-Beauty",
+    "slug": "k-beauty",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the K-Beauty industry. Learn how K-Beauty brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the K-Beauty space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for K-Beauty?",
+        "a": "ROAS benchmarks for K-Beauty typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for K-Beauty?",
+        "a": "Most K-Beauty brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Nail Care",
+    "slug": "nail-care",
+    "category": "beauty",
+    "description": "Ad analytics insights and benchmarks for the Nail Care industry. Learn how Nail Care brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Nail Care space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Nail Care?",
+        "a": "ROAS benchmarks for Nail Care typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Nail Care?",
+        "a": "Most Nail Care brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Supplements",
+    "slug": "supplements",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the Supplements industry. Learn how Supplements brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Supplements space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Supplements?",
+        "a": "ROAS benchmarks for Supplements typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Supplements?",
+        "a": "Most Supplements brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Vitamins",
+    "slug": "vitamins",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the Vitamins industry. Learn how Vitamins brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Vitamins space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Vitamins?",
+        "a": "ROAS benchmarks for Vitamins typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Vitamins?",
+        "a": "Most Vitamins brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "CBD",
+    "slug": "cbd",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the CBD industry. Learn how CBD brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the CBD space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for CBD?",
+        "a": "ROAS benchmarks for CBD typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for CBD?",
+        "a": "Most CBD brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Fitness Equipment",
+    "slug": "fitness-equipment",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the Fitness Equipment industry. Learn how Fitness Equipment brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Fitness Equipment space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Fitness Equipment?",
+        "a": "ROAS benchmarks for Fitness Equipment typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Fitness Equipment?",
+        "a": "Most Fitness Equipment brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Protein Powder",
+    "slug": "protein-powder",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the Protein Powder industry. Learn how Protein Powder brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Protein Powder space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Protein Powder?",
+        "a": "ROAS benchmarks for Protein Powder typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Protein Powder?",
+        "a": "Most Protein Powder brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Weight Loss",
+    "slug": "weight-loss",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the Weight Loss industry. Learn how Weight Loss brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Weight Loss space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Weight Loss?",
+        "a": "ROAS benchmarks for Weight Loss typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Weight Loss?",
+        "a": "Most Weight Loss brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Sleep Products",
+    "slug": "sleep-products",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the Sleep Products industry. Learn how Sleep Products brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Sleep Products space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Sleep Products?",
+        "a": "ROAS benchmarks for Sleep Products typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Sleep Products?",
+        "a": "Most Sleep Products brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Mental Wellness",
+    "slug": "mental-wellness",
+    "category": "health",
+    "description": "Ad analytics insights and benchmarks for the Mental Wellness industry. Learn how Mental Wellness brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Mental Wellness space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Mental Wellness?",
+        "a": "ROAS benchmarks for Mental Wellness typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Mental Wellness?",
+        "a": "Most Mental Wellness brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Snacks",
+    "slug": "snacks",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Snacks industry. Learn how Snacks brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Snacks space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Snacks?",
+        "a": "ROAS benchmarks for Snacks typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Snacks?",
+        "a": "Most Snacks brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Coffee",
+    "slug": "coffee",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Coffee industry. Learn how Coffee brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Coffee space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Coffee?",
+        "a": "ROAS benchmarks for Coffee typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Coffee?",
+        "a": "Most Coffee brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Tea",
+    "slug": "tea",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Tea industry. Learn how Tea brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Tea space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Tea?",
+        "a": "ROAS benchmarks for Tea typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Tea?",
+        "a": "Most Tea brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Alcohol",
+    "slug": "alcohol",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Alcohol industry. Learn how Alcohol brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Alcohol space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Alcohol?",
+        "a": "ROAS benchmarks for Alcohol typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Alcohol?",
+        "a": "Most Alcohol brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Wine",
+    "slug": "wine",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Wine industry. Learn how Wine brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Wine space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Wine?",
+        "a": "ROAS benchmarks for Wine typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Wine?",
+        "a": "Most Wine brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Craft Beer",
+    "slug": "craft-beer",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Craft Beer industry. Learn how Craft Beer brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Craft Beer space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Craft Beer?",
+        "a": "ROAS benchmarks for Craft Beer typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Craft Beer?",
+        "a": "Most Craft Beer brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Meal Kits",
+    "slug": "meal-kits",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Meal Kits industry. Learn how Meal Kits brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Meal Kits space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Meal Kits?",
+        "a": "ROAS benchmarks for Meal Kits typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Meal Kits?",
+        "a": "Most Meal Kits brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Organic Food",
+    "slug": "organic-food",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Organic Food industry. Learn how Organic Food brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Organic Food space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Organic Food?",
+        "a": "ROAS benchmarks for Organic Food typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Organic Food?",
+        "a": "Most Organic Food brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Pet Food",
+    "slug": "pet-food",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Pet Food industry. Learn how Pet Food brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Pet Food space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Pet Food?",
+        "a": "ROAS benchmarks for Pet Food typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Pet Food?",
+        "a": "Most Pet Food brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Baby Food",
+    "slug": "baby-food",
+    "category": "food",
+    "description": "Ad analytics insights and benchmarks for the Baby Food industry. Learn how Baby Food brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Baby Food space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Baby Food?",
+        "a": "ROAS benchmarks for Baby Food typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Baby Food?",
+        "a": "Most Baby Food brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Home & Living",
+    "slug": "home-living",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Home & Living industry. Learn how Home & Living brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Home & Living space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Home & Living?",
+        "a": "ROAS benchmarks for Home & Living typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Home & Living?",
+        "a": "Most Home & Living brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Furniture",
+    "slug": "furniture",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Furniture industry. Learn how Furniture brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Furniture space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Furniture?",
+        "a": "ROAS benchmarks for Furniture typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Furniture?",
+        "a": "Most Furniture brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Home Decor",
+    "slug": "home-decor",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Home Decor industry. Learn how Home Decor brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Home Decor space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Home Decor?",
+        "a": "ROAS benchmarks for Home Decor typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Home Decor?",
+        "a": "Most Home Decor brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Bedding",
+    "slug": "bedding",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Bedding industry. Learn how Bedding brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Bedding space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Bedding?",
+        "a": "ROAS benchmarks for Bedding typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Bedding?",
+        "a": "Most Bedding brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Mattresses",
+    "slug": "mattresses",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Mattresses industry. Learn how Mattresses brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Mattresses space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Mattresses?",
+        "a": "ROAS benchmarks for Mattresses typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Mattresses?",
+        "a": "Most Mattresses brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Kitchen",
+    "slug": "kitchen",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Kitchen industry. Learn how Kitchen brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Kitchen space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Kitchen?",
+        "a": "ROAS benchmarks for Kitchen typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Kitchen?",
+        "a": "Most Kitchen brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Cookware",
+    "slug": "cookware",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Cookware industry. Learn how Cookware brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Cookware space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Cookware?",
+        "a": "ROAS benchmarks for Cookware typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Cookware?",
+        "a": "Most Cookware brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Candles",
+    "slug": "candles",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Candles industry. Learn how Candles brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Candles space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Candles?",
+        "a": "ROAS benchmarks for Candles typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Candles?",
+        "a": "Most Candles brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Plants",
+    "slug": "plants",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Plants industry. Learn how Plants brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Plants space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Plants?",
+        "a": "ROAS benchmarks for Plants typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Plants?",
+        "a": "Most Plants brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Cleaning Products",
+    "slug": "cleaning-products",
+    "category": "home",
+    "description": "Ad analytics insights and benchmarks for the Cleaning Products industry. Learn how Cleaning Products brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Cleaning Products space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Cleaning Products?",
+        "a": "ROAS benchmarks for Cleaning Products typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Cleaning Products?",
+        "a": "Most Cleaning Products brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Baby Products",
+    "slug": "baby-products",
+    "category": "baby",
+    "description": "Ad analytics insights and benchmarks for the Baby Products industry. Learn how Baby Products brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Baby Products space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Baby Products?",
+        "a": "ROAS benchmarks for Baby Products typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Baby Products?",
+        "a": "Most Baby Products brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Baby Gear",
+    "slug": "baby-gear",
+    "category": "baby",
+    "description": "Ad analytics insights and benchmarks for the Baby Gear industry. Learn how Baby Gear brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Baby Gear space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Baby Gear?",
+        "a": "ROAS benchmarks for Baby Gear typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Baby Gear?",
+        "a": "Most Baby Gear brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Toys",
+    "slug": "toys",
+    "category": "baby",
+    "description": "Ad analytics insights and benchmarks for the Toys industry. Learn how Toys brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Toys space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Toys?",
+        "a": "ROAS benchmarks for Toys typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Toys?",
+        "a": "Most Toys brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Kids Education",
+    "slug": "kids-education",
+    "category": "baby",
+    "description": "Ad analytics insights and benchmarks for the Kids Education industry. Learn how Kids Education brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Kids Education space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Kids Education?",
+        "a": "ROAS benchmarks for Kids Education typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Kids Education?",
+        "a": "Most Kids Education brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Diapers",
+    "slug": "diapers",
+    "category": "baby",
+    "description": "Ad analytics insights and benchmarks for the Diapers industry. Learn how Diapers brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Diapers space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Diapers?",
+        "a": "ROAS benchmarks for Diapers typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Diapers?",
+        "a": "Most Diapers brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Dog Products",
+    "slug": "dog-products",
+    "category": "pets",
+    "description": "Ad analytics insights and benchmarks for the Dog Products industry. Learn how Dog Products brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Dog Products space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Dog Products?",
+        "a": "ROAS benchmarks for Dog Products typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Dog Products?",
+        "a": "Most Dog Products brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Cat Products",
+    "slug": "cat-products",
+    "category": "pets",
+    "description": "Ad analytics insights and benchmarks for the Cat Products industry. Learn how Cat Products brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Cat Products space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Cat Products?",
+        "a": "ROAS benchmarks for Cat Products typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Cat Products?",
+        "a": "Most Cat Products brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Pet Supplies",
+    "slug": "pet-supplies",
+    "category": "pets",
+    "description": "Ad analytics insights and benchmarks for the Pet Supplies industry. Learn how Pet Supplies brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Pet Supplies space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Pet Supplies?",
+        "a": "ROAS benchmarks for Pet Supplies typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Pet Supplies?",
+        "a": "Most Pet Supplies brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Pet Accessories",
+    "slug": "pet-accessories",
+    "category": "pets",
+    "description": "Ad analytics insights and benchmarks for the Pet Accessories industry. Learn how Pet Accessories brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Pet Accessories space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Pet Accessories?",
+        "a": "ROAS benchmarks for Pet Accessories typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Pet Accessories?",
+        "a": "Most Pet Accessories brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Electronics",
+    "slug": "electronics",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Electronics industry. Learn how Electronics brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Electronics space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Electronics?",
+        "a": "ROAS benchmarks for Electronics typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Electronics?",
+        "a": "Most Electronics brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Consumer Electronics",
+    "slug": "consumer-electronics",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Consumer Electronics industry. Learn how Consumer Electronics brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Consumer Electronics space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Consumer Electronics?",
+        "a": "ROAS benchmarks for Consumer Electronics typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Consumer Electronics?",
+        "a": "Most Consumer Electronics brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Gadgets",
+    "slug": "gadgets",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Gadgets industry. Learn how Gadgets brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Gadgets space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Gadgets?",
+        "a": "ROAS benchmarks for Gadgets typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Gadgets?",
+        "a": "Most Gadgets brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Audio Equipment",
+    "slug": "audio-equipment",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Audio Equipment industry. Learn how Audio Equipment brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Audio Equipment space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Audio Equipment?",
+        "a": "ROAS benchmarks for Audio Equipment typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Audio Equipment?",
+        "a": "Most Audio Equipment brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Smart Home",
+    "slug": "smart-home",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Smart Home industry. Learn how Smart Home brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Smart Home space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Smart Home?",
+        "a": "ROAS benchmarks for Smart Home typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Smart Home?",
+        "a": "Most Smart Home brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Wearables",
+    "slug": "wearables",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Wearables industry. Learn how Wearables brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Wearables space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Wearables?",
+        "a": "ROAS benchmarks for Wearables typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Wearables?",
+        "a": "Most Wearables brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Phone Accessories",
+    "slug": "phone-accessories",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Phone Accessories industry. Learn how Phone Accessories brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Phone Accessories space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Phone Accessories?",
+        "a": "ROAS benchmarks for Phone Accessories typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Phone Accessories?",
+        "a": "Most Phone Accessories brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Gaming",
+    "slug": "gaming",
+    "category": "tech",
+    "description": "Ad analytics insights and benchmarks for the Gaming industry. Learn how Gaming brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Gaming space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Gaming?",
+        "a": "ROAS benchmarks for Gaming typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Gaming?",
+        "a": "Most Gaming brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Outdoor",
+    "slug": "outdoor",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Outdoor industry. Learn how Outdoor brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Outdoor space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Outdoor?",
+        "a": "ROAS benchmarks for Outdoor typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Outdoor?",
+        "a": "Most Outdoor brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Camping Gear",
+    "slug": "camping-gear",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Camping Gear industry. Learn how Camping Gear brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Camping Gear space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Camping Gear?",
+        "a": "ROAS benchmarks for Camping Gear typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Camping Gear?",
+        "a": "Most Camping Gear brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Hiking",
+    "slug": "hiking",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Hiking industry. Learn how Hiking brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Hiking space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Hiking?",
+        "a": "ROAS benchmarks for Hiking typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Hiking?",
+        "a": "Most Hiking brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Cycling",
+    "slug": "cycling",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Cycling industry. Learn how Cycling brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Cycling space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Cycling?",
+        "a": "ROAS benchmarks for Cycling typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Cycling?",
+        "a": "Most Cycling brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Golf",
+    "slug": "golf",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Golf industry. Learn how Golf brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Golf space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Golf?",
+        "a": "ROAS benchmarks for Golf typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Golf?",
+        "a": "Most Golf brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Fishing",
+    "slug": "fishing",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Fishing industry. Learn how Fishing brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Fishing space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Fishing?",
+        "a": "ROAS benchmarks for Fishing typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Fishing?",
+        "a": "Most Fishing brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Hunting",
+    "slug": "hunting",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Hunting industry. Learn how Hunting brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Hunting space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Hunting?",
+        "a": "ROAS benchmarks for Hunting typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Hunting?",
+        "a": "Most Hunting brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Running",
+    "slug": "running",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Running industry. Learn how Running brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Running space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Running?",
+        "a": "ROAS benchmarks for Running typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Running?",
+        "a": "Most Running brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Yoga",
+    "slug": "yoga",
+    "category": "outdoor",
+    "description": "Ad analytics insights and benchmarks for the Yoga industry. Learn how Yoga brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Yoga space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Yoga?",
+        "a": "ROAS benchmarks for Yoga typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Yoga?",
+        "a": "Most Yoga brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Print on Demand",
+    "slug": "print-on-demand",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Print on Demand industry. Learn how Print on Demand brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Print on Demand space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Print on Demand?",
+        "a": "ROAS benchmarks for Print on Demand typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Print on Demand?",
+        "a": "Most Print on Demand brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Dropshipping",
+    "slug": "dropshipping",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Dropshipping industry. Learn how Dropshipping brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Dropshipping space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Dropshipping?",
+        "a": "ROAS benchmarks for Dropshipping typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Dropshipping?",
+        "a": "Most Dropshipping brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Handmade",
+    "slug": "handmade",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Handmade industry. Learn how Handmade brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Handmade space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Handmade?",
+        "a": "ROAS benchmarks for Handmade typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Handmade?",
+        "a": "Most Handmade brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Vintage",
+    "slug": "vintage",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Vintage industry. Learn how Vintage brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Vintage space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Vintage?",
+        "a": "ROAS benchmarks for Vintage typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Vintage?",
+        "a": "Most Vintage brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Eco-Friendly",
+    "slug": "eco-friendly",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Eco-Friendly industry. Learn how Eco-Friendly brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Eco-Friendly space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Eco-Friendly?",
+        "a": "ROAS benchmarks for Eco-Friendly typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Eco-Friendly?",
+        "a": "Most Eco-Friendly brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Auto Parts",
+    "slug": "auto-parts",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Auto Parts industry. Learn how Auto Parts brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Auto Parts space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Auto Parts?",
+        "a": "ROAS benchmarks for Auto Parts typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Auto Parts?",
+        "a": "Most Auto Parts brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Office Supplies",
+    "slug": "office-supplies",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Office Supplies industry. Learn how Office Supplies brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Office Supplies space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Office Supplies?",
+        "a": "ROAS benchmarks for Office Supplies typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Office Supplies?",
+        "a": "Most Office Supplies brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Art & Craft",
+    "slug": "art-craft",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Art & Craft industry. Learn how Art & Craft brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Art & Craft space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Art & Craft?",
+        "a": "ROAS benchmarks for Art & Craft typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Art & Craft?",
+        "a": "Most Art & Craft brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Musical Instruments",
+    "slug": "musical-instruments",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Musical Instruments industry. Learn how Musical Instruments brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Musical Instruments space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Musical Instruments?",
+        "a": "ROAS benchmarks for Musical Instruments typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Musical Instruments?",
+        "a": "Most Musical Instruments brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Books",
+    "slug": "books",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Books industry. Learn how Books brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Books space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Books?",
+        "a": "ROAS benchmarks for Books typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Books?",
+        "a": "Most Books brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Stationery",
+    "slug": "stationery",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Stationery industry. Learn how Stationery brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Stationery space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Stationery?",
+        "a": "ROAS benchmarks for Stationery typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Stationery?",
+        "a": "Most Stationery brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Gifts",
+    "slug": "gifts",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Gifts industry. Learn how Gifts brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Gifts space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Gifts?",
+        "a": "ROAS benchmarks for Gifts typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Gifts?",
+        "a": "Most Gifts brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Wedding",
+    "slug": "wedding",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Wedding industry. Learn how Wedding brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Wedding space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Wedding?",
+        "a": "ROAS benchmarks for Wedding typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Wedding?",
+        "a": "Most Wedding brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  },
+  {
+    "name": "Party Supplies",
+    "slug": "party-supplies",
+    "category": "specialty",
+    "description": "Ad analytics insights and benchmarks for the Party Supplies industry. Learn how Party Supplies brands optimize their advertising across Meta, Google, and TikTok.",
+    "benchmarks": {
+      "avgRoas": "3-5x",
+      "avgCpa": "$15-45",
+      "avgCtr": "1-3%"
+    },
+    "challenges": [
+      "Competition in the Party Supplies space",
+      "Rising CPMs across platforms",
+      "Attribution challenges with iOS 14+",
+      "Creative fatigue and ad blindness"
+    ],
+    "tips": [
+      "Focus on first-party data collection",
+      "Test video creative formats",
+      "Use lookalike audiences from purchasers",
+      "Implement server-side tracking"
+    ],
+    "relatedIndustries": [],
+    "faqs": [
+      {
+        "q": "What's a good ROAS for Party Supplies?",
+        "a": "ROAS benchmarks for Party Supplies typically range from 3-5x depending on margins and AOV. Use metricx to track your specific ROAS and compare to industry benchmarks."
+      },
+      {
+        "q": "Which ad platforms work best for Party Supplies?",
+        "a": "Most Party Supplies brands see success with Meta (Facebook/Instagram) and Google Ads. TikTok is increasingly important for reaching younger audiences."
+      }
+    ]
+  }
+]

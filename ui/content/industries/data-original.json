@@ -1,0 +1,518 @@
+[
+  {
+    "name": "Fashion & Apparel",
+    "slug": "fashion-apparel",
+    "icon": "shirt",
+    "description": "Fashion and apparel e-commerce requires sophisticated ad analytics to track seasonal trends, size returns, and multi-channel attribution across visually-driven platforms.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$60 - $120",
+    "keyMetrics": ["roas", "cpa", "aov", "return-rate", "ltv"],
+    "challenges": [
+      "High return rates (20-40%) skew attribution",
+      "Seasonal demand fluctuations",
+      "Size and fit issues affect conversion",
+      "Heavy visual content requirements",
+      "Fast fashion trends require agile campaigns"
+    ],
+    "bestPlatforms": ["meta", "tiktok", "pinterest", "google-shopping"],
+    "strategies": [
+      "Use CAPI to track post-return revenue",
+      "Build lookalike audiences from low-return customers",
+      "Invest in video content showcasing fit and fabric",
+      "Retarget cart abandoners with size guides",
+      "Test TikTok and Instagram Reels for discovery"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$25-40",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Fashion brands using metricx see 23% better ROAS accuracy by factoring in returns.",
+    "faqs": [
+      {
+        "question": "How do I account for returns in ROAS?",
+        "answer": "True ROAS should subtract returns. With metricx, Shopify integration automatically adjusts revenue for returned items, giving you accurate profitability."
+      },
+      {
+        "question": "Which platform works best for fashion?",
+        "answer": "Meta (Instagram) and TikTok drive discovery. Google Shopping captures high-intent searches. Use all three for full-funnel coverage."
+      }
+    ],
+    "relatedIndustries": ["beauty-cosmetics", "jewelry-accessories", "luxury-goods"],
+    "metricxFeature": "Return-adjusted ROAS tracking with Shopify refund data integration"
+  },
+  {
+    "name": "Beauty & Cosmetics",
+    "slug": "beauty-cosmetics",
+    "icon": "sparkles",
+    "description": "Beauty and cosmetics brands thrive on visual platforms with strong UGC and influencer content, requiring analytics that track both new customer acquisition and replenishment cycles.",
+    "targetROAS": "4x - 6x",
+    "averageAOV": "$40 - $80",
+    "keyMetrics": ["roas", "cpa", "ltv", "repurchase-rate", "subscription-rate"],
+    "challenges": [
+      "Long consideration cycles for premium products",
+      "Heavy influencer/UGC content investment",
+      "Subscription vs one-time purchase tracking",
+      "Shade matching challenges online",
+      "Regulatory restrictions on ad claims"
+    ],
+    "bestPlatforms": ["meta", "tiktok", "youtube", "pinterest"],
+    "strategies": [
+      "Track LTV by acquisition channel, not just first purchase",
+      "Measure influencer campaigns with unique tracking",
+      "Build subscription cohort analysis",
+      "Use quiz funnels for personalized product matching",
+      "Leverage before/after content (within guidelines)"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$15-30",
+      "ctr": "2-3%",
+      "conversionRate": "3-4%"
+    },
+    "caseStudySnippet": "Beauty brands see 35% higher ROAS when optimizing for LTV instead of first-purchase CPA.",
+    "faqs": [
+      {
+        "question": "How should I measure influencer campaigns?",
+        "answer": "Use unique discount codes, UTM parameters, and branded landing pages for each influencer. Track both direct sales and assisted conversions in the attribution window."
+      },
+      {
+        "question": "How do I track subscription revenue from ads?",
+        "answer": "metricx tracks subscription orders from Shopify, letting you see which ad campaigns drive recurring revenue, not just one-time purchases."
+      }
+    ],
+    "relatedIndustries": ["health-wellness", "skincare", "haircare"],
+    "metricxFeature": "LTV-based optimization with subscription revenue tracking"
+  },
+  {
+    "name": "Health & Wellness",
+    "slug": "health-wellness",
+    "icon": "heart-pulse",
+    "description": "Health and wellness e-commerce includes supplements, fitness equipment, and wellness products, requiring compliant advertising and trust-building content.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$50 - $100",
+    "keyMetrics": ["roas", "cpa", "ltv", "subscription-rate", "review-score"],
+    "challenges": [
+      "Strict advertising restrictions on health claims",
+      "Subscription churn management",
+      "Competing with Amazon prices",
+      "Building trust for ingestible products",
+      "Compliance across platforms"
+    ],
+    "bestPlatforms": ["meta", "google", "youtube", "podcast"],
+    "strategies": [
+      "Focus on education over direct claims",
+      "Build email lists for compliant direct communication",
+      "Track subscription churn by acquisition source",
+      "Use testimonials and social proof heavily",
+      "Invest in content marketing for organic traffic"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$30-50",
+      "ctr": "1-2%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Supplement brands achieve 40% lower churn when acquiring customers through educational content vs direct response.",
+    "faqs": [
+      {
+        "question": "How do I advertise supplements compliantly?",
+        "answer": "Focus on ingredient benefits, lifestyle imagery, and testimonials. Avoid medical claims. Each platform has specific policies - review Meta's and Google's health product guidelines."
+      },
+      {
+        "question": "How should I track subscription LTV?",
+        "answer": "metricx calculates LTV cohorts by acquisition source, showing which campaigns bring subscribers who stay longest."
+      }
+    ],
+    "relatedIndustries": ["fitness-equipment", "supplements", "beauty-cosmetics"],
+    "metricxFeature": "Subscription LTV tracking with churn prediction by acquisition channel"
+  },
+  {
+    "name": "Home & Garden",
+    "slug": "home-garden",
+    "icon": "home",
+    "description": "Home and garden e-commerce involves high-consideration purchases with longer buying cycles, requiring attribution that captures the full customer journey.",
+    "targetROAS": "4x - 7x",
+    "averageAOV": "$100 - $300",
+    "keyMetrics": ["roas", "cpa", "aov", "time-to-purchase", "cart-value"],
+    "challenges": [
+      "Long consideration periods (weeks to months)",
+      "High AOV but lower purchase frequency",
+      "Seasonal demand patterns",
+      "Shipping costs affect conversion",
+      "Showrooming (research online, buy in-store)"
+    ],
+    "bestPlatforms": ["pinterest", "meta", "google-shopping", "google-search"],
+    "strategies": [
+      "Use longer attribution windows (30-60 days)",
+      "Retarget across the entire consideration period",
+      "Invest heavily in Pinterest for discovery",
+      "Create room visualizers and planning tools",
+      "Optimize for add-to-cart, not just purchases"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$40-80",
+      "ctr": "0.8-1.5%",
+      "conversionRate": "1-2%"
+    },
+    "caseStudySnippet": "Home brands using 30-day attribution see 60% more attributed conversions than 7-day windows.",
+    "faqs": [
+      {
+        "question": "Why do my Meta Ads show low ROAS for home products?",
+        "answer": "Home purchases have long consideration cycles. Meta's default 7-day window misses conversions. Use longer attribution windows and view-through attribution."
+      },
+      {
+        "question": "Is Pinterest worth it for home products?",
+        "answer": "Absolutely. Pinterest users plan home projects months in advance. CPMs are lower and purchase intent is high."
+      }
+    ],
+    "relatedIndustries": ["furniture", "home-decor", "garden-outdoor"],
+    "metricxFeature": "Extended attribution modeling with 30/60/90-day windows"
+  },
+  {
+    "name": "Food & Beverage",
+    "slug": "food-beverage",
+    "icon": "utensils",
+    "description": "Food and beverage DTC brands face unique challenges with perishability, subscription models, and repeat purchase patterns that require specialized analytics.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$40 - $80",
+    "keyMetrics": ["roas", "cpa", "ltv", "subscription-rate", "reorder-rate"],
+    "challenges": [
+      "Perishability limits shipping windows",
+      "Heavy competition from grocery retail",
+      "Subscription fatigue and churn",
+      "High CAC for consumables",
+      "Seasonal and regional demand"
+    ],
+    "bestPlatforms": ["meta", "tiktok", "youtube", "podcast"],
+    "strategies": [
+      "Optimize for subscription sign-ups, not one-time",
+      "Track cohort LTV religiously",
+      "Use urgency (freshness, limited batches)",
+      "Build strong brand storytelling",
+      "Partner with food influencers authentically"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$20-40",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-4%"
+    },
+    "caseStudySnippet": "DTC food brands break even on first order but generate 4x return through subscription LTV.",
+    "faqs": [
+      {
+        "question": "Should I acquire at a loss on first order?",
+        "answer": "If your subscription data shows strong retention, yes. Track CAC payback period. Most food brands recover CAC by order 2-3."
+      },
+      {
+        "question": "How do I reduce subscription churn?",
+        "answer": "Analyze churn by acquisition channel. Some sources (discount-heavy) churn 2x faster. Focus ad spend on quality cohorts."
+      }
+    ],
+    "relatedIndustries": ["coffee-tea", "snacks", "meal-kits", "beverages"],
+    "metricxFeature": "Subscription cohort analysis with CAC payback tracking"
+  },
+  {
+    "name": "Electronics & Tech",
+    "slug": "electronics-tech",
+    "icon": "laptop",
+    "description": "Electronics and tech products require detailed product comparison content and analytics that track high-consideration, research-heavy purchase journeys.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$150 - $500",
+    "keyMetrics": ["roas", "cpa", "aov", "research-time", "comparison-rate"],
+    "challenges": [
+      "Long research and comparison cycles",
+      "Heavy competition from Amazon/Best Buy",
+      "Rapid product obsolescence",
+      "Complex product specifications",
+      "Price sensitivity and deal-hunting"
+    ],
+    "bestPlatforms": ["google-search", "google-shopping", "youtube", "meta"],
+    "strategies": [
+      "Capture search traffic for product comparisons",
+      "Use YouTube for product demonstrations",
+      "Retarget research-phase visitors aggressively",
+      "Highlight unique value vs Amazon",
+      "Time campaigns around product launches"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$50-100",
+      "ctr": "1-2%",
+      "conversionRate": "1-2%"
+    },
+    "caseStudySnippet": "Electronics brands see 50% of conversions from visitors who researched 3+ times before purchase.",
+    "faqs": [
+      {
+        "question": "How do I compete with Amazon for electronics?",
+        "answer": "Focus on unique products, bundles, expert service, and warranty. Track customers who research on Amazon but buy from you."
+      },
+      {
+        "question": "What attribution window for electronics?",
+        "answer": "Use 30-60 day click windows. Electronics purchases often take 2-4 weeks of research before conversion."
+      }
+    ],
+    "relatedIndustries": ["mobile-accessories", "smart-home", "audio-video"],
+    "metricxFeature": "Research-to-purchase path tracking with multi-touch attribution"
+  },
+  {
+    "name": "Jewelry & Accessories",
+    "slug": "jewelry-accessories",
+    "icon": "gem",
+    "description": "Jewelry and accessories e-commerce combines impulse purchases (costume jewelry) with high-consideration luxury items, requiring segmented analytics approaches.",
+    "targetROAS": "4x - 8x",
+    "averageAOV": "$80 - $300",
+    "keyMetrics": ["roas", "cpa", "aov", "gift-purchase-rate", "seasonal-lift"],
+    "challenges": [
+      "Wide price range requires segmented strategy",
+      "Heavy seasonal peaks (holidays, Valentine's)",
+      "Gift purchases complicate attribution",
+      "Size/fit concerns for rings",
+      "Trust requirements for precious metals/stones"
+    ],
+    "bestPlatforms": ["meta", "pinterest", "google-shopping", "tiktok"],
+    "strategies": [
+      "Segment campaigns by price tier",
+      "Build gift-focused campaigns for holidays",
+      "Use AR try-on technology",
+      "Create urgency with limited editions",
+      "Invest in high-quality product photography"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$30-60",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Jewelry brands see 3x ROAS during gift-giving seasons compared to off-peak periods.",
+    "faqs": [
+      {
+        "question": "How do I track gift purchases?",
+        "answer": "Implement gift options at checkout and track separately. Gift purchasers have different LTV patterns than self-purchasers."
+      },
+      {
+        "question": "When should I scale ad spend for jewelry?",
+        "answer": "Begin scaling 4-6 weeks before major holidays. Competition peaks last 2 weeks - consider securing inventory of winning creatives early."
+      }
+    ],
+    "relatedIndustries": ["watches", "fashion-apparel", "luxury-goods"],
+    "metricxFeature": "Seasonal demand forecasting with gift purchase tracking"
+  },
+  {
+    "name": "Pet Products",
+    "slug": "pet-products",
+    "icon": "dog",
+    "description": "Pet products e-commerce benefits from highly passionate customers with strong repeat purchase patterns and subscription potential.",
+    "targetROAS": "4x - 6x",
+    "averageAOV": "$50 - $100",
+    "keyMetrics": ["roas", "cpa", "ltv", "subscription-rate", "reorder-cycle"],
+    "challenges": [
+      "Heavy Amazon competition",
+      "Subscription fatigue in market",
+      "Product safety and recall concerns",
+      "Price competition on commodities",
+      "Pet-specific sizing and preferences"
+    ],
+    "bestPlatforms": ["meta", "google-shopping", "tiktok", "pinterest"],
+    "strategies": [
+      "Build subscription for consumables (food, treats)",
+      "Use pet photos in UGC campaigns",
+      "Target life events (new puppy, moving)",
+      "Create breed-specific targeting",
+      "Partner with pet influencers"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$20-40",
+      "ctr": "2-3%",
+      "conversionRate": "3-4%"
+    },
+    "caseStudySnippet": "Pet brands with subscription models see 5x higher LTV than one-time purchase customers.",
+    "faqs": [
+      {
+        "question": "How do I compete with Chewy and Amazon?",
+        "answer": "Focus on premium/specialty products, personalization, and community. Track customers who value expertise over lowest price."
+      },
+      {
+        "question": "What's the best targeting for pet products?",
+        "answer": "Use interest-based (pet owners) + behavior (pet supply purchasers) + life event (new pet adoption) targeting in combination."
+      }
+    ],
+    "relatedIndustries": ["pet-food", "pet-accessories", "pet-health"],
+    "metricxFeature": "Subscription cohort tracking with reorder cycle analysis"
+  },
+  {
+    "name": "Sports & Outdoor",
+    "slug": "sports-outdoor",
+    "icon": "mountain",
+    "description": "Sports and outdoor e-commerce serves passionate enthusiasts with specific needs, requiring analytics that track both seasonal patterns and activity-based segments.",
+    "targetROAS": "3x - 5x",
+    "averageAOV": "$80 - $200",
+    "keyMetrics": ["roas", "cpa", "aov", "seasonal-lift", "cross-sell-rate"],
+    "challenges": [
+      "Strong seasonal demand patterns",
+      "Activity-specific product needs",
+      "Competition from specialty retailers",
+      "Weather-dependent demand",
+      "Size and fit for performance gear"
+    ],
+    "bestPlatforms": ["meta", "google", "youtube", "strava-partnerships"],
+    "strategies": [
+      "Segment by activity/sport type",
+      "Time campaigns to seasons and events",
+      "Use athlete/enthusiast content",
+      "Build email for weather-triggered campaigns",
+      "Cross-sell within activity categories"
+    ],
+    "kpiBenchmarks": {
+      "roas": "4x average",
+      "cpa": "$35-70",
+      "ctr": "1-2%",
+      "conversionRate": "2-3%"
+    },
+    "caseStudySnippet": "Outdoor brands see 80% of annual revenue in 4 months - analytics must plan for seasonality.",
+    "faqs": [
+      {
+        "question": "How do I plan for seasonal sports demand?",
+        "answer": "Build 12-month demand calendars by sport. Start campaigns 6-8 weeks before peak seasons. Reserve budget for shoulder seasons."
+      },
+      {
+        "question": "Should I run ads in the off-season?",
+        "answer": "Yes, but shift objectives. Off-season is for list building, content engagement, and acquiring deal-hunters at lower CPAs."
+      }
+    ],
+    "relatedIndustries": ["fitness-equipment", "outdoor-gear", "athleisure"],
+    "metricxFeature": "Seasonal demand planning with year-over-year comparison"
+  },
+  {
+    "name": "Baby & Kids",
+    "slug": "baby-kids",
+    "icon": "baby",
+    "description": "Baby and kids e-commerce serves parents through distinct life stages, requiring analytics that track the evolving needs of growing families.",
+    "targetROAS": "4x - 6x",
+    "averageAOV": "$60 - $120",
+    "keyMetrics": ["roas", "cpa", "ltv", "life-stage-progression", "referral-rate"],
+    "challenges": [
+      "Rapid product aging out (kids grow fast)",
+      "Heavy safety and trust requirements",
+      "Registry competition",
+      "Wide age range with different needs",
+      "Gift purchases common"
+    ],
+    "bestPlatforms": ["meta", "pinterest", "google-shopping", "parenting-sites"],
+    "strategies": [
+      "Track customers through life stages",
+      "Create age-based email sequences",
+      "Target expecting parents (new customer acquisition)",
+      "Partner with parenting influencers",
+      "Build strong referral programs"
+    ],
+    "kpiBenchmarks": {
+      "roas": "5x average",
+      "cpa": "$25-50",
+      "ctr": "1.5-2.5%",
+      "conversionRate": "2-4%"
+    },
+    "caseStudySnippet": "Baby brands that track life-stage progression see 3x higher LTV by age-appropriate upselling.",
+    "faqs": [
+      {
+        "question": "How do I acquire expecting parents?",
+        "answer": "Target pregnancy and parenting interests, registry-related searches, and life-event signals. Offer registry or welcome boxes."
+      },
+      {
+        "question": "How should I track LTV for baby products?",
+        "answer": "LTV is highly age-dependent. Track by child's birth date and measure purchases through each stage (infant, toddler, preschool)."
+      }
+    ],
+    "relatedIndustries": ["baby-gear", "kids-clothing", "toys-games", "maternity"],
+    "metricxFeature": "Life-stage tracking with age-based cohort analysis"
+  },
+  {
+    "name": "Luxury Goods",
+    "slug": "luxury-goods",
+    "icon": "crown",
+    "description": "Luxury e-commerce requires sophisticated attribution for high-value, long-consideration purchases with affluent audiences.",
+    "targetROAS": "5x - 10x",
+    "averageAOV": "$500 - $2000+",
+    "keyMetrics": ["roas", "cpa", "aov", "consideration-time", "vip-rate"],
+    "challenges": [
+      "Very long consideration cycles",
+      "Offline/in-store component to purchases",
+      "Affluent audience targeting precision",
+      "Brand image in ad placements",
+      "Counterfeiting and trust concerns"
+    ],
+    "bestPlatforms": ["meta", "google", "youtube", "programmatic"],
+    "strategies": [
+      "Use extended attribution windows (90+ days)",
+      "Track store visits from digital campaigns",
+      "Build VIP customer segments",
+      "Invest in brand storytelling over direct response",
+      "Use contextual targeting for brand-safe placement"
+    ],
+    "kpiBenchmarks": {
+      "roas": "7x average",
+      "cpa": "$200-500",
+      "ctr": "0.5-1%",
+      "conversionRate": "0.5-1%"
+    },
+    "caseStudySnippet": "Luxury brands see 40% of conversions attributed to touchpoints 30+ days prior to purchase.",
+    "faqs": [
+      {
+        "question": "What attribution model for luxury?",
+        "answer": "Use linear or time-decay models with 90-day windows. Last-click dramatically undervalues awareness campaigns for luxury."
+      },
+      {
+        "question": "How do I target affluent audiences?",
+        "answer": "Use income targeting where available, interest-based (luxury brands, travel), and lookalikes from your VIP customers."
+      }
+    ],
+    "relatedIndustries": ["jewelry-accessories", "fashion-apparel", "watches"],
+    "metricxFeature": "90-day attribution with VIP customer tracking"
+  },
+  {
+    "name": "Subscription Boxes",
+    "slug": "subscription-boxes",
+    "icon": "package",
+    "description": "Subscription box e-commerce requires analytics focused on CAC payback, churn prediction, and cohort lifetime value optimization.",
+    "targetROAS": "2x - 4x (first box)",
+    "averageAOV": "$30 - $60",
+    "keyMetrics": ["cac-payback", "churn-rate", "ltv", "box-ltv-ratio", "pause-rate"],
+    "challenges": [
+      "Acquiring at a loss on first box",
+      "Subscription fatigue in market",
+      "Churn prediction and prevention",
+      "Content fatigue (same box concept)",
+      "Logistics complexity"
+    ],
+    "bestPlatforms": ["meta", "tiktok", "youtube", "podcast"],
+    "strategies": [
+      "Optimize for LTV, not first-box ROAS",
+      "Track churn by acquisition channel",
+      "Build cohort analysis dashboards",
+      "Offer pause instead of cancel",
+      "Use surprise/delight marketing"
+    ],
+    "kpiBenchmarks": {
+      "ltv": "5-8 boxes average",
+      "churnRate": "8-15% monthly",
+      "cpa": "$15-40",
+      "cacPayback": "2-3 boxes"
+    },
+    "caseStudySnippet": "Subscription boxes that track churn by source reduce CAC payback by 30% by shifting spend.",
+    "faqs": [
+      {
+        "question": "What CAC is acceptable for subscription boxes?",
+        "answer": "CAC should payback within 2-3 boxes (3-4 months). If average LTV is $200 over 5 boxes, CAC under $50 is healthy."
+      },
+      {
+        "question": "How do I reduce subscription churn?",
+        "answer": "Analyze churn timing (month 2-3 is critical), offer pause options, personalize boxes, and identify at-risk subscribers early."
+      }
+    ],
+    "relatedIndustries": ["beauty-cosmetics", "food-beverage", "pet-products"],
+    "metricxFeature": "Cohort LTV tracking with churn prediction by acquisition source"
+  }
+]
