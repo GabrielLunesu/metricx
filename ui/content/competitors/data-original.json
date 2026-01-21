@@ -1,0 +1,451 @@
+[
+  {
+    "name": "Triple Whale",
+    "slug": "triple-whale",
+    "pricing": "$129+/month",
+    "pricingNote": "Starts at $129/month, scales with ad spend",
+    "targetAudience": "Enterprise e-commerce brands",
+    "description": "Triple Whale is a multi-touch attribution platform for e-commerce brands. It offers detailed attribution modeling, creative analytics, and customer journey tracking.",
+    "pros": [
+      "Advanced multi-touch attribution models",
+      "Comprehensive creative analytics",
+      "Strong Shopify integration",
+      "Well-established in the market"
+    ],
+    "cons": [
+      "Expensive for small businesses",
+      "Complex setup and learning curve",
+      "Overwhelming number of features",
+      "Pricing scales with ad spend"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$129+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "77%"
+      },
+      "setupTime": {
+        "them": "30+ minutes",
+        "us": "5 minutes",
+        "winner": "metricx"
+      },
+      "complexity": {
+        "them": "Complex dashboards",
+        "us": "AI-powered simplicity",
+        "winner": "metricx"
+      },
+      "aiCopilot": {
+        "them": "Basic reporting",
+        "us": "Full AI assistant",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": true,
+      "metaAds": true,
+      "googleAds": true,
+      "tiktokAds": true,
+      "shopifyIntegration": true,
+      "aiInsights": false,
+      "creativeAnalytics": true
+    },
+    "faqs": [
+      {
+        "q": "Is Triple Whale worth it?",
+        "a": "Triple Whale offers powerful features but at a premium price. For brands spending $100K+/month on ads, the detailed attribution may justify the cost. For smaller brands, metricx provides similar core insights at 77% lower cost."
+      },
+      {
+        "q": "Why choose metricx over Triple Whale?",
+        "a": "metricx offers the same essential analytics (ROAS tracking, unified dashboard, Shopify integration) at $29.99/month vs $129+. Plus, our AI Copilot lets you ask questions in plain English instead of clicking through complex dashboards."
+      }
+    ]
+  },
+  {
+    "name": "Northbeam",
+    "slug": "northbeam",
+    "pricing": "$500+/month",
+    "pricingNote": "Custom pricing, typically $500-1500+/month",
+    "targetAudience": "Enterprise brands and agencies",
+    "description": "Northbeam is an enterprise marketing analytics platform focused on multi-touch attribution and media mix modeling for large brands and agencies.",
+    "pros": [
+      "Sophisticated attribution modeling",
+      "Media mix modeling capabilities",
+      "Enterprise-grade features",
+      "Agency-focused tools"
+    ],
+    "cons": [
+      "Very expensive ($500+/month)",
+      "Enterprise-focused, overkill for SMBs",
+      "Long implementation timeline",
+      "Requires dedicated analyst"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$500+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "94%"
+      },
+      "targetMarket": {
+        "them": "Enterprise only",
+        "us": "SMB-friendly",
+        "winner": "metricx"
+      },
+      "setupTime": {
+        "them": "Weeks to months",
+        "us": "5 minutes",
+        "winner": "metricx"
+      },
+      "usability": {
+        "them": "Needs analyst",
+        "us": "Self-service AI",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": true,
+      "metaAds": true,
+      "googleAds": true,
+      "tiktokAds": true,
+      "shopifyIntegration": true,
+      "aiInsights": false,
+      "mediaMixModeling": true
+    },
+    "faqs": [
+      {
+        "q": "Who should use Northbeam?",
+        "a": "Northbeam is best for large brands spending $1M+/month on ads who need enterprise attribution and have dedicated analytics teams. For most e-commerce brands, it's overkill and overpriced."
+      },
+      {
+        "q": "What's a good Northbeam alternative?",
+        "a": "metricx provides the core analytics most brands need (unified dashboard, ROAS tracking, AI insights) at 94% lower cost. You get 80% of the value for 6% of the price."
+      }
+    ]
+  },
+  {
+    "name": "Madgicx",
+    "slug": "madgicx",
+    "pricing": "$79+/month",
+    "pricingNote": "Based on ad spend, starts at $79/month",
+    "targetAudience": "Facebook/Meta advertisers",
+    "description": "Madgicx is an AI-powered advertising platform focused primarily on Meta Ads optimization with automation features and creative analytics.",
+    "pros": [
+      "Strong Meta Ads optimization",
+      "Automation features",
+      "Creative analytics",
+      "AI-powered recommendations"
+    ],
+    "cons": [
+      "Primarily Meta-focused",
+      "Limited Google Ads support",
+      "Pricing scales with ad spend",
+      "Can be complex to configure"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$79+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "62%"
+      },
+      "platforms": {
+        "them": "Meta-focused",
+        "us": "Meta + Google + TikTok",
+        "winner": "metricx"
+      },
+      "pricingModel": {
+        "them": "Scales with spend",
+        "us": "Flat rate",
+        "winner": "metricx"
+      },
+      "aiCapabilities": {
+        "them": "Optimization AI",
+        "us": "Full AI Copilot",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": false,
+      "metaAds": true,
+      "googleAds": false,
+      "tiktokAds": false,
+      "shopifyIntegration": true,
+      "aiInsights": true,
+      "automation": true
+    },
+    "faqs": [
+      {
+        "q": "Is Madgicx good for Google Ads?",
+        "a": "Madgicx is primarily built for Meta Ads. If you run both Meta and Google Ads, metricx provides better cross-platform analytics in one unified dashboard."
+      },
+      {
+        "q": "Madgicx vs metricx: which is better?",
+        "a": "Madgicx excels at Meta Ads automation. metricx provides unified analytics across all platforms with AI-powered insights. If you run multi-platform campaigns, metricx offers better value."
+      }
+    ]
+  },
+  {
+    "name": "Hyros",
+    "slug": "hyros",
+    "pricing": "$500+/month",
+    "pricingNote": "Custom pricing, typically $500-2000+/month",
+    "targetAudience": "Info product and course creators",
+    "description": "Hyros specializes in ad tracking and attribution for info products, courses, and high-ticket items with print tracking technology.",
+    "pros": [
+      "Excellent for high-ticket items",
+      "Print tracking technology",
+      "Good for long sales cycles",
+      "Strong in info product space"
+    ],
+    "cons": [
+      "Very expensive",
+      "Not ideal for e-commerce",
+      "Complex setup",
+      "Niche focus"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$500+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "94%"
+      },
+      "focusArea": {
+        "them": "Info products",
+        "us": "E-commerce",
+        "winner": "depends"
+      },
+      "ease": {
+        "them": "Complex setup",
+        "us": "5-minute setup",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": true,
+      "metaAds": true,
+      "googleAds": true,
+      "tiktokAds": false,
+      "shopifyIntegration": false,
+      "printTracking": true
+    },
+    "faqs": [
+      {
+        "q": "Should I use Hyros for my Shopify store?",
+        "a": "Hyros is optimized for info products and high-ticket items, not typical e-commerce. For Shopify stores, metricx offers better integration and e-commerce-specific analytics at a fraction of the cost."
+      }
+    ]
+  },
+  {
+    "name": "Rockerbox",
+    "slug": "rockerbox",
+    "pricing": "$1000+/month",
+    "pricingNote": "Enterprise pricing, typically $1000-5000+/month",
+    "targetAudience": "Enterprise brands and DTC companies",
+    "description": "Rockerbox is an enterprise marketing attribution and measurement platform offering multi-touch attribution, media mix modeling, and incrementality testing.",
+    "pros": [
+      "Enterprise-grade attribution",
+      "Incrementality testing",
+      "Media mix modeling",
+      "Strong integrations"
+    ],
+    "cons": [
+      "Enterprise pricing ($1000+/month)",
+      "Long sales cycle",
+      "Complex implementation",
+      "Overkill for most brands"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$1000+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "97%"
+      },
+      "targetMarket": {
+        "them": "Enterprise",
+        "us": "SMB to Mid-market",
+        "winner": "metricx"
+      },
+      "implementation": {
+        "them": "Months",
+        "us": "5 minutes",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": true,
+      "metaAds": true,
+      "googleAds": true,
+      "tiktokAds": true,
+      "shopifyIntegration": true,
+      "incrementalityTesting": true,
+      "mediaMixModeling": true
+    },
+    "faqs": [
+      {
+        "q": "Do I need Rockerbox for my e-commerce brand?",
+        "a": "Unless you're spending $500K+/month on ads with a dedicated analytics team, Rockerbox is likely overkill. metricx provides the core analytics most brands need at 97% lower cost."
+      }
+    ]
+  },
+  {
+    "name": "Wicked Reports",
+    "slug": "wicked-reports",
+    "pricing": "$250+/month",
+    "pricingNote": "Starts at $250/month, scales with features",
+    "targetAudience": "E-commerce and lead gen businesses",
+    "description": "Wicked Reports provides attribution tracking focused on first-party data with cohort analysis and LTV tracking capabilities.",
+    "pros": [
+      "First-party data focus",
+      "LTV cohort tracking",
+      "Good attribution models",
+      "Email marketing integration"
+    ],
+    "cons": [
+      "Expensive for features offered",
+      "Interface feels dated",
+      "Limited AI capabilities",
+      "Setup can be complex"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$250+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "88%"
+      },
+      "aiFeatures": {
+        "them": "Limited",
+        "us": "Full AI Copilot",
+        "winner": "metricx"
+      },
+      "modernUI": {
+        "them": "Dated",
+        "us": "Modern",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": true,
+      "metaAds": true,
+      "googleAds": true,
+      "tiktokAds": false,
+      "shopifyIntegration": true,
+      "ltvTracking": true,
+      "cohortAnalysis": true
+    },
+    "faqs": [
+      {
+        "q": "Is Wicked Reports good for Shopify?",
+        "a": "Wicked Reports offers Shopify integration, but at $250+/month, it's expensive for the features. metricx provides similar core tracking with modern AI features at 88% lower cost."
+      }
+    ]
+  },
+  {
+    "name": "Cometly",
+    "slug": "cometly",
+    "pricing": "$99+/month",
+    "pricingNote": "Starts at $99/month, scales with ad spend",
+    "targetAudience": "E-commerce and DTC brands",
+    "description": "Cometly is an ad tracking and attribution platform that uses first-party data to track conversions across ad platforms.",
+    "pros": [
+      "First-party tracking",
+      "Simple setup",
+      "Good basic attribution",
+      "Reasonable starting price"
+    ],
+    "cons": [
+      "Limited AI capabilities",
+      "Basic reporting features",
+      "Scales with ad spend",
+      "Less established"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$99+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "70%"
+      },
+      "aiCopilot": {
+        "them": "No",
+        "us": "Yes",
+        "winner": "metricx"
+      },
+      "pricingModel": {
+        "them": "Scales with spend",
+        "us": "Flat rate",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": true,
+      "metaAds": true,
+      "googleAds": true,
+      "tiktokAds": true,
+      "shopifyIntegration": true,
+      "aiInsights": false
+    },
+    "faqs": [
+      {
+        "q": "Cometly vs metricx: which is better value?",
+        "a": "Both offer first-party tracking, but metricx includes AI-powered insights and flat-rate pricing at $29.99/month vs Cometly's $99+ that scales with spend. metricx offers better value for growing brands."
+      }
+    ]
+  },
+  {
+    "name": "SegMetrics",
+    "slug": "segmetrics",
+    "pricing": "$175+/month",
+    "pricingNote": "Starts at $175/month for basic plan",
+    "targetAudience": "Course creators and info marketers",
+    "description": "SegMetrics provides marketing attribution and customer journey analytics focused on info products, courses, and subscription businesses.",
+    "pros": [
+      "Great for info products",
+      "Customer journey tracking",
+      "LTV analysis",
+      "Email platform integrations"
+    ],
+    "cons": [
+      "Not optimized for e-commerce",
+      "Expensive for features",
+      "Complex for simple needs",
+      "Niche focus"
+    ],
+    "comparisonPoints": {
+      "price": {
+        "them": "$175+/month",
+        "us": "$29.99/month",
+        "winner": "metricx",
+        "savings": "83%"
+      },
+      "focusArea": {
+        "them": "Info products",
+        "us": "E-commerce",
+        "winner": "depends"
+      },
+      "shopify": {
+        "them": "Limited",
+        "us": "Deep integration",
+        "winner": "metricx"
+      }
+    },
+    "features": {
+      "attribution": true,
+      "metaAds": true,
+      "googleAds": true,
+      "tiktokAds": false,
+      "shopifyIntegration": false,
+      "ltvTracking": true,
+      "customerJourney": true
+    },
+    "faqs": [
+      {
+        "q": "Is SegMetrics good for Shopify stores?",
+        "a": "SegMetrics is designed for info products and courses, not e-commerce. For Shopify stores, metricx provides purpose-built e-commerce analytics at 83% lower cost."
+      }
+    ]
+  }
+]

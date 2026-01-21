@@ -1,0 +1,701 @@
+[
+  {
+    "name": "Meta Ads",
+    "slug": "meta-ads",
+    "aliases": ["Facebook Ads", "Instagram Ads"],
+    "icon": "meta",
+    "description": "Meta Ads is the advertising platform for Facebook, Instagram, Messenger, and the Meta Audience Network. It's the largest social advertising platform with powerful targeting and creative options.",
+    "targetAudience": "E-commerce, DTC brands, B2C businesses, local businesses",
+    "adTypes": [
+      { "name": "Image Ads", "description": "Single image with text overlay" },
+      { "name": "Video Ads", "description": "Short-form and long-form video content" },
+      { "name": "Carousel Ads", "description": "Multiple scrollable images/videos" },
+      { "name": "Collection Ads", "description": "Product catalog in immersive format" },
+      { "name": "Dynamic Ads", "description": "Automatically personalized product ads" },
+      { "name": "Reels Ads", "description": "Short-form vertical video in Reels" },
+      { "name": "Stories Ads", "description": "Full-screen vertical format" }
+    ],
+    "placements": [
+      "Facebook Feed",
+      "Facebook Marketplace",
+      "Facebook Stories",
+      "Facebook Reels",
+      "Instagram Feed",
+      "Instagram Stories",
+      "Instagram Reels",
+      "Instagram Explore",
+      "Messenger",
+      "Audience Network"
+    ],
+    "targetingCapabilities": [
+      "Demographics (age, gender, location)",
+      "Interests and behaviors",
+      "Custom Audiences (customer lists, website visitors)",
+      "Lookalike Audiences",
+      "Detailed targeting expansion",
+      "Advantage+ targeting"
+    ],
+    "objectives": [
+      { "name": "Awareness", "types": ["Reach", "Brand Awareness", "Video Views"] },
+      { "name": "Traffic", "types": ["Link Clicks", "Landing Page Views"] },
+      { "name": "Engagement", "types": ["Post Engagement", "Page Likes", "Event Responses"] },
+      { "name": "Leads", "types": ["Lead Generation Forms", "Messenger", "Conversions"] },
+      { "name": "Sales", "types": ["Conversions", "Catalog Sales", "Store Traffic"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["1-day", "7-day"],
+      "viewWindow": ["1-day"],
+      "default": "7-day click, 1-day view"
+    },
+    "keyMetrics": ["roas", "cpa", "cpm", "ctr", "frequency", "reach"],
+    "pros": [
+      "Largest social audience reach (3B+ users)",
+      "Powerful interest-based targeting",
+      "Strong visual ad formats",
+      "Robust retargeting capabilities",
+      "Advantage+ AI optimization"
+    ],
+    "cons": [
+      "iOS 14+ tracking limitations",
+      "Rising CPMs in competitive niches",
+      "Algorithm can be unpredictable",
+      "Requires constant creative refresh",
+      "Complex attribution model"
+    ],
+    "bestPractices": [
+      "Use Conversions API (CAPI) for better tracking",
+      "Test multiple creative formats",
+      "Leverage Advantage+ campaigns",
+      "Refresh creative every 2-4 weeks",
+      "Use broad targeting with good creative"
+    ],
+    "setupSteps": [
+      "Create or access Facebook Business Manager",
+      "Set up Meta Pixel on your website",
+      "Configure Conversions API (CAPI)",
+      "Create custom audiences",
+      "Build first campaign with conversion objective"
+    ],
+    "integrationGuide": {
+      "shopify": "Install Meta sales channel, connect pixel automatically",
+      "metricx": "Connect via OAuth, auto-imports campaigns and metrics"
+    },
+    "faqs": [
+      {
+        "question": "How do I track Meta Ads accurately after iOS 14?",
+        "answer": "Implement Conversions API (CAPI) alongside the Meta Pixel for server-side tracking. This helps recover 20-30% of lost conversions from browser restrictions."
+      },
+      {
+        "question": "What's a good ROAS for Meta Ads?",
+        "answer": "Average Meta Ads ROAS for e-commerce is 2-4x. Top performers achieve 5-8x. Your target depends on profit margins - aim for ROAS above your break-even point."
+      },
+      {
+        "question": "How often should I refresh ad creative?",
+        "answer": "Every 2-4 weeks for most campaigns. Watch for rising frequency and declining CTR as signs of ad fatigue. Have 3-5 creative variations ready at all times."
+      }
+    ],
+    "metricxFeature": "Real-time Meta Ads performance with AI-powered insights and Shopify revenue verification"
+  },
+  {
+    "name": "Google Ads",
+    "slug": "google-ads",
+    "aliases": ["Google AdWords", "GDN", "Google Display Network"],
+    "icon": "google",
+    "description": "Google Ads is the world's largest digital advertising platform, offering search, display, video, shopping, and app campaigns across Google's ecosystem.",
+    "targetAudience": "All businesses, especially those with search intent customers",
+    "adTypes": [
+      { "name": "Search Ads", "description": "Text ads on Google search results" },
+      { "name": "Shopping Ads", "description": "Product listings with image and price" },
+      { "name": "Display Ads", "description": "Banner ads across 2M+ websites" },
+      { "name": "Video Ads", "description": "YouTube pre-roll and in-stream ads" },
+      { "name": "Performance Max", "description": "AI-driven cross-channel campaigns" },
+      { "name": "Discovery Ads", "description": "Ads in Gmail, YouTube, Discover feed" },
+      { "name": "App Campaigns", "description": "Mobile app install and engagement" }
+    ],
+    "placements": [
+      "Google Search",
+      "Google Shopping",
+      "YouTube",
+      "Gmail",
+      "Google Discover",
+      "Google Display Network",
+      "Google Maps"
+    ],
+    "targetingCapabilities": [
+      "Keyword targeting (search)",
+      "Audience segments",
+      "Customer Match",
+      "Similar Audiences",
+      "In-market audiences",
+      "Affinity audiences",
+      "Custom intent audiences"
+    ],
+    "objectives": [
+      { "name": "Sales", "types": ["Search", "Shopping", "Performance Max"] },
+      { "name": "Leads", "types": ["Search", "Display", "Discovery"] },
+      { "name": "Traffic", "types": ["Search", "Display", "Video"] },
+      { "name": "Awareness", "types": ["Display", "Video", "Discovery"] },
+      { "name": "App Promotion", "types": ["App Campaigns"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["7-day", "30-day", "60-day", "90-day"],
+      "default": "30-day click",
+      "models": ["Last click", "First click", "Linear", "Time decay", "Data-driven"]
+    },
+    "keyMetrics": ["roas", "cpa", "cpc", "ctr", "quality-score", "conversion-rate"],
+    "pros": [
+      "Captures high-intent search traffic",
+      "Massive reach across Google ecosystem",
+      "Strong shopping/e-commerce features",
+      "Detailed attribution models",
+      "Performance Max AI optimization"
+    ],
+    "cons": [
+      "Can be expensive in competitive niches",
+      "Steeper learning curve",
+      "Requires ongoing optimization",
+      "Performance Max lacks transparency",
+      "Quality Score impacts costs significantly"
+    ],
+    "bestPractices": [
+      "Structure campaigns by product/intent",
+      "Use negative keywords extensively",
+      "Optimize for Quality Score",
+      "Test Performance Max for e-commerce",
+      "Implement enhanced conversions"
+    ],
+    "setupSteps": [
+      "Create Google Ads account",
+      "Set up conversion tracking",
+      "Link Google Merchant Center (for shopping)",
+      "Create first search campaign",
+      "Implement enhanced conversions"
+    ],
+    "integrationGuide": {
+      "shopify": "Install Google sales channel, connect Merchant Center",
+      "metricx": "Connect via OAuth, imports all campaigns and metrics automatically"
+    },
+    "faqs": [
+      {
+        "question": "Search vs Performance Max - which is better?",
+        "answer": "Use Search for proven keywords with clear intent. Use Performance Max to expand reach with AI optimization. Most e-commerce brands benefit from both."
+      },
+      {
+        "question": "How do I improve Google Ads Quality Score?",
+        "answer": "Focus on three factors: expected CTR (compelling ads), ad relevance (keyword-ad match), and landing page experience (fast, relevant pages)."
+      },
+      {
+        "question": "What's a good CPC for Google Ads?",
+        "answer": "Average CPC varies by industry ($1-3 typical). Focus on CPA and ROAS instead - a $5 CPC that converts at 10% is better than $0.50 CPC at 1%."
+      }
+    ],
+    "metricxFeature": "Unified Google Ads dashboard with cross-campaign ROAS tracking and AI recommendations"
+  },
+  {
+    "name": "TikTok Ads",
+    "slug": "tiktok-ads",
+    "aliases": ["TikTok For Business", "TikTok Ads Manager"],
+    "icon": "tiktok",
+    "description": "TikTok Ads is the advertising platform for TikTok, offering unique short-form video advertising opportunities to reach younger, engaged audiences.",
+    "targetAudience": "DTC brands, fashion, beauty, consumer products, Gen Z/Millennial audiences",
+    "adTypes": [
+      { "name": "In-Feed Ads", "description": "Native ads in For You feed" },
+      { "name": "TopView", "description": "Full-screen ad on app open" },
+      { "name": "Branded Hashtag Challenge", "description": "Sponsored hashtag campaigns" },
+      { "name": "Branded Effects", "description": "Custom AR filters and stickers" },
+      { "name": "Spark Ads", "description": "Boost organic or creator content" },
+      { "name": "Shopping Ads", "description": "Product catalog integration" },
+      { "name": "Collection Ads", "description": "Product showcase format" }
+    ],
+    "placements": [
+      "TikTok For You Feed",
+      "TikTok Search",
+      "TikTok Shop",
+      "Pangle Network"
+    ],
+    "targetingCapabilities": [
+      "Demographics and location",
+      "Interest categories",
+      "Behavior signals",
+      "Custom Audiences",
+      "Lookalike Audiences",
+      "Creator targeting"
+    ],
+    "objectives": [
+      { "name": "Awareness", "types": ["Reach", "Video Views"] },
+      { "name": "Consideration", "types": ["Traffic", "Engagement", "Followers"] },
+      { "name": "Conversion", "types": ["Website Conversions", "App Install", "Shop Purchases"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["1-day", "7-day", "14-day", "28-day"],
+      "viewWindow": ["1-day", "7-day"],
+      "default": "7-day click, 1-day view"
+    },
+    "keyMetrics": ["roas", "cpa", "cpm", "ctr", "video-views", "engagement-rate"],
+    "pros": [
+      "Access to Gen Z and Millennial audiences",
+      "Lower CPMs than Meta (currently)",
+      "High engagement with native content",
+      "Spark Ads leverage organic content",
+      "TikTok Shop integration"
+    ],
+    "cons": [
+      "Requires native, platform-specific creative",
+      "Smaller audience than Meta/Google",
+      "Attribution still maturing",
+      "Works best for certain product types",
+      "Creative production can be expensive"
+    ],
+    "bestPractices": [
+      "Create TikTok-native content (not repurposed)",
+      "Use Spark Ads to boost winning organic posts",
+      "Partner with TikTok creators",
+      "Hook viewers in first 3 seconds",
+      "Test multiple creative variations"
+    ],
+    "setupSteps": [
+      "Create TikTok Business Center account",
+      "Set up TikTok Pixel",
+      "Connect e-commerce platform",
+      "Create first conversion campaign",
+      "Implement Events API for better tracking"
+    ],
+    "integrationGuide": {
+      "shopify": "Install TikTok sales channel, auto-configure pixel",
+      "metricx": "Connect via OAuth, imports campaigns and syncs with Shopify data"
+    },
+    "faqs": [
+      {
+        "question": "Does TikTok Ads work for e-commerce?",
+        "answer": "Yes, especially for products that demo well on video (fashion, beauty, gadgets). DTC brands often see 3-6x ROAS with native creative."
+      },
+      {
+        "question": "What type of creative works on TikTok?",
+        "answer": "Authentic, native content performs best. UGC-style videos, creator partnerships, and trend-based content outperform polished brand ads."
+      },
+      {
+        "question": "Is TikTok cheaper than Meta Ads?",
+        "answer": "Currently, TikTok CPMs are 20-40% lower on average. However, conversion rates may differ. Test both and compare CPA/ROAS, not just CPM."
+      }
+    ],
+    "metricxFeature": "TikTok Ads integration with Shopify revenue verification and cross-platform comparison"
+  },
+  {
+    "name": "Pinterest Ads",
+    "slug": "pinterest-ads",
+    "aliases": ["Pinterest for Business", "Promoted Pins"],
+    "icon": "pinterest",
+    "description": "Pinterest Ads reaches users in discovery and planning mode, making it ideal for home, fashion, food, and lifestyle brands.",
+    "targetAudience": "Home decor, fashion, food, DIY, wedding, lifestyle brands",
+    "adTypes": [
+      { "name": "Standard Pins", "description": "Single image promoted pins" },
+      { "name": "Video Pins", "description": "Autoplay video content" },
+      { "name": "Carousel Pins", "description": "Multiple swipeable images" },
+      { "name": "Shopping Pins", "description": "Product catalog integration" },
+      { "name": "Collection Pins", "description": "Hero image with product grid" },
+      { "name": "Idea Pins", "description": "Multi-page story format" }
+    ],
+    "placements": [
+      "Home Feed",
+      "Search Results",
+      "Related Pins",
+      "Shopping Tab"
+    ],
+    "targetingCapabilities": [
+      "Keywords and interests",
+      "Demographics",
+      "Customer lists",
+      "Actalike audiences",
+      "Retargeting"
+    ],
+    "objectives": [
+      { "name": "Awareness", "types": ["Brand Awareness", "Video Views"] },
+      { "name": "Consideration", "types": ["Traffic", "Engagement"] },
+      { "name": "Conversion", "types": ["Conversions", "Catalog Sales"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["1-day", "7-day", "30-day"],
+      "viewWindow": ["1-day"],
+      "default": "30-day click, 1-day view"
+    },
+    "keyMetrics": ["roas", "cpa", "cpm", "ctr", "saves", "closeups"],
+    "pros": [
+      "Users are in discovery/planning mode",
+      "Long content lifespan (pins last months)",
+      "High purchase intent audience",
+      "Less competitive than Meta/Google",
+      "Strong for visual products"
+    ],
+    "cons": [
+      "Smaller audience (450M users)",
+      "Limited targeting options",
+      "Best for specific niches",
+      "Requires high-quality visuals",
+      "Longer conversion cycles"
+    ],
+    "bestPractices": [
+      "Create vertical, Pinterest-optimized images",
+      "Use keyword-rich pin descriptions",
+      "Link to relevant landing pages",
+      "Test different pin formats",
+      "Leverage seasonal trends early"
+    ],
+    "setupSteps": [
+      "Create Pinterest Business account",
+      "Install Pinterest Tag",
+      "Set up product catalog",
+      "Create first traffic or conversion campaign",
+      "Enable enhanced match"
+    ],
+    "integrationGuide": {
+      "shopify": "Install Pinterest sales channel",
+      "metricx": "Connect via API, imports campaign performance"
+    },
+    "faqs": [
+      {
+        "question": "What products work best on Pinterest?",
+        "answer": "Home decor, fashion, food, DIY, wedding, and lifestyle products perform best. Pinterest users plan purchases weeks/months in advance."
+      },
+      {
+        "question": "How long does Pinterest take to convert?",
+        "answer": "Pinterest has longer consideration cycles - often 30-90 days. Use broader attribution windows and value saves/closeups as mid-funnel signals."
+      }
+    ],
+    "metricxFeature": "Pinterest Ads tracking with extended attribution modeling"
+  },
+  {
+    "name": "Snapchat Ads",
+    "slug": "snapchat-ads",
+    "aliases": ["Snap Ads", "Snapchat for Business"],
+    "icon": "snapchat",
+    "description": "Snapchat Ads reaches a young, engaged audience through immersive vertical video and AR experiences.",
+    "targetAudience": "Gen Z focused brands, apps, entertainment, fast fashion",
+    "adTypes": [
+      { "name": "Snap Ads", "description": "Full-screen vertical video" },
+      { "name": "Story Ads", "description": "Branded tile in Discover" },
+      { "name": "Collection Ads", "description": "Product showcase format" },
+      { "name": "AR Lenses", "description": "Interactive AR experiences" },
+      { "name": "Filters", "description": "Location-based overlays" },
+      { "name": "Commercials", "description": "Non-skippable 6-second ads" }
+    ],
+    "placements": [
+      "Between Stories",
+      "Discover Feed",
+      "Spotlight",
+      "Camera (AR)"
+    ],
+    "targetingCapabilities": [
+      "Demographics and location",
+      "Snap Lifestyle Categories",
+      "Custom Audiences",
+      "Lookalike Audiences",
+      "Snap Pixel retargeting"
+    ],
+    "objectives": [
+      { "name": "Awareness", "types": ["Reach", "Video Views"] },
+      { "name": "Consideration", "types": ["Traffic", "App Install", "Engagement"] },
+      { "name": "Conversion", "types": ["Website Conversions", "Catalog Sales"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["1-day", "7-day", "28-day"],
+      "viewWindow": ["1-day"],
+      "default": "28-day click, 1-day view"
+    },
+    "keyMetrics": ["roas", "cpa", "cpm", "swipe-up-rate", "video-views"],
+    "pros": [
+      "Strong Gen Z reach (75% of 13-34 year olds)",
+      "Lower CPMs than competitors",
+      "Innovative AR ad formats",
+      "High engagement rates",
+      "Less ad fatigue"
+    ],
+    "cons": [
+      "Older demographics hard to reach",
+      "Smaller scale than Meta",
+      "Requires mobile-first creative",
+      "Limited targeting depth",
+      "Can be challenging to scale"
+    ],
+    "bestPractices": [
+      "Create vertical, mobile-first video",
+      "Hook viewers in first 2 seconds",
+      "Use sound (most users have it on)",
+      "Test AR lenses for engagement",
+      "Keep creative fresh and authentic"
+    ],
+    "setupSteps": [
+      "Create Snapchat Ads Manager account",
+      "Install Snap Pixel",
+      "Set up product catalog",
+      "Create first conversion campaign",
+      "Implement CAPI for better tracking"
+    ],
+    "integrationGuide": {
+      "shopify": "Install Snapchat sales channel",
+      "metricx": "Connect via API integration"
+    },
+    "faqs": [
+      {
+        "question": "Is Snapchat good for e-commerce?",
+        "answer": "Yes, for brands targeting under-35 audiences. Fashion, beauty, and impulse-buy products see strong results with the right creative."
+      },
+      {
+        "question": "Snapchat vs TikTok - which is better?",
+        "answer": "TikTok has more reach and discovery potential. Snapchat has loyal users and lower CPMs. Test both if your audience is Gen Z."
+      }
+    ],
+    "metricxFeature": "Snapchat Ads integration with cross-platform performance comparison"
+  },
+  {
+    "name": "LinkedIn Ads",
+    "slug": "linkedin-ads",
+    "aliases": ["LinkedIn Marketing Solutions", "LinkedIn Campaign Manager"],
+    "icon": "linkedin",
+    "description": "LinkedIn Ads is the premier B2B advertising platform, offering professional targeting for reaching business decision-makers.",
+    "targetAudience": "B2B businesses, SaaS, professional services, recruiters",
+    "adTypes": [
+      { "name": "Sponsored Content", "description": "Native feed ads" },
+      { "name": "Message Ads", "description": "Direct InMail messages" },
+      { "name": "Text Ads", "description": "Simple sidebar ads" },
+      { "name": "Dynamic Ads", "description": "Personalized with profile data" },
+      { "name": "Video Ads", "description": "In-feed video content" },
+      { "name": "Carousel Ads", "description": "Multi-card format" }
+    ],
+    "placements": [
+      "LinkedIn Feed",
+      "LinkedIn Messaging",
+      "LinkedIn Right Rail",
+      "LinkedIn Audience Network"
+    ],
+    "targetingCapabilities": [
+      "Job title and function",
+      "Company name and size",
+      "Industry and seniority",
+      "Skills and groups",
+      "Account-based targeting",
+      "Matched Audiences"
+    ],
+    "objectives": [
+      { "name": "Awareness", "types": ["Brand Awareness"] },
+      { "name": "Consideration", "types": ["Website Visits", "Engagement", "Video Views"] },
+      { "name": "Conversion", "types": ["Lead Generation", "Website Conversions"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["1-day", "7-day", "30-day", "90-day"],
+      "viewWindow": ["1-day", "7-day"],
+      "default": "30-day click, 7-day view"
+    },
+    "keyMetrics": ["cpl", "ctr", "cpm", "conversion-rate", "lead-quality"],
+    "pros": [
+      "Unmatched B2B targeting precision",
+      "High-quality professional audience",
+      "Strong for lead generation",
+      "Account-based marketing capabilities",
+      "Professional context"
+    ],
+    "cons": [
+      "Most expensive CPMs (often $30-80+)",
+      "Not suitable for B2C/e-commerce",
+      "Limited creative formats",
+      "Smaller scale than consumer platforms",
+      "Higher minimum budgets"
+    ],
+    "bestPractices": [
+      "Target decision-makers precisely",
+      "Use Lead Gen Forms for conversions",
+      "Test Thought Leader Ads (employee posts)",
+      "Retarget website visitors",
+      "Keep copy professional but engaging"
+    ],
+    "setupSteps": [
+      "Create LinkedIn Campaign Manager account",
+      "Install Insight Tag",
+      "Set up conversion tracking",
+      "Create matched audiences",
+      "Build first Lead Gen campaign"
+    ],
+    "integrationGuide": {
+      "note": "LinkedIn is primarily B2B - limited e-commerce use",
+      "metricx": "API integration available for B2B businesses"
+    },
+    "faqs": [
+      {
+        "question": "Is LinkedIn worth the high CPM?",
+        "answer": "For B2B with high customer values, yes. A $50 CPM that generates a $50K deal is excellent ROI. Not suitable for low-ticket B2C."
+      },
+      {
+        "question": "How do I reduce LinkedIn ad costs?",
+        "answer": "Use precise targeting to avoid waste, test different bid strategies, focus on Lead Gen Forms (higher conversion), and expand audience slightly if CPMs are too high."
+      }
+    ],
+    "metricxFeature": "LinkedIn Ads integration for B2B SaaS and high-ticket products"
+  },
+  {
+    "name": "Microsoft Ads",
+    "slug": "microsoft-ads",
+    "aliases": ["Bing Ads", "Microsoft Advertising"],
+    "icon": "microsoft",
+    "description": "Microsoft Ads serves search ads on Bing, Yahoo, and AOL, reaching an older, higher-income audience often overlooked by competitors.",
+    "targetAudience": "B2B, finance, insurance, healthcare, older demographics",
+    "adTypes": [
+      { "name": "Search Ads", "description": "Text ads on Bing search" },
+      { "name": "Shopping Ads", "description": "Product listings on Bing" },
+      { "name": "Audience Ads", "description": "Native ads on Microsoft properties" },
+      { "name": "Video Ads", "description": "Video on MSN and partners" },
+      { "name": "App Install Ads", "description": "Mobile app promotion" }
+    ],
+    "placements": [
+      "Bing Search",
+      "Yahoo Search",
+      "AOL Search",
+      "MSN",
+      "Microsoft Edge",
+      "Outlook.com"
+    ],
+    "targetingCapabilities": [
+      "Keywords",
+      "Demographics",
+      "In-market audiences",
+      "Custom audiences",
+      "Remarketing lists",
+      "LinkedIn profile targeting"
+    ],
+    "objectives": [
+      { "name": "Conversions", "types": ["Search", "Shopping"] },
+      { "name": "Traffic", "types": ["Search", "Audience"] },
+      { "name": "Brand Awareness", "types": ["Audience Ads", "Video"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["1-day", "7-day", "30-day", "90-day"],
+      "default": "30-day click"
+    },
+    "keyMetrics": ["roas", "cpa", "cpc", "ctr", "quality-score"],
+    "pros": [
+      "Lower CPCs than Google (30-50% less)",
+      "Older, higher-income demographic",
+      "Easy Google Ads import",
+      "LinkedIn targeting integration",
+      "Less competition"
+    ],
+    "cons": [
+      "Smaller search volume (3% market share)",
+      "Limited reach for some audiences",
+      "Fewer features than Google",
+      "Can't scale as much",
+      "Slower innovation"
+    ],
+    "bestPractices": [
+      "Import Google Ads campaigns to start",
+      "Adjust bids for Bing's demographic",
+      "Use LinkedIn targeting for B2B",
+      "Don't neglect - it's incremental revenue",
+      "Test Shopping campaigns"
+    ],
+    "setupSteps": [
+      "Create Microsoft Ads account",
+      "Import from Google Ads (or start fresh)",
+      "Set up UET tag for tracking",
+      "Create conversion goals",
+      "Launch search campaigns"
+    ],
+    "integrationGuide": {
+      "shopify": "Manual pixel installation",
+      "metricx": "API integration for search campaign tracking"
+    },
+    "faqs": [
+      {
+        "question": "Should I advertise on Bing?",
+        "answer": "If you advertise on Google, yes. Bing often delivers 10-20% additional conversions at lower CPCs. Import your Google campaigns and test."
+      },
+      {
+        "question": "Who uses Bing?",
+        "answer": "Older demographics (35+), higher-income households, and business users (default in Edge/Windows). Often higher purchase intent."
+      }
+    ],
+    "metricxFeature": "Microsoft Ads integration with cross-platform search comparison"
+  },
+  {
+    "name": "Amazon Ads",
+    "slug": "amazon-ads",
+    "aliases": ["Amazon Advertising", "Amazon PPC"],
+    "icon": "amazon",
+    "description": "Amazon Ads reaches shoppers with high purchase intent on the world's largest e-commerce marketplace.",
+    "targetAudience": "Amazon sellers, product brands, e-commerce businesses",
+    "adTypes": [
+      { "name": "Sponsored Products", "description": "Product-level keyword ads" },
+      { "name": "Sponsored Brands", "description": "Brand headline ads" },
+      { "name": "Sponsored Display", "description": "Audience and product targeting" },
+      { "name": "Stores", "description": "Brand storefronts" },
+      { "name": "DSP", "description": "Programmatic display/video" }
+    ],
+    "placements": [
+      "Amazon Search Results",
+      "Product Detail Pages",
+      "Amazon Homepage",
+      "Twitch",
+      "Fire TV",
+      "Third-party sites (DSP)"
+    ],
+    "targetingCapabilities": [
+      "Keyword targeting",
+      "Product targeting (ASIN)",
+      "Category targeting",
+      "Audience segments",
+      "Remarketing",
+      "Lookalike audiences"
+    ],
+    "objectives": [
+      { "name": "Sales", "types": ["Sponsored Products", "Sponsored Brands"] },
+      { "name": "Brand Awareness", "types": ["Sponsored Brands", "DSP"] },
+      { "name": "Product Discovery", "types": ["Sponsored Display"] }
+    ],
+    "attributionSettings": {
+      "clickWindow": ["7-day", "14-day"],
+      "default": "14-day click (Sponsored Products)"
+    },
+    "keyMetrics": ["acos", "roas", "tacos", "cpc", "conversion-rate"],
+    "pros": [
+      "Highest purchase intent audience",
+      "Closed-loop attribution",
+      "Directly drives Amazon sales",
+      "Massive scale on Amazon",
+      "Clear performance metrics"
+    ],
+    "cons": [
+      "Only for Amazon sellers",
+      "High competition in many categories",
+      "Complex campaign management",
+      "Requires Amazon inventory",
+      "Can't drive off-Amazon traffic"
+    ],
+    "bestPractices": [
+      "Start with auto campaigns to discover keywords",
+      "Optimize product listings first",
+      "Use negative keywords aggressively",
+      "Monitor TACoS, not just ACoS",
+      "Balance branded and non-branded campaigns"
+    ],
+    "setupSteps": [
+      "Register in Amazon Seller Central",
+      "Enroll in Brand Registry",
+      "Create first Sponsored Products campaign",
+      "Set up Sponsored Brands",
+      "Build Amazon Store"
+    ],
+    "integrationGuide": {
+      "note": "Amazon Ads are separate from Shopify",
+      "metricx": "Amazon Ads API integration for unified view"
+    },
+    "faqs": [
+      {
+        "question": "What's a good ACoS on Amazon?",
+        "answer": "ACoS should be below your profit margin. Average is 25-35%. Under 20% is excellent. New products may need higher ACoS for ranking."
+      },
+      {
+        "question": "How do I rank on Amazon?",
+        "answer": "Sales velocity drives ranking. Use Sponsored Products to generate initial sales, optimize listings, and maintain competitive pricing."
+      }
+    ],
+    "metricxFeature": "Amazon Ads integration with marketplace-to-DTC performance comparison"
+  }
+]

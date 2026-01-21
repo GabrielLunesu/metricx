@@ -1,0 +1,444 @@
+[
+  {
+    "name": "ROAS Calculator",
+    "slug": "roas-calculator",
+    "icon": "calculator",
+    "category": "performance",
+    "tagline": "Calculate your Return on Ad Spend instantly",
+    "description": "Free ROAS calculator for e-commerce marketers. Enter your ad spend and revenue to instantly calculate your Return on Ad Spend.",
+    "formula": "Revenue from Ads / Ad Spend",
+    "inputs": [
+      {
+        "id": "ad-spend",
+        "label": "Total Ad Spend",
+        "type": "currency",
+        "placeholder": "1000",
+        "helperText": "Total amount spent on ads"
+      },
+      {
+        "id": "revenue",
+        "label": "Revenue from Ads",
+        "type": "currency",
+        "placeholder": "5000",
+        "helperText": "Revenue attributed to these ads"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "roas",
+        "label": "ROAS",
+        "format": "decimal",
+        "suffix": "x"
+      },
+      {
+        "id": "roas-percent",
+        "label": "ROAS %",
+        "format": "percent"
+      },
+      {
+        "id": "profit",
+        "label": "Gross Profit",
+        "format": "currency"
+      }
+    ],
+    "benchmarks": {
+      "poor": { "max": 2, "label": "Unprofitable", "color": "red" },
+      "average": { "min": 2, "max": 4, "label": "Average", "color": "yellow" },
+      "good": { "min": 4, "max": 6, "label": "Good", "color": "green" },
+      "excellent": { "min": 6, "label": "Excellent", "color": "emerald" }
+    },
+    "howToSteps": [
+      "Enter your total ad spend for the period you want to analyze",
+      "Enter the total revenue attributed to those ads",
+      "View your ROAS and profitability analysis"
+    ],
+    "faqs": [
+      {
+        "question": "What is ROAS?",
+        "answer": "ROAS (Return on Ad Spend) measures how much revenue you earn for every dollar spent on advertising. A ROAS of 4x means you earn $4 for every $1 spent."
+      },
+      {
+        "question": "What's a good ROAS?",
+        "answer": "For most e-commerce businesses, a ROAS of 4x or higher is considered good. However, what's 'good' depends on your profit margins - low-margin businesses need higher ROAS."
+      },
+      {
+        "question": "How is ROAS different from ROI?",
+        "answer": "ROAS measures revenue per ad dollar (Revenue/Ad Spend). ROI measures profit after all costs ((Profit-Cost)/Cost × 100%). ROAS doesn't account for product costs, overhead, etc."
+      },
+      {
+        "question": "Why does platform ROAS differ from actual ROAS?",
+        "answer": "Platforms may over-report due to attribution models, view-through conversions, and multi-platform overlap. Verify with actual order data for accuracy."
+      }
+    ],
+    "relatedTools": ["cpa-calculator", "break-even-roas-calculator", "ad-spend-calculator"],
+    "seoKeywords": ["roas calculator", "return on ad spend calculator", "ad roas calculator", "calculate roas"],
+    "metricxFeature": "Track ROAS automatically across all platforms with metricx"
+  },
+  {
+    "name": "CPA Calculator",
+    "slug": "cpa-calculator",
+    "icon": "target",
+    "category": "cost",
+    "tagline": "Calculate your Cost Per Acquisition",
+    "description": "Free CPA calculator to determine your customer acquisition cost. Enter ad spend and conversions to find your cost per acquisition.",
+    "formula": "Total Ad Spend / Number of Conversions",
+    "inputs": [
+      {
+        "id": "ad-spend",
+        "label": "Total Ad Spend",
+        "type": "currency",
+        "placeholder": "1000",
+        "helperText": "Total amount spent on ads"
+      },
+      {
+        "id": "conversions",
+        "label": "Number of Conversions",
+        "type": "number",
+        "placeholder": "50",
+        "helperText": "Total purchases or sign-ups"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "cpa",
+        "label": "Cost Per Acquisition",
+        "format": "currency"
+      },
+      {
+        "id": "conversion-rate-needed",
+        "label": "Conversions per $100 Spend",
+        "format": "number"
+      }
+    ],
+    "benchmarks": {
+      "excellent": { "max": 15, "label": "Excellent", "color": "emerald" },
+      "good": { "min": 15, "max": 30, "label": "Good", "color": "green" },
+      "average": { "min": 30, "max": 50, "label": "Average", "color": "yellow" },
+      "poor": { "min": 50, "label": "Expensive", "color": "red" }
+    },
+    "howToSteps": [
+      "Enter your total advertising spend",
+      "Enter the number of conversions (purchases, leads, etc.)",
+      "View your CPA and efficiency analysis"
+    ],
+    "faqs": [
+      {
+        "question": "What is CPA?",
+        "answer": "CPA (Cost Per Acquisition) is the average cost to acquire one customer or conversion through advertising. It's calculated by dividing total ad spend by number of conversions."
+      },
+      {
+        "question": "What's a good CPA?",
+        "answer": "A good CPA should be significantly lower than your customer's lifetime value (LTV). Generally, CPA should be under 1/3 of your average order value for single-purchase businesses."
+      },
+      {
+        "question": "CPA vs CAC - what's the difference?",
+        "answer": "CPA typically refers to advertising cost per conversion. CAC (Customer Acquisition Cost) includes ALL costs to acquire a customer: ads, salaries, tools, etc."
+      },
+      {
+        "question": "How do I lower my CPA?",
+        "answer": "Improve targeting, test better creatives, optimize landing pages, use retargeting, and focus budget on high-performing campaigns."
+      }
+    ],
+    "relatedTools": ["roas-calculator", "cpm-calculator", "ctr-calculator"],
+    "seoKeywords": ["cpa calculator", "cost per acquisition calculator", "customer acquisition cost calculator"],
+    "metricxFeature": "Monitor CPA across all campaigns with AI-powered optimization suggestions"
+  },
+  {
+    "name": "CPM Calculator",
+    "slug": "cpm-calculator",
+    "icon": "eye",
+    "category": "cost",
+    "tagline": "Calculate Cost Per Thousand Impressions",
+    "description": "Free CPM calculator for media buyers. Enter your ad spend and impressions to calculate your cost per thousand impressions.",
+    "formula": "(Ad Spend / Impressions) × 1,000",
+    "inputs": [
+      {
+        "id": "ad-spend",
+        "label": "Total Ad Spend",
+        "type": "currency",
+        "placeholder": "500",
+        "helperText": "Total amount spent on ads"
+      },
+      {
+        "id": "impressions",
+        "label": "Total Impressions",
+        "type": "number",
+        "placeholder": "100000",
+        "helperText": "Number of times ad was shown"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "cpm",
+        "label": "CPM",
+        "format": "currency"
+      },
+      {
+        "id": "impressions-per-dollar",
+        "label": "Impressions per $1",
+        "format": "number"
+      }
+    ],
+    "benchmarks": {
+      "excellent": { "max": 5, "label": "Very Efficient", "color": "emerald" },
+      "good": { "min": 5, "max": 12, "label": "Good", "color": "green" },
+      "average": { "min": 12, "max": 20, "label": "Average", "color": "yellow" },
+      "expensive": { "min": 20, "label": "Expensive", "color": "red" }
+    },
+    "howToSteps": [
+      "Enter your total ad spend",
+      "Enter the total number of impressions",
+      "View your CPM and reach efficiency"
+    ],
+    "faqs": [
+      {
+        "question": "What is CPM?",
+        "answer": "CPM (Cost Per Mille) is the cost to show your ad 1,000 times. It measures how expensive it is to reach audiences on a platform."
+      },
+      {
+        "question": "What's a good CPM?",
+        "answer": "Average CPM varies by platform and targeting: Meta $8-15, Google Display $2-5, TikTok $5-10. Narrower targeting increases CPM."
+      },
+      {
+        "question": "Should I optimize for low CPM?",
+        "answer": "Not necessarily. Low CPM with poor targeting wastes money. Focus on CPA and ROAS for conversion campaigns; CPM matters more for brand awareness."
+      },
+      {
+        "question": "Why does CPM fluctuate?",
+        "answer": "CPM is affected by competition (Q4 is expensive), targeting specificity, audience size, ad quality, and platform changes."
+      }
+    ],
+    "relatedTools": ["ctr-calculator", "cpa-calculator", "roas-calculator"],
+    "seoKeywords": ["cpm calculator", "cost per thousand calculator", "cpm advertising calculator"],
+    "metricxFeature": "Track CPM trends across platforms with automated alerts for spikes"
+  },
+  {
+    "name": "CTR Calculator",
+    "slug": "ctr-calculator",
+    "icon": "mouse-pointer-click",
+    "category": "engagement",
+    "tagline": "Calculate your Click-Through Rate",
+    "description": "Free CTR calculator for digital marketers. Enter clicks and impressions to calculate your click-through rate and benchmark against averages.",
+    "formula": "(Clicks / Impressions) × 100",
+    "inputs": [
+      {
+        "id": "clicks",
+        "label": "Total Clicks",
+        "type": "number",
+        "placeholder": "500",
+        "helperText": "Number of ad clicks"
+      },
+      {
+        "id": "impressions",
+        "label": "Total Impressions",
+        "type": "number",
+        "placeholder": "50000",
+        "helperText": "Number of times ad was shown"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "ctr",
+        "label": "Click-Through Rate",
+        "format": "percent"
+      },
+      {
+        "id": "clicks-per-thousand",
+        "label": "Clicks per 1,000 Impressions",
+        "format": "number"
+      }
+    ],
+    "benchmarks": {
+      "poor": { "max": 0.5, "label": "Below Average", "color": "red" },
+      "average": { "min": 0.5, "max": 1, "label": "Average", "color": "yellow" },
+      "good": { "min": 1, "max": 2, "label": "Good", "color": "green" },
+      "excellent": { "min": 2, "label": "Excellent", "color": "emerald" }
+    },
+    "howToSteps": [
+      "Enter your total number of ad clicks",
+      "Enter your total number of impressions",
+      "View your CTR and engagement analysis"
+    ],
+    "faqs": [
+      {
+        "question": "What is CTR?",
+        "answer": "CTR (Click-Through Rate) measures the percentage of people who click on your ad after seeing it. Higher CTR indicates more engaging ads."
+      },
+      {
+        "question": "What's a good CTR?",
+        "answer": "Good CTR varies by platform: Facebook Feed 0.9-1.5%, Google Search 3-5%, Google Display 0.3-0.5%, Instagram 0.5-1%."
+      },
+      {
+        "question": "How do I improve CTR?",
+        "answer": "Write compelling headlines, use eye-catching visuals, include clear CTAs, improve targeting relevance, and test multiple creative variations."
+      },
+      {
+        "question": "Is high CTR always good?",
+        "answer": "Not always. High CTR with low conversions may indicate misleading ads or poor landing pages. Balance CTR with conversion metrics."
+      }
+    ],
+    "relatedTools": ["cpm-calculator", "cpa-calculator", "roas-calculator"],
+    "seoKeywords": ["ctr calculator", "click through rate calculator", "ad ctr calculator"],
+    "metricxFeature": "Monitor CTR trends with AI-powered creative recommendations"
+  },
+  {
+    "name": "Ad Spend Planner",
+    "slug": "ad-spend-calculator",
+    "icon": "wallet",
+    "category": "planning",
+    "tagline": "Plan your advertising budget based on goals",
+    "description": "Free ad budget calculator to determine how much to spend on ads based on your revenue goals, target ROAS, and conversion rates.",
+    "formula": "Target Revenue / Target ROAS",
+    "inputs": [
+      {
+        "id": "revenue-goal",
+        "label": "Revenue Goal",
+        "type": "currency",
+        "placeholder": "50000",
+        "helperText": "How much revenue you want to generate"
+      },
+      {
+        "id": "target-roas",
+        "label": "Target ROAS",
+        "type": "number",
+        "placeholder": "4",
+        "suffix": "x",
+        "helperText": "Expected return on ad spend"
+      },
+      {
+        "id": "aov",
+        "label": "Average Order Value",
+        "type": "currency",
+        "placeholder": "75",
+        "helperText": "Average revenue per order"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "required-spend",
+        "label": "Required Ad Spend",
+        "format": "currency"
+      },
+      {
+        "id": "expected-orders",
+        "label": "Expected Orders",
+        "format": "number"
+      },
+      {
+        "id": "cost-per-order",
+        "label": "Cost Per Order",
+        "format": "currency"
+      }
+    ],
+    "howToSteps": [
+      "Enter your revenue goal for the period",
+      "Enter your expected/target ROAS",
+      "Enter your average order value",
+      "View your required ad spend and expected results"
+    ],
+    "faqs": [
+      {
+        "question": "How do I set realistic ROAS targets?",
+        "answer": "Base targets on historical performance. If you've been averaging 3x ROAS, targeting 4x is ambitious but possible with optimization. Don't expect 10x if you're at 2x."
+      },
+      {
+        "question": "Should I spend my full budget immediately?",
+        "answer": "No. Start with 20-30% of planned budget, optimize based on results, then scale. Platforms need data to optimize - rushing spend wastes money."
+      },
+      {
+        "question": "How do I account for seasonality?",
+        "answer": "Adjust ROAS expectations by season. Q4 typically has higher CPMs but also higher conversion rates. Plan extra budget for peak seasons."
+      },
+      {
+        "question": "What if I don't hit my ROAS target?",
+        "answer": "You'll either generate less revenue than planned or need to spend more. This calculator helps you understand the trade-offs."
+      }
+    ],
+    "relatedTools": ["roas-calculator", "break-even-roas-calculator", "cpa-calculator"],
+    "seoKeywords": ["ad spend calculator", "advertising budget calculator", "media budget planner"],
+    "metricxFeature": "Plan and track budgets across all platforms with metricx"
+  },
+  {
+    "name": "Break-even ROAS Calculator",
+    "slug": "break-even-roas-calculator",
+    "icon": "scale",
+    "category": "profitability",
+    "tagline": "Find your break-even ROAS threshold",
+    "description": "Calculate the minimum ROAS needed to break even on your ad spend. Enter your costs and margins to find your profitability threshold.",
+    "formula": "1 / Profit Margin (as decimal)",
+    "inputs": [
+      {
+        "id": "selling-price",
+        "label": "Selling Price",
+        "type": "currency",
+        "placeholder": "100",
+        "helperText": "Price you sell the product for"
+      },
+      {
+        "id": "product-cost",
+        "label": "Product Cost (COGS)",
+        "type": "currency",
+        "placeholder": "30",
+        "helperText": "Cost of goods sold"
+      },
+      {
+        "id": "shipping-cost",
+        "label": "Shipping Cost",
+        "type": "currency",
+        "placeholder": "5",
+        "helperText": "Shipping per order"
+      },
+      {
+        "id": "other-costs",
+        "label": "Other Costs",
+        "type": "currency",
+        "placeholder": "5",
+        "helperText": "Payment fees, packaging, etc."
+      }
+    ],
+    "outputs": [
+      {
+        "id": "break-even-roas",
+        "label": "Break-even ROAS",
+        "format": "decimal",
+        "suffix": "x"
+      },
+      {
+        "id": "profit-margin",
+        "label": "Profit Margin",
+        "format": "percent"
+      },
+      {
+        "id": "profit-per-sale",
+        "label": "Profit Per Sale",
+        "format": "currency"
+      }
+    ],
+    "howToSteps": [
+      "Enter your product's selling price",
+      "Enter all costs: product, shipping, and other per-order costs",
+      "View your break-even ROAS and profit analysis"
+    ],
+    "faqs": [
+      {
+        "question": "What is break-even ROAS?",
+        "answer": "Break-even ROAS is the minimum Return on Ad Spend needed to cover all costs and not lose money. Below this point, you're losing money on each ad-driven sale."
+      },
+      {
+        "question": "How much above break-even should I target?",
+        "answer": "Aim for at least 25-50% above break-even for healthy profit. If break-even is 2x, target 2.5-3x to account for returns, overhead, and provide margin."
+      },
+      {
+        "question": "What if my break-even ROAS is really high?",
+        "answer": "High break-even ROAS (5x+) indicates low margins. Consider: raising prices, reducing costs, targeting higher-value products, or focusing on customer LTV."
+      },
+      {
+        "question": "Should I include all costs?",
+        "answer": "Include all variable costs per order. Fixed costs (rent, salaries) are harder to allocate but important for true profitability."
+      }
+    ],
+    "relatedTools": ["roas-calculator", "cpa-calculator", "ad-spend-calculator"],
+    "seoKeywords": ["break even roas calculator", "roas breakeven calculator", "ad profitability calculator"],
+    "metricxFeature": "Track profitability with margin-adjusted ROAS calculations"
+  }
+]

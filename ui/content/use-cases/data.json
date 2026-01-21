@@ -1,0 +1,3483 @@
+[
+  {
+    "name": "Track ROAS Across All Ad Platforms",
+    "slug": "track-roas-across-platforms",
+    "icon": "chart-line",
+    "category": "analytics",
+    "tagline": "One dashboard for Meta, Google, and TikTok ROAS",
+    "description": "Stop logging into multiple ad platforms. metricx unifies your ROAS tracking across Meta, Google, and TikTok in a single dashboard with real-time data.",
+    "problem": "Logging into Meta Ads Manager, Google Ads, and TikTok separately wastes time and makes it impossible to compare performance accurately. Each platform reports differently.",
+    "solution": "metricx pulls data from all platforms into one unified dashboard, normalizing metrics so you can compare apples to apples. See your true cross-platform ROAS instantly.",
+    "benefits": [
+      "Save 5+ hours per week on reporting",
+      "Compare platform performance accurately",
+      "Identify which platform delivers best ROI",
+      "Make faster budget allocation decisions",
+      "No more spreadsheet consolidation"
+    ],
+    "features": [
+      "Real-time data sync from all platforms",
+      "Unified metric definitions",
+      "Cross-platform comparison views",
+      "Customizable date ranges",
+      "Automated reporting"
+    ],
+    "idealFor": [
+      "Multi-platform advertisers",
+      "E-commerce brands",
+      "Marketing agencies",
+      "Growth marketers"
+    ],
+    "testimonialSnippet": "metricx saved us 8 hours a week on reporting. Now we make decisions in minutes, not days.",
+    "faqs": [
+      {
+        "question": "How often does metricx sync data?",
+        "answer": "Meta and Google data syncs hourly. TikTok syncs every 4 hours. You always see recent performance."
+      },
+      {
+        "question": "Can I see data by campaign and ad set?",
+        "answer": "Yes, metricx shows account-level, campaign-level, and ad set-level data for all platforms."
+      }
+    ],
+    "relatedUseCases": [
+      "compare-platform-performance",
+      "automated-reporting"
+    ],
+    "cta": "See all your ads in one dashboard",
+    "metricxFeature": "Unified multi-platform ROAS dashboard"
+  },
+  {
+    "name": "Verify Platform-Reported Revenue",
+    "slug": "verify-platform-revenue",
+    "icon": "badge-check",
+    "category": "attribution",
+    "tagline": "Know if your ROAS is real or inflated",
+    "description": "Ad platforms often over-report conversions. metricx connects to Shopify to verify exactly how much revenue actually came from your ads.",
+    "problem": "Meta and Google both claim credit for the same sales. Your true ROAS could be 30-50% lower than platforms report. Without verification, you're optimizing blind.",
+    "solution": "metricx connects to Shopify and matches orders to ad clicks. You see both platform-reported and Shopify-verified revenue side by side, revealing your true performance.",
+    "benefits": [
+      "Know your real ROAS, not inflated numbers",
+      "Stop over-investing in underperforming campaigns",
+      "Make data-driven budget decisions",
+      "Understand cross-platform attribution overlap",
+      "Trust your numbers"
+    ],
+    "features": [
+      "Shopify revenue verification",
+      "Platform vs verified comparison",
+      "Attribution gap analysis",
+      "Return/refund adjustments",
+      "Order-level matching"
+    ],
+    "idealFor": [
+      "Shopify store owners",
+      "Skeptical of platform numbers",
+      "Data-driven marketers",
+      "CFOs wanting accurate CAC"
+    ],
+    "testimonialSnippet": "We discovered our Meta ROAS was 40% overstated. metricx saved us from scaling a losing campaign.",
+    "faqs": [
+      {
+        "question": "How does verification work?",
+        "answer": "metricx matches Shopify orders to ad platform click data using UTM parameters and timing. You see which orders are verified vs platform-only attributed."
+      },
+      {
+        "question": "What if numbers don't match?",
+        "answer": "Some gap is normal due to attribution windows and view-through conversions. metricx shows you the gap size so you can factor it into decisions."
+      }
+    ],
+    "relatedUseCases": [
+      "track-roas-across-platforms",
+      "true-profitability-analysis"
+    ],
+    "cta": "Verify your real ROAS",
+    "metricxFeature": "Shopify revenue verification"
+  },
+  {
+    "name": "Get AI-Powered Optimization Insights",
+    "slug": "ai-optimization-insights",
+    "icon": "sparkles",
+    "category": "ai",
+    "tagline": "Ask questions about your ads in plain English",
+    "description": "metricx's AI Copilot analyzes your ad data and surfaces actionable insights. Ask questions like 'Why did ROAS drop?' and get instant answers.",
+    "problem": "You have the data but lack time to analyze it deeply. Finding optimization opportunities requires hours of digging through metrics and comparing trends.",
+    "solution": "metricx AI continuously analyzes your campaigns and proactively surfaces insights. Plus, you can ask questions in natural language and get instant, data-backed answers.",
+    "benefits": [
+      "Instant answers to performance questions",
+      "Proactive anomaly detection",
+      "No data analysis skills required",
+      "Optimization recommendations",
+      "Time savings on reporting"
+    ],
+    "features": [
+      "Natural language queries",
+      "Automated insight generation",
+      "Anomaly detection alerts",
+      "Trend analysis",
+      "Recommendation engine"
+    ],
+    "idealFor": [
+      "Busy founders and marketers",
+      "Teams without data analysts",
+      "Anyone wanting faster insights",
+      "Data-curious but time-poor"
+    ],
+    "testimonialSnippet": "I asked why my CPA spiked and got a detailed answer in seconds. It's like having an analyst on demand.",
+    "faqs": [
+      {
+        "question": "What can I ask the AI?",
+        "answer": "Anything about your ad performance: 'Why did ROAS drop last week?', 'Which campaigns should I scale?', 'Compare Meta vs Google performance', and more."
+      },
+      {
+        "question": "How accurate are AI recommendations?",
+        "answer": "AI insights are based on your actual data. They identify patterns and correlations you might miss but should be validated with your business context."
+      }
+    ],
+    "relatedUseCases": [
+      "automated-alerts",
+      "performance-forecasting"
+    ],
+    "cta": "Talk to your data",
+    "metricxFeature": "AI Copilot for ad analytics"
+  },
+  {
+    "name": "Calculate True Customer LTV by Channel",
+    "slug": "customer-ltv-by-channel",
+    "icon": "users",
+    "category": "analytics",
+    "tagline": "Know which ads bring your best customers",
+    "description": "Not all customers are equal. metricx tracks customer lifetime value by acquisition channel so you know which ads attract high-value, repeat buyers.",
+    "problem": "You're optimizing for first-purchase CPA, but some channels attract one-time buyers while others bring loyal customers. Without LTV data, you're missing the big picture.",
+    "solution": "metricx calculates LTV by tracking repeat purchases in Shopify and attributing them back to original acquisition source. See which campaigns bring customers who keep buying.",
+    "benefits": [
+      "Optimize for long-term value, not just conversions",
+      "Identify highest-ROI channels",
+      "Justify higher CAC for better channels",
+      "Build cohort analysis by source",
+      "Predict future revenue by campaign"
+    ],
+    "features": [
+      "LTV calculation by channel",
+      "Cohort analysis",
+      "Repeat purchase tracking",
+      "Predicted LTV modeling",
+      "Channel comparison"
+    ],
+    "idealFor": [
+      "Subscription businesses",
+      "Repeat-purchase products",
+      "Brands focused on retention",
+      "Long-term thinkers"
+    ],
+    "testimonialSnippet": "We discovered TikTok customers have 2x higher LTV than Meta. Now we allocate budget accordingly.",
+    "faqs": [
+      {
+        "question": "How is LTV calculated?",
+        "answer": "metricx sums all purchases from a customer over time and attributes that value to their original acquisition source. You can view 30/60/90-day and lifetime LTV."
+      },
+      {
+        "question": "Can I see LTV by campaign, not just platform?",
+        "answer": "Yes, LTV tracking goes down to campaign level, so you can identify specific campaigns that attract high-value customers."
+      }
+    ],
+    "relatedUseCases": [
+      "verify-platform-revenue",
+      "subscription-analytics"
+    ],
+    "cta": "Find your best customers",
+    "metricxFeature": "LTV tracking by acquisition source"
+  },
+  {
+    "name": "Monitor Budgets and Prevent Overspend",
+    "slug": "budget-monitoring",
+    "icon": "wallet",
+    "category": "management",
+    "tagline": "Never accidentally overspend again",
+    "description": "metricx tracks your ad spend across all platforms in real-time and alerts you before you exceed budgets. Set limits and get notified instantly.",
+    "problem": "Ad platforms can spend budgets faster than expected, especially with automated bidding. Without monitoring, a glitch or mistake can burn through your monthly budget in days.",
+    "solution": "metricx provides real-time spend tracking across all platforms with customizable alerts. Set daily, weekly, or monthly limits and get notified when you're approaching them.",
+    "benefits": [
+      "Real-time spend visibility",
+      "Prevent budget overruns",
+      "Cross-platform budget tracking",
+      "Customizable alerts",
+      "Peace of mind"
+    ],
+    "features": [
+      "Real-time spend tracking",
+      "Budget alerts and limits",
+      "Pacing indicators",
+      "Slack/email notifications",
+      "Historical spend analysis"
+    ],
+    "idealFor": [
+      "Budget-conscious teams",
+      "Agencies managing client budgets",
+      "Scaling advertisers",
+      "Finance-focused marketers"
+    ],
+    "testimonialSnippet": "A campaign bug would have cost us $10K overnight. metricx alerted us at $500 and we paused it.",
+    "faqs": [
+      {
+        "question": "Can I set different budgets by platform?",
+        "answer": "Yes, set total budget limits or platform-specific limits. Get alerts when approaching either threshold."
+      },
+      {
+        "question": "How fast are spend alerts?",
+        "answer": "metricx checks spend hourly and sends alerts immediately when thresholds are crossed."
+      }
+    ],
+    "relatedUseCases": [
+      "automated-alerts",
+      "track-roas-across-platforms"
+    ],
+    "cta": "Protect your ad budget",
+    "metricxFeature": "Real-time budget monitoring with alerts"
+  },
+  {
+    "name": "Automated Daily Performance Reports",
+    "slug": "automated-reporting",
+    "icon": "file-text",
+    "category": "reporting",
+    "tagline": "Wake up to yesterday's performance summary",
+    "description": "metricx automatically generates and delivers daily performance reports to your inbox or Slack. Know how your ads performed without logging in.",
+    "problem": "Manually pulling reports wastes time and creates delays. By the time you analyze yesterday's data, it's already midday today.",
+    "solution": "metricx generates automated reports on your schedule - daily, weekly, or monthly. Get summaries delivered to email or Slack with key metrics and AI insights.",
+    "benefits": [
+      "Start each day informed",
+      "Save hours on manual reporting",
+      "Consistent reporting schedule",
+      "Shareable with team/stakeholders",
+      "Includes AI insights"
+    ],
+    "features": [
+      "Scheduled report delivery",
+      "Email and Slack integration",
+      "Customizable metrics",
+      "Cross-platform summary",
+      "Trend comparisons"
+    ],
+    "idealFor": [
+      "Busy marketers",
+      "Teams needing regular updates",
+      "Stakeholder communication",
+      "Agency client reporting"
+    ],
+    "testimonialSnippet": "Our CEO gets a metricx report every morning. No more ad-hoc requests for updates.",
+    "faqs": [
+      {
+        "question": "What's included in daily reports?",
+        "answer": "Key metrics (spend, revenue, ROAS, CPA), comparison to previous period, notable changes, and AI-generated insights."
+      },
+      {
+        "question": "Can I customize what's in reports?",
+        "answer": "Yes, choose which metrics, platforms, and campaigns to include. Different stakeholders can get different report versions."
+      }
+    ],
+    "relatedUseCases": [
+      "track-roas-across-platforms",
+      "ai-optimization-insights"
+    ],
+    "cta": "Automate your reporting",
+    "metricxFeature": "Scheduled automated reports"
+  },
+  {
+    "name": "Detect and Alert on Performance Anomalies",
+    "slug": "anomaly-detection",
+    "icon": "alert-triangle",
+    "category": "monitoring",
+    "tagline": "Get alerted before small problems become big ones",
+    "description": "metricx AI monitors your campaigns 24/7 and alerts you when something unusual happens - ROAS drops, spend spikes, CTR crashes - so you can act fast.",
+    "problem": "Performance problems can go unnoticed for days. By the time you see a drop in your weekly review, you've already wasted significant budget.",
+    "solution": "metricx continuously monitors your campaigns against historical patterns. When metrics deviate significantly, you get instant alerts via Slack or email.",
+    "benefits": [
+      "Catch issues within hours, not days",
+      "Automatic pattern detection",
+      "No manual monitoring needed",
+      "Configurable sensitivity",
+      "Actionable alert context"
+    ],
+    "features": [
+      "24/7 automated monitoring",
+      "Statistical anomaly detection",
+      "Instant Slack/email alerts",
+      "Root cause suggestions",
+      "Alert history and patterns"
+    ],
+    "idealFor": [
+      "High-spend advertisers",
+      "Anyone who's been burned by unnoticed issues",
+      "Teams wanting proactive monitoring",
+      "Overnight/weekend coverage"
+    ],
+    "testimonialSnippet": "metricx caught a ROAS crash on Saturday night. We fixed it Sunday morning instead of losing the whole weekend.",
+    "faqs": [
+      {
+        "question": "What triggers an anomaly alert?",
+        "answer": "Statistically significant deviations from recent performance - ROAS drops, CPA spikes, CTR crashes, spend surges, and more."
+      },
+      {
+        "question": "Can I adjust sensitivity?",
+        "answer": "Yes, configure how sensitive alerts are. High-spend campaigns might need tighter monitoring than experimental ones."
+      }
+    ],
+    "relatedUseCases": [
+      "budget-monitoring",
+      "ai-optimization-insights"
+    ],
+    "cta": "Never miss a problem",
+    "metricxFeature": "AI-powered anomaly detection"
+  },
+  {
+    "name": "Compare Creative Performance",
+    "slug": "creative-performance-analysis",
+    "icon": "image",
+    "category": "creative",
+    "tagline": "Find your winning ads faster",
+    "description": "metricx shows which ad creatives perform best across all platforms. Compare images, videos, and copy variations to double down on winners.",
+    "problem": "You're running dozens of ad variations but struggle to identify true winners. Platform reports are hard to compare, and creative fatigue is hard to spot.",
+    "solution": "metricx aggregates creative performance across platforms with consistent metrics. See which creatives drive the best ROAS and when they start fatiguing.",
+    "benefits": [
+      "Identify top-performing creatives",
+      "Compare across platforms",
+      "Spot creative fatigue early",
+      "Inform creative production",
+      "Maximize creative ROI"
+    ],
+    "features": [
+      "Creative-level performance",
+      "Cross-platform comparison",
+      "Fatigue detection",
+      "Performance trends over time",
+      "Winner identification"
+    ],
+    "idealFor": [
+      "Creative-heavy brands",
+      "Teams testing lots of variations",
+      "Visual product businesses",
+      "Anyone wanting creative insights"
+    ],
+    "testimonialSnippet": "We found our top-performing video was outperforming by 3x but buried in the data. Now we scale winners faster.",
+    "faqs": [
+      {
+        "question": "Can I see creative thumbnails in metricx?",
+        "answer": "Yes, metricx displays creative thumbnails alongside performance metrics for easy identification."
+      },
+      {
+        "question": "How do you detect creative fatigue?",
+        "answer": "metricx tracks CTR and ROAS trends over time. When a creative's performance declines consistently, we flag it as potentially fatigued."
+      }
+    ],
+    "relatedUseCases": [
+      "track-roas-across-platforms",
+      "ai-optimization-insights"
+    ],
+    "cta": "Find your winning creatives",
+    "metricxFeature": "Creative performance analysis"
+  },
+  {
+    "name": "Track Returns for True Profitability",
+    "slug": "return-adjusted-analytics",
+    "icon": "rotate-ccw",
+    "category": "profitability",
+    "tagline": "ROAS that accounts for returns",
+    "description": "Returns can destroy ad profitability. metricx automatically adjusts your ROAS calculations based on Shopify refund data, showing true profit per campaign.",
+    "problem": "A campaign with great ROAS might actually be losing money after returns. Fashion brands especially see 20-40% return rates that platform ROAS ignores.",
+    "solution": "metricx syncs Shopify refund data and calculates return-adjusted ROAS. See which campaigns have high returns and which actually keep the revenue.",
+    "benefits": [
+      "True profitability picture",
+      "Return rate by campaign",
+      "Stop scaling high-return campaigns",
+      "Identify quality traffic sources",
+      "More accurate decisions"
+    ],
+    "features": [
+      "Automatic refund tracking",
+      "Return-adjusted ROAS",
+      "Return rate by campaign",
+      "Gross vs net revenue",
+      "Historical return analysis"
+    ],
+    "idealFor": [
+      "Fashion and apparel brands",
+      "High-return-rate products",
+      "Anyone wanting true profitability",
+      "Margin-focused businesses"
+    ],
+    "testimonialSnippet": "Our best-looking campaign had 35% returns. Without metricx, we'd have scaled it and lost money.",
+    "faqs": [
+      {
+        "question": "How quickly do returns show up?",
+        "answer": "metricx syncs Shopify refunds in real-time. As soon as a refund is processed, it's reflected in your return-adjusted metrics."
+      },
+      {
+        "question": "Can I see which products have high returns?",
+        "answer": "Yes, metricx tracks returns by product, helping you identify if certain products (not just campaigns) drive high return rates."
+      }
+    ],
+    "relatedUseCases": [
+      "verify-platform-revenue",
+      "true-profitability-analysis"
+    ],
+    "cta": "See your true profit",
+    "metricxFeature": "Return-adjusted ROAS tracking"
+  },
+  {
+    "name": "Agency Client Reporting",
+    "slug": "agency-reporting",
+    "icon": "building",
+    "category": "agencies",
+    "tagline": "White-label reports for your clients",
+    "description": "Agencies use metricx to create professional, white-labeled performance reports for clients. Save hours on reporting while impressing with presentation.",
+    "problem": "Agencies spend hours creating client reports from multiple platform exports. The process is manual, error-prone, and time-consuming.",
+    "solution": "metricx provides agency-focused features: white-label reports, client-specific dashboards, scheduled delivery, and multi-client management.",
+    "benefits": [
+      "Save 10+ hours per client monthly",
+      "Professional white-label reports",
+      "Automated delivery",
+      "Client-specific dashboards",
+      "Scalable process"
+    ],
+    "features": [
+      "White-label branding",
+      "Multi-client management",
+      "Automated report scheduling",
+      "Client-facing dashboards",
+      "Permission controls"
+    ],
+    "idealFor": [
+      "Digital marketing agencies",
+      "Freelance ad managers",
+      "Consultants",
+      "Multi-brand management"
+    ],
+    "testimonialSnippet": "metricx replaced our manual reporting process. Clients get better reports and we save 2 days per month.",
+    "faqs": [
+      {
+        "question": "Can I add my agency logo?",
+        "answer": "Yes, fully white-label reports with your logo, colors, and branding. Clients see your brand, not metricx."
+      },
+      {
+        "question": "Can clients access dashboards directly?",
+        "answer": "Yes, create client logins with view-only access to their specific data. Or send automated reports without login."
+      }
+    ],
+    "relatedUseCases": [
+      "automated-reporting",
+      "track-roas-across-platforms"
+    ],
+    "cta": "Streamline client reporting",
+    "metricxFeature": "White-label agency reporting"
+  },
+  {
+    "name": "Compare Meta vs Google Performance",
+    "slug": "meta-vs-google-comparison",
+    "icon": "git-compare",
+    "category": "analytics",
+    "tagline": "Which platform delivers better ROI?",
+    "description": "Stop guessing which platform works better. metricx provides side-by-side Meta vs Google comparison with normalized metrics and verified revenue.",
+    "problem": "Meta and Google report metrics differently. Comparing them in their native dashboards is comparing apples to oranges. You can't make confident budget allocation decisions.",
+    "solution": "metricx normalizes metrics across platforms and displays them side-by-side. Compare ROAS, CPA, and other metrics with confidence, backed by Shopify-verified revenue.",
+    "benefits": [
+      "Apples-to-apples comparison",
+      "Confident budget allocation",
+      "Identify platform strengths",
+      "Unified metric definitions",
+      "Data-driven decisions"
+    ],
+    "features": [
+      "Side-by-side comparison view",
+      "Normalized metrics",
+      "Verified revenue attribution",
+      "Trend comparison",
+      "Budget optimization suggestions"
+    ],
+    "idealFor": [
+      "Multi-platform advertisers",
+      "Budget optimization focus",
+      "Platform-agnostic marketers",
+      "Performance-driven teams"
+    ],
+    "testimonialSnippet": "Turns out Google was outperforming Meta by 30% when we looked at verified ROAS. We shifted budget accordingly.",
+    "faqs": [
+      {
+        "question": "How does metricx normalize metrics?",
+        "answer": "metricx uses consistent definitions (e.g., same attribution window, same conversion events) and Shopify verification to make platform data comparable."
+      },
+      {
+        "question": "Can I compare at campaign level?",
+        "answer": "Yes, compare specific campaigns across platforms or aggregate platform-level performance."
+      }
+    ],
+    "relatedUseCases": [
+      "track-roas-across-platforms",
+      "verify-platform-revenue"
+    ],
+    "cta": "Compare your platforms",
+    "metricxFeature": "Cross-platform comparison dashboard"
+  },
+  {
+    "name": "Subscription Revenue Analytics",
+    "slug": "subscription-analytics",
+    "icon": "repeat",
+    "category": "subscriptions",
+    "tagline": "Track MRR from your ad campaigns",
+    "description": "Subscription businesses need special analytics. metricx tracks recurring revenue, churn, and LTV by acquisition source so you optimize for long-term value.",
+    "problem": "Standard ad analytics focus on first purchase. For subscriptions, first purchase might be at a loss - what matters is lifetime value and churn by acquisition source.",
+    "solution": "metricx integrates with Recharge and Shopify Subscriptions to track recurring revenue. See which campaigns bring subscribers who stay and which bring churners.",
+    "benefits": [
+      "MRR tracking by ad source",
+      "Churn analysis by campaign",
+      "Subscription LTV calculation",
+      "CAC payback period",
+      "Predict subscription value"
+    ],
+    "features": [
+      "Subscription order tracking",
+      "Churn attribution",
+      "LTV by cohort",
+      "CAC payback analysis",
+      "Retention curves by source"
+    ],
+    "idealFor": [
+      "Subscription box brands",
+      "SaaS companies",
+      "Subscription e-commerce",
+      "Membership businesses"
+    ],
+    "testimonialSnippet": "We found Facebook subscribers churned 2x faster than Google. Shifted budget and improved overall retention.",
+    "faqs": [
+      {
+        "question": "Which subscription platforms integrate?",
+        "answer": "metricx integrates with Recharge, Bold Subscriptions, and native Shopify Subscriptions."
+      },
+      {
+        "question": "How is subscription LTV calculated?",
+        "answer": "metricx tracks all recurring payments from each subscriber and calculates average LTV by acquisition cohort."
+      }
+    ],
+    "relatedUseCases": [
+      "customer-ltv-by-channel",
+      "verify-platform-revenue"
+    ],
+    "cta": "Optimize subscription acquisition",
+    "metricxFeature": "Subscription revenue analytics"
+  },
+  {
+    "name": "New Customer vs Returning Analysis",
+    "slug": "new-vs-returning-customers",
+    "icon": "user-plus",
+    "category": "analytics",
+    "tagline": "Know if ads bring new customers or existing ones",
+    "description": "Are your ads acquiring new customers or just re-acquiring existing ones? metricx separates new vs returning customer revenue so you know your true acquisition cost.",
+    "problem": "Platforms count any conversion as success. But if you're paying to convert existing customers who would have bought anyway, your true CAC is much higher.",
+    "solution": "metricx uses Shopify customer data to identify first-time vs repeat purchasers. See what percentage of ad-attributed revenue comes from truly new customers.",
+    "benefits": [
+      "True new customer CAC",
+      "Identify remarketing efficiency",
+      "Separate acquisition vs retention",
+      "Better budget decisions",
+      "Avoid paying for existing customers"
+    ],
+    "features": [
+      "New vs returning segmentation",
+      "First-purchase attribution",
+      "Repeat purchase tracking",
+      "Blended vs new CAC",
+      "Customer type by campaign"
+    ],
+    "idealFor": [
+      "Growth-focused brands",
+      "CAC-sensitive businesses",
+      "Brands with high repeat rates",
+      "Acquisition marketers"
+    ],
+    "testimonialSnippet": "60% of our 'conversions' were existing customers. Our real CAC was 2.5x what we thought.",
+    "faqs": [
+      {
+        "question": "How does metricx identify new customers?",
+        "answer": "metricx checks Shopify customer history. If it's their first order, they're counted as new; otherwise, returning."
+      },
+      {
+        "question": "Should I care about this split?",
+        "answer": "Yes, especially for CAC calculations. If you're paying acquisition costs for existing customers, you're overstating efficiency."
+      }
+    ],
+    "relatedUseCases": [
+      "customer-ltv-by-channel",
+      "verify-platform-revenue"
+    ],
+    "cta": "Track true acquisition",
+    "metricxFeature": "New vs returning customer analytics"
+  },
+  {
+    "name": "Unified Ad Dashboard",
+    "slug": "unified-ad-dashboard",
+    "category": "analytics",
+    "tagline": "Unified Ad Dashboard made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with unified ad dashboard. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing unified ad dashboard across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making unified ad dashboard effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Unified Ad Dashboard?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified unified ad dashboard across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Unified Ad Dashboard Today"
+  },
+  {
+    "name": "Cross-Platform Reporting",
+    "slug": "cross-platform-reporting",
+    "category": "analytics",
+    "tagline": "Cross-Platform Reporting made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with cross-platform reporting. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing cross-platform reporting across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making cross-platform reporting effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Cross-Platform Reporting?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified cross-platform reporting across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Cross-Platform Reporting Today"
+  },
+  {
+    "name": "Real-Time Ad Performance",
+    "slug": "real-time-ad-performance",
+    "category": "analytics",
+    "tagline": "Real-Time Ad Performance made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with real-time ad performance. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing real-time ad performance across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making real-time ad performance effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Real-Time Ad Performance?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified real-time ad performance across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Real-Time Ad Performance Today"
+  },
+  {
+    "name": "Campaign Comparison",
+    "slug": "campaign-comparison",
+    "category": "analytics",
+    "tagline": "Campaign Comparison made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with campaign comparison. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing campaign comparison across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making campaign comparison effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Campaign Comparison?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified campaign comparison across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Campaign Comparison Today"
+  },
+  {
+    "name": "Audience Insights",
+    "slug": "audience-insights",
+    "category": "analytics",
+    "tagline": "Audience Insights made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with audience insights. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing audience insights across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making audience insights effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Audience Insights?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified audience insights across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Audience Insights Today"
+  },
+  {
+    "name": "Historical Trend Analysis",
+    "slug": "historical-trend-analysis",
+    "category": "analytics",
+    "tagline": "Historical Trend Analysis made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with historical trend analysis. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing historical trend analysis across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making historical trend analysis effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Historical Trend Analysis?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified historical trend analysis across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Historical Trend Analysis Today"
+  },
+  {
+    "name": "Platform Benchmarking",
+    "slug": "platform-benchmarking",
+    "category": "analytics",
+    "tagline": "Platform Benchmarking made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with platform benchmarking. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing platform benchmarking across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making platform benchmarking effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Platform Benchmarking?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified platform benchmarking across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Platform Benchmarking Today"
+  },
+  {
+    "name": "Ad Spend Tracking",
+    "slug": "ad-spend-tracking",
+    "category": "analytics",
+    "tagline": "Ad Spend Tracking made simple with metricx",
+    "description": "Learn how metricx helps you track and analyze your advertising with ad spend tracking. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing ad spend tracking across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making ad spend tracking effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Ad Spend Tracking?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified ad spend tracking across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Ad Spend Tracking Today"
+  },
+  {
+    "name": "First-Party Attribution",
+    "slug": "first-party-attribution",
+    "category": "attribution",
+    "tagline": "First-Party Attribution made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with first-party attribution. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing first-party attribution across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making first-party attribution effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with First-Party Attribution?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified first-party attribution across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start First-Party Attribution Today"
+  },
+  {
+    "name": "Cross-Device Tracking",
+    "slug": "cross-device-tracking",
+    "category": "attribution",
+    "tagline": "Cross-Device Tracking made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with cross-device tracking. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing cross-device tracking across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making cross-device tracking effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Cross-Device Tracking?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified cross-device tracking across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Cross-Device Tracking Today"
+  },
+  {
+    "name": "iOS 14 Attribution",
+    "slug": "ios14-attribution",
+    "category": "attribution",
+    "tagline": "iOS 14 Attribution made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with ios 14 attribution. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing ios 14 attribution across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making ios 14 attribution effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with iOS 14 Attribution?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified ios 14 attribution across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start iOS 14 Attribution Today"
+  },
+  {
+    "name": "Post-Purchase Surveys",
+    "slug": "post-purchase-surveys",
+    "category": "attribution",
+    "tagline": "Post-Purchase Surveys made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with post-purchase surveys. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing post-purchase surveys across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making post-purchase surveys effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Post-Purchase Surveys?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified post-purchase surveys across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Post-Purchase Surveys Today"
+  },
+  {
+    "name": "Multi-Touch Attribution",
+    "slug": "multi-touch-attribution",
+    "category": "attribution",
+    "tagline": "Multi-Touch Attribution made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with multi-touch attribution. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing multi-touch attribution across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making multi-touch attribution effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Multi-Touch Attribution?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified multi-touch attribution across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Multi-Touch Attribution Today"
+  },
+  {
+    "name": "Customer Journey Mapping",
+    "slug": "customer-journey-mapping",
+    "category": "attribution",
+    "tagline": "Customer Journey Mapping made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with customer journey mapping. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing customer journey mapping across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making customer journey mapping effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Customer Journey Mapping?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified customer journey mapping across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Customer Journey Mapping Today"
+  },
+  {
+    "name": "Conversion Path Analysis",
+    "slug": "conversion-path-analysis",
+    "category": "attribution",
+    "tagline": "Conversion Path Analysis made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with conversion path analysis. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing conversion path analysis across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making conversion path analysis effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Conversion Path Analysis?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified conversion path analysis across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Conversion Path Analysis Today"
+  },
+  {
+    "name": "Assisted Conversion Tracking",
+    "slug": "assisted-conversion-tracking",
+    "category": "attribution",
+    "tagline": "Assisted Conversion Tracking made simple with metricx",
+    "description": "Learn how metricx helps you attribute and verify your advertising with assisted conversion tracking. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing assisted conversion tracking across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making assisted conversion tracking effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Assisted Conversion Tracking?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified assisted conversion tracking across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Assisted Conversion Tracking Today"
+  },
+  {
+    "name": "AI Ad Insights",
+    "slug": "ai-ad-insights",
+    "category": "ai",
+    "tagline": "AI Ad Insights made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with ai ad insights. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing ai ad insights across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making ai ad insights effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with AI Ad Insights?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified ai ad insights across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start AI Ad Insights Today"
+  },
+  {
+    "name": "Ask AI About Performance",
+    "slug": "ask-ai-about-performance",
+    "category": "ai",
+    "tagline": "Ask AI About Performance made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with ask ai about performance. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing ask ai about performance across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making ask ai about performance effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Ask AI About Performance?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified ask ai about performance across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Ask AI About Performance Today"
+  },
+  {
+    "name": "Automated Recommendations",
+    "slug": "automated-recommendations",
+    "category": "ai",
+    "tagline": "Automated Recommendations made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with automated recommendations. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing automated recommendations across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making automated recommendations effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Automated Recommendations?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified automated recommendations across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Automated Recommendations Today"
+  },
+  {
+    "name": "Predictive Analytics",
+    "slug": "predictive-analytics",
+    "category": "ai",
+    "tagline": "Predictive Analytics made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with predictive analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing predictive analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making predictive analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Predictive Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified predictive analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Predictive Analytics Today"
+  },
+  {
+    "name": "Budget Recommendations",
+    "slug": "budget-recommendations",
+    "category": "ai",
+    "tagline": "Budget Recommendations made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with budget recommendations. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing budget recommendations across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making budget recommendations effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Budget Recommendations?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified budget recommendations across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Budget Recommendations Today"
+  },
+  {
+    "name": "Creative Recommendations",
+    "slug": "creative-recommendations",
+    "category": "ai",
+    "tagline": "Creative Recommendations made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with creative recommendations. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing creative recommendations across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making creative recommendations effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Creative Recommendations?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified creative recommendations across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Creative Recommendations Today"
+  },
+  {
+    "name": "Audience Recommendations",
+    "slug": "audience-recommendations",
+    "category": "ai",
+    "tagline": "Audience Recommendations made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with audience recommendations. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing audience recommendations across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making audience recommendations effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Audience Recommendations?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified audience recommendations across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Audience Recommendations Today"
+  },
+  {
+    "name": "AI Performance Summary",
+    "slug": "ai-performance-summary",
+    "category": "ai",
+    "tagline": "AI Performance Summary made simple with metricx",
+    "description": "Learn how metricx helps you leverage AI to understand your advertising with ai performance summary. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing ai performance summary across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making ai performance summary effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with AI Performance Summary?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified ai performance summary across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start AI Performance Summary Today"
+  },
+  {
+    "name": "Automated Reports",
+    "slug": "automated-reports",
+    "category": "reporting",
+    "tagline": "Automated Reports made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with automated reports. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing automated reports across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making automated reports effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Automated Reports?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified automated reports across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Automated Reports Today"
+  },
+  {
+    "name": "Scheduled Email Reports",
+    "slug": "scheduled-email-reports",
+    "category": "reporting",
+    "tagline": "Scheduled Email Reports made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with scheduled email reports. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing scheduled email reports across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making scheduled email reports effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Scheduled Email Reports?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified scheduled email reports across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Scheduled Email Reports Today"
+  },
+  {
+    "name": "Custom Dashboards",
+    "slug": "custom-dashboards",
+    "category": "reporting",
+    "tagline": "Custom Dashboards made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with custom dashboards. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing custom dashboards across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making custom dashboards effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Custom Dashboards?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified custom dashboards across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Custom Dashboards Today"
+  },
+  {
+    "name": "White-Label Reports",
+    "slug": "white-label-reports",
+    "category": "reporting",
+    "tagline": "White-Label Reports made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with white-label reports. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing white-label reports across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making white-label reports effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with White-Label Reports?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified white-label reports across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start White-Label Reports Today"
+  },
+  {
+    "name": "Executive Summaries",
+    "slug": "executive-summaries",
+    "category": "reporting",
+    "tagline": "Executive Summaries made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with executive summaries. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing executive summaries across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making executive summaries effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Executive Summaries?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified executive summaries across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Executive Summaries Today"
+  },
+  {
+    "name": "Client Reporting",
+    "slug": "client-reporting",
+    "category": "reporting",
+    "tagline": "Client Reporting made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with client reporting. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing client reporting across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making client reporting effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Client Reporting?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified client reporting across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Client Reporting Today"
+  },
+  {
+    "name": "Team Performance Reports",
+    "slug": "team-performance-reports",
+    "category": "reporting",
+    "tagline": "Team Performance Reports made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with team performance reports. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing team performance reports across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making team performance reports effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Team Performance Reports?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified team performance reports across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Team Performance Reports Today"
+  },
+  {
+    "name": "Export to Google Sheets",
+    "slug": "export-google-sheets",
+    "category": "reporting",
+    "tagline": "Export to Google Sheets made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with export to google sheets. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing export to google sheets across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making export to google sheets effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Export to Google Sheets?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified export to google sheets across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Export to Google Sheets Today"
+  },
+  {
+    "name": "PDF Report Generation",
+    "slug": "pdf-report-generation",
+    "category": "reporting",
+    "tagline": "PDF Report Generation made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with pdf report generation. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing pdf report generation across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making pdf report generation effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with PDF Report Generation?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified pdf report generation across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start PDF Report Generation Today"
+  },
+  {
+    "name": "Slack Notifications",
+    "slug": "slack-notifications",
+    "category": "reporting",
+    "tagline": "Slack Notifications made simple with metricx",
+    "description": "Learn how metricx helps you report and share your advertising with slack notifications. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing slack notifications across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making slack notifications effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Slack Notifications?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified slack notifications across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Slack Notifications Today"
+  },
+  {
+    "name": "ROAS Optimization",
+    "slug": "roas-optimization",
+    "category": "optimization",
+    "tagline": "ROAS Optimization made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with roas optimization. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing roas optimization across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making roas optimization effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with ROAS Optimization?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified roas optimization across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start ROAS Optimization Today"
+  },
+  {
+    "name": "Budget Optimization",
+    "slug": "budget-optimization",
+    "category": "optimization",
+    "tagline": "Budget Optimization made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with budget optimization. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing budget optimization across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making budget optimization effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Budget Optimization?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified budget optimization across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Budget Optimization Today"
+  },
+  {
+    "name": "Campaign Scaling",
+    "slug": "campaign-scaling",
+    "category": "optimization",
+    "tagline": "Campaign Scaling made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with campaign scaling. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing campaign scaling across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making campaign scaling effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Campaign Scaling?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified campaign scaling across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Campaign Scaling Today"
+  },
+  {
+    "name": "Ad Fatigue Detection",
+    "slug": "ad-fatigue-detection",
+    "category": "optimization",
+    "tagline": "Ad Fatigue Detection made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with ad fatigue detection. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing ad fatigue detection across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making ad fatigue detection effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Ad Fatigue Detection?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified ad fatigue detection across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Ad Fatigue Detection Today"
+  },
+  {
+    "name": "Creative Testing",
+    "slug": "creative-testing",
+    "category": "optimization",
+    "tagline": "Creative Testing made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with creative testing. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing creative testing across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making creative testing effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Creative Testing?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified creative testing across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Creative Testing Today"
+  },
+  {
+    "name": "Audience Optimization",
+    "slug": "audience-optimization",
+    "category": "optimization",
+    "tagline": "Audience Optimization made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with audience optimization. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing audience optimization across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making audience optimization effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Audience Optimization?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified audience optimization across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Audience Optimization Today"
+  },
+  {
+    "name": "Bid Strategy Optimization",
+    "slug": "bid-strategy-optimization",
+    "category": "optimization",
+    "tagline": "Bid Strategy Optimization made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with bid strategy optimization. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing bid strategy optimization across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making bid strategy optimization effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Bid Strategy Optimization?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified bid strategy optimization across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Bid Strategy Optimization Today"
+  },
+  {
+    "name": "CPA Reduction",
+    "slug": "cpa-reduction",
+    "category": "optimization",
+    "tagline": "CPA Reduction made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with cpa reduction. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing cpa reduction across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making cpa reduction effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with CPA Reduction?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified cpa reduction across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start CPA Reduction Today"
+  },
+  {
+    "name": "CPM Monitoring",
+    "slug": "cpm-monitoring",
+    "category": "optimization",
+    "tagline": "CPM Monitoring made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with cpm monitoring. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing cpm monitoring across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making cpm monitoring effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with CPM Monitoring?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified cpm monitoring across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start CPM Monitoring Today"
+  },
+  {
+    "name": "Frequency Management",
+    "slug": "frequency-management",
+    "category": "optimization",
+    "tagline": "Frequency Management made simple with metricx",
+    "description": "Learn how metricx helps you optimize and improve your advertising with frequency management. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing frequency management across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making frequency management effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Frequency Management?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified frequency management across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Frequency Management Today"
+  },
+  {
+    "name": "Meta Ads Analytics",
+    "slug": "meta-ads-analytics",
+    "category": "platform",
+    "tagline": "Meta Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with meta ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing meta ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making meta ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Meta Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified meta ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Meta Ads Analytics Today"
+  },
+  {
+    "name": "Google Ads Analytics",
+    "slug": "google-ads-analytics",
+    "category": "platform",
+    "tagline": "Google Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with google ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing google ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making google ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Google Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified google ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Google Ads Analytics Today"
+  },
+  {
+    "name": "TikTok Ads Analytics",
+    "slug": "tiktok-ads-analytics",
+    "category": "platform",
+    "tagline": "TikTok Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with tiktok ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing tiktok ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making tiktok ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with TikTok Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified tiktok ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start TikTok Ads Analytics Today"
+  },
+  {
+    "name": "Pinterest Ads Analytics",
+    "slug": "pinterest-ads-analytics",
+    "category": "platform",
+    "tagline": "Pinterest Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with pinterest ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing pinterest ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making pinterest ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Pinterest Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified pinterest ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Pinterest Ads Analytics Today"
+  },
+  {
+    "name": "Snapchat Ads Analytics",
+    "slug": "snapchat-ads-analytics",
+    "category": "platform",
+    "tagline": "Snapchat Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with snapchat ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing snapchat ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making snapchat ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Snapchat Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified snapchat ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Snapchat Ads Analytics Today"
+  },
+  {
+    "name": "YouTube Ads Analytics",
+    "slug": "youtube-ads-analytics",
+    "category": "platform",
+    "tagline": "YouTube Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with youtube ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing youtube ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making youtube ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with YouTube Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified youtube ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start YouTube Ads Analytics Today"
+  },
+  {
+    "name": "Amazon Ads Analytics",
+    "slug": "amazon-ads-analytics",
+    "category": "platform",
+    "tagline": "Amazon Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with amazon ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing amazon ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making amazon ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Amazon Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified amazon ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Amazon Ads Analytics Today"
+  },
+  {
+    "name": "LinkedIn Ads Analytics",
+    "slug": "linkedin-ads-analytics",
+    "category": "platform",
+    "tagline": "LinkedIn Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with linkedin ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing linkedin ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making linkedin ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with LinkedIn Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified linkedin ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start LinkedIn Ads Analytics Today"
+  },
+  {
+    "name": "Twitter Ads Analytics",
+    "slug": "twitter-ads-analytics",
+    "category": "platform",
+    "tagline": "Twitter Ads Analytics made simple with metricx",
+    "description": "Learn how metricx helps you manage your advertising with twitter ads analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing twitter ads analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making twitter ads analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Twitter Ads Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified twitter ads analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Twitter Ads Analytics Today"
+  },
+  {
+    "name": "Shopify Analytics",
+    "slug": "shopify-analytics",
+    "category": "ecommerce",
+    "tagline": "Shopify Analytics made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with shopify analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing shopify analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making shopify analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Shopify Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified shopify analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Shopify Analytics Today"
+  },
+  {
+    "name": "WooCommerce Analytics",
+    "slug": "woocommerce-analytics",
+    "category": "ecommerce",
+    "tagline": "WooCommerce Analytics made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with woocommerce analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing woocommerce analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making woocommerce analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with WooCommerce Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified woocommerce analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start WooCommerce Analytics Today"
+  },
+  {
+    "name": "BigCommerce Analytics",
+    "slug": "bigcommerce-analytics",
+    "category": "ecommerce",
+    "tagline": "BigCommerce Analytics made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with bigcommerce analytics. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing bigcommerce analytics across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making bigcommerce analytics effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with BigCommerce Analytics?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified bigcommerce analytics across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start BigCommerce Analytics Today"
+  },
+  {
+    "name": "Product-Level ROAS",
+    "slug": "product-level-roas",
+    "category": "ecommerce",
+    "tagline": "Product-Level ROAS made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with product-level roas. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing product-level roas across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making product-level roas effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Product-Level ROAS?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified product-level roas across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Product-Level ROAS Today"
+  },
+  {
+    "name": "Category Performance",
+    "slug": "category-performance",
+    "category": "ecommerce",
+    "tagline": "Category Performance made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with category performance. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing category performance across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making category performance effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Category Performance?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified category performance across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Category Performance Today"
+  },
+  {
+    "name": "Customer Acquisition",
+    "slug": "customer-acquisition",
+    "category": "ecommerce",
+    "tagline": "Customer Acquisition made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with customer acquisition. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing customer acquisition across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making customer acquisition effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Customer Acquisition?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified customer acquisition across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Customer Acquisition Today"
+  },
+  {
+    "name": "LTV Analysis",
+    "slug": "ltv-analysis",
+    "category": "ecommerce",
+    "tagline": "LTV Analysis made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with ltv analysis. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing ltv analysis across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making ltv analysis effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with LTV Analysis?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified ltv analysis across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start LTV Analysis Today"
+  },
+  {
+    "name": "AOV Tracking",
+    "slug": "aov-tracking",
+    "category": "ecommerce",
+    "tagline": "AOV Tracking made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with aov tracking. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing aov tracking across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making aov tracking effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with AOV Tracking?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified aov tracking across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start AOV Tracking Today"
+  },
+  {
+    "name": "Cart Abandonment",
+    "slug": "cart-abandonment",
+    "category": "ecommerce",
+    "tagline": "Cart Abandonment made simple with metricx",
+    "description": "Learn how metricx helps you e-commerce focused your advertising with cart abandonment. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing cart abandonment across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making cart abandonment effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Cart Abandonment?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified cart abandonment across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Cart Abandonment Today"
+  },
+  {
+    "name": "Manage Multiple Clients",
+    "slug": "manage-multiple-clients",
+    "category": "agency",
+    "tagline": "Manage Multiple Clients made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with manage multiple clients. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing manage multiple clients across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making manage multiple clients effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Manage Multiple Clients?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified manage multiple clients across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Manage Multiple Clients Today"
+  },
+  {
+    "name": "Agency Dashboard",
+    "slug": "agency-dashboard",
+    "category": "agency",
+    "tagline": "Agency Dashboard made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with agency dashboard. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing agency dashboard across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making agency dashboard effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Agency Dashboard?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified agency dashboard across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Agency Dashboard Today"
+  },
+  {
+    "name": "Client Onboarding",
+    "slug": "client-onboarding",
+    "category": "agency",
+    "tagline": "Client Onboarding made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with client onboarding. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing client onboarding across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making client onboarding effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Client Onboarding?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified client onboarding across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Client Onboarding Today"
+  },
+  {
+    "name": "Multi-Account Management",
+    "slug": "multi-account-management",
+    "category": "agency",
+    "tagline": "Multi-Account Management made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with multi-account management. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing multi-account management across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making multi-account management effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Multi-Account Management?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified multi-account management across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Multi-Account Management Today"
+  },
+  {
+    "name": "Team Collaboration",
+    "slug": "team-collaboration",
+    "category": "agency",
+    "tagline": "Team Collaboration made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with team collaboration. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing team collaboration across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making team collaboration effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Team Collaboration?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified team collaboration across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Team Collaboration Today"
+  },
+  {
+    "name": "Performance Benchmarks",
+    "slug": "performance-benchmarks",
+    "category": "agency",
+    "tagline": "Performance Benchmarks made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with performance benchmarks. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing performance benchmarks across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making performance benchmarks effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Performance Benchmarks?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified performance benchmarks across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Performance Benchmarks Today"
+  },
+  {
+    "name": "Agency Profitability",
+    "slug": "agency-profitability",
+    "category": "agency",
+    "tagline": "Agency Profitability made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with agency profitability. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing agency profitability across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making agency profitability effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Agency Profitability?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified agency profitability across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Agency Profitability Today"
+  },
+  {
+    "name": "Client Retention",
+    "slug": "client-retention",
+    "category": "agency",
+    "tagline": "Client Retention made simple with metricx",
+    "description": "Learn how metricx helps you agency-focused your advertising with client retention. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing client retention across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making client retention effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Client Retention?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified client retention across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Client Retention Today"
+  },
+  {
+    "name": "Brand Health Monitoring",
+    "slug": "brand-health-monitoring",
+    "category": "brand",
+    "tagline": "Brand Health Monitoring made simple with metricx",
+    "description": "Learn how metricx helps you brand-level your advertising with brand health monitoring. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing brand health monitoring across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making brand health monitoring effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Brand Health Monitoring?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified brand health monitoring across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Brand Health Monitoring Today"
+  },
+  {
+    "name": "Competitive Analysis",
+    "slug": "competitive-analysis",
+    "category": "brand",
+    "tagline": "Competitive Analysis made simple with metricx",
+    "description": "Learn how metricx helps you brand-level your advertising with competitive analysis. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing competitive analysis across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making competitive analysis effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Competitive Analysis?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified competitive analysis across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Competitive Analysis Today"
+  },
+  {
+    "name": "Market Share Analysis",
+    "slug": "market-share-analysis",
+    "category": "brand",
+    "tagline": "Market Share Analysis made simple with metricx",
+    "description": "Learn how metricx helps you brand-level your advertising with market share analysis. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing market share analysis across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making market share analysis effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Market Share Analysis?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified market share analysis across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Market Share Analysis Today"
+  },
+  {
+    "name": "Brand vs Performance",
+    "slug": "brand-vs-performance",
+    "category": "brand",
+    "tagline": "Brand vs Performance made simple with metricx",
+    "description": "Learn how metricx helps you brand-level your advertising with brand vs performance. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing brand vs performance across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making brand vs performance effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Brand vs Performance?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified brand vs performance across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Brand vs Performance Today"
+  },
+  {
+    "name": "Omnichannel Attribution",
+    "slug": "omnichannel-attribution",
+    "category": "brand",
+    "tagline": "Omnichannel Attribution made simple with metricx",
+    "description": "Learn how metricx helps you brand-level your advertising with omnichannel attribution. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing omnichannel attribution across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making omnichannel attribution effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Omnichannel Attribution?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified omnichannel attribution across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Omnichannel Attribution Today"
+  },
+  {
+    "name": "P&L by Channel",
+    "slug": "pl-by-channel",
+    "category": "finance",
+    "tagline": "P&L by Channel made simple with metricx",
+    "description": "Learn how metricx helps you financial your advertising with p&l by channel. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing p&l by channel across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making p&l by channel effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with P&L by Channel?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified p&l by channel across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start P&L by Channel Today"
+  },
+  {
+    "name": "Profit Margin Analysis",
+    "slug": "profit-margin-analysis",
+    "category": "finance",
+    "tagline": "Profit Margin Analysis made simple with metricx",
+    "description": "Learn how metricx helps you financial your advertising with profit margin analysis. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing profit margin analysis across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making profit margin analysis effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Profit Margin Analysis?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified profit margin analysis across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Profit Margin Analysis Today"
+  },
+  {
+    "name": "Break-Even Analysis",
+    "slug": "break-even-analysis",
+    "category": "finance",
+    "tagline": "Break-Even Analysis made simple with metricx",
+    "description": "Learn how metricx helps you financial your advertising with break-even analysis. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing break-even analysis across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making break-even analysis effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Break-Even Analysis?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified break-even analysis across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Break-Even Analysis Today"
+  },
+  {
+    "name": "Budget Planning",
+    "slug": "budget-planning",
+    "category": "finance",
+    "tagline": "Budget Planning made simple with metricx",
+    "description": "Learn how metricx helps you financial your advertising with budget planning. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing budget planning across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making budget planning effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Budget Planning?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified budget planning across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Budget Planning Today"
+  },
+  {
+    "name": "Forecasting",
+    "slug": "forecasting",
+    "category": "finance",
+    "tagline": "Forecasting made simple with metricx",
+    "description": "Learn how metricx helps you financial your advertising with forecasting. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing forecasting across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making forecasting effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Forecasting?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified forecasting across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Forecasting Today"
+  },
+  {
+    "name": "Cost Tracking",
+    "slug": "cost-tracking",
+    "category": "finance",
+    "tagline": "Cost Tracking made simple with metricx",
+    "description": "Learn how metricx helps you financial your advertising with cost tracking. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing cost tracking across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making cost tracking effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Cost Tracking?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified cost tracking across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Cost Tracking Today"
+  },
+  {
+    "name": "Revenue Attribution",
+    "slug": "revenue-attribution",
+    "category": "finance",
+    "tagline": "Revenue Attribution made simple with metricx",
+    "description": "Learn how metricx helps you financial your advertising with revenue attribution. Connect Meta, Google, and TikTok for unified insights.",
+    "problem": "Managing revenue attribution across multiple ad platforms is time-consuming and error-prone. Spreadsheets don't scale, and platform dashboards don't talk to each other.",
+    "solution": "metricx unifies your ad data from Meta, Google, and TikTok into one dashboard, making revenue attribution effortless. See everything in one place and get AI-powered insights.",
+    "benefits": [
+      "Save hours on manual reporting",
+      "See all platforms in one view",
+      "Get AI-powered recommendations",
+      "Make faster, data-driven decisions"
+    ],
+    "features": [
+      "Real-time data sync",
+      "Cross-platform comparison",
+      "AI insights and recommendations",
+      "Automated alerts"
+    ],
+    "idealFor": [
+      "E-commerce brands",
+      "DTC companies",
+      "Marketing teams",
+      "Agencies"
+    ],
+    "faqs": [
+      {
+        "q": "How does metricx help with Revenue Attribution?",
+        "a": "metricx connects to Meta, Google, and TikTok to provide unified revenue attribution across all your ad platforms in one dashboard."
+      }
+    ],
+    "relatedUseCases": [],
+    "cta": "Start Revenue Attribution Today"
+  }
+]

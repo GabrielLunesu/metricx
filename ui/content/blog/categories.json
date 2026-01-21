@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Ad Analytics",
+    "slug": "ad-analytics",
+    "description": "Deep dives into advertising analytics, metrics interpretation, and data-driven decision making for e-commerce marketers.",
+    "icon": "chart-bar",
+    "color": "cyan",
+    "featuredOrder": 1,
+    "seoTitle": "Ad Analytics Guides & Tutorials | metricx Blog",
+    "seoDescription": "Learn how to analyze your advertising data effectively. Guides on ROAS, attribution, metrics interpretation, and data-driven marketing decisions."
+  },
+  {
+    "name": "Meta Ads",
+    "slug": "meta-ads",
+    "description": "Strategies, tactics, and best practices for Facebook and Instagram advertising on the Meta platform.",
+    "icon": "facebook",
+    "color": "blue",
+    "featuredOrder": 2,
+    "seoTitle": "Meta Ads (Facebook & Instagram) Marketing Guides | metricx Blog",
+    "seoDescription": "Expert guides on Meta Ads optimization, Facebook advertising strategies, Instagram ad tactics, and platform-specific best practices."
+  },
+  {
+    "name": "Google Ads",
+    "slug": "google-ads",
+    "description": "Comprehensive guides for Google Search, Shopping, Performance Max, and YouTube advertising.",
+    "icon": "google",
+    "color": "red",
+    "featuredOrder": 3,
+    "seoTitle": "Google Ads Guides & Optimization Tips | metricx Blog",
+    "seoDescription": "Master Google Ads with expert guides on Search, Shopping, Performance Max, and YouTube advertising strategies for e-commerce."
+  },
+  {
+    "name": "TikTok Ads",
+    "slug": "tiktok-ads",
+    "description": "TikTok advertising strategies for e-commerce brands looking to reach younger audiences through short-form video.",
+    "icon": "video",
+    "color": "pink",
+    "featuredOrder": 4,
+    "seoTitle": "TikTok Ads Marketing Strategies | metricx Blog",
+    "seoDescription": "Learn TikTok advertising strategies, creative best practices, and targeting tactics to reach Gen Z and Millennial shoppers."
+  },
+  {
+    "name": "Attribution",
+    "slug": "attribution",
+    "description": "Understanding marketing attribution models, cross-platform tracking, and measuring true campaign impact.",
+    "icon": "git-branch",
+    "color": "purple",
+    "featuredOrder": 5,
+    "seoTitle": "Marketing Attribution Guides | metricx Blog",
+    "seoDescription": "Understand attribution models, cross-platform tracking, iOS 14 impacts, and how to measure true marketing performance."
+  },
+  {
+    "name": "E-commerce Strategy",
+    "slug": "ecommerce-strategy",
+    "description": "Strategic insights for e-commerce growth, from scaling paid acquisition to optimizing customer lifetime value.",
+    "icon": "shopping-cart",
+    "color": "green",
+    "featuredOrder": 6,
+    "seoTitle": "E-commerce Marketing Strategy Guides | metricx Blog",
+    "seoDescription": "Strategic guides for e-commerce growth: scaling paid acquisition, improving profitability, and building sustainable DTC brands."
+  },
+  {
+    "name": "Tutorials",
+    "slug": "tutorials",
+    "description": "Step-by-step guides and how-tos for using metricx and optimizing your ad campaigns.",
+    "icon": "book-open",
+    "color": "amber",
+    "featuredOrder": 7,
+    "seoTitle": "metricx Tutorials & How-To Guides",
+    "seoDescription": "Step-by-step tutorials for using metricx, connecting ad accounts, interpreting data, and optimizing campaigns."
+  },
+  {
+    "name": "Industry Insights",
+    "slug": "industry-insights",
+    "description": "Trends, benchmarks, and insights across e-commerce industries and verticals.",
+    "icon": "trending-up",
+    "color": "indigo",
+    "featuredOrder": 8,
+    "seoTitle": "E-commerce Industry Insights & Trends | metricx Blog",
+    "seoDescription": "Industry-specific insights, benchmarks, and trends for fashion, beauty, home, and other e-commerce verticals."
+  },
+  {
+    "name": "Case Studies",
+    "slug": "case-studies",
+    "description": "Real-world examples of e-commerce brands achieving results with better ad analytics.",
+    "icon": "file-text",
+    "color": "slate",
+    "featuredOrder": 9,
+    "seoTitle": "E-commerce Marketing Case Studies | metricx Blog",
+    "seoDescription": "Real-world case studies showing how e-commerce brands improved ROAS, reduced CAC, and scaled profitably with data-driven decisions."
+  },
+  {
+    "name": "Product Updates",
+    "slug": "product-updates",
+    "description": "Latest features, improvements, and updates to the metricx platform.",
+    "icon": "sparkles",
+    "color": "cyan",
+    "featuredOrder": 10,
+    "seoTitle": "metricx Product Updates & New Features",
+    "seoDescription": "Stay updated on the latest metricx features, improvements, and platform updates."
+  }
+]
