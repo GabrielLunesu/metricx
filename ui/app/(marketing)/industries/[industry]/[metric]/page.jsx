@@ -36,7 +36,15 @@ import {
 } from "lucide-react";
 
 /**
- * Generate all industry × metric combinations for static generation.
+ * Enable on-demand generation for pages not pre-rendered at build time.
+ * This allows ISR to generate pages when first requested.
+ */
+export const dynamicParams = true;
+
+/**
+ * Generate top industry × metric combinations for static generation.
+ * Only pre-renders ~100 highest-value pages to stay under Vercel size limits.
+ * Remaining 2,000+ pages are generated on-demand via ISR.
  */
 export async function generateStaticParams() {
   const [industries, metrics] = await Promise.all([
@@ -44,8 +52,12 @@ export async function generateStaticParams() {
     getMetrics(),
   ]);
 
+  // Pre-render only top 5 industries × all metrics = ~100 pages
+  // Rest will be generated on-demand (ISR)
+  const topIndustries = industries.slice(0, 5);
+
   const params = [];
-  for (const industry of industries) {
+  for (const industry of topIndustries) {
     for (const metric of metrics) {
       params.push({
         industry: industry.slug,

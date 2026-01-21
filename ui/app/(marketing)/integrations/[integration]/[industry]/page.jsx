@@ -35,7 +35,15 @@ import {
 } from "lucide-react";
 
 /**
- * Generate all integration × industry combinations for static generation.
+ * Enable on-demand generation for pages not pre-rendered at build time.
+ * This allows ISR to generate pages when first requested.
+ */
+export const dynamicParams = true;
+
+/**
+ * Generate top integration × industry combinations for static generation.
+ * Only pre-renders ~50 highest-value pages to stay under Vercel size limits.
+ * Remaining 1,200+ pages are generated on-demand via ISR.
  */
 export async function generateStaticParams() {
   const [integrations, industries] = await Promise.all([
@@ -43,9 +51,14 @@ export async function generateStaticParams() {
     getIndustries(),
   ]);
 
+  // Pre-render top 5 integrations × top 10 industries = 50 pages
+  // Rest will be generated on-demand (ISR)
+  const topIntegrations = integrations.slice(0, 5);
+  const topIndustries = industries.slice(0, 10);
+
   const params = [];
-  for (const integration of integrations) {
-    for (const industry of industries) {
+  for (const integration of topIntegrations) {
+    for (const industry of topIndustries) {
       params.push({
         integration: integration.slug,
         industry: industry.slug,

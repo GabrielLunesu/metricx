@@ -39,7 +39,14 @@ import {
 } from "lucide-react";
 
 /**
+ * Enable on-demand generation for pages not pre-rendered at build time.
+ * This allows ISR to generate pages when first requested.
+ */
+export const dynamicParams = true;
+
+/**
  * Generate all platform × metric combinations for static generation.
+ * Only ~160 pages (8 platforms × 20 metrics) - small enough to pre-render all.
  */
 export async function generateStaticParams() {
   const [platforms, metrics] = await Promise.all([
