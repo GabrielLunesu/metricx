@@ -72,6 +72,7 @@ export const config = {
     // Match all routes except:
     // - Static files (_next, images, fonts, etc.)
     // - /api/* routes (these are proxied to backend which has its own auth)
-    '/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // - .txt files (for IndexNow verification, robots.txt, etc.)
+    '/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|txt)).*)',
   ],
 }
