@@ -34,7 +34,7 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import Link from "next/link";
 
 // Routes that require paid tier (free tier users are redirected)
-const PAID_ONLY_ROUTES = ['/analytics', '/finance', '/campaigns', '/copilot'];
+const PAID_ONLY_ROUTES = ['/analytics', '/finance', '/campaigns', '/copilot', '/agents'];
 
 export default function DashboardShell({ children }) {
   const pathname = usePathname();

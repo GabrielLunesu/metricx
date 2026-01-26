@@ -461,6 +461,210 @@ USE THIS FOR:
             },
         },
     },
+    # ===================
+    # AGENT MANAGEMENT (Autonomous monitoring agents)
+    # ===================
+    {
+        "type": "function",
+        "function": {
+            "name": "list_agents",
+            "description": """List the user's monitoring agents with their current status.
+
+USE THIS FOR:
+- "What agents do I have?"
+- "Show me my active agents"
+- "List all my monitoring rules"
+- "Which agents are running?"
+
+RETURNS:
+- List of agents with: name, status (active/paused), last triggered, total triggers
+- Brief summary of what each agent monitors""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status_filter": {
+                        "type": "string",
+                        "enum": ["active", "paused", "all"],
+                        "description": "Filter by agent status. Default: all",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_agent_status",
+            "description": """Get detailed status of a specific agent.
+
+USE THIS FOR:
+- "How is my ROAS agent doing?"
+- "Status of the budget scaler"
+- "Is my CPC alert working?"
+
+RETURNS:
+- Agent configuration summary
+- Current state per monitored entity
+- Recent evaluation history
+- Last triggered time and reason""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "agent_name": {
+                        "type": "string",
+                        "description": "Name or partial name of the agent to look up",
+                    },
+                    "agent_id": {
+                        "type": "string",
+                        "description": "UUID of the agent (if known)",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_agent",
+            "description": """Create a new monitoring agent from a natural language description.
+
+ALWAYS call this tool when user wants to create/setup an agent or alert.
+The tool returns a preview card - the UI handles confirmation, not you.
+
+USE THIS FOR:
+- "Alert me when ROAS drops below 2x"
+- "Let me know if CPC goes above $3 on my Google campaigns"
+- "Create an agent to monitor spend on Meta"
+- "Setup a notification when conversions drop"
+
+IMPORTANT: Just call the tool with the user's description. Do NOT ask for confirmation
+in your response - the tool returns a visual preview card with Create/Edit buttons
+that the user clicks to confirm. Your job is just to call the tool.""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": "Natural language description of what the agent should do",
+                    },
+                    "platform": {
+                        "type": "string",
+                        "enum": ["meta", "google", "all"],
+                        "description": "Platform to monitor (optional, can be inferred from description)",
+                    },
+                    "campaign_name": {
+                        "type": "string",
+                        "description": "Specific campaign to monitor (optional)",
+                    },
+                    "confirmed": {
+                        "type": "boolean",
+                        "description": "Set to true ONLY after user explicitly confirms. First call should be with confirmed=false to get preview.",
+                    },
+                },
+                "required": ["description"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "pause_agent",
+            "description": """Pause a running agent.
+
+USE THIS FOR:
+- "Pause my ROAS agent"
+- "Stop the budget scaler"
+- "Disable the CPC alert"
+
+The agent will stop evaluating but configuration is preserved.""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "agent_name": {
+                        "type": "string",
+                        "description": "Name or partial name of the agent to pause",
+                    },
+                    "agent_id": {
+                        "type": "string",
+                        "description": "UUID of the agent (if known)",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Optional reason for pausing",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "resume_agent",
+            "description": """Resume a paused agent.
+
+USE THIS FOR:
+- "Resume my ROAS agent"
+- "Start the budget scaler again"
+- "Re-enable the CPC alert"
+
+The agent will start evaluating again from its last state.""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "agent_name": {
+                        "type": "string",
+                        "description": "Name or partial name of the agent to resume",
+                    },
+                    "agent_id": {
+                        "type": "string",
+                        "description": "UUID of the agent (if known)",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "explain_agent_behavior",
+            "description": """Explain why an agent did or didn't trigger.
+
+USE THIS FOR:
+- "Why didn't my agents fire yesterday?" (explains ALL agents)
+- "Why didn't my ROAS agent fire yesterday?" (explains specific agent)
+- "What did the budget scaler do last week?"
+- "Why was my CPC alert triggered?"
+
+IMPORTANT: If user asks about "agents" (plural) or doesn't specify which agent,
+call this WITHOUT agent_name/agent_id to get a summary of ALL agents.
+
+RETURNS:
+- If specific agent: detailed evaluation events with explanations
+- If no agent specified: summary of ALL agents and their behavior""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "agent_name": {
+                        "type": "string",
+                        "description": "Name or partial name of the agent. OMIT to explain ALL agents.",
+                    },
+                    "agent_id": {
+                        "type": "string",
+                        "description": "UUID of the agent (if known). OMIT to explain ALL agents.",
+                    },
+                    "time_range": {
+                        "type": "string",
+                        "enum": ["today", "yesterday", "last_7d", "last_30d"],
+                        "description": "Time range to look at. Default: last_7d",
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "Specific question about the agent's behavior",
+                    },
+                },
+            },
+        },
+    },
 ]
 
 
@@ -930,6 +1134,748 @@ class SemanticTools:
         return aliases.get(time_range, 7)
 
 
+# =============================================================================
+# AGENT MANAGEMENT TOOLS
+# =============================================================================
+
+
+class AgentManagementTools:
+    """
+    Tool implementations for managing autonomous monitoring agents.
+
+    WHAT: Provides copilot tools to list, create, pause, resume agents
+    and explain their behavior.
+
+    WHY: Enables natural language agent management through Copilot.
+    Users can say "alert me when ROAS drops below 2" and we create the agent.
+    """
+
+    def __init__(self, db: Session, workspace_id: str, user_id: Optional[str] = None):
+        self.db = db
+        self.workspace_id = workspace_id
+        self.user_id = user_id
+
+    def list_agents(
+        self,
+        status_filter: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        List user's monitoring agents.
+
+        RETURNS:
+            Dict with list of agents and their status summaries.
+        """
+        from app.models import Agent, AgentStatusEnum
+
+        logger.info(f"[AGENT_TOOLS] list_agents: status={status_filter}")
+
+        try:
+            query = self.db.query(Agent).filter(
+                Agent.workspace_id == self.workspace_id
+            )
+
+            if status_filter and status_filter != "all":
+                try:
+                    status_enum = AgentStatusEnum(status_filter)
+                    query = query.filter(Agent.status == status_enum)
+                except ValueError:
+                    pass
+
+            agents = query.order_by(Agent.created_at.desc()).limit(50).all()
+
+            agent_list = []
+            for agent in agents:
+                # Build condition summary
+                condition = agent.condition or {}
+                condition_summary = self._summarize_condition(condition)
+
+                # Build scope summary
+                scope_config = agent.scope_config or {}
+                scope_summary = self._summarize_scope(agent.scope_type, scope_config)
+
+                agent_list.append({
+                    "id": str(agent.id),
+                    "name": agent.name,
+                    "status": agent.status.value if agent.status else "unknown",
+                    "description": agent.description,
+                    "condition_summary": condition_summary,
+                    "scope_summary": scope_summary,
+                    "last_evaluated_at": agent.last_evaluated_at.isoformat() if agent.last_evaluated_at else None,
+                    "last_triggered_at": agent.last_triggered_at.isoformat() if agent.last_triggered_at else None,
+                    "total_triggers": agent.total_triggers or 0,
+                    "total_evaluations": agent.total_evaluations or 0,
+                })
+
+            return {
+                "success": True,
+                "agents": agent_list,
+                "count": len(agent_list),
+                "summary": f"You have {len(agent_list)} agent(s)" + (
+                    f" ({status_filter})" if status_filter and status_filter != "all" else ""
+                ),
+            }
+
+        except Exception as e:
+            logger.exception(f"[AGENT_TOOLS] list_agents failed: {e}")
+            return {"error": str(e)}
+
+    def get_agent_status(
+        self,
+        agent_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get detailed status of a specific agent.
+        """
+        from app.models import Agent, AgentEntityState, AgentEvaluationEvent
+
+        logger.info(f"[AGENT_TOOLS] get_agent_status: name={agent_name}, id={agent_id}")
+
+        try:
+            agent = self._find_agent(agent_name, agent_id)
+            if not agent:
+                return {"error": f"Agent not found: {agent_name or agent_id}"}
+
+            # Get entity states
+            entity_states = self.db.query(AgentEntityState).filter(
+                AgentEntityState.agent_id == agent.id
+            ).all()
+
+            # Get recent events
+            recent_events = self.db.query(AgentEvaluationEvent).filter(
+                AgentEvaluationEvent.agent_id == agent.id
+            ).order_by(AgentEvaluationEvent.evaluated_at.desc()).limit(5).all()
+
+            # Build status summary
+            states_summary = []
+            for state in entity_states:
+                states_summary.append({
+                    "entity_id": str(state.entity_id),
+                    "state": state.state.value if state.state else "unknown",
+                    "accumulation_count": state.accumulation_count or 0,
+                    "trigger_count": state.trigger_count or 0,
+                })
+
+            events_summary = []
+            for event in recent_events:
+                events_summary.append({
+                    "evaluated_at": event.evaluated_at.isoformat() if event.evaluated_at else None,
+                    "result_type": event.result_type,
+                    "headline": event.headline,
+                    "entity_name": event.entity_name,
+                    "condition_result": event.condition_result,
+                    "should_trigger": event.should_trigger,
+                })
+
+            return {
+                "success": True,
+                "agent": {
+                    "id": str(agent.id),
+                    "name": agent.name,
+                    "status": agent.status.value if agent.status else "unknown",
+                    "description": agent.description,
+                    "condition": agent.condition,
+                    "condition_summary": self._summarize_condition(agent.condition or {}),
+                    "scope_summary": self._summarize_scope(agent.scope_type, agent.scope_config or {}),
+                    "last_evaluated_at": agent.last_evaluated_at.isoformat() if agent.last_evaluated_at else None,
+                    "last_triggered_at": agent.last_triggered_at.isoformat() if agent.last_triggered_at else None,
+                    "total_triggers": agent.total_triggers or 0,
+                    "total_evaluations": agent.total_evaluations or 0,
+                },
+                "entity_states": states_summary,
+                "recent_events": events_summary,
+            }
+
+        except Exception as e:
+            logger.exception(f"[AGENT_TOOLS] get_agent_status failed: {e}")
+            return {"error": str(e)}
+
+    def create_agent(
+        self,
+        description: str,
+        platform: Optional[str] = None,
+        campaign_name: Optional[str] = None,
+        confirmed: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Create a new agent from natural language description.
+
+        When confirmed=False (default): Returns a PREVIEW of what will be created.
+        When confirmed=True: Actually creates the agent.
+
+        This two-step process ensures users confirm before agents are created.
+        """
+        from app.models import Agent, AgentStatusEnum, User
+        import re
+
+        logger.info(f"[AGENT_TOOLS] create_agent: {description}, confirmed={confirmed}")
+
+        try:
+            # Parse the natural language description
+            parsed = self._parse_agent_description(description)
+
+            if not parsed.get("metric"):
+                return {
+                    "error": "Couldn't understand what metric to monitor. Try something like 'alert me when ROAS drops below 2' or 'notify me if CPC goes above $3'"
+                }
+
+            # Build condition
+            condition = {
+                "type": "threshold",
+                "metric": parsed["metric"],
+                "operator": parsed.get("operator", "<"),
+                "value": parsed.get("value", 0),
+            }
+
+            # Build scope config
+            scope_type = "all"
+            scope_config = {
+                "level": "campaign",
+            }
+
+            # Apply platform filter
+            inferred_platform = platform or parsed.get("platform")
+            if inferred_platform and inferred_platform != "all":
+                scope_config["provider"] = inferred_platform
+
+            # If specific campaign mentioned, use filter scope
+            if campaign_name or parsed.get("campaign_name"):
+                scope_type = "filter"
+                scope_config["entity_name_contains"] = campaign_name or parsed.get("campaign_name")
+
+            # Generate agent name if not provided
+            agent_name = parsed.get("name") or self._generate_agent_name(condition, scope_config)
+
+            # If not confirmed, return preview for user to approve
+            if not confirmed:
+                condition_summary = self._summarize_condition(condition)
+                scope_summary = self._summarize_scope(scope_type, scope_config)
+
+                return {
+                    "success": True,
+                    "preview": True,
+                    "requires_confirmation": True,
+                    "message": "Here's what I'll create. Please confirm to proceed.",
+                    "agent_preview": {
+                        "name": agent_name,
+                        "condition": condition_summary,
+                        "scope": scope_summary,
+                        "action": "Email notification when triggered",
+                        "frequency": "Evaluates every 15 minutes",
+                    },
+                    "confirmation_prompt": f"I'll create an agent called '{agent_name}' that will {condition_summary.lower()} across {scope_summary.lower()}. You'll receive an email when it triggers. Should I create this?",
+                }
+
+            # Build email action
+            actions = [{
+                "type": "email",
+                "config": {
+                    "subject_template": f"🎯 {agent_name} triggered on {{{{entity_name}}}}",
+                    "body_template": f"Your agent '{agent_name}' has triggered.\n\nCondition: {parsed['metric']} {parsed.get('operator', '<')} {parsed.get('value', 0)}\n\nCheck your dashboard for details.",
+                }
+            }]
+
+            # Get user for created_by
+            user = self.db.query(User).filter(User.id == self.user_id).first() if self.user_id else None
+
+            # Create the agent
+            agent = Agent(
+                workspace_id=self.workspace_id,
+                name=agent_name,
+                description=f"Created via Copilot: {description}",
+                scope_type=scope_type,
+                scope_config=scope_config,
+                condition=condition,
+                accumulation_required=1,
+                accumulation_unit="evaluations",
+                accumulation_mode="consecutive",
+                trigger_mode="once",
+                actions=actions,
+                status=AgentStatusEnum.active,
+                created_by=user.id if user else None,
+            )
+
+            self.db.add(agent)
+            self.db.commit()
+            self.db.refresh(agent)
+
+            return {
+                "success": True,
+                "message": f"Created agent '{agent_name}'",
+                "agent": {
+                    "id": str(agent.id),
+                    "name": agent.name,
+                    "status": "active",
+                    "condition_summary": self._summarize_condition(condition),
+                    "scope_summary": self._summarize_scope(scope_type, scope_config),
+                },
+                "note": "The agent is now active and will evaluate every 15 minutes. You'll receive an email when it triggers.",
+            }
+
+        except Exception as e:
+            logger.exception(f"[AGENT_TOOLS] create_agent failed: {e}")
+            self.db.rollback()
+            return {"error": str(e)}
+
+    def pause_agent(
+        self,
+        agent_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Pause a running agent."""
+        from app.models import Agent, AgentStatusEnum
+
+        logger.info(f"[AGENT_TOOLS] pause_agent: name={agent_name}, id={agent_id}")
+
+        try:
+            agent = self._find_agent(agent_name, agent_id)
+            if not agent:
+                return {"error": f"Agent not found: {agent_name or agent_id}"}
+
+            if agent.status == AgentStatusEnum.paused:
+                return {
+                    "success": True,
+                    "message": f"Agent '{agent.name}' is already paused",
+                    "agent_id": str(agent.id),
+                }
+
+            agent.status = AgentStatusEnum.paused
+            self.db.commit()
+
+            return {
+                "success": True,
+                "message": f"Paused agent '{agent.name}'" + (f" (reason: {reason})" if reason else ""),
+                "agent_id": str(agent.id),
+                "agent_name": agent.name,
+            }
+
+        except Exception as e:
+            logger.exception(f"[AGENT_TOOLS] pause_agent failed: {e}")
+            self.db.rollback()
+            return {"error": str(e)}
+
+    def resume_agent(
+        self,
+        agent_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Resume a paused agent."""
+        from app.models import Agent, AgentStatusEnum
+
+        logger.info(f"[AGENT_TOOLS] resume_agent: name={agent_name}, id={agent_id}")
+
+        try:
+            agent = self._find_agent(agent_name, agent_id)
+            if not agent:
+                return {"error": f"Agent not found: {agent_name or agent_id}"}
+
+            if agent.status == AgentStatusEnum.active:
+                return {
+                    "success": True,
+                    "message": f"Agent '{agent.name}' is already active",
+                    "agent_id": str(agent.id),
+                }
+
+            agent.status = AgentStatusEnum.active
+            self.db.commit()
+
+            return {
+                "success": True,
+                "message": f"Resumed agent '{agent.name}'. It will evaluate on the next cycle (every 15 minutes).",
+                "agent_id": str(agent.id),
+                "agent_name": agent.name,
+            }
+
+        except Exception as e:
+            logger.exception(f"[AGENT_TOOLS] resume_agent failed: {e}")
+            self.db.rollback()
+            return {"error": str(e)}
+
+    def explain_agent_behavior(
+        self,
+        agent_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        time_range: str = "last_7d",
+        question: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Explain why an agent did or didn't trigger.
+
+        Queries evaluation events and provides human-readable explanations.
+        If no agent specified, explains behavior for ALL agents.
+        """
+        from app.models import Agent, AgentEvaluationEvent
+        from datetime import datetime, timedelta
+
+        logger.info(f"[AGENT_TOOLS] explain_agent_behavior: name={agent_name}, range={time_range}")
+
+        try:
+            # If no agent specified, explain ALL agents
+            if not agent_name and not agent_id:
+                return self._explain_all_agents_behavior(time_range)
+
+            agent = self._find_agent(agent_name, agent_id)
+            if not agent:
+                return {"error": f"Agent not found: {agent_name or agent_id}"}
+
+            # Determine date range
+            days_map = {
+                "today": 1,
+                "yesterday": 2,
+                "last_7d": 7,
+                "last_30d": 30,
+            }
+            days = days_map.get(time_range, 7)
+            since = datetime.utcnow() - timedelta(days=days)
+
+            # Get evaluation events
+            events = self.db.query(AgentEvaluationEvent).filter(
+                AgentEvaluationEvent.agent_id == agent.id,
+                AgentEvaluationEvent.evaluated_at >= since,
+            ).order_by(AgentEvaluationEvent.evaluated_at.desc()).limit(20).all()
+
+            if not events:
+                return {
+                    "success": True,
+                    "agent_name": agent.name,
+                    "explanation": f"No evaluations found for '{agent.name}' in the {time_range} period. This could mean:\n"
+                                   f"1. The agent was just created\n"
+                                   f"2. The agent is paused (current status: {agent.status.value if agent.status else 'unknown'})\n"
+                                   f"3. No entities match the agent's scope",
+                    "events": [],
+                }
+
+            # Build explanation
+            trigger_count = sum(1 for e in events if e.should_trigger)
+            condition_met_count = sum(1 for e in events if e.condition_result)
+
+            events_summary = []
+            for event in events[:10]:  # Top 10 most recent
+                events_summary.append({
+                    "time": event.evaluated_at.isoformat() if event.evaluated_at else None,
+                    "entity": event.entity_name,
+                    "result": event.result_type,
+                    "headline": event.headline,
+                    "condition_met": event.condition_result,
+                    "triggered": event.should_trigger,
+                    "explanation": event.condition_explanation,
+                })
+
+            explanation_lines = [
+                f"**Agent: {agent.name}**",
+                f"**Period: {time_range}** ({len(events)} evaluations)",
+                f"**Condition: {self._summarize_condition(agent.condition or {})}**",
+                "",
+                f"📊 **Summary:**",
+                f"- Total evaluations: {len(events)}",
+                f"- Condition met: {condition_met_count} times",
+                f"- Triggered actions: {trigger_count} times",
+            ]
+
+            if trigger_count == 0 and condition_met_count == 0:
+                explanation_lines.append("\n⚠️ The condition was never met during this period.")
+                explanation_lines.append("This means the monitored metric stayed within acceptable bounds.")
+            elif trigger_count == 0 and condition_met_count > 0:
+                explanation_lines.append("\n⚠️ Condition was met but agent didn't trigger.")
+                explanation_lines.append("This could be due to accumulation requirements or cooldown settings.")
+
+            return {
+                "success": True,
+                "agent_name": agent.name,
+                "explanation": "\n".join(explanation_lines),
+                "events": events_summary,
+                "stats": {
+                    "total_evaluations": len(events),
+                    "condition_met": condition_met_count,
+                    "triggered": trigger_count,
+                },
+            }
+
+        except Exception as e:
+            logger.exception(f"[AGENT_TOOLS] explain_agent_behavior failed: {e}")
+            return {"error": str(e)}
+
+    # =========================================================================
+    # HELPER METHODS
+    # =========================================================================
+
+    def _explain_all_agents_behavior(self, time_range: str = "last_7d") -> Dict[str, Any]:
+        """
+        Explain behavior for ALL agents when no specific agent is mentioned.
+
+        WHY: Users often ask "why didn't my agents fire?" without specifying which one.
+        """
+        from app.models import Agent, AgentEvaluationEvent
+        from datetime import datetime, timedelta
+
+        # Determine date range
+        days_map = {
+            "today": 1,
+            "yesterday": 2,
+            "last_7d": 7,
+            "last_30d": 30,
+        }
+        days = days_map.get(time_range, 7)
+        since = datetime.utcnow() - timedelta(days=days)
+
+        # Get all agents
+        agents = self.db.query(Agent).filter(
+            Agent.workspace_id == self.workspace_id
+        ).order_by(Agent.created_at.desc()).limit(20).all()
+
+        if not agents:
+            return {
+                "success": True,
+                "explanation": "You don't have any agents set up yet. Would you like me to create one? Just tell me what you want to monitor, like 'alert me when ROAS drops below 2'.",
+                "agents": [],
+            }
+
+        # Build summary for each agent
+        agents_summary = []
+        total_triggers = 0
+        total_evaluations = 0
+
+        for agent in agents:
+            # Get events for this agent
+            events = self.db.query(AgentEvaluationEvent).filter(
+                AgentEvaluationEvent.agent_id == agent.id,
+                AgentEvaluationEvent.evaluated_at >= since,
+            ).all()
+
+            trigger_count = sum(1 for e in events if e.should_trigger)
+            condition_met_count = sum(1 for e in events if e.condition_result)
+
+            total_triggers += trigger_count
+            total_evaluations += len(events)
+
+            # Determine status explanation
+            if agent.status.value == "paused":
+                status_note = "⏸️ Paused - not evaluating"
+            elif len(events) == 0:
+                status_note = "⚠️ No evaluations - may be newly created or no matching entities"
+            elif trigger_count > 0:
+                status_note = f"✅ Triggered {trigger_count} time(s)"
+            elif condition_met_count > 0:
+                status_note = f"🔄 Condition met {condition_met_count}x but accumulation not reached"
+            else:
+                status_note = "✓ Monitoring - condition not met (metrics within bounds)"
+
+            agents_summary.append({
+                "name": agent.name,
+                "status": agent.status.value if agent.status else "unknown",
+                "condition": self._summarize_condition(agent.condition or {}),
+                "scope": self._summarize_scope(agent.scope_type, agent.scope_config or {}),
+                "evaluations": len(events),
+                "condition_met": condition_met_count,
+                "triggered": trigger_count,
+                "status_note": status_note,
+            })
+
+        # Build explanation text
+        explanation_lines = [
+            f"**Agent Summary ({time_range})**",
+            f"You have {len(agents)} agent(s). Here's what happened:",
+            "",
+        ]
+
+        for i, agent_info in enumerate(agents_summary, 1):
+            explanation_lines.append(f"**{i}. {agent_info['name']}** ({agent_info['status']})")
+            explanation_lines.append(f"   Watches: {agent_info['scope']}")
+            explanation_lines.append(f"   Condition: {agent_info['condition']}")
+            explanation_lines.append(f"   {agent_info['status_note']}")
+            explanation_lines.append("")
+
+        if total_triggers == 0:
+            explanation_lines.append("📊 **None of your agents triggered** during this period.")
+            explanation_lines.append("This means all monitored metrics stayed within your defined thresholds.")
+        else:
+            explanation_lines.append(f"📊 **Total: {total_triggers} trigger(s)** across {total_evaluations} evaluations.")
+
+        return {
+            "success": True,
+            "explanation": "\n".join(explanation_lines),
+            "agents": agents_summary,
+            "stats": {
+                "total_agents": len(agents),
+                "total_evaluations": total_evaluations,
+                "total_triggers": total_triggers,
+            },
+        }
+
+    def _find_agent(
+        self,
+        agent_name: Optional[str],
+        agent_id: Optional[str],
+    ):
+        """Find an agent by name or ID."""
+        from app.models import Agent
+        import uuid as uuid_module
+
+        if agent_id:
+            try:
+                uid = uuid_module.UUID(agent_id)
+                return self.db.query(Agent).filter(
+                    Agent.id == uid,
+                    Agent.workspace_id == self.workspace_id,
+                ).first()
+            except ValueError:
+                pass
+
+        if agent_name:
+            # Try exact match first
+            agent = self.db.query(Agent).filter(
+                Agent.workspace_id == self.workspace_id,
+                Agent.name.ilike(agent_name),
+            ).first()
+
+            if agent:
+                return agent
+
+            # Try partial match
+            return self.db.query(Agent).filter(
+                Agent.workspace_id == self.workspace_id,
+                Agent.name.ilike(f"%{agent_name}%"),
+            ).first()
+
+        return None
+
+    def _summarize_condition(self, condition: Dict) -> str:
+        """Generate human-readable summary of a condition."""
+        cond_type = condition.get("type", "unknown")
+
+        if cond_type == "threshold":
+            metric = condition.get("metric", "metric")
+            operator = condition.get("operator", "<")
+            value = condition.get("value", 0)
+
+            op_text = {
+                "<": "drops below",
+                "<=": "drops to or below",
+                ">": "goes above",
+                ">=": "goes to or above",
+                "==": "equals",
+            }.get(operator, operator)
+
+            # Format value based on metric
+            if metric in ["roas"]:
+                value_str = f"{value}x"
+            elif metric in ["spend", "revenue", "cpc", "cpa"]:
+                value_str = f"${value}"
+            elif metric in ["ctr"]:
+                value_str = f"{value}%"
+            else:
+                value_str = str(value)
+
+            return f"When {metric.upper()} {op_text} {value_str}"
+
+        elif cond_type == "composite":
+            sub_conditions = condition.get("conditions", [])
+            operator = condition.get("operator", "AND")
+            summaries = [self._summarize_condition(c) for c in sub_conditions]
+            return f" {operator} ".join(summaries)
+
+        return "Custom condition"
+
+    def _summarize_scope(self, scope_type: str, scope_config: Dict) -> str:
+        """Generate human-readable summary of scope."""
+        provider = scope_config.get("provider") or scope_config.get("platform")
+        level = scope_config.get("level", "campaign")
+
+        if scope_type == "all":
+            if provider:
+                return f"All {provider.title()} {level}s"
+            return f"All {level}s"
+
+        elif scope_type == "filter":
+            name_filter = scope_config.get("entity_name_contains")
+            if name_filter:
+                return f"{level}s matching '{name_filter}'"
+            return f"Filtered {level}s"
+
+        elif scope_type == "specific":
+            entity_ids = scope_config.get("entity_ids", [])
+            return f"{len(entity_ids)} specific {level}(s)"
+
+        return "Custom scope"
+
+    def _parse_agent_description(self, description: str) -> Dict[str, Any]:
+        """
+        Parse natural language agent description to extract configuration.
+
+        Examples:
+        - "alert me when ROAS drops below 2" -> {metric: "roas", operator: "<", value: 2}
+        - "notify me if CPC goes above $3" -> {metric: "cpc", operator: ">", value: 3}
+        """
+        import re
+
+        description_lower = description.lower()
+        result = {}
+
+        # Extract metric
+        metrics_map = {
+            "roas": ["roas", "return on ad spend"],
+            "cpc": ["cpc", "cost per click"],
+            "ctr": ["ctr", "click through rate", "click-through rate"],
+            "cpa": ["cpa", "cost per acquisition", "cost per action"],
+            "spend": ["spend", "spending", "cost"],
+            "revenue": ["revenue", "sales", "income"],
+            "conversions": ["conversions", "conversion", "purchases"],
+            "impressions": ["impressions", "views"],
+            "clicks": ["clicks"],
+        }
+
+        for metric, keywords in metrics_map.items():
+            for keyword in keywords:
+                if keyword in description_lower:
+                    result["metric"] = metric
+                    break
+            if "metric" in result:
+                break
+
+        # Extract operator and value
+        patterns = [
+            # "drops below X" or "falls below X"
+            (r"(?:drops?|falls?|goes?)\s+(?:below|under)\s+\$?(\d+\.?\d*)", "<"),
+            # "goes above X" or "exceeds X"
+            (r"(?:goes?|rises?|exceeds?)\s+(?:above|over)\s+\$?(\d+\.?\d*)", ">"),
+            # "below X" or "under X"
+            (r"(?:below|under|less than|<)\s+\$?(\d+\.?\d*)", "<"),
+            # "above X" or "over X"
+            (r"(?:above|over|more than|greater than|>)\s+\$?(\d+\.?\d*)", ">"),
+            # "< X" or "> X" patterns
+            (r"<\s*\$?(\d+\.?\d*)", "<"),
+            (r">\s*\$?(\d+\.?\d*)", ">"),
+        ]
+
+        for pattern, operator in patterns:
+            match = re.search(pattern, description_lower)
+            if match:
+                result["operator"] = operator
+                result["value"] = float(match.group(1))
+                break
+
+        # Extract platform
+        if "google" in description_lower:
+            result["platform"] = "google"
+        elif "meta" in description_lower or "facebook" in description_lower:
+            result["platform"] = "meta"
+
+        return result
+
+    def _generate_agent_name(self, condition: Dict, scope_config: Dict) -> str:
+        """Generate a descriptive agent name from configuration."""
+        metric = condition.get("metric", "metric").upper()
+        operator = condition.get("operator", "<")
+        value = condition.get("value", 0)
+
+        op_word = "Low" if operator in ["<", "<="] else "High"
+        provider = scope_config.get("provider", "")
+        provider_str = f" {provider.title()}" if provider else ""
+
+        return f"{op_word} {metric} Alert{provider_str}"
+
+
 def execute_tool(
     tool_name: str,
     tool_args: Dict[str, Any],
@@ -954,16 +1900,35 @@ def execute_tool(
     RETURNS:
         Tool result dict
     """
-    tools = SemanticTools(db, workspace_id, user_id)
+    # Semantic/metrics tools
+    if tool_name in ["query_metrics", "get_entities", "analyze_change"]:
+        tools = SemanticTools(db, workspace_id, user_id)
 
-    if tool_name == "query_metrics":
-        return tools.query_metrics(**tool_args)
-    elif tool_name == "get_entities":
-        return tools.get_entities(**tool_args)
-    elif tool_name == "analyze_change":
-        return tools.analyze_change(**tool_args)
-    else:
-        return {"error": f"Unknown tool: {tool_name}"}
+        if tool_name == "query_metrics":
+            return tools.query_metrics(**tool_args)
+        elif tool_name == "get_entities":
+            return tools.get_entities(**tool_args)
+        elif tool_name == "analyze_change":
+            return tools.analyze_change(**tool_args)
+
+    # Agent management tools
+    elif tool_name in ["list_agents", "get_agent_status", "create_agent", "pause_agent", "resume_agent", "explain_agent_behavior"]:
+        agent_tools = AgentManagementTools(db, workspace_id, user_id)
+
+        if tool_name == "list_agents":
+            return agent_tools.list_agents(**tool_args)
+        elif tool_name == "get_agent_status":
+            return agent_tools.get_agent_status(**tool_args)
+        elif tool_name == "create_agent":
+            return agent_tools.create_agent(**tool_args)
+        elif tool_name == "pause_agent":
+            return agent_tools.pause_agent(**tool_args)
+        elif tool_name == "resume_agent":
+            return agent_tools.resume_agent(**tool_args)
+        elif tool_name == "explain_agent_behavior":
+            return agent_tools.explain_agent_behavior(**tool_args)
+
+    return {"error": f"Unknown tool: {tool_name}"}
 
 
 # =============================================================================
@@ -978,6 +1943,8 @@ def get_tools_description() -> str:
     WHY: Used in system prompt to tell LLM what tools are available.
     """
     return """You have access to these tools:
+
+## METRICS & ANALYTICS
 
 1. **query_metrics** - Get advertising metrics
    - metrics: What to measure (roas, spend, cpc, ctr, revenue, conversions, etc.)
@@ -998,5 +1965,32 @@ def get_tools_description() -> str:
    - direction: "up" or "down"
    - time_range: Period to analyze
 
+## AGENT MANAGEMENT (Monitoring Automation)
+
+4. **list_agents** - List user's monitoring agents
+   - status_filter: "active", "paused", or "all"
+
+5. **get_agent_status** - Get detailed status of an agent
+   - agent_name: Name or partial name to search
+   - agent_id: UUID if known
+
+6. **create_agent** - Create agent from natural language
+   - description: What the agent should do (e.g., "alert me when ROAS drops below 2")
+   - platform: Optional platform filter (meta, google, all)
+   - campaign_name: Optional specific campaign
+
+7. **pause_agent** - Pause a running agent
+   - agent_name or agent_id
+   - reason: Optional pause reason
+
+8. **resume_agent** - Resume a paused agent
+   - agent_name or agent_id
+
+9. **explain_agent_behavior** - Explain why an agent did/didn't trigger
+   - agent_name or agent_id
+   - time_range: "today", "yesterday", "last_7d", "last_30d"
+   - question: Specific question about behavior
+
 Always use query_metrics for data questions. Use analyze_change for "why" questions.
+For monitoring setup, use create_agent with natural language like "alert me when CPC goes above $5".
 """

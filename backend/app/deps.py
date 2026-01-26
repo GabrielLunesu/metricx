@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     CLERK_PUBLISHABLE_KEY: Optional[str] = None
     CLERK_WEBHOOK_SECRET: Optional[str] = None
 
+    # Resend Email Configuration
+    # WHAT: Resend API key for transactional emails
+    # WHY: Used for agent notifications (triggers, errors, circuit breakers)
+    # REFERENCES: https://resend.com/docs/api-reference/emails/send-email
+    RESEND_API_KEY: Optional[str] = None
+    RESEND_FROM_EMAIL: str = "Metricx Agents <agents@metricx.ai>"
+
     # Development mode settings
     # WHAT: Auto-provision users when Clerk webhooks can't reach localhost
     # WHY: In local dev, Clerk webhooks don't fire, so users aren't created in DB

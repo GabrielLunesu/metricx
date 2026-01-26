@@ -67,7 +67,7 @@ function StageIndicator({ stage }) {
 // AI Message Bubble (v5.0 - With Tool Events)
 // WHAT: Glass-morphism bubble with ThinkingAccordion for tool transparency
 // WHY: Apple-inspired subtle aesthetic + shows what the agent is doing
-function AIMessage({ text, isTyping, visuals, stage, toolEvents = [] }) {
+function AIMessage({ text, isTyping, visuals, stage, toolEvents = [], workspaceId }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -113,7 +113,7 @@ function AIMessage({ text, isTyping, visuals, stage, toolEvents = [] }) {
                   className="text-sm text-slate-700 leading-relaxed space-y-3"
                 >
                   <div dangerouslySetInnerHTML={{ __html: text }} />
-                  <AnswerVisuals visuals={visuals} />
+                  <AnswerVisuals visuals={visuals} workspaceId={workspaceId} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -176,7 +176,7 @@ function UserMessage({ text, user }) {
 //   - stage: Current processing stage (from SSE streaming)
 //   - streamingText: Text being streamed token-by-token (typing effect)
 //   - toolEvents: Current tool events during streaming (for live typing indicator)
-export default function ConversationThread({ messages = [], isLoading, stage, streamingText = '', toolEvents = [] }) {
+export default function ConversationThread({ messages = [], isLoading, stage, streamingText = '', toolEvents = [], workspaceId }) {
   const messagesEndRef = useRef(null);
   const { user } = useUser();
 
@@ -243,6 +243,7 @@ export default function ConversationThread({ messages = [], isLoading, stage, st
                 text={msg.text}
                 visuals={msg.visuals}
                 toolEvents={msg.toolEvents || []}
+                workspaceId={workspaceId}
               />
             ) : (
               <UserMessage text={msg.text} user={user} />
@@ -262,13 +263,14 @@ export default function ConversationThread({ messages = [], isLoading, stage, st
           >
             {streamingText ? (
               // Show streaming text with typing cursor + tool events
-              <AIMessage 
-                text={streamingText + '<span class="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse"></span>'} 
+              <AIMessage
+                text={streamingText + '<span class="inline-block w-2 h-4 bg-blue-500 ml-1 animate-pulse"></span>'}
                 toolEvents={toolEvents}
+                workspaceId={workspaceId}
               />
             ) : (
               // Show stage indicator while waiting for tokens + tool events
-              <AIMessage isTyping={true} stage={stage} toolEvents={toolEvents} />
+              <AIMessage isTyping={true} stage={stage} toolEvents={toolEvents} workspaceId={workspaceId} />
             )}
           </motion.div>
         )}

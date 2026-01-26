@@ -465,6 +465,56 @@ async def scheduled_compaction(ctx: Dict) -> Dict:
 
 
 # =============================================================================
+# AGENT EVALUATION (Autonomous monitoring)
+# =============================================================================
+
+async def scheduled_agent_evaluation(ctx: Dict) -> Dict:
+    """Scheduled job: evaluate all active agents.
+
+    WHAT:
+        Evaluates all active agents against their scoped entities.
+        Executes actions when conditions are met.
+
+    WHEN:
+        Every 15 minutes at :00, :15, :30, :45 (after metric sync).
+
+    WHY:
+        - Agents need fresh data to evaluate accurately
+        - Runs after metric sync to have latest data
+        - 15-min cadence matches metric granularity
+
+    REFERENCES:
+        - Agent System Implementation Plan
+        - backend/app/services/agents/evaluation_engine.py
+    """
+    logger.info("[ARQ] Starting scheduled agent evaluation")
+
+    db = SessionLocal()
+    try:
+        from app.services.agents.evaluation_engine import AgentEvaluationEngine
+
+        engine = AgentEvaluationEngine(db)
+        results = await engine.evaluate_all_agents()
+
+        logger.info(
+            "[ARQ] Agent evaluation complete: agents=%d, entities=%d, triggers=%d, errors=%d",
+            results.get("agents_evaluated", 0),
+            results.get("entities_evaluated", 0),
+            results.get("triggers", 0),
+            results.get("errors", 0),
+        )
+
+        return results
+
+    except Exception as e:
+        logger.exception("[ARQ] Agent evaluation failed: %s", e)
+        capture_exception(e, extra={"operation": "scheduled_agent_evaluation"})
+        return {"error": str(e)}
+    finally:
+        db.close()
+
+
+# =============================================================================
 # SHOPIFY SYNC (Separate from ad platforms)
 # =============================================================================
 
@@ -595,6 +645,7 @@ class WorkerSettings:
         scheduled_realtime_sync,
         scheduled_attribution_sync,
         scheduled_compaction,
+        scheduled_agent_evaluation,
     ]
 
     # NO cron_jobs here - the scheduler handles cron scheduling

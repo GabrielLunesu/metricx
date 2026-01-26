@@ -58,6 +58,7 @@ from .routers import analytics as analytics_router  # Production analytics chart
 from .routers import onboarding as onboarding_router  # Onboarding flow
 from .routers import polar as polar_router  # Polar billing integration
 from .routers import admin as admin_router  # Admin endpoints for bulk operations
+from .routers import agents as agents_router  # Agent system for automated monitoring
 from . import schemas
 
 # Import models so Alembic can discover metadata
@@ -218,6 +219,7 @@ def create_app() -> FastAPI:
     app.include_router(polar_router.router)  # Polar billing endpoints
     app.include_router(polar_router.webhook_router)  # Polar webhook handler
     app.include_router(admin_router.router)  # Admin endpoints (protected by ADMIN_SECRET)
+    app.include_router(agents_router.router)  # Agent system for automated monitoring
 
     @app.get(
         "/health",

@@ -1493,3 +1493,405 @@ export async function fetchEntityTimeseries({
 
   return fetchWorkspaceKpis(params);
 }
+
+
+// =============================================================================
+// AGENT SYSTEM API
+// =============================================================================
+//
+// WHAT: API functions for the autonomous monitoring agent system
+// WHY: Agents watch performance metrics and take automated actions
+//
+// USAGE:
+//   const agents = await fetchAgents({ workspaceId });
+//   const agent = await createAgent({ workspaceId, name, condition, actions, ... });
+//   await pauseAgent({ agentId, workspaceId });
+//   await resumeAgent({ agentId, workspaceId });
+//
+// REFERENCES:
+// - backend/app/routers/agents.py
+// - backend/app/services/agents/
+
+/**
+ * Fetch all agents for a workspace.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.status - Filter by status (active, paused, error, draft)
+ * @param {number} params.limit - Max agents to return
+ * @param {number} params.offset - Pagination offset
+ * @returns {Promise<Object>} { items: Agent[], meta: { total, limit, offset } }
+ */
+export async function fetchAgents({ workspaceId, status = null, limit = 50, offset = 0 }) {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  params.set('limit', limit.toString());
+  params.set('offset', offset.toString());
+
+  const res = await authFetch(`${BASE}/agents?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch agents: ${res.status} ${msg}`);
+  }
+
+  // Transform backend response {agents, total} to frontend format {items, meta}
+  const data = await res.json();
+  return {
+    items: data.agents || [],
+    meta: {
+      total: data.total || 0,
+      limit,
+      offset
+    }
+  };
+}
+
+/**
+ * Get a single agent by ID.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @returns {Promise<Object>} Agent details with current states
+ */
+export async function fetchAgent({ workspaceId, agentId }) {
+  const res = await authFetch(`${BASE}/agents/${agentId}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch agent: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Create a new agent.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.name - Agent name
+ * @param {string} params.description - Agent description
+ * @param {string} params.scope_type - Scope type (all, filter, specific)
+ * @param {Object} params.scope_config - Scope configuration
+ * @param {Object} params.condition - Condition tree
+ * @param {Object} params.accumulation - Accumulation config
+ * @param {Object} params.trigger - Trigger mode config
+ * @param {Array} params.actions - Array of action configurations
+ * @param {Object} params.safety - Safety configuration (optional)
+ * @param {string} params.status - Initial status (active, draft)
+ * @returns {Promise<Object>} Created agent
+ */
+export async function createAgent({
+  workspaceId,
+  name,
+  description = null,
+  scope_type = 'all',
+  scope_config = { level: 'campaign' },
+  condition,
+  accumulation = { required: 1, unit: 'evaluations', mode: 'consecutive' },
+  trigger = { mode: 'once' },
+  actions,
+  safety = null,
+  status = 'active'
+}) {
+  const res = await authFetch(`${BASE}/agents`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      description,
+      scope_type,
+      scope_config,
+      condition,
+      accumulation,
+      trigger,
+      actions,
+      safety,
+      status
+    })
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to create agent: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Update an existing agent.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @param {Object} params.updates - Fields to update
+ * @returns {Promise<Object>} Updated agent
+ */
+export async function updateAgent({ workspaceId, agentId, updates }) {
+  const res = await authFetch(`${BASE}/agents/${agentId}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to update agent: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Delete an agent.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @returns {Promise<void>}
+ */
+export async function deleteAgent({ workspaceId, agentId }) {
+  const res = await authFetch(`${BASE}/agents/${agentId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to delete agent: ${res.status} ${msg}`);
+  }
+}
+
+/**
+ * Pause an agent.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @returns {Promise<Object>} Updated agent
+ */
+export async function pauseAgent({ workspaceId, agentId }) {
+  const res = await authFetch(`${BASE}/agents/${agentId}/pause`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to pause agent: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Resume a paused agent.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @returns {Promise<Object>} Updated agent
+ */
+export async function resumeAgent({ workspaceId, agentId }) {
+  const res = await authFetch(`${BASE}/agents/${agentId}/resume`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to resume agent: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Test an agent (dry run evaluation).
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @returns {Promise<Object>} Test evaluation results
+ */
+export async function testAgent({ workspaceId, agentId }) {
+  const res = await authFetch(`${BASE}/agents/${agentId}/test`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to test agent: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch evaluation events for an agent.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @param {string} params.result_type - Filter by result type (triggered, condition_met, condition_not_met, cooldown, error)
+ * @param {number} params.limit - Max events to return
+ * @param {number} params.offset - Pagination offset
+ * @returns {Promise<Object>} { items: Event[], meta: { total, limit, offset } }
+ */
+export async function fetchAgentEvents({ workspaceId, agentId, result_type = null, limit = 50, offset = 0 }) {
+  const params = new URLSearchParams();
+  if (result_type) params.set('result_type', result_type);
+  params.set('limit', limit.toString());
+  params.set('offset', offset.toString());
+
+  const res = await authFetch(`${BASE}/agents/${agentId}/events?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch agent events: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch action executions for an agent.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.agentId - Agent UUID
+ * @param {number} params.limit - Max actions to return
+ * @param {number} params.offset - Pagination offset
+ * @returns {Promise<Object>} { items: Action[], meta: { total, limit, offset } }
+ */
+export async function fetchAgentActions({ workspaceId, agentId, limit = 50, offset = 0 }) {
+  const params = new URLSearchParams();
+  params.set('limit', limit.toString());
+  params.set('offset', offset.toString());
+
+  const res = await authFetch(`${BASE}/agents/${agentId}/actions?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch agent actions: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch entities for agent scope selection.
+ *
+ * WHAT: Returns entities (campaigns, adsets, ads) filtered by platform and level
+ * WHY: Agent creation wizard needs entity list for scope configuration
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.platform - Platform filter (meta, google, all)
+ * @param {string} params.level - Entity level (campaign, adset, ad)
+ * @param {string} params.status - Status filter (active, paused, all)
+ * @param {number} params.limit - Max entities to return
+ * @returns {Promise<Object>} { items: Entity[], meta: { total } }
+ *
+ * REFERENCES:
+ * - Uses fetchEntityPerformance under the hood
+ * - ui/app/(dashboard)/agents/new/page.jsx (scope step)
+ */
+export async function fetchEntities({
+  workspaceId,
+  platform = null,
+  level = 'campaign',
+  status = 'all',
+  limit = 100
+}) {
+  const params = new URLSearchParams();
+  params.set('entity_level', level);
+  params.set('page_size', limit.toString());
+  params.set('sort_by', 'name');
+  params.set('sort_dir', 'asc');
+
+  // Map status filter
+  if (status === 'all') {
+    params.set('status', 'all');
+  } else {
+    params.set('status', status);
+  }
+
+  // Platform filter
+  if (platform && platform !== 'all') {
+    params.set('platform', platform);
+  }
+
+  // Use 7-day timeframe for basic entity listing
+  params.set('timeframe', '7d');
+
+  const res = await authFetch(`${BASE}/entity-performance/list?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch entities: ${res.status} ${msg}`);
+  }
+
+  const data = await res.json();
+
+  // Transform to simplified entity format for wizard
+  // NOTE: Backend returns EntityPerformanceRow with `id`, `name`, `status` (not entity_*)
+  const items = (data.rows || []).map(row => ({
+    id: row.id,
+    name: row.name,
+    platform: row.platform,
+    level: level,  // Use request param since all entities in response share same level
+    status: row.status,
+    // Include basic metrics for display
+    spend: row.spend,
+    revenue: row.revenue,
+    roas: row.roas
+  }));
+
+  // Sort: active/enabled campaigns first, then alphabetically by name
+  items.sort((a, b) => {
+    const aActive = a.status?.toLowerCase() === 'active' || a.status?.toLowerCase() === 'enabled';
+    const bActive = b.status?.toLowerCase() === 'active' || b.status?.toLowerCase() === 'enabled';
+
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  return {
+    items,
+    meta: {
+      total: data.pagination?.total || items.length
+    }
+  };
+}

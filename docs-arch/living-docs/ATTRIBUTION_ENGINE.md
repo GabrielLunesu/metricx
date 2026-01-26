@@ -297,7 +297,7 @@ register(async ({ analytics, browser, settings, init }) => {
   'use strict';
 
   const { workspaceId, apiEndpoint } = settings;
-  const endpoint = apiEndpoint || 'https://api.metricx.io/v1/pixel-events';
+  const endpoint = apiEndpoint || 'https://api.metricx.ai/v1/pixel-events';
 
   // ─── RESPECT PRIVACY/CONSENT ───
   // In strict mode, Shopify handles consent. Events only fire if allowed.
@@ -918,7 +918,7 @@ class MetaCAPITestResponse(BaseModel):
 ```bash
 # 1. Get test event code from Meta Events Manager → Test Events
 # 2. Call the endpoint
-curl -X POST "https://api.metricx.io/workspaces/{id}/meta-capi/test" \
+curl -X POST "https://api.metricx.ai/workspaces/{id}/meta-capi/test" \
   -H "Content-Type: application/json" \
   -d '{"test_event_code": "TEST12345"}'
 
@@ -1600,7 +1600,7 @@ When building the attribution dashboard:
 
 ```bash
 # Pixel endpoint (where web pixel sends events)
-PIXEL_ENDPOINT=https://api.metricx.io/v1/pixel-events
+PIXEL_ENDPOINT=https://api.metricx.ai/v1/pixel-events
 
 # Meta Conversions API
 META_PIXEL_ID=xxx
