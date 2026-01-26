@@ -22,6 +22,15 @@ from .models import (
     GoalEnum,
     BillingStatusEnum,
     BillingPlanEnum,
+    # Agent system enums
+    AgentStatusEnum,
+    AgentScopeTypeEnum,
+    AgentStateEnum,
+    TriggerModeEnum,
+    AccumulationUnitEnum,
+    AccumulationModeEnum,
+    AgentResultTypeEnum,
+    ActionTypeEnum,
 )
 
 
@@ -1727,6 +1736,705 @@ class AdminMeResponse(BaseModel):
     is_superuser: bool
     user_id: str
     email: str
+
+
+# ==========================================================================
+# AGENT SYSTEM SCHEMAS
+# ==========================================================================
+# WHAT: Request/response schemas for autonomous monitoring agents
+# WHY: Agents watch ad metrics, evaluate conditions, and take actions
+# REFERENCES:
+#   - Agent System Implementation Plan
+#   - backend/app/models.py (Agent, AgentEntityState, etc.)
+
+
+# --- Agent Scope Configuration ---
+
+
+class AgentScopeSpecific(BaseModel):
+    """Scope configuration for watching specific entities.
+
+    WHAT: Watch specific entity IDs
+    WHY: User wants to monitor exact campaigns/ads
+    """
+
+    entity_ids: List[UUID] = Field(
+        description="List of entity UUIDs to watch",
+        min_length=1,
+    )
+
+
+class AgentScopeFilter(BaseModel):
+    """Scope configuration for filtering entities.
+
+    WHAT: Watch entities matching criteria
+    WHY: User wants to monitor all campaigns matching conditions
+    """
+
+    level: LevelEnum = Field(description="Entity level to watch")
+    provider: Optional[ProviderEnum] = Field(
+        None, description="Filter by provider (meta, google, etc.)"
+    )
+    status: Optional[str] = Field(
+        None, description="Filter by entity status (ACTIVE, PAUSED, etc.)"
+    )
+    name_contains: Optional[str] = Field(
+        None, description="Filter by name containing substring"
+    )
+
+
+class AgentScopeAll(BaseModel):
+    """Scope configuration for watching all entities.
+
+    WHAT: Watch all entities at a level
+    WHY: User wants blanket monitoring
+    """
+
+    level: LevelEnum = Field(description="Entity level to watch (campaign, adset, ad)")
+
+
+AgentScopeConfig = Union[AgentScopeSpecific, AgentScopeFilter, AgentScopeAll]
+
+
+# --- Condition Configuration ---
+
+
+class ThresholdCondition(BaseModel):
+    """Threshold-based condition.
+
+    WHAT: Compare metric to a value
+    WHY: "Alert when ROAS > 2" or "Pause when CPC > $3"
+    """
+
+    type: Literal["threshold"] = "threshold"
+    metric: str = Field(description="Metric to evaluate (roas, cpc, spend, etc.)")
+    operator: Literal["gt", "gte", "lt", "lte", "eq", "neq"] = Field(
+        description="Comparison operator"
+    )
+    value: float = Field(description="Threshold value")
+
+
+class ChangeCondition(BaseModel):
+    """Change-based condition.
+
+    WHAT: Detect metric changes over time
+    WHY: "Alert when spend increases 50% vs yesterday"
+    """
+
+    type: Literal["change"] = "change"
+    metric: str = Field(description="Metric to evaluate")
+    direction: Literal["increase", "decrease", "any"] = Field(
+        description="Direction of change"
+    )
+    percent: float = Field(description="Percentage change threshold", gt=0)
+    reference_period: Literal["previous_day", "previous_week", "previous_period"] = (
+        Field(description="What to compare against")
+    )
+
+
+class CompositeCondition(BaseModel):
+    """Composite condition combining multiple conditions.
+
+    WHAT: AND/OR logic for multiple conditions
+    WHY: "Alert when ROAS > 2 AND spend > $100"
+    """
+
+    type: Literal["composite"] = "composite"
+    operator: Literal["and", "or"] = Field(description="Logical operator")
+    conditions: List["ConditionConfig"] = Field(
+        description="List of conditions to combine", min_length=2
+    )
+
+
+class NotCondition(BaseModel):
+    """Negation condition.
+
+    WHAT: Negate another condition
+    WHY: "Alert when ROAS is NOT > 2"
+    """
+
+    type: Literal["not"] = "not"
+    condition: "ConditionConfig" = Field(description="Condition to negate")
+
+
+ConditionConfig = Union[
+    ThresholdCondition, ChangeCondition, CompositeCondition, NotCondition
+]
+
+# Forward reference resolution
+CompositeCondition.model_rebuild()
+NotCondition.model_rebuild()
+
+
+# --- Action Configuration ---
+
+
+class EmailAction(BaseModel):
+    """Email notification action.
+
+    WHAT: Send email when triggered
+    WHY: Alert user about metric conditions
+    """
+
+    type: Literal["email"] = "email"
+    to: Optional[List[EmailStr]] = Field(
+        None, description="Recipients (default: workspace members)"
+    )
+    subject_template: Optional[str] = Field(
+        None,
+        description="Subject template with {{variables}}",
+        example="Alert: {{agent_name}} triggered on {{entity_name}}",
+    )
+    body_template: Optional[str] = Field(
+        None, description="Body template with {{variables}}"
+    )
+
+
+class ScaleBudgetAction(BaseModel):
+    """Budget scaling action.
+
+    WHAT: Adjust campaign budget
+    WHY: Auto-scale winning campaigns
+    """
+
+    type: Literal["scale_budget"] = "scale_budget"
+    scale_percent: float = Field(
+        description="Percentage to scale (positive = increase, negative = decrease)",
+        example=20,
+    )
+    max_budget: Optional[float] = Field(
+        None, description="Maximum budget cap", example=1000
+    )
+    min_budget: Optional[float] = Field(
+        None, description="Minimum budget floor", example=10
+    )
+
+
+class PauseCampaignAction(BaseModel):
+    """Campaign pause action.
+
+    WHAT: Pause the campaign
+    WHY: Stop-loss for poor performers
+    """
+
+    type: Literal["pause_campaign"] = "pause_campaign"
+
+
+class WebhookAction(BaseModel):
+    """Webhook call action.
+
+    WHAT: Call external URL
+    WHY: Integration with external systems
+    """
+
+    type: Literal["webhook"] = "webhook"
+    url: str = Field(description="Webhook URL to call")
+    method: Literal["GET", "POST", "PUT"] = Field(
+        default="POST", description="HTTP method"
+    )
+    headers: Optional[dict] = Field(None, description="Custom headers")
+    body_template: Optional[str] = Field(
+        None, description="Request body template with {{variables}}"
+    )
+
+
+ActionConfig = Union[EmailAction, ScaleBudgetAction, PauseCampaignAction, WebhookAction]
+
+
+# --- Accumulation Configuration ---
+
+
+class AccumulationConfig(BaseModel):
+    """Accumulation settings for agent triggers.
+
+    WHAT: How long condition must hold before triggering
+    WHY: "ROAS > 2 for 3 consecutive days" prevents noise
+    """
+
+    required: int = Field(
+        default=1,
+        description="Number of units required",
+        ge=1,
+        example=3,
+    )
+    unit: AccumulationUnitEnum = Field(
+        default=AccumulationUnitEnum.evaluations,
+        description="What to count (evaluations, hours, days)",
+    )
+    mode: AccumulationModeEnum = Field(
+        default=AccumulationModeEnum.consecutive,
+        description="consecutive or within_window",
+    )
+    window: Optional[int] = Field(
+        None,
+        description="Window size for within_window mode",
+        example=7,
+    )
+
+
+# --- Trigger Configuration ---
+
+
+class TriggerConfig(BaseModel):
+    """Trigger behavior settings.
+
+    WHAT: What happens after condition is met
+    WHY: Different use cases need different patterns
+    """
+
+    mode: TriggerModeEnum = Field(
+        default=TriggerModeEnum.once,
+        description="once, cooldown, or continuous",
+    )
+    cooldown_minutes: Optional[int] = Field(
+        None,
+        description="Minutes to wait before can trigger again (cooldown mode)",
+        example=1440,
+    )
+    continuous_interval_minutes: Optional[int] = Field(
+        None,
+        description="Minutes between triggers while condition holds (continuous mode)",
+        example=60,
+    )
+
+
+# --- Safety Configuration ---
+
+
+class SafetyConfig(BaseModel):
+    """Safety limits and circuit breakers.
+
+    WHAT: Hard limits to prevent runaway behavior
+    WHY: Agents are autonomous - need guardrails
+    """
+
+    max_budget: Optional[float] = Field(
+        None, description="Maximum budget cap for this agent's actions"
+    )
+    min_budget: Optional[float] = Field(
+        None, description="Minimum budget floor for this agent's actions"
+    )
+    pause_if_roas_drops_percent: Optional[float] = Field(
+        None, description="Pause if ROAS drops more than this % after action"
+    )
+    max_actions_per_day: Optional[int] = Field(
+        None, description="Maximum actions per day per entity"
+    )
+
+
+# --- Agent CRUD Schemas ---
+
+
+class AgentCreate(BaseModel):
+    """Request to create a new agent.
+
+    WHAT: Full agent definition
+    WHY: Create monitoring agent with all configuration
+    """
+
+    name: Optional[str] = Field(
+        None,
+        description="Agent name (auto-generated if not provided)",
+        max_length=255,
+        example="High ROAS Scaler",
+    )
+    description: Optional[str] = Field(
+        None,
+        description="Human-readable description",
+        example="Scales budget when ROAS exceeds 2.0 for 3 days",
+    )
+
+    # Scope
+    scope_type: AgentScopeTypeEnum = Field(description="How to select entities")
+    scope_config: dict = Field(
+        description="Scope configuration (entity_ids, filters, or level)"
+    )
+
+    # Condition
+    condition: dict = Field(
+        description="Condition configuration (threshold, change, composite, or not)"
+    )
+
+    # Accumulation
+    accumulation: AccumulationConfig = Field(
+        default_factory=AccumulationConfig,
+        description="How long condition must hold",
+    )
+
+    # Trigger
+    trigger: TriggerConfig = Field(
+        default_factory=TriggerConfig,
+        description="What happens after condition met",
+    )
+
+    # Actions
+    actions: List[dict] = Field(
+        description="List of actions to execute",
+        min_length=1,
+    )
+
+    # Safety
+    safety: Optional[SafetyConfig] = Field(
+        None, description="Safety limits and circuit breakers"
+    )
+
+    # Status
+    status: Literal["active", "draft"] = Field(
+        default="active",
+        description="Initial status (active or draft)",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "name": "High ROAS Scaler",
+                "description": "Scales budget when ROAS exceeds 2.0 for 3 consecutive days",
+                "scope_type": "filter",
+                "scope_config": {"level": "campaign", "provider": "meta"},
+                "condition": {
+                    "type": "threshold",
+                    "metric": "roas",
+                    "operator": "gt",
+                    "value": 2.0,
+                },
+                "accumulation": {"required": 3, "unit": "days", "mode": "consecutive"},
+                "trigger": {"mode": "once"},
+                "actions": [
+                    {"type": "scale_budget", "scale_percent": 20, "max_budget": 1000},
+                    {"type": "email"},
+                ],
+            }
+        }
+    }
+
+
+class AgentUpdate(BaseModel):
+    """Request to update an agent.
+
+    WHAT: Partial update to agent configuration
+    WHY: Modify agent without recreating
+    """
+
+    name: Optional[str] = Field(None, max_length=255)
+    description: Optional[str] = None
+    scope_type: Optional[AgentScopeTypeEnum] = None
+    scope_config: Optional[dict] = None
+    condition: Optional[dict] = None
+    accumulation: Optional[AccumulationConfig] = None
+    trigger: Optional[TriggerConfig] = None
+    actions: Optional[List[dict]] = None
+    safety: Optional[SafetyConfig] = None
+
+
+class AgentEntityStateSummary(BaseModel):
+    """Summary of per-entity state.
+
+    WHAT: Current state for one entity being watched
+    WHY: Show accumulation progress in UI
+    """
+
+    entity_id: UUID
+    entity_name: str
+    entity_provider: str
+    state: AgentStateEnum
+    accumulation_count: int
+    accumulation_required: int
+    trigger_count: int
+    last_triggered_at: Optional[datetime] = None
+    next_eligible_trigger_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AgentOut(BaseModel):
+    """Agent response with full details.
+
+    WHAT: Complete agent representation
+    WHY: Return agent data to frontend
+    """
+
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    status: AgentStatusEnum
+    error_message: Optional[str] = None
+
+    # Configuration
+    scope_type: AgentScopeTypeEnum
+    scope_config: dict
+    condition: dict
+    accumulation: AccumulationConfig
+    trigger: TriggerConfig
+    actions: List[dict]
+    safety: Optional[SafetyConfig] = None
+
+    # Stats
+    entities_count: int = Field(
+        default=0, description="Number of entities being watched"
+    )
+    last_evaluated_at: Optional[datetime] = None
+    total_evaluations: int = 0
+    total_triggers: int = 0
+    last_triggered_at: Optional[datetime] = None
+
+    # Entity states summary
+    current_states: List[AgentEntityStateSummary] = Field(
+        default_factory=list, description="State per watched entity"
+    )
+
+    # Metadata
+    created_by: UUID
+    created_at: datetime
+    updated_at: datetime
+    workspace_id: UUID
+
+    model_config = {"from_attributes": True}
+
+
+class AgentListResponse(BaseModel):
+    """Response for agent list endpoint.
+
+    WHAT: Paginated list of agents
+    WHY: Dashboard needs to show all agents
+    """
+
+    agents: List[AgentOut]
+    total: int
+
+
+# --- Agent Event Schemas ---
+
+
+class AgentEvaluationEventOut(BaseModel):
+    """Evaluation event response.
+
+    WHAT: Single evaluation event with full details
+    WHY: Show what happened during evaluation
+    """
+
+    id: UUID
+    agent_id: UUID
+    entity_id: UUID
+    evaluated_at: datetime
+
+    # Result
+    result_type: AgentResultTypeEnum
+    headline: str
+
+    # Entity context
+    entity_name: str
+    entity_provider: str
+    entity_snapshot: dict
+
+    # Observations
+    observations: dict
+
+    # Condition
+    condition_definition: dict
+    condition_inputs: dict
+    condition_result: bool
+    condition_explanation: str
+
+    # Accumulation
+    accumulation_before: dict
+    accumulation_after: dict
+    accumulation_explanation: str
+
+    # State
+    state_before: str
+    state_after: str
+    state_transition_reason: str
+
+    # Trigger
+    should_trigger: bool
+    trigger_explanation: str
+
+    # Summary
+    summary: str
+
+    # Performance
+    evaluation_duration_ms: int
+
+    model_config = {"from_attributes": True}
+
+
+class AgentEvaluationEventListResponse(BaseModel):
+    """Response for evaluation events list.
+
+    WHAT: Paginated list of evaluation events
+    WHY: Agent detail page shows event history
+    """
+
+    events: List[AgentEvaluationEventOut]
+    total: int
+
+
+class AgentActionExecutionOut(BaseModel):
+    """Action execution response.
+
+    WHAT: Record of an executed action
+    WHY: Show what actions were taken and their results
+    """
+
+    id: UUID
+    evaluation_event_id: UUID
+    agent_id: UUID
+
+    action_type: ActionTypeEnum
+    action_config: dict
+
+    executed_at: datetime
+    success: bool
+    description: str
+    details: dict
+    error: Optional[str] = None
+    duration_ms: int
+
+    # State tracking
+    state_before: Optional[dict] = None
+    state_after: Optional[dict] = None
+    state_verified: bool = False
+
+    # Rollback
+    rollback_possible: bool = False
+    rollback_executed_at: Optional[datetime] = None
+    rollback_executed_by: Optional[UUID] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AgentActionExecutionListResponse(BaseModel):
+    """Response for action executions list.
+
+    WHAT: Paginated list of action executions
+    WHY: Show history of agent actions
+    """
+
+    executions: List[AgentActionExecutionOut]
+    total: int
+
+
+# --- Agent Status/Control Schemas ---
+
+
+class AgentPauseRequest(BaseModel):
+    """Request to pause an agent.
+
+    WHAT: Optional reason for pausing
+    WHY: Audit trail for agent state changes
+    """
+
+    reason: Optional[str] = Field(None, description="Reason for pausing")
+
+
+class AgentResumeRequest(BaseModel):
+    """Request to resume an agent.
+
+    WHAT: Options for resuming
+    WHY: May need to reset state on resume
+    """
+
+    reset_state: bool = Field(
+        default=False,
+        description="Reset accumulation state on resume",
+    )
+
+
+class AgentTestRequest(BaseModel):
+    """Request to test agent evaluation.
+
+    WHAT: Dry-run evaluation without executing actions
+    WHY: Verify agent configuration before enabling
+    """
+
+    entity_ids: Optional[List[UUID]] = Field(
+        None, description="Specific entities to test (default: all scoped)"
+    )
+
+
+class AgentTestResult(BaseModel):
+    """Result from agent test evaluation.
+
+    WHAT: What would happen if agent ran
+    WHY: Preview agent behavior
+    """
+
+    entity_id: UUID
+    entity_name: str
+    condition_result: bool
+    condition_explanation: str
+    would_trigger: bool
+    trigger_explanation: str
+    observations: dict
+
+
+class AgentTestResponse(BaseModel):
+    """Response from agent test.
+
+    WHAT: Test results for all evaluated entities
+    WHY: Show what agent would do
+    """
+
+    agent_id: UUID
+    results: List[AgentTestResult]
+    summary: str
+
+
+# --- AI/NL Parsing Schemas ---
+
+
+class AgentParseNaturalRequest(BaseModel):
+    """Request to parse natural language to agent config.
+
+    WHAT: Natural language description of desired agent
+    WHY: Create agents via Copilot conversationally
+    """
+
+    description: str = Field(
+        description="Natural language description of agent behavior",
+        example="Alert me when CPC goes above $2 on my Meta campaigns for 2 days",
+    )
+
+
+class AgentParseNaturalResponse(BaseModel):
+    """Response with parsed agent configuration.
+
+    WHAT: Agent config derived from natural language
+    WHY: Pre-fill wizard with parsed config
+    """
+
+    success: bool
+    config: Optional[AgentCreate] = None
+    suggested_name: Optional[str] = None
+    clarification_needed: Optional[str] = Field(
+        None, description="Question if input was ambiguous"
+    )
+    error: Optional[str] = None
+
+
+class AgentGenerateNameRequest(BaseModel):
+    """Request to generate agent name from config.
+
+    WHAT: Agent configuration to name
+    WHY: Auto-generate descriptive names
+    """
+
+    condition: dict
+    actions: List[dict]
+    scope_type: AgentScopeTypeEnum
+
+
+class AgentGenerateNameResponse(BaseModel):
+    """Response with generated name.
+
+    WHAT: Suggested name for agent
+    WHY: User can accept or modify
+    """
+
+    name: str
+    alternatives: List[str] = Field(
+        default_factory=list, description="Alternative name suggestions"
+    )
 
 
 # Resolve forward references for nested models

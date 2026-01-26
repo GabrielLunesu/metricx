@@ -7,6 +7,7 @@ import { ArrowDownRight, ArrowUpRight, Maximize2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { motion, AnimatePresence } from "framer-motion";
+import AgentPreviewCard from "./AgentPreviewCard";
 
 Chart.register(...registerables);
 
@@ -526,19 +527,32 @@ function TableCard({ table }) {
   );
 }
 
-export default function AnswerVisuals({ visuals }) {
+export default function AnswerVisuals({ visuals, workspaceId }) {
   if (!visuals) return null;
-  const { cards = [], viz_specs = [], tables = [] } = visuals;
-  const hasContent = cards.length || viz_specs.length || tables.length;
+  const { cards = [], viz_specs = [], tables = [], agent_previews = [] } = visuals;
+  const hasContent = cards.length || viz_specs.length || tables.length || agent_previews.length;
   if (!hasContent) return null;
 
   // Smart layout: single card + single chart = side-by-side
   const singleCard = cards.length === 1;
   const singleChart = viz_specs.length === 1;
-  const showCombined = singleCard && singleChart && tables.length === 0;
+  const showCombined = singleCard && singleChart && tables.length === 0 && agent_previews.length === 0;
 
   return (
     <div className="mt-6 space-y-4">
+      {/* Agent Previews - Show first for immediate action */}
+      {agent_previews.length > 0 && (
+        <div className="space-y-4">
+          {agent_previews.map((preview) => (
+            <AgentPreviewCard
+              key={preview.id}
+              preview={preview}
+              workspaceId={workspaceId}
+            />
+          ))}
+        </div>
+      )}
+
       {showCombined ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-1">

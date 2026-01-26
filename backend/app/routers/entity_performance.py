@@ -153,12 +153,14 @@ def _base_query(
         connection_alias = aliased(models.Connection)
 
         # Build platform filter for SQL
+        # NOTE: Use `c.provider` since `c` is the Connection alias inside the subquery
+        # (not `ls` which is the outer subquery alias)
         platform_filter = ""
         platform_param = None
         if platform:
             try:
                 provider = models.ProviderEnum(platform)
-                platform_filter = "AND ls.provider = :platform"
+                platform_filter = "AND c.provider = :platform"
                 platform_param = provider.value
             except ValueError as exc:
                 raise HTTPException(

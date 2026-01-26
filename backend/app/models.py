@@ -1888,3 +1888,556 @@ class AuthCredential(Base):
 
     def __str__(self):
         return f"Credential for {self.user.email if self.user else 'Unknown'}"
+
+
+# =============================================================================
+# AGENT SYSTEM MODELS
+# =============================================================================
+# WHAT: Models for autonomous monitoring agents that watch ad performance metrics
+# WHY: Agents evaluate conditions over time and take actions (notifications,
+#      budget scaling, campaign pausing) - first-class entities with full
+#      observability and queryable history
+# REFERENCES:
+#   - Agent System Implementation Plan (Sprint 1: Foundation)
+#   - Event sourcing: every evaluation is an immutable event
+
+
+class AgentStatusEnum(str, enum.Enum):
+    """Agent lifecycle status.
+
+    WHAT: Represents the operational state of an agent
+    WHY: Controls whether agent is evaluated and surfaces state in UI
+
+    States:
+        active: Agent is running and being evaluated
+        paused: Agent temporarily stopped by user
+        draft: Agent not yet activated (saved but not running)
+        error: Agent stopped due to repeated failures
+        disabled: Agent permanently disabled
+    """
+
+    active = "active"
+    paused = "paused"
+    draft = "draft"
+    error = "error"
+    disabled = "disabled"
+
+
+class AgentScopeTypeEnum(str, enum.Enum):
+    """How agent selects entities to monitor.
+
+    WHAT: Determines which entities an agent watches
+    WHY: Flexible targeting - specific entities, filtered set, or all
+
+    Types:
+        specific: Watch specific entity IDs (scope_config.entity_ids)
+        filter: Watch entities matching criteria (scope_config.filters)
+        all: Watch all entities at specified level
+    """
+
+    specific = "specific"
+    filter = "filter"
+    all = "all"
+
+
+class AgentStateEnum(str, enum.Enum):
+    """Per-entity state machine state.
+
+    WHAT: Tracks where each entity is in the agent evaluation lifecycle
+    WHY: Enables accumulation ("ROAS > 2 for 3 days") and cooldowns
+
+    State machine:
+        WATCHING → condition met → ACCUMULATING
+        ACCUMULATING → accumulation complete → TRIGGERED → cooldown → WATCHING
+        Any state → error → ERROR
+    """
+
+    watching = "watching"
+    accumulating = "accumulating"
+    triggered = "triggered"
+    cooldown = "cooldown"
+    error = "error"
+
+
+class TriggerModeEnum(str, enum.Enum):
+    """How agent triggers after accumulation completes.
+
+    WHAT: Controls trigger behavior after condition met for required duration
+    WHY: Different use cases need different trigger patterns
+
+    Modes:
+        once: Fire once, then go to cooldown (stop-loss use case)
+        cooldown: Fire, wait cooldown_duration, then can fire again (alerts)
+        continuous: Keep firing at continuous_interval while condition holds (scaling)
+    """
+
+    once = "once"
+    cooldown = "cooldown"
+    continuous = "continuous"
+
+
+class AccumulationUnitEnum(str, enum.Enum):
+    """Unit for accumulation counting.
+
+    WHAT: What to count for accumulation requirement
+    WHY: "3 evaluations" vs "3 days" vs "3 hours" mean different things
+
+    Units:
+        evaluations: Count evaluation cycles (every 15 min)
+        hours: Count hours where condition was met
+        days: Count calendar days where condition was met
+    """
+
+    evaluations = "evaluations"
+    hours = "hours"
+    days = "days"
+
+
+class AccumulationModeEnum(str, enum.Enum):
+    """How accumulation is tracked.
+
+    WHAT: Whether condition must be met consecutively or within a window
+    WHY: "ROAS > 2 for 3 consecutive days" vs "ROAS > 2 on 3 of last 7 days"
+
+    Modes:
+        consecutive: Condition must be true N times in a row
+        within_window: Condition must be true N times within last X period
+    """
+
+    consecutive = "consecutive"
+    within_window = "within_window"
+
+
+class AgentResultTypeEnum(str, enum.Enum):
+    """Classification of evaluation result.
+
+    WHAT: Categorizes what happened during an evaluation
+    WHY: Powers UI filtering and quick understanding of event history
+
+    Types:
+        triggered: Actions were executed
+        condition_met: Condition true, accumulating
+        condition_not_met: Condition false, reset/watching
+        cooldown: In cooldown period, skipped
+        error: Evaluation failed
+    """
+
+    triggered = "triggered"
+    condition_met = "condition_met"
+    condition_not_met = "condition_not_met"
+    cooldown = "cooldown"
+    error = "error"
+
+
+class ActionTypeEnum(str, enum.Enum):
+    """Types of actions agents can execute.
+
+    WHAT: What an agent can do when triggered
+    WHY: Extensible action system - add new types as needed
+
+    Types:
+        email: Send notification email via Resend
+        scale_budget: Adjust campaign budget up/down
+        pause_campaign: Pause the campaign
+        webhook: Call external webhook URL
+    """
+
+    email = "email"
+    scale_budget = "scale_budget"
+    pause_campaign = "pause_campaign"
+    webhook = "webhook"
+
+
+class Agent(Base):
+    """Autonomous monitoring agent for ad performance.
+
+    WHAT: An agent watches entities, evaluates conditions over time, and
+          executes actions when conditions are met for the required duration.
+
+    WHY: Merchants need automated monitoring for:
+         - Stop-losses (pause when ROAS drops)
+         - Scaling (increase budget when performing well)
+         - Alerts (notify when metrics hit thresholds)
+
+    DESIGN:
+        - Event sourced: Every evaluation stored as immutable event
+        - Stateful: Tracks accumulation over time per entity
+        - Extensible: Pluggable conditions and actions
+        - Observable: Full audit trail, real-time status
+
+    REFERENCES:
+        - Agent System Implementation Plan
+        - Similar pattern: ComputeRun for batch processing
+    """
+
+    __tablename__ = "agents"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "name", name="uq_agent_workspace_name"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
+
+    # Identity
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+
+    # Scope - what entities to watch
+    # scope_type: 'specific', 'filter', 'all'
+    # scope_config: {"entity_ids": [...]} or {"level": "campaign", "provider": "meta", ...}
+    scope_type = Column(
+        Enum(
+            AgentScopeTypeEnum, values_callable=lambda obj: [e.value for e in obj]
+        ),
+        nullable=False,
+    )
+    scope_config = Column(JSON, nullable=False)
+
+    # Condition - when to trigger
+    # Serialized condition tree (Threshold, Change, Composite, Not)
+    # Example: {"type": "threshold", "metric": "roas", "operator": "gt", "value": 2.0}
+    condition = Column(JSON, nullable=False)
+
+    # Accumulation config - how long condition must hold
+    accumulation_required = Column(Integer, nullable=False, default=1)
+    accumulation_unit = Column(
+        Enum(
+            AccumulationUnitEnum, values_callable=lambda obj: [e.value for e in obj]
+        ),
+        nullable=False,
+        default=AccumulationUnitEnum.evaluations,
+    )
+    accumulation_mode = Column(
+        Enum(
+            AccumulationModeEnum, values_callable=lambda obj: [e.value for e in obj]
+        ),
+        nullable=False,
+        default=AccumulationModeEnum.consecutive,
+    )
+    accumulation_window = Column(Integer, nullable=True)  # For within_window mode
+
+    # Trigger behavior - what happens after condition met
+    trigger_mode = Column(
+        Enum(TriggerModeEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=TriggerModeEnum.once,
+    )
+    cooldown_duration_minutes = Column(Integer, nullable=True)
+    continuous_interval_minutes = Column(Integer, nullable=True)
+
+    # Actions - what to do when triggered
+    # Array of serialized actions
+    # Example: [{"type": "email", "to": "user@example.com", "subject": "..."}]
+    actions = Column(JSON, nullable=False)
+
+    # Safety configuration
+    # Hard limits and circuit breaker settings
+    # Example: {"max_budget": 1000, "pause_if_roas_drops_percent": 30, ...}
+    safety_config = Column(JSON, nullable=True)
+
+    # Status
+    status = Column(
+        Enum(AgentStatusEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=AgentStatusEnum.active,
+    )
+    error_message = Column(Text, nullable=True)
+
+    # Metadata
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Cached stats (denormalized for fast dashboard queries)
+    last_evaluated_at = Column(DateTime(timezone=True), nullable=True)
+    total_evaluations = Column(BigInteger, default=0)
+    total_triggers = Column(BigInteger, default=0)
+    last_triggered_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    workspace = relationship("Workspace", backref="agents")
+    creator = relationship("User", backref="created_agents")
+    entity_states = relationship(
+        "AgentEntityState", back_populates="agent", cascade="all, delete-orphan"
+    )
+    evaluation_events = relationship(
+        "AgentEvaluationEvent", back_populates="agent", cascade="all, delete-orphan"
+    )
+    action_executions = relationship(
+        "AgentActionExecution", back_populates="agent", cascade="all, delete-orphan"
+    )
+
+    def __str__(self):
+        return f"{self.name} ({self.status.value})"
+
+
+class AgentEntityState(Base):
+    """Per-entity state for an agent.
+
+    WHAT: Tracks the evaluation state for each entity an agent monitors.
+          One row per (agent, entity) pair.
+
+    WHY: Agents can watch multiple entities; each needs independent state
+         tracking for accumulation, triggers, and cooldowns.
+
+    STATE MACHINE:
+        WATCHING: Default state, evaluating condition each cycle
+        ACCUMULATING: Condition met, counting towards threshold
+        TRIGGERED: Actions executed, may enter cooldown or continue
+        COOLDOWN: Waiting before agent can trigger again
+        ERROR: Evaluation failed, needs attention
+
+    REFERENCES:
+        - Agent System Implementation Plan (state_machine.py)
+    """
+
+    __tablename__ = "agent_entity_states"
+
+    agent_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("agents.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    entity_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("entities.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    # State machine
+    state = Column(
+        Enum(AgentStateEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=AgentStateEnum.watching,
+    )
+
+    # Accumulation tracking
+    accumulation_started_at = Column(DateTime(timezone=True), nullable=True)
+    accumulation_count = Column(Integer, default=0)
+    # Timestamps of condition=true evaluations for within_window mode
+    accumulation_history = Column(JSON, default=list)
+
+    # Trigger tracking
+    last_triggered_at = Column(DateTime(timezone=True), nullable=True)
+    trigger_count = Column(Integer, default=0)
+    next_eligible_trigger_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Health tracking
+    consecutive_errors = Column(Integer, default=0)
+    last_error = Column(Text, nullable=True)
+    last_error_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Baseline tracking for external change detection
+    last_known_budget = Column(Numeric(18, 4), nullable=True)
+    last_known_status = Column(String, nullable=True)
+    baseline_updated_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Timestamps
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    agent = relationship("Agent", back_populates="entity_states")
+    entity = relationship("Entity", backref="agent_states")
+
+    def __str__(self):
+        return f"Agent {self.agent_id} / Entity {self.entity_id}: {self.state.value}"
+
+
+class AgentEvaluationEvent(Base):
+    """Immutable evaluation event record.
+
+    WHAT: Stores every evaluation of an agent against an entity.
+          This is the event source - never modified after creation.
+
+    WHY: Full observability is critical for agents:
+         - Answer "why didn't my agent fire?"
+         - Debug accumulation and trigger logic
+         - Copilot can query and explain agent behavior
+         - Audit trail for compliance
+
+    DESIGN:
+        Event sourcing pattern - all state derived from events.
+        Each evaluation produces exactly one event, regardless of outcome.
+
+    REFERENCES:
+        - Agent System Implementation Plan (evaluation_engine.py)
+    """
+
+    __tablename__ = "agent_evaluation_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    agent_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("agents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    entity_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("entities.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    workspace_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    evaluated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    # Result classification for UI
+    result_type = Column(
+        Enum(
+            AgentResultTypeEnum, values_callable=lambda obj: [e.value for e in obj]
+        ),
+        nullable=False,
+    )
+    headline = Column(Text, nullable=False)  # One-liner for list view
+
+    # What was observed (metrics at evaluation time)
+    # Example: {"spend": 150.00, "revenue": 450.00, "roas": 3.0, "cpc": 1.25}
+    observations = Column(JSON, nullable=False)
+
+    # Entity snapshot (for context even if entity changes later)
+    # Example: {"name": "Summer Sale", "status": "ACTIVE", "provider": "meta"}
+    entity_snapshot = Column(JSON, nullable=False)
+
+    # Condition evaluation details
+    condition_definition = Column(JSON, nullable=False)  # The condition config
+    condition_inputs = Column(JSON, nullable=False)  # What values were used
+    condition_result = Column(Boolean, nullable=False)  # True/False
+    condition_explanation = Column(Text, nullable=False)  # Human-readable
+
+    # Accumulation state
+    accumulation_before = Column(JSON, nullable=False)
+    accumulation_after = Column(JSON, nullable=False)
+    accumulation_explanation = Column(Text, nullable=False)
+
+    # State transition
+    state_before = Column(String(50), nullable=False)
+    state_after = Column(String(50), nullable=False)
+    state_transition_reason = Column(Text, nullable=False)
+
+    # Trigger decision
+    should_trigger = Column(Boolean, nullable=False)
+    trigger_explanation = Column(Text, nullable=False)
+
+    # Summary for Copilot
+    summary = Column(Text, nullable=False)
+
+    # Performance tracking
+    evaluation_duration_ms = Column(Integer, nullable=False)
+
+    # Denormalized for filtering (avoid joins)
+    entity_name = Column(String(255), nullable=False)
+    entity_provider = Column(String(50), nullable=False)
+
+    # Relationships
+    agent = relationship("Agent", back_populates="evaluation_events")
+    entity = relationship("Entity", backref="agent_evaluation_events")
+    action_executions = relationship(
+        "AgentActionExecution",
+        back_populates="evaluation_event",
+        cascade="all, delete-orphan",
+    )
+
+    # Indexes for common queries
+    __table_args__ = (
+        # Agent + time for event history
+        # Result filtering
+        # These are created via Index below
+    )
+
+    def __str__(self):
+        return f"{self.result_type.value}: {self.headline}"
+
+
+class AgentActionExecution(Base):
+    """Record of an action executed by an agent.
+
+    WHAT: Stores the result of executing an action (email, scale, pause, webhook).
+          Linked to the evaluation event that triggered it.
+
+    WHY: Full audit trail of what agents have done:
+         - Verify actions executed correctly
+         - Debug action failures
+         - Enable rollback (for state-changing actions)
+
+    REFERENCES:
+        - Agent System Implementation Plan (actions.py)
+    """
+
+    __tablename__ = "agent_action_executions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evaluation_event_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("agent_evaluation_events.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    agent_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("agents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    workspace_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # Action definition
+    action_type = Column(
+        Enum(ActionTypeEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
+    action_config = Column(JSON, nullable=False)
+
+    # Execution result
+    executed_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    success = Column(Boolean, nullable=False)
+    description = Column(Text, nullable=False)  # Human-readable description
+    details = Column(JSON, nullable=False)  # Full execution details
+    error = Column(Text, nullable=True)
+    duration_ms = Column(Integer, nullable=False)
+
+    # State tracking for rollback capability
+    state_before = Column(JSON, nullable=True)  # e.g., {"budget": 500}
+    state_after = Column(JSON, nullable=True)  # e.g., {"budget": 600}
+    state_verified = Column(Boolean, default=False)  # Did we verify the change?
+
+    # Rollback capability
+    rollback_possible = Column(Boolean, default=False)
+    rollback_executed_at = Column(DateTime(timezone=True), nullable=True)
+    rollback_executed_by = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    rollback_result = Column(JSON, nullable=True)
+
+    # Relationships
+    evaluation_event = relationship(
+        "AgentEvaluationEvent", back_populates="action_executions"
+    )
+    agent = relationship("Agent", back_populates="action_executions")
+    rollback_user = relationship("User", backref="agent_action_rollbacks")
+
+    def __str__(self):
+        status = "success" if self.success else "failed"
+        return f"{self.action_type.value} ({status}): {self.description}"

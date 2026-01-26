@@ -49,6 +49,7 @@ from sqlalchemy.orm import Session
 from app.agent.state import AgentState, Message, MessageRole
 from app.agent.tools import (
     SemanticTools,
+    AgentManagementTools,
     get_tool_schemas,
     get_tools_description,
     get_agent_tools,
@@ -1687,6 +1688,12 @@ async def agent_loop_node(
                             f"[AGENT] Collected data for visuals: {list(collected_data.keys())}"
                         )
 
+                    # Collect agent preview for UI rendering
+                    if tool_name == "create_agent" and success and result.get("preview"):
+                        collected_data["agent_preview"] = result.get("agent_preview")
+                        collected_data["confirmation_prompt"] = result.get("confirmation_prompt")
+                        logger.info("[AGENT] Collected agent preview for visuals")
+
                     # Emit tool_end event with timing and data source
                     if publisher:
                         if success:
@@ -1892,6 +1899,70 @@ async def execute_tool_async(
                 "message": "No business profile configured. Set it up in Settings → Business.",
                 "data_source": "workspace_settings",
             }
+
+        return await asyncio.to_thread(run_sync)
+
+    # ===================
+    # AGENT MANAGEMENT TOOLS
+    # ===================
+
+    elif tool_name == "list_agents":
+
+        def run_sync():
+            agent_tools = AgentManagementTools(db, workspace_id, user_id)
+            result = agent_tools.list_agents(**tool_args)
+            result["data_source"] = "agent_system"
+            return result
+
+        return await asyncio.to_thread(run_sync)
+
+    elif tool_name == "get_agent_status":
+
+        def run_sync():
+            agent_tools = AgentManagementTools(db, workspace_id, user_id)
+            result = agent_tools.get_agent_status(**tool_args)
+            result["data_source"] = "agent_system"
+            return result
+
+        return await asyncio.to_thread(run_sync)
+
+    elif tool_name == "create_agent":
+
+        def run_sync():
+            agent_tools = AgentManagementTools(db, workspace_id, user_id)
+            result = agent_tools.create_agent(**tool_args)
+            result["data_source"] = "agent_system"
+            return result
+
+        return await asyncio.to_thread(run_sync)
+
+    elif tool_name == "pause_agent":
+
+        def run_sync():
+            agent_tools = AgentManagementTools(db, workspace_id, user_id)
+            result = agent_tools.pause_agent(**tool_args)
+            result["data_source"] = "agent_system"
+            return result
+
+        return await asyncio.to_thread(run_sync)
+
+    elif tool_name == "resume_agent":
+
+        def run_sync():
+            agent_tools = AgentManagementTools(db, workspace_id, user_id)
+            result = agent_tools.resume_agent(**tool_args)
+            result["data_source"] = "agent_system"
+            return result
+
+        return await asyncio.to_thread(run_sync)
+
+    elif tool_name == "explain_agent_behavior":
+
+        def run_sync():
+            agent_tools = AgentManagementTools(db, workspace_id, user_id)
+            result = agent_tools.explain_agent_behavior(**tool_args)
+            result["data_source"] = "agent_system"
+            return result
 
         return await asyncio.to_thread(run_sync)
 
@@ -2421,7 +2492,22 @@ def _build_visuals_from_data(
         }
         visuals["tables"].append(table)
 
-    return visuals if (visuals["viz_specs"] or visuals["tables"]) else None
+    # Agent preview (for create_agent confirmations)
+    agent_preview = data.get("agent_preview")
+    if agent_preview:
+        visuals["agent_previews"] = [{
+            "id": "agent-preview-1",
+            "type": "agent_create",
+            **agent_preview,
+            "confirmation_prompt": data.get("confirmation_prompt"),
+        }]
+
+    has_content = (
+        visuals["viz_specs"] or
+        visuals["tables"] or
+        visuals.get("agent_previews")
+    )
+    return visuals if has_content else None
 
 
 def _strip_markdown_tables(text: str) -> str:
