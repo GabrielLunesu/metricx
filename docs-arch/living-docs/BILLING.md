@@ -257,7 +257,7 @@ Creates a Polar checkout session.
 {
   "workspace_id": "uuid",
   "plan": "monthly",  // or "annual"
-  "success_url": "https://app.metricx.io/dashboard?checkout=success"
+  "success_url": "https://metricx.ai/dashboard?checkout=success"
 }
 ```
 

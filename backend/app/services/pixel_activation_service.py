@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-07")
-PIXEL_ENDPOINT = os.getenv("PIXEL_ENDPOINT", "https://api.metricx.io/v1/pixel-events")
+PIXEL_ENDPOINT = os.getenv("PIXEL_ENDPOINT", "https://api.metricx.ai/v1/pixel-events")
 
 
 # =============================================================================

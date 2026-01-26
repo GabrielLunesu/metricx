@@ -13,7 +13,7 @@ import { register } from '@shopify/web-pixels-extension';
 
 register(async ({ analytics, browser, settings, init }) => {
   const { workspaceId, apiEndpoint } = settings;
-  const endpoint = apiEndpoint || 'https://api.metricx.io/v1/pixel-events';
+  const endpoint = apiEndpoint || 'https://api.metricx.ai/v1/pixel-events';
 
   // ─── RESPECT PRIVACY/CONSENT ───
   // In strict mode, Shopify handles consent. Events only fire if allowed.

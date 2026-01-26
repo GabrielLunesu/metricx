@@ -174,7 +174,7 @@ async def _fetch_domain_content(domain: str) -> Optional[str]:
         timeout=FETCH_TIMEOUT,
         follow_redirects=True,
         headers={
-            "User-Agent": "Mozilla/5.0 (compatible; metricx-bot/1.0; +https://metricx.io)"
+            "User-Agent": "Mozilla/5.0 (compatible; metricx-bot/1.0; +https://metricx.ai)"
         }
     ) as client:
         for url in urls_to_try:
