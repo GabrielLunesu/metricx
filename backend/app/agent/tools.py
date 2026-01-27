@@ -1319,11 +1319,24 @@ class AgentManagementTools:
                     "error": "Couldn't understand what metric to monitor. Try something like 'alert me when ROAS drops below 2' or 'notify me if CPC goes above $3'"
                 }
 
+            # Map symbolic operators to named operators (ThresholdCondition expects gt/lt/etc)
+            operator_map = {
+                "<": "lt",
+                "<=": "lte",
+                ">": "gt",
+                ">=": "gte",
+                "=": "eq",
+                "==": "eq",
+                "!=": "neq",
+            }
+            raw_operator = parsed.get("operator", "<")
+            named_operator = operator_map.get(raw_operator, raw_operator)
+
             # Build condition
             condition = {
                 "type": "threshold",
                 "metric": parsed["metric"],
-                "operator": parsed.get("operator", "<"),
+                "operator": named_operator,
                 "value": parsed.get("value", 0),
             }
 
@@ -1746,15 +1759,22 @@ class AgentManagementTools:
 
         if cond_type == "threshold":
             metric = condition.get("metric", "metric")
-            operator = condition.get("operator", "<")
+            operator = condition.get("operator", "lt")
             value = condition.get("value", 0)
 
+            # Handle both symbolic (<, >) and named (lt, gt) operators
             op_text = {
                 "<": "drops below",
                 "<=": "drops to or below",
                 ">": "goes above",
                 ">=": "goes to or above",
                 "==": "equals",
+                "lt": "drops below",
+                "lte": "drops to or below",
+                "gt": "goes above",
+                "gte": "goes to or above",
+                "eq": "equals",
+                "neq": "is not equal to",
             }.get(operator, operator)
 
             # Format value based on metric
@@ -1866,10 +1886,11 @@ class AgentManagementTools:
     def _generate_agent_name(self, condition: Dict, scope_config: Dict) -> str:
         """Generate a descriptive agent name from configuration."""
         metric = condition.get("metric", "metric").upper()
-        operator = condition.get("operator", "<")
+        operator = condition.get("operator", "lt")
         value = condition.get("value", 0)
 
-        op_word = "Low" if operator in ["<", "<="] else "High"
+        # Handle both symbolic (<, >) and named (lt, gt) operators
+        op_word = "Low" if operator in ["<", "<=", "lt", "lte"] else "High"
         provider = scope_config.get("provider", "")
         provider_str = f" {provider.title()}" if provider else ""
 
