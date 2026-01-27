@@ -356,11 +356,21 @@ View details in metricx: {{dashboard_url}}
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "EmailAction":
-        """Deserialize from dictionary."""
+        """
+        Deserialize from dictionary.
+
+        Handles both flat and nested config structures:
+        - Flat: {"type": "email", "to": [...], "subject_template": "..."}
+        - Nested: {"type": "email", "config": {"subject_template": "..."}}
+        """
+        # Handle nested config structure (from Copilot creation)
+        config = data.get("config", {})
+
+        # Prefer top-level values, fall back to nested config
         return cls(
-            to=data.get("to"),
-            subject_template=data.get("subject_template"),
-            body_template=data.get("body_template"),
+            to=data.get("to") or config.get("to"),
+            subject_template=data.get("subject_template") or config.get("subject_template"),
+            body_template=data.get("body_template") or config.get("body_template"),
         )
 
 

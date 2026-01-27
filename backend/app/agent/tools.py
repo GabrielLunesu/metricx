@@ -1344,6 +1344,9 @@ class AgentManagementTools:
             scope_type = "all"
             scope_config = {
                 "level": "campaign",
+                # AGGREGATE MODE: Evaluate totals across all campaigns, not each individually
+                # This means "alert when spend > $50" checks TOTAL spend, not per-campaign
+                "aggregate": True,
             }
 
             # Apply platform filter
@@ -1351,10 +1354,11 @@ class AgentManagementTools:
             if inferred_platform and inferred_platform != "all":
                 scope_config["provider"] = inferred_platform
 
-            # If specific campaign mentioned, use filter scope
+            # If specific campaign mentioned, use filter scope (NOT aggregate)
             if campaign_name or parsed.get("campaign_name"):
                 scope_type = "filter"
                 scope_config["entity_name_contains"] = campaign_name or parsed.get("campaign_name")
+                scope_config["aggregate"] = False  # Specific campaign = individual evaluation
 
             # Generate agent name if not provided
             agent_name = parsed.get("name") or self._generate_agent_name(condition, scope_config)
@@ -1801,11 +1805,19 @@ class AgentManagementTools:
         """Generate human-readable summary of scope."""
         provider = scope_config.get("provider") or scope_config.get("platform")
         level = scope_config.get("level", "campaign")
+        is_aggregate = scope_config.get("aggregate", False)
 
         if scope_type == "all":
-            if provider:
-                return f"All {provider.title()} {level}s"
-            return f"All {level}s"
+            if is_aggregate:
+                # Aggregate mode: monitoring totals
+                if provider:
+                    return f"{provider.title()} account total"
+                return "Account total"
+            else:
+                # Individual mode: monitoring each campaign
+                if provider:
+                    return f"All {provider.title()} {level}s"
+                return f"All {level}s"
 
         elif scope_type == "filter":
             name_filter = scope_config.get("entity_name_contains")

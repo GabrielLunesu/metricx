@@ -193,6 +193,10 @@ class AgentEvaluationEngine:
         """
         Evaluate a single agent across all scoped entities.
 
+        Supports two modes:
+        - Individual (default): Evaluate each entity separately
+        - Aggregate: Sum metrics across all entities, evaluate ONCE
+
         Parameters:
             agent: Agent to evaluate
 
@@ -211,20 +215,38 @@ class AgentEvaluationEngine:
             "errors": 0,
         }
 
-        for entity in entities:
-            try:
-                eval_result = await self.evaluate_agent_entity(agent, entity)
-                results["entities_evaluated"] += 1
+        # Check if this is an AGGREGATE agent (evaluate totals, not individuals)
+        scope_config = agent.scope_config or {}
+        is_aggregate = scope_config.get("aggregate", False)
 
+        if is_aggregate and entities:
+            # AGGREGATE MODE: Sum metrics across all entities, evaluate ONCE
+            try:
+                eval_result = await self.evaluate_agent_aggregate(agent, entities)
+                results["entities_evaluated"] = 1  # One aggregate evaluation
                 if eval_result.should_trigger:
                     results["triggers"] += 1
-
                 if eval_result.error:
                     results["errors"] += 1
-
             except Exception as e:
-                logger.exception(f"Failed to evaluate agent {agent.id} for entity {entity.id}: {e}")
+                logger.exception(f"Failed aggregate evaluation for agent {agent.id}: {e}")
                 results["errors"] += 1
+        else:
+            # INDIVIDUAL MODE: Evaluate each entity separately
+            for entity in entities:
+                try:
+                    eval_result = await self.evaluate_agent_entity(agent, entity)
+                    results["entities_evaluated"] += 1
+
+                    if eval_result.should_trigger:
+                        results["triggers"] += 1
+
+                    if eval_result.error:
+                        results["errors"] += 1
+
+                except Exception as e:
+                    logger.exception(f"Failed to evaluate agent {agent.id} for entity {entity.id}: {e}")
+                    results["errors"] += 1
 
         # Update agent stats
         agent.last_evaluated_at = datetime.now(timezone.utc)
@@ -233,6 +255,318 @@ class AgentEvaluationEngine:
         self.db.commit()
 
         return results
+
+    async def evaluate_agent_aggregate(
+        self, agent: Agent, entities: List[Entity]
+    ) -> EvaluationResult:
+        """
+        Evaluate agent against AGGREGATED metrics across all entities.
+
+        WHAT:
+            Instead of evaluating each campaign individually, aggregate metrics
+            (sum spend, sum revenue, etc.) and evaluate ONCE.
+
+        WHY:
+            Users want to monitor TOTAL account spend/revenue, not per-campaign.
+            "Alert when total Google spend > $100" = ONE evaluation, ONE notification.
+
+        Parameters:
+            agent: Agent to evaluate
+            entities: List of entities to aggregate
+
+        Returns:
+            Single EvaluationResult for the aggregate
+        """
+        start_time = time.time()
+        evaluated_at = datetime.now(timezone.utc)
+
+        # Build aggregate entity name for display
+        scope_config = agent.scope_config or {}
+        provider = scope_config.get("provider", "all").title()
+        aggregate_name = f"{provider} Account Total ({len(entities)} campaigns)"
+
+        # Initialize result
+        result = EvaluationResult(
+            agent_id=str(agent.id),
+            entity_id="aggregate",  # Virtual entity ID
+            workspace_id=str(agent.workspace_id),
+            evaluated_at=evaluated_at,
+            duration_ms=0,
+            result_type=AgentResultTypeEnum.condition_not_met,
+            headline="",
+            observations={},
+            entity_snapshot={
+                "name": aggregate_name,
+                "status": "active",
+                "provider": provider.lower(),
+                "level": "account",
+                "entity_count": len(entities),
+            },
+            condition_definition=agent.condition,
+            condition_inputs={},
+            condition_result=False,
+            condition_explanation="",
+            accumulation_before={},
+            accumulation_after={},
+            accumulation_explanation="",
+            state_before="watching",
+            state_after="watching",
+            state_transition_reason="",
+            should_trigger=False,
+            trigger_explanation="",
+            summary="",
+        )
+
+        try:
+            # 1. Aggregate metrics across all entities
+            aggregated_observations = await self._aggregate_observations(entities)
+            result.observations = aggregated_observations
+
+            logger.info(
+                f"Aggregated metrics for agent {agent.id}: "
+                f"spend=${aggregated_observations.get('spend', 0):.2f}, "
+                f"revenue=${aggregated_observations.get('revenue', 0):.2f}"
+            )
+
+            # 2. Evaluate condition against aggregated metrics
+            condition = condition_from_dict(agent.condition)
+            eval_context = EvalContext(
+                observations=aggregated_observations,
+                entity_id="aggregate",
+                entity_name=aggregate_name,
+                evaluated_at=evaluated_at,
+            )
+            condition_result = condition.evaluate(eval_context)
+            result.condition_result = condition_result.met
+            result.condition_inputs = condition_result.inputs
+            result.condition_explanation = condition_result.explanation
+
+            # 3. For aggregate mode, trigger immediately if condition met (no accumulation)
+            # This simplifies the logic - aggregate agents trigger on first match
+            if condition_result.met:
+                result.result_type = AgentResultTypeEnum.triggered
+                result.should_trigger = True
+                result.headline = f"Triggered: {condition_result.explanation}"
+                result.trigger_explanation = "Aggregate condition met"
+                result.state_after = "triggered"
+
+                # 4. Execute actions
+                result.action_results = await self._execute_aggregate_actions(
+                    agent, aggregate_name, provider.lower(), result
+                )
+            else:
+                result.result_type = AgentResultTypeEnum.condition_not_met
+                result.headline = f"Condition not met: {condition_result.explanation}"
+                result.trigger_explanation = "Aggregate condition not met"
+
+            # 5. Generate summary
+            result.summary = (
+                f"Agent '{agent.name}' evaluated {aggregate_name}: "
+                f"{condition_result.explanation}"
+            )
+
+        except Exception as e:
+            logger.exception(f"Aggregate evaluation error for agent {agent.id}")
+            result.result_type = AgentResultTypeEnum.error
+            result.error = str(e)
+            result.headline = f"Error: {str(e)[:100]}"
+            result.summary = f"Aggregate evaluation failed: {str(e)}"
+
+        # Calculate duration
+        result.duration_ms = int((time.time() - start_time) * 1000)
+
+        # Store evaluation event (with aggregate entity_id)
+        await self._store_aggregate_evaluation_event(agent, result, aggregate_name, provider.lower())
+
+        return result
+
+    async def _aggregate_observations(self, entities: List[Entity]) -> Dict[str, float]:
+        """
+        Aggregate metrics across multiple entities.
+
+        Sums: spend, revenue, clicks, impressions, conversions
+        Calculates: ROAS, CPC, CTR from aggregated values
+        """
+        from datetime import timedelta
+
+        totals = {
+            "spend": 0.0,
+            "revenue": 0.0,
+            "clicks": 0,
+            "impressions": 0,
+            "conversions": 0.0,
+        }
+
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+
+        for entity in entities:
+            result = self.db.execute(
+                select(
+                    func.sum(MetricSnapshot.spend).label("spend"),
+                    func.sum(MetricSnapshot.revenue).label("revenue"),
+                    func.sum(MetricSnapshot.clicks).label("clicks"),
+                    func.sum(MetricSnapshot.impressions).label("impressions"),
+                    func.sum(MetricSnapshot.conversions).label("conversions"),
+                )
+                .where(
+                    and_(
+                        MetricSnapshot.entity_id == entity.id,
+                        MetricSnapshot.captured_at >= cutoff,
+                    )
+                )
+            ).first()
+
+            if result and result.spend is not None:
+                totals["spend"] += float(result.spend or 0)
+                totals["revenue"] += float(result.revenue or 0)
+                totals["clicks"] += int(result.clicks or 0)
+                totals["impressions"] += int(result.impressions or 0)
+                totals["conversions"] += float(result.conversions or 0)
+
+        # Calculate derived metrics
+        spend = totals["spend"]
+        revenue = totals["revenue"]
+        clicks = totals["clicks"]
+        impressions = totals["impressions"]
+
+        return {
+            "spend": round(spend, 2),
+            "revenue": round(revenue, 2),
+            "roas": round(revenue / spend, 2) if spend > 0 else 0.0,
+            "clicks": clicks,
+            "impressions": impressions,
+            "conversions": round(totals["conversions"], 2),
+            "cpc": round(spend / clicks, 2) if clicks > 0 else 0.0,
+            "ctr": round((clicks / impressions * 100), 2) if impressions > 0 else 0.0,
+        }
+
+    async def _execute_aggregate_actions(
+        self, agent: Agent, aggregate_name: str, provider: str, result: EvaluationResult
+    ) -> List[ActionResult]:
+        """Execute actions for an aggregate trigger."""
+        from .action_executor import PlatformActionExecutor
+        from .actions import ActionContext, action_from_dict
+
+        # Get user email
+        user_email = None
+        from ...models import User
+
+        if agent.created_by:
+            user = self.db.query(User).filter(User.id == agent.created_by).first()
+            if user and user.email:
+                user_email = user.email
+
+        if not user_email:
+            workspace_user = self.db.query(User).filter(
+                User.workspace_id == agent.workspace_id
+            ).first()
+            if workspace_user and workspace_user.email:
+                user_email = workspace_user.email
+
+        action_results = []
+        for action_config in agent.actions:
+            try:
+                action = action_from_dict(action_config)
+
+                # Build context for aggregate (no specific entity)
+                context = ActionContext(
+                    agent_id=str(agent.id),
+                    agent_name=agent.name,
+                    entity_id="aggregate",
+                    entity_name=aggregate_name,
+                    entity_provider=provider,
+                    workspace_id=str(agent.workspace_id),
+                    observations=result.observations,
+                    evaluation_event_id="",
+                    user_email=user_email,
+                )
+
+                action_result = await action.execute(context)
+                action_results.append(action_result)
+
+                logger.info(
+                    f"Aggregate action {action_config.get('type')}: "
+                    f"success={action_result.success}, desc={action_result.description}"
+                )
+
+            except Exception as e:
+                logger.exception(f"Aggregate action failed: {e}")
+                action_results.append(ActionResult(
+                    success=False,
+                    description="Action failed",
+                    error=str(e),
+                ))
+
+        return action_results
+
+    async def _store_aggregate_evaluation_event(
+        self, agent: Agent, result: EvaluationResult, aggregate_name: str, provider: str
+    ) -> AgentEvaluationEvent:
+        """Store evaluation event for aggregate evaluation."""
+        event = AgentEvaluationEvent(
+            id=uuid.uuid4(),
+            agent_id=agent.id,
+            entity_id=None,  # No specific entity for aggregate
+            workspace_id=agent.workspace_id,
+            evaluated_at=result.evaluated_at,
+            result_type=result.result_type,
+            headline=result.headline,
+            observations=result.observations,
+            entity_snapshot=result.entity_snapshot,
+            condition_definition=result.condition_definition,
+            condition_inputs=result.condition_inputs,
+            condition_result=result.condition_result,
+            condition_explanation=result.condition_explanation,
+            accumulation_before=result.accumulation_before,
+            accumulation_after=result.accumulation_after,
+            accumulation_explanation=result.accumulation_explanation,
+            state_before=result.state_before,
+            state_after=result.state_after,
+            state_transition_reason=result.state_transition_reason,
+            should_trigger=result.should_trigger,
+            trigger_explanation=result.trigger_explanation,
+            summary=result.summary,
+            evaluation_duration_ms=result.duration_ms,
+            entity_name=aggregate_name,
+            entity_provider=provider,
+        )
+
+        self.db.add(event)
+        self.db.flush()
+
+        # Store action executions
+        if result.action_results:
+            for i, action_result in enumerate(result.action_results):
+                action_config = agent.actions[i] if i < len(agent.actions) else {}
+                action_type_str = action_config.get("type", "unknown")
+
+                try:
+                    action_type = ActionTypeEnum(action_type_str)
+                except ValueError:
+                    action_type = ActionTypeEnum.email
+
+                execution = AgentActionExecution(
+                    id=uuid.uuid4(),
+                    evaluation_event_id=event.id,
+                    agent_id=agent.id,
+                    workspace_id=agent.workspace_id,
+                    action_type=action_type,
+                    action_config=action_config,
+                    executed_at=result.evaluated_at,
+                    success=action_result.success,
+                    description=action_result.description,
+                    details=action_result.details,
+                    error=action_result.error,
+                    duration_ms=action_result.duration_ms,
+                    state_before=action_result.state_before,
+                    state_after=action_result.state_after,
+                    state_verified=False,
+                    rollback_possible=action_result.rollback_possible,
+                )
+                self.db.add(execution)
+
+        self.db.commit()
+        return event
 
     async def evaluate_agent_entity(
         self, agent: Agent, entity: Entity
@@ -656,12 +990,25 @@ class AgentEvaluationEngine:
         from .action_executor import execute_agent_actions
 
         # Get user email for notifications
+        # Priority: 1) Agent creator, 2) Workspace owner, 3) Any workspace member
         user_email = None
+        from ...models import User
+
+        # Try agent creator first
         if agent.created_by:
-            from ...models import User
             user = self.db.query(User).filter(User.id == agent.created_by).first()
-            if user:
+            if user and user.email:
                 user_email = user.email
+                logger.debug(f"Using agent creator email: {user_email}")
+
+        # Fall back to workspace owner/member
+        if not user_email:
+            workspace_user = self.db.query(User).filter(
+                User.workspace_id == agent.workspace_id
+            ).first()
+            if workspace_user and workspace_user.email:
+                user_email = workspace_user.email
+                logger.debug(f"Using workspace user email: {user_email}")
 
         # Execute all actions through the platform-aware executor
         action_results = await execute_agent_actions(
