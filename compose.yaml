@@ -18,6 +18,9 @@ services:
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
       CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET}
 
+      # ReSend API Key
+      RESEND_API_KEY: ${RESEND_API_KEY}
+
       # Anthropic API Key
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       
@@ -117,6 +120,8 @@ services:
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
       JWT_SECRET: ${JWT_SECRET}
 
+      RESEND_API_KEY: ${RESEND_API_KEY}
+
       # Required for QA processing
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -156,6 +161,10 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      # Required for security.py import chain (used by notification service)
+      JWT_SECRET: ${JWT_SECRET}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
       # Error tracking
       ENVIRONMENT: ${ENVIRONMENT:-production}
       SENTRY_DSN: ${SENTRY_DSN:-}
