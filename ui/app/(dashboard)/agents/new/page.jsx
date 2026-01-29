@@ -323,9 +323,13 @@ export default function CreateAgentPage() {
 
     try {
       // Build scope config
+      // For 'all' and 'filter' scopes, enable aggregate mode so metrics are
+      // summed across all matched entities and evaluated once (workspace-level).
+      // Per-entity evaluation only makes sense for 'specific' scope.
       const scopeConfig = {
         platform: platform === 'all' ? null : platform,
         level: entityLevel,
+        aggregate: scopeType !== 'specific',
       };
 
       if (scopeType === 'specific') {
@@ -731,8 +735,18 @@ function StepScope({
         </div>
         <div className="space-y-3">
           {[
-            { value: 'all', label: `All ${entityLevel}s`, description: `Monitor every ${entityLevel} matching your platform filter`, icon: Target },
-            { value: 'specific', label: `Specific ${entityLevel}s`, description: `Choose individual ${entityLevel}s to watch`, icon: CheckCircle2 },
+            {
+              value: 'all',
+              label: `All ${entityLevel}s (combined)`,
+              description: `Metrics are totaled across all ${entityLevel}s. You get one notification with your overall performance.`,
+              icon: Target,
+            },
+            {
+              value: 'specific',
+              label: `Specific ${entityLevel}s (individual)`,
+              description: `Each selected ${entityLevel} is monitored separately. You get a notification per ${entityLevel} that meets the condition.`,
+              icon: CheckCircle2,
+            },
           ].map((option) => {
             const Icon = option.icon;
             return (
@@ -772,6 +786,36 @@ function StepScope({
               </button>
             );
           })}
+        </div>
+
+        {/* Scope mode explanation */}
+        <div className={cn(
+          'flex items-start gap-3 p-4 rounded-xl border mt-4',
+          scopeType === 'all'
+            ? 'bg-blue-500/5 border-blue-200/60'
+            : 'bg-amber-500/5 border-amber-200/60'
+        )}>
+          <Info size={16} className={cn(
+            'mt-0.5 flex-shrink-0',
+            scopeType === 'all' ? 'text-blue-500' : 'text-amber-500'
+          )} />
+          <div className="text-sm text-neutral-600">
+            {scopeType === 'all' ? (
+              <>
+                <span className="font-medium text-neutral-800">Combined mode: </span>
+                Revenue, spend, and other metrics from all your {entityLevel}s are added together.
+                The agent checks the total once and sends a single notification.
+                Best for account-level monitoring like "alert me when total revenue exceeds $1,000".
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-neutral-800">Individual mode: </span>
+                Each {entityLevel} is checked on its own. If 5 {entityLevel}s meet the condition,
+                you get 5 separate notifications. Best for per-{entityLevel} alerts
+                like "alert me when any {entityLevel} drops below $10 ROAS".
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1396,11 +1440,13 @@ function StepReview({
             {scopeType === 'specific' && selectedEntities.length > 0 && (
               <div className="text-sm text-neutral-500">
                 Watching {selectedEntities.length} specific {entityLevel}
-                {selectedEntities.length !== 1 ? 's' : ''}
+                {selectedEntities.length !== 1 ? 's' : ''} — evaluated individually, one notification per {entityLevel}
               </div>
             )}
             {scopeType === 'all' && (
-              <div className="text-sm text-neutral-500">Watching all {entityLevel}s</div>
+              <div className="text-sm text-neutral-500">
+                All {entityLevel}s combined — metrics totaled, one notification for overall performance
+              </div>
             )}
           </div>
         </div>

@@ -8,7 +8,7 @@ The Metricx API is a REST API built with FastAPI. Authentication uses Clerk JWT 
 
 **Base URLs:**
 - Development: `http://localhost:8000`
-- Production: `https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app`
+- Production: `https://api.metricx.ai`
 
 ## Authentication
 

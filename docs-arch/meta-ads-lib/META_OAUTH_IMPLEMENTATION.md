@@ -68,17 +68,8 @@ Before starting, ensure you have:
 
 ### 1.3 Configure OAuth Redirect URIs
 
-**Navigate to**: [developers.facebook.com/apps/YOUR_APP_ID/fb-login/settings](https://developers.facebook.com/apps/YOUR_APP_ID/fb-login/settings)
-
-**Valid OAuth Redirect URIs**:
-Add these redirect URIs (one per line):
-```
-https://t8zgrthold5r2-backend--8000.prod2.defang.dev/auth/meta/callback
+https://api.metricx.ai/auth/meta/callback
 http://localhost:8000/auth/meta/callback
-```
-
-**Note**: 
-- Production backend URL: `https://t8zgrthold5r2-backend--8000.prod2.defang.dev`
 - For local testing, use `localhost:8000`
 
 **Save Changes**
@@ -137,14 +128,10 @@ This will follow the same pattern as `google_oauth.py`:
 - Ad accounts are fetched via `/me/adaccounts` endpoint
 - Long-lived tokens require exchange from short-lived tokens
 
-### 2.2 Environment Variables
-
-**Add to `backend/.env`**:
-```bash
 # Meta OAuth Configuration
-META_APP_ID="[YOUR_APP_ID]"
+META_APP_ID="[YOUR_APP_ID]" 
 META_APP_SECRET="[YOUR_APP_SECRET]"
-META_OAUTH_REDIRECT_URI="https://t8zgrthold5r2-backend--8000.prod2.defang.dev/auth/meta/callback"
+META_OAUTH_REDIRECT_URI="https://api.metricx.ai/auth/meta/callback"
 
 # For local testing:
 # META_OAUTH_REDIRECT_URI="http://localhost:8000/auth/meta/callback"

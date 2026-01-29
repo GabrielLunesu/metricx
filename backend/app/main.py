@@ -107,7 +107,7 @@ def create_app() -> FastAPI:
                 "description": "Development server"
             },
             {
-                "url": "https://t8zgrthold5r2-backend--8000.prod2.defang.dev",
+                "url": "https://api.metricx.ai",
                 "description": "Production server"
             }
         ]

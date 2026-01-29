@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    domainname: api.metricx.ai
     ports:
       - mode: ingress
         target: 8000
@@ -46,14 +47,14 @@ services:
       SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET:-}
       
       # Pixel/Attribution
-      PIXEL_ENDPOINT: ${PIXEL_ENDPOINT:-https://backend.beta.adnavi.t8zgrthold5r2.defang.app/v1/pixel-events}
+      PIXEL_ENDPOINT: ${PIXEL_ENDPOINT:-https://api.metricx.ai/v1/pixel-events}
 
-       # OAuth Redirect URIs
-      META_OAUTH_REDIRECT_URI:
-      GOOGLE_REDIRECT_URI: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/google/callback"
-      SHOPIFY_OAUTH_REDIRECT_URI: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/shopify/callback"
+      # OAuth Redirect URIs
+      META_OAUTH_REDIRECT_URI: "https://api.metricx.ai/auth/meta/callback"
+      GOOGLE_REDIRECT_URI: "https://api.metricx.ai/auth/google/callback"
+      SHOPIFY_OAUTH_REDIRECT_URI: "https://api.metricx.ai/auth/shopify/callback"
       FRONTEND_URL: "https://www.metricx.ai"
-      BACKEND_URL: "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
+      BACKEND_URL: "https://api.metricx.ai"
 
       # Forwarded Allow IPs
       FORWARDED_ALLOW_IPS: "*"
@@ -63,7 +64,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       
       # CORS Configuration - allow production frontend, localhost, and defang domains
-      BACKEND_CORS_ORIGINS: "https://www.metricx.ai,http://localhost:3000,https://t8zgrthold5r2-backend--8000.prod2.defang.dev,https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app"
+      BACKEND_CORS_ORIGINS: "https://www.metricx.ai,http://localhost:3000,https://api.metricx.ai"
 
       # ===========================================
       # Observability Stack
