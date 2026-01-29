@@ -1319,11 +1319,24 @@ class AgentManagementTools:
                     "error": "Couldn't understand what metric to monitor. Try something like 'alert me when ROAS drops below 2' or 'notify me if CPC goes above $3'"
                 }
 
+            # Map symbolic operators to named operators (ThresholdCondition expects gt/lt/etc)
+            operator_map = {
+                "<": "lt",
+                "<=": "lte",
+                ">": "gt",
+                ">=": "gte",
+                "=": "eq",
+                "==": "eq",
+                "!=": "neq",
+            }
+            raw_operator = parsed.get("operator", "<")
+            named_operator = operator_map.get(raw_operator, raw_operator)
+
             # Build condition
             condition = {
                 "type": "threshold",
                 "metric": parsed["metric"],
-                "operator": parsed.get("operator", "<"),
+                "operator": named_operator,
                 "value": parsed.get("value", 0),
             }
 
@@ -1331,6 +1344,9 @@ class AgentManagementTools:
             scope_type = "all"
             scope_config = {
                 "level": "campaign",
+                # AGGREGATE MODE: Evaluate totals across all campaigns, not each individually
+                # This means "alert when spend > $50" checks TOTAL spend, not per-campaign
+                "aggregate": True,
             }
 
             # Apply platform filter
@@ -1338,10 +1354,11 @@ class AgentManagementTools:
             if inferred_platform and inferred_platform != "all":
                 scope_config["provider"] = inferred_platform
 
-            # If specific campaign mentioned, use filter scope
+            # If specific campaign mentioned, use filter scope (NOT aggregate)
             if campaign_name or parsed.get("campaign_name"):
                 scope_type = "filter"
                 scope_config["entity_name_contains"] = campaign_name or parsed.get("campaign_name")
+                scope_config["aggregate"] = False  # Specific campaign = individual evaluation
 
             # Generate agent name if not provided
             agent_name = parsed.get("name") or self._generate_agent_name(condition, scope_config)
@@ -1746,15 +1763,22 @@ class AgentManagementTools:
 
         if cond_type == "threshold":
             metric = condition.get("metric", "metric")
-            operator = condition.get("operator", "<")
+            operator = condition.get("operator", "lt")
             value = condition.get("value", 0)
 
+            # Handle both symbolic (<, >) and named (lt, gt) operators
             op_text = {
                 "<": "drops below",
                 "<=": "drops to or below",
                 ">": "goes above",
                 ">=": "goes to or above",
                 "==": "equals",
+                "lt": "drops below",
+                "lte": "drops to or below",
+                "gt": "goes above",
+                "gte": "goes to or above",
+                "eq": "equals",
+                "neq": "is not equal to",
             }.get(operator, operator)
 
             # Format value based on metric
@@ -1781,11 +1805,19 @@ class AgentManagementTools:
         """Generate human-readable summary of scope."""
         provider = scope_config.get("provider") or scope_config.get("platform")
         level = scope_config.get("level", "campaign")
+        is_aggregate = scope_config.get("aggregate", False)
 
         if scope_type == "all":
-            if provider:
-                return f"All {provider.title()} {level}s"
-            return f"All {level}s"
+            if is_aggregate:
+                # Aggregate mode: monitoring totals
+                if provider:
+                    return f"{provider.title()} account total"
+                return "Account total"
+            else:
+                # Individual mode: monitoring each campaign
+                if provider:
+                    return f"All {provider.title()} {level}s"
+                return f"All {level}s"
 
         elif scope_type == "filter":
             name_filter = scope_config.get("entity_name_contains")
@@ -1866,10 +1898,11 @@ class AgentManagementTools:
     def _generate_agent_name(self, condition: Dict, scope_config: Dict) -> str:
         """Generate a descriptive agent name from configuration."""
         metric = condition.get("metric", "metric").upper()
-        operator = condition.get("operator", "<")
+        operator = condition.get("operator", "lt")
         value = condition.get("value", 0)
 
-        op_word = "Low" if operator in ["<", "<="] else "High"
+        # Handle both symbolic (<, >) and named (lt, gt) operators
+        op_word = "Low" if operator in ["<", "<=", "lt", "lte"] else "High"
         provider = scope_config.get("provider", "")
         provider_str = f" {provider.title()}" if provider else ""
 

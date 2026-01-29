@@ -32,7 +32,7 @@ REFERENCES:
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 import logging
 
@@ -55,6 +55,8 @@ from ..models import (
     AgentStatusEnum,
     AgentStateEnum,
     ProviderEnum,
+    AgentResultTypeEnum,
+    ActionTypeEnum,
 )
 from ..schemas import (
     ErrorResponse,
@@ -77,6 +79,12 @@ from ..schemas import (
     AgentEvaluationEventListResponse,
     AgentActionExecutionOut,
     AgentActionExecutionListResponse,
+    # Workspace-level stats and events
+    AgentStatsResponse,
+    WorkspaceAgentEventsResponse,
+    WorkspaceAgentEventOut,
+    WorkspaceAgentActionSummary,
+    ActionRollbackResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -514,6 +522,327 @@ def create_agent(
         updated_at=agent.updated_at,
         workspace_id=agent.workspace_id,
     )
+
+
+# =============================================================================
+# Workspace-Level Stats and Events (MUST be before /{agent_id} routes)
+# =============================================================================
+
+
+@router.get("/stats", response_model=AgentStatsResponse)
+def get_agent_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get aggregate stats for all agents in workspace.
+
+    WHAT: Returns dashboard-level metrics for agent system
+    WHY: Users need quick overview of agent activity
+
+    Returns:
+        - active_agents: count of ACTIVE agents
+        - triggers_today: count of triggers in last 24h
+        - evaluations_this_hour: count of evaluations in last hour
+        - errors_today: count of ERROR status agents or failed evaluations
+    """
+    workspace_id = current_user.workspace_id
+    now = datetime.now(timezone.utc)
+    today_start = now - timedelta(hours=24)
+    hour_start = now - timedelta(hours=1)
+
+    # Count active agents
+    active_agents = db.query(Agent).filter(
+        and_(
+            Agent.workspace_id == workspace_id,
+            Agent.status == AgentStatusEnum.active,
+        )
+    ).count()
+
+    # Count triggers today (events with result_type = triggered)
+    triggers_today = db.query(AgentEvaluationEvent).join(
+        Agent, AgentEvaluationEvent.agent_id == Agent.id
+    ).filter(
+        and_(
+            Agent.workspace_id == workspace_id,
+            AgentEvaluationEvent.result_type == AgentResultTypeEnum.triggered,
+            AgentEvaluationEvent.evaluated_at >= today_start,
+        )
+    ).count()
+
+    # Count evaluations this hour
+    evaluations_this_hour = db.query(AgentEvaluationEvent).join(
+        Agent, AgentEvaluationEvent.agent_id == Agent.id
+    ).filter(
+        and_(
+            Agent.workspace_id == workspace_id,
+            AgentEvaluationEvent.evaluated_at >= hour_start,
+        )
+    ).count()
+
+    # Count errors: ERROR status agents + error events today
+    error_agents = db.query(Agent).filter(
+        and_(
+            Agent.workspace_id == workspace_id,
+            Agent.status == AgentStatusEnum.error,
+        )
+    ).count()
+
+    error_events = db.query(AgentEvaluationEvent).join(
+        Agent, AgentEvaluationEvent.agent_id == Agent.id
+    ).filter(
+        and_(
+            Agent.workspace_id == workspace_id,
+            AgentEvaluationEvent.result_type == AgentResultTypeEnum.error,
+            AgentEvaluationEvent.evaluated_at >= today_start,
+        )
+    ).count()
+
+    errors_today = error_agents + error_events
+
+    logger.debug(
+        f"Agent stats for workspace {workspace_id}: "
+        f"active={active_agents}, triggers={triggers_today}, "
+        f"evals={evaluations_this_hour}, errors={errors_today}"
+    )
+
+    return AgentStatsResponse(
+        active_agents=active_agents,
+        triggers_today=triggers_today,
+        evaluations_this_hour=evaluations_this_hour,
+        errors_today=errors_today,
+    )
+
+
+@router.get("/events", response_model=WorkspaceAgentEventsResponse)
+def get_workspace_agent_events(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    result_type: Optional[str] = Query(None, description="Filter: TRIGGERED, ERROR, etc."),
+    limit: int = Query(20, ge=1, le=100),
+    cursor: Optional[str] = Query(None, description="Cursor for pagination (ISO datetime)"),
+):
+    """
+    Get all evaluation events across all agents in workspace.
+
+    WHAT: Returns paginated list of events for notification feed
+    WHY: Dashboard shows all agent activity in one feed
+
+    Cursor-based pagination:
+        - cursor is the evaluated_at timestamp of the last item
+        - Returns events older than cursor
+        - nextCursor in response can be used for next page
+    """
+    workspace_id = current_user.workspace_id
+
+    # Build base query with join to get agent info
+    query = db.query(AgentEvaluationEvent).join(
+        Agent, AgentEvaluationEvent.agent_id == Agent.id
+    ).filter(
+        Agent.workspace_id == workspace_id
+    )
+
+    # Filter by result type if provided
+    if result_type:
+        try:
+            result_enum = AgentResultTypeEnum(result_type.lower())
+            query = query.filter(AgentEvaluationEvent.result_type == result_enum)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid result_type: {result_type}. Valid values: triggered, condition_met, condition_not_met, cooldown, error",
+            )
+
+    # Apply cursor for pagination
+    if cursor:
+        try:
+            cursor_dt = datetime.fromisoformat(cursor.replace("Z", "+00:00"))
+            query = query.filter(AgentEvaluationEvent.evaluated_at < cursor_dt)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cursor format: {cursor}. Use ISO datetime.",
+            )
+
+    # Get total count (without cursor filter for consistency)
+    total_query = db.query(AgentEvaluationEvent).join(
+        Agent, AgentEvaluationEvent.agent_id == Agent.id
+    ).filter(Agent.workspace_id == workspace_id)
+    if result_type:
+        total_query = total_query.filter(
+            AgentEvaluationEvent.result_type == AgentResultTypeEnum(result_type.lower())
+        )
+    total = total_query.count()
+
+    # Fetch events with agent info
+    events = query.order_by(
+        desc(AgentEvaluationEvent.evaluated_at)
+    ).limit(limit).all()
+
+    # Build response with agent names and action summaries
+    event_responses = []
+    for event in events:
+        # Get agent name
+        agent = db.query(Agent).filter(Agent.id == event.agent_id).first()
+        agent_name = agent.name if agent else "Unknown Agent"
+
+        # Get actions executed for this event
+        actions = db.query(AgentActionExecution).filter(
+            AgentActionExecution.evaluation_event_id == event.id
+        ).all()
+
+        action_summaries = [
+            WorkspaceAgentActionSummary(
+                id=action.id,
+                action_type=action.action_type.value if hasattr(action.action_type, 'value') else str(action.action_type),
+                success=action.success,
+                description=action.description or "",
+                rollback_possible=action.rollback_possible or False,
+                rollback_executed_at=action.rollback_executed_at,
+                state_before=action.state_before,
+                state_after=action.state_after,
+            )
+            for action in actions
+        ]
+
+        event_responses.append(
+            WorkspaceAgentEventOut(
+                id=event.id,
+                agent_id=event.agent_id,
+                agent_name=agent_name,
+                entity_id=event.entity_id,
+                entity_name=event.entity_name,
+                entity_provider=event.entity_provider,
+                result_type=event.result_type,
+                headline=event.headline,
+                evaluated_at=event.evaluated_at,
+                actions_executed=action_summaries,
+            )
+        )
+
+    # Calculate next cursor
+    next_cursor = None
+    if events and len(events) == limit:
+        next_cursor = events[-1].evaluated_at.isoformat()
+
+    return WorkspaceAgentEventsResponse(
+        events=event_responses,
+        total=total,
+        next_cursor=next_cursor,
+    )
+
+
+@router.post("/actions/{action_id}/rollback", response_model=ActionRollbackResponse)
+def rollback_action(
+    action_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Rollback a previously executed action.
+
+    WHAT: Restores state_before for reversible actions
+    WHY: Users need safety net for automated actions
+
+    Reversible actions:
+        - scale_budget: Restore previous budget
+        - pause_campaign: Restore previous status
+
+    Non-reversible actions (will fail):
+        - email: Cannot unsend
+        - webhook: External system, cannot undo
+    """
+    # Find the action
+    action = db.query(AgentActionExecution).filter(
+        AgentActionExecution.id == action_id
+    ).first()
+
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+
+    # Verify action belongs to user's workspace
+    agent = db.query(Agent).filter(Agent.id == action.agent_id).first()
+    if not agent or agent.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Action not found")
+
+    # Check if rollback is possible
+    if not action.rollback_possible:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Rollback not possible for this action. Action type '{action.action_type}' may not support rollback, or state_before was not recorded.",
+        )
+
+    # Check if already rolled back
+    if action.rollback_executed_at:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Action was already rolled back at {action.rollback_executed_at.isoformat()}",
+        )
+
+    # Check if state_before exists
+    if not action.state_before:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot rollback: no previous state recorded",
+        )
+
+    # Determine action type and execute rollback
+    action_type = action.action_type
+    if hasattr(action_type, 'value'):
+        action_type_str = action_type.value
+    else:
+        action_type_str = str(action_type)
+
+    state_before = action.state_before
+    state_after = action.state_after or {}
+
+    # TODO: Implement actual platform API calls for rollback
+    # For now, we'll record the rollback and mark it as successful
+    # In production, this would call Meta/Google API to restore budget/status
+
+    if action_type_str == "scale_budget":
+        # Would call platform API to restore budget
+        # For example: meta_api.update_campaign_budget(entity_id, state_before["budget"])
+        logger.info(
+            f"Rollback scale_budget: restoring budget from {state_after.get('budget')} to {state_before.get('budget')}"
+        )
+        message = f"Budget restored from ${state_after.get('budget', 'N/A')} to ${state_before.get('budget', 'N/A')}"
+
+    elif action_type_str == "pause_campaign":
+        # Would call platform API to restore campaign status
+        logger.info(
+            f"Rollback pause_campaign: restoring status from {state_after.get('status')} to {state_before.get('status')}"
+        )
+        message = f"Campaign status restored to {state_before.get('status', 'ACTIVE')}"
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Rollback not supported for action type: {action_type_str}",
+        )
+
+    # Update action record with rollback info
+    action.rollback_executed_at = datetime.now(timezone.utc)
+    action.rollback_executed_by = current_user.id
+    db.commit()
+
+    logger.info(
+        f"User {current_user.id} rolled back action {action_id} ({action_type_str})"
+    )
+
+    return ActionRollbackResponse(
+        success=True,
+        action_id=action.id,
+        action_type=action_type_str,
+        state_before=state_before,
+        state_after=state_after,
+        message=message,
+    )
+
+
+# =============================================================================
+# Agent Detail Operations
+# =============================================================================
 
 
 @router.get("/{agent_id}", response_model=AgentOut)

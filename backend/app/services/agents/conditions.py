@@ -259,10 +259,28 @@ class ThresholdCondition(Condition):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ThresholdCondition":
-        """Deserialize from dictionary."""
+        """
+        Deserialize from dictionary.
+
+        Handles both named operators (gt, lt) and symbolic operators (<, >)
+        for backwards compatibility with agents created before the fix.
+        """
+        # Map symbolic operators to named operators
+        operator_map = {
+            "<": "lt",
+            "<=": "lte",
+            ">": "gt",
+            ">=": "gte",
+            "=": "eq",
+            "==": "eq",
+            "!=": "neq",
+        }
+        raw_operator = data["operator"]
+        operator = operator_map.get(raw_operator, raw_operator)
+
         return cls(
             metric=data["metric"],
-            operator=data["operator"],
+            operator=operator,
             value=float(data["value"]),
         )
 

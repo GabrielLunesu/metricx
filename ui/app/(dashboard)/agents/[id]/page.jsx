@@ -34,13 +34,13 @@ import { cn } from '@/lib/utils';
 import { currentUser } from '@/lib/workspace';
 import {
   fetchAgent,
-  fetchAgentEvents,
   fetchAgentActions,
   pauseAgent,
   resumeAgent,
   testAgent,
   deleteAgent
 } from '@/lib/api';
+import { AgentEventLog } from '@/components/agents/AgentEventLog';
 import {
   ArrowLeft,
   Play,
@@ -162,7 +162,6 @@ export default function AgentDetailPage() {
   // State
   const [workspaceId, setWorkspaceId] = useState(null);
   const [agent, setAgent] = useState(null);
-  const [events, setEvents] = useState([]);
   const [actions, setActions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -207,15 +206,6 @@ export default function AgentDetailPage() {
   useEffect(() => {
     loadAgent();
   }, [loadAgent]);
-
-  // Fetch events when Events tab is active
-  useEffect(() => {
-    if (activeTab === 'events' && workspaceId && agentId) {
-      fetchAgentEvents({ workspaceId, agentId, limit: 50 })
-        .then(result => setEvents(result.items || []))
-        .catch(err => console.error('Failed to fetch events:', err));
-    }
-  }, [activeTab, workspaceId, agentId]);
 
   // Fetch actions when Actions tab is active
   useEffect(() => {
@@ -481,7 +471,13 @@ export default function AgentDetailPage() {
       {/* Tab content */}
       <div className="max-w-6xl mx-auto px-4">
         {activeTab === 'overview' && <OverviewTab agent={agent} />}
-        {activeTab === 'events' && <EventsTab events={events} />}
+        {activeTab === 'events' && (
+          <AgentEventLog
+            workspaceId={workspaceId}
+            agentId={agentId}
+            agent={agent}
+          />
+        )}
         {activeTab === 'actions' && <ActionsTab actions={actions} />}
         {activeTab === 'settings' && <SettingsTab agent={agent} onUpdate={loadAgent} />}
       </div>
@@ -754,87 +750,6 @@ function OverviewTab({ agent }) {
           <span>Last triggered: {lastTriggeredText}</span>
         </div>
       </div>
-    </div>
-  );
-}
-
-/**
- * EventsTab - Evaluation event log with premium design
- */
-function EventsTab({ events }) {
-  if (events.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in-up">
-        <div className="w-20 h-20 rounded-[24px] bg-white/40 glass border border-white/60 flex items-center justify-center mb-6">
-          <Activity size={32} className="text-neutral-400" />
-        </div>
-        <h3 className="text-xl font-semibold text-neutral-900 mb-3">
-          No evaluation events yet
-        </h3>
-        <p className="text-neutral-500 max-w-md">
-          Events will appear here after the agent runs its first evaluation. Use the Test button to trigger a manual evaluation.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3 animate-fade-in-up">
-      {events.map((event, idx) => {
-        const config = RESULT_TYPE_CONFIG[event.result_type] || RESULT_TYPE_CONFIG.condition_not_met;
-        const Icon = config.icon;
-        return (
-          <div
-            key={event.id}
-            className="bg-white/40 glass rounded-[20px] border border-white/60 overflow-hidden hover:bg-white/60 transition-all duration-200"
-            style={{ animationDelay: `${idx * 0.03}s` }}
-          >
-            <div className="p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4 flex-1 min-w-0">
-                  {/* Icon */}
-                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', config.bg)}>
-                    <Icon size={18} className={config.text} />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={cn(
-                        'px-2.5 py-0.5 text-xs font-semibold rounded-lg',
-                        config.bg, config.text
-                      )}>
-                        {config.label}
-                      </span>
-                      <span className="text-xs text-neutral-400">
-                        {format(new Date(event.evaluated_at), 'MMM d, HH:mm:ss')}
-                      </span>
-                    </div>
-                    <div className="font-medium text-neutral-900 mb-1">{event.headline}</div>
-                    <div className="text-sm text-neutral-500">
-                      {event.entity_name}
-                      <span className="mx-1.5 text-neutral-300">•</span>
-                      <span className="capitalize">{event.entity_provider}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Duration */}
-                <div className="text-xs text-neutral-400 bg-neutral-100/50 px-2 py-1 rounded-lg">
-                  {event.evaluation_duration_ms}ms
-                </div>
-              </div>
-
-              {/* Explanation */}
-              {event.condition_explanation && (
-                <div className="mt-4 p-3 bg-neutral-900/5 rounded-xl">
-                  <p className="text-sm text-neutral-600">{event.condition_explanation}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

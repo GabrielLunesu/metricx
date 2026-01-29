@@ -1806,6 +1806,114 @@ export async function fetchAgentActions({ workspaceId, agentId, limit = 50, offs
 }
 
 /**
+ * Fetch aggregate stats for all agents in workspace.
+ *
+ * WHAT: Returns dashboard-level metrics for agent system health
+ * WHY: Agents dashboard needs quick overview of agent activity
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID (not used in request, but kept for API consistency)
+ * @returns {Promise<Object>} { active_agents, triggers_today, evaluations_this_hour, errors_today }
+ *
+ * REFERENCES:
+ * - ui/components/agents/AgentStatsGrid.jsx
+ * - GET /v1/agents/stats endpoint
+ */
+export async function fetchAgentStats({ workspaceId }) {
+  const res = await authFetch(`${BASE}/agents/stats`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch agent stats: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch all evaluation events across all agents in workspace.
+ *
+ * WHAT: Returns paginated list of events for notification feed
+ * WHY: Dashboard shows all agent activity in one feed with infinite scroll
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID (not used in request, but kept for consistency)
+ * @param {string} params.resultType - Optional filter: 'triggered', 'error', etc.
+ * @param {number} params.limit - Max events per page (default 20)
+ * @param {string} params.cursor - Cursor for pagination (ISO datetime of last event)
+ * @returns {Promise<Object>} { events: [], total: number, next_cursor: string|null }
+ *
+ * REFERENCES:
+ * - ui/components/agents/NotificationFeed.jsx
+ * - GET /v1/agents/events endpoint
+ */
+export async function fetchWorkspaceAgentEvents({
+  workspaceId,
+  resultType = null,
+  limit = 20,
+  cursor = null
+}) {
+  const params = new URLSearchParams();
+  params.set('limit', limit.toString());
+
+  if (resultType) {
+    params.set('result_type', resultType);
+  }
+
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+
+  const res = await authFetch(`${BASE}/agents/events?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch workspace agent events: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Rollback a previously executed action.
+ *
+ * WHAT: Restores state_before for reversible actions (scale_budget, pause_campaign)
+ * WHY: Users need safety net for automated actions
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID (for access verification)
+ * @param {string} params.actionId - Action execution UUID
+ * @returns {Promise<Object>} { success, action_id, action_type, state_before, state_after, message }
+ *
+ * REFERENCES:
+ * - ui/components/agents/NotificationItem.jsx
+ * - POST /v1/agents/actions/{action_id}/rollback endpoint
+ */
+export async function rollbackAgentAction({ workspaceId, actionId }) {
+  const res = await authFetch(`${BASE}/agents/actions/${actionId}/rollback`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to rollback action: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+/**
  * Fetch entities for agent scope selection.
  *
  * WHAT: Returns entities (campaigns, adsets, ads) filtered by platform and level
