@@ -19,8 +19,8 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://t8zgrthold5r2-backend.prod2.defang.dev/auth/shopify/callback",
+  "https://api.metricx.ai/auth/shopify/callback",
   "http://localhost:8000/auth/shopify/callback",
   "https://esperanza-pseudophilosophical-nondeistically.ngrok-free.dev/auth/shopify/callback",
-  "https://backend--8000.beta.adnavi.t8zgrthold5r2.defang.app/auth/shopify/callback"
+  "https://api.metricx.ai/auth/shopify/callback"
 ]
