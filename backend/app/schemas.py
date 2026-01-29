@@ -1781,6 +1781,10 @@ class AgentScopeFilter(BaseModel):
     name_contains: Optional[str] = Field(
         None, description="Filter by name containing substring"
     )
+    aggregate: bool = Field(
+        default=False,
+        description="If true, sum metrics across all matched entities and evaluate ONCE (account-level monitoring)"
+    )
 
 
 class AgentScopeAll(BaseModel):
@@ -1791,6 +1795,10 @@ class AgentScopeAll(BaseModel):
     """
 
     level: LevelEnum = Field(description="Entity level to watch (campaign, adset, ad)")
+    aggregate: bool = Field(
+        default=False,
+        description="If true, sum metrics across all entities and evaluate ONCE (account-level monitoring)"
+    )
 
 
 AgentScopeConfig = Union[AgentScopeSpecific, AgentScopeFilter, AgentScopeAll]
@@ -2437,8 +2445,117 @@ class AgentGenerateNameResponse(BaseModel):
     )
 
 
+# --- Agent Stats and Workspace Events Schemas ---
+
+
+class AgentStatsResponse(BaseModel):
+    """Aggregate stats for all agents in workspace.
+
+    WHAT: Dashboard-level metrics for agent system health
+    WHY: Users need quick overview of agent activity
+
+    REFERENCES:
+        - GET /v1/agents/stats endpoint
+        - ui/components/agents/AgentStatsGrid.jsx
+    """
+
+    active_agents: int = Field(description="Count of ACTIVE agents")
+    triggers_today: int = Field(description="Count of triggers in last 24 hours")
+    evaluations_this_hour: int = Field(description="Count of evaluations in last hour")
+    errors_today: int = Field(
+        description="Count of ERROR status agents or failed evaluations today"
+    )
+
+
+class WorkspaceAgentEventOut(BaseModel):
+    """Evaluation event for workspace-level notification feed.
+
+    WHAT: Simplified event representation for notification feed
+    WHY: Dashboard shows all events across all agents
+
+    REFERENCES:
+        - GET /v1/agents/events endpoint
+        - ui/components/agents/NotificationFeed.jsx
+    """
+
+    id: UUID
+    agent_id: UUID
+    agent_name: str
+    entity_id: UUID
+    entity_name: str
+    entity_provider: str
+    result_type: AgentResultTypeEnum
+    headline: str
+    evaluated_at: datetime
+    # Include action info for rollback capability
+    actions_executed: List["WorkspaceAgentActionSummary"] = Field(
+        default_factory=list, description="Actions executed for this event"
+    )
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceAgentActionSummary(BaseModel):
+    """Summary of action execution for notification feed.
+
+    WHAT: Minimal action info needed for rollback UI
+    WHY: Show rollback button on events that have reversible actions
+    """
+
+    id: UUID
+    action_type: str
+    success: bool
+    description: str
+    rollback_possible: bool
+    rollback_executed_at: Optional[datetime] = None
+    state_before: Optional[dict] = None
+    state_after: Optional[dict] = None
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceAgentEventsResponse(BaseModel):
+    """Response for workspace-level agent events.
+
+    WHAT: Paginated events with cursor for infinite scroll
+    WHY: Notification feed uses infinite scroll pattern
+    """
+
+    events: List[WorkspaceAgentEventOut]
+    total: int
+    next_cursor: Optional[str] = Field(
+        None, description="Cursor for next page (ISO datetime of last event)"
+    )
+
+
+class ActionRollbackRequest(BaseModel):
+    """Request to rollback an action.
+
+    WHAT: Optional reason for rollback
+    WHY: Audit trail for rollback operations
+    """
+
+    reason: Optional[str] = Field(None, description="Reason for rollback")
+
+
+class ActionRollbackResponse(BaseModel):
+    """Response from action rollback.
+
+    WHAT: Confirmation of rollback with details
+    WHY: User needs to know rollback succeeded
+    """
+
+    success: bool
+    action_id: UUID
+    action_type: str
+    state_before: dict = Field(description="State that was restored")
+    state_after: dict = Field(description="State that was rolled back from")
+    message: str
+
+
 # Resolve forward references for nested models
 WorkspaceMemberOutLite.model_rebuild()
 WorkspaceMemberOut.model_rebuild()
 WorkspaceInviteOut.model_rebuild()
 UserOut.model_rebuild()
+WorkspaceAgentEventOut.model_rebuild()

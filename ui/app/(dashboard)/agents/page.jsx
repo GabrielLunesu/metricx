@@ -1,26 +1,25 @@
 /**
- * Agents List Page - Metricx v3.0 Design
- * ======================================
+ * Agents Dashboard Page - Metricx v3.0 Design
+ * ===========================================
  *
- * WHAT: Premium agent list with glass morphism and award-winning design
- * WHY: Users need a beautiful, intuitive interface for managing their agents
+ * WHAT: Dashboard-style agent management with stats and notification feed
+ * WHY: Users need quick overview and real-time visibility into agent activity
  *
- * DESIGN PRINCIPLES:
- * - Glass morphism with backdrop blur
- * - Soft rounded cards (32px radius)
- * - Subtle animations and hover effects
- * - Centered hero layout
- * - Premium color palette
+ * LAYOUT:
+ * - Top row: Stats card (left) + Notification feed (right)
+ * - Bottom row: Full-width Agents grid
  *
  * FEATURES:
- * - Hero header with agent stats visualization
- * - Glass filter bar with search
- * - Beautiful agent cards with status badges
- * - Staggered entrance animations
+ * - Real-time stats (active agents, triggers, evaluations, errors)
+ * - Notification feed with infinite scroll
+ * - Fullscreen notification modal
+ * - Agent cards with pause/resume actions
+ * - Rollback capability for reversible actions
  *
  * REFERENCES:
- * - Metricx v3.0 design system
- * - components/dashboard/KpiCardsModule.jsx
+ * - GET /v1/agents/stats endpoint
+ * - GET /v1/agents/events endpoint
+ * - components/agents/* components
  */
 
 'use client';
@@ -29,27 +28,27 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { currentUser } from '@/lib/workspace';
-import { fetchAgents, pauseAgent, resumeAgent } from '@/lib/api';
+import { fetchAgents, fetchAgentStats, pauseAgent, resumeAgent } from '@/lib/api';
 import {
   AgentCard,
-  AgentFilters,
+  AgentStatsGrid,
   AgentEmptyState,
+  NotificationFeed,
+  NotificationFeedFullscreen,
 } from '@/components/agents';
 import {
   Plus,
   RefreshCw,
-  Bot,
-  Zap,
+  Maximize2,
   Search,
-  Activity,
-  Sparkles,
   Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 /**
- * AgentsPage - Premium agent list page
+ * AgentsPage - Dashboard-style agent management
  */
 export default function AgentsPage() {
   const router = useRouter();
@@ -57,9 +56,14 @@ export default function AgentsPage() {
   // State
   const [workspaceId, setWorkspaceId] = useState(null);
   const [agents, setAgents] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+
+  // Fullscreen notification modal
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState(null);
@@ -84,7 +88,7 @@ export default function AgentsPage() {
       });
   }, []);
 
-  // Fetch agents when workspace or filters change
+  // Fetch agents
   const loadAgents = useCallback(async () => {
     if (!workspaceId) return;
 
@@ -109,9 +113,34 @@ export default function AgentsPage() {
     }
   }, [workspaceId, statusFilter]);
 
+  // Fetch stats
+  const loadStats = useCallback(async () => {
+    if (!workspaceId) return;
+
+    setStatsLoading(true);
+
+    try {
+      const result = await fetchAgentStats({ workspaceId });
+      setStats(result);
+    } catch (err) {
+      console.error('Failed to fetch agent stats:', err);
+      // Don't set error for stats, just show 0s
+      setStats({
+        active_agents: 0,
+        triggers_today: 0,
+        evaluations_this_hour: 0,
+        errors_today: 0,
+      });
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [workspaceId]);
+
+  // Load data when workspace changes
   useEffect(() => {
     loadAgents();
-  }, [loadAgents]);
+    loadStats();
+  }, [loadAgents, loadStats]);
 
   // Filter agents by search query (client-side for instant feedback)
   const filteredAgents = useMemo(() => {
@@ -130,6 +159,7 @@ export default function AgentsPage() {
       await pauseAgent({ workspaceId, agentId });
       toast.success('Agent paused');
       loadAgents();
+      loadStats();
     } catch (err) {
       toast.error('Failed to pause agent: ' + err.message);
     }
@@ -140,6 +170,7 @@ export default function AgentsPage() {
       await resumeAgent({ workspaceId, agentId });
       toast.success('Agent resumed');
       loadAgents();
+      loadStats();
     } catch (err) {
       toast.error('Failed to resume agent: ' + err.message);
     }
@@ -158,26 +189,25 @@ export default function AgentsPage() {
     setSearchQuery('');
   };
 
+  const handleRefresh = () => {
+    loadAgents();
+    loadStats();
+  };
+
   const hasActiveFilters = statusFilter !== null || searchQuery.length > 0;
 
-  // Calculate stats
-  const stats = useMemo(() => {
-    const totalTriggers = agents.reduce((sum, a) => sum + (a.total_triggers || 0), 0);
-    const totalEvaluations = agents.reduce((sum, a) => sum + (a.total_evaluations || 0), 0);
-    return {
-      total: agents.length,
-      active: agents.filter(a => a.status === 'active').length,
-      paused: agents.filter(a => a.status === 'paused').length,
-      error: agents.filter(a => a.status === 'error').length,
-      totalTriggers,
-      totalEvaluations,
-    };
-  }, [agents]);
+  // Calculate local stats for filter counts
+  const localStats = useMemo(() => ({
+    total: agents.length,
+    active: agents.filter(a => a.status === 'active').length,
+    paused: agents.filter(a => a.status === 'paused').length,
+    error: agents.filter(a => a.status === 'error').length,
+  }), [agents]);
 
   // Loading state with premium spinner
-  if (loading && agents.length === 0) {
+  if (loading && agents.length === 0 && !workspaceId) {
     return (
-      <div className=" min-h-[80vh] flex items-center justify-center">
+      <div className="min-h-[80vh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="w-16 h-16 border-2 border-neutral-200 rounded-full" />
@@ -202,7 +232,7 @@ export default function AgentsPage() {
           </h3>
           <p className="text-neutral-500 mb-8">{error}</p>
           <Button
-            onClick={loadAgents}
+            onClick={handleRefresh}
             className="bg-neutral-900 text-white rounded-xl px-6 py-3 hover:bg-neutral-800 transition-all"
           >
             <RefreshCw size={16} className="mr-2" />
@@ -214,190 +244,177 @@ export default function AgentsPage() {
   }
 
   return (
-    <div className=" min-h-screen pb-12">
-      {/* Hero Header */}
-      <header className="flex flex-col items-center justify-center pt-8 pb-4 max-w-4xl mx-auto text-center px-4">
-        {/* Live Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 border border-neutral-200/60 mb-6 backdrop-blur-sm">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
-            {stats.active} Active Agents
-          </span>
+    <div className="min-h-screen pb-12 p-4 sm:p-6">
+      {/* Header with Create button */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-neutral-900">Agents</h1>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            Autonomous monitoring that watches, learns, and acts on your behalf
+          </p>
         </div>
-
-        {/* Hero Title */}
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium text-neutral-900 tracking-tighter mb-4 text-glow">
-          Your AI Agents
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-lg sm:text-xl text-neutral-400 font-light tracking-tight max-w-xl">
-          Autonomous monitoring that watches, learns, and acts on your behalf.
-        </p>
-
-        {/* Create Agent CTA */}
-        <div className="mt-8 flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            onClick={loadAgents}
-            disabled={loading}
+            size="icon"
+            onClick={handleRefresh}
+            disabled={loading || statsLoading}
             className="rounded-xl border-neutral-200/60 hover:bg-white/60"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={(loading || statsLoading) ? 'animate-spin' : ''} />
           </Button>
           <Link href="/agents/new">
-            <Button className="gap-2 bg-neutral-900 text-white rounded-xl px-6 py-3 hover:bg-neutral-800 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-              <Sparkles size={16} />
+            <Button className="gap-2 bg-neutral-900 text-white rounded-xl px-4 py-2 hover:bg-neutral-800 transition-all">
+              <Plus size={16} />
               Create Agent
             </Button>
           </Link>
         </div>
-      </header>
-
-      {/* Stats Cards - Premium KPI Grid */}
-      {agents.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto px-4 mb-8">
-          {/* Total Agents */}
-          <div className="bg-white/40 glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 border border-white/60 hover:bg-white/60 hover:-translate-y-0.5 transition-all duration-300 cursor-default">
-            <div className="flex items-start justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-neutral-500 tracking-wide">Total Agents</span>
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-neutral-100/80">
-                <Bot size={14} className="text-neutral-600 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="text-3xl sm:text-4xl lg:text-5xl font-medium text-neutral-900 number-display tracking-tighter">
-              {stats.total}
-            </div>
-          </div>
-
-          {/* Active */}
-          <div className="bg-white/40 glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 border border-white/60 hover:bg-white/60 hover:-translate-y-0.5 transition-all duration-300 cursor-default">
-            <div className="flex items-start justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-neutral-500 tracking-wide">Active</span>
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-emerald-500/10">
-                <Activity size={14} className="text-emerald-600 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="text-3xl sm:text-4xl lg:text-5xl font-medium text-emerald-600 number-display tracking-tighter">
-              {stats.active}
-            </div>
-          </div>
-
-          {/* Triggers */}
-          <div className="bg-white/40 glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 border border-white/60 hover:bg-white/60 hover:-translate-y-0.5 transition-all duration-300 cursor-default">
-            <div className="flex items-start justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-neutral-500 tracking-wide">Total Triggers</span>
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-500/10">
-                <Zap size={14} className="text-amber-600 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="text-3xl sm:text-4xl lg:text-5xl font-medium text-amber-600 number-display tracking-tighter">
-              {stats.totalTriggers.toLocaleString()}
-            </div>
-          </div>
-
-          {/* Evaluations */}
-          <div className="bg-white/40 glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 border border-white/60 hover:bg-white/60 hover:-translate-y-0.5 transition-all duration-300 cursor-default">
-            <div className="flex items-start justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-neutral-500 tracking-wide">Evaluations</span>
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-violet-500/10">
-                <Activity size={14} className="text-violet-600 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="text-3xl sm:text-4xl lg:text-5xl font-medium text-violet-600 number-display tracking-tighter">
-              {stats.totalEvaluations >= 1000
-                ? `${(stats.totalEvaluations / 1000).toFixed(1)}K`
-                : stats.totalEvaluations.toLocaleString()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Search & Filters - Glass Panel */}
-      {(agents.length > 0 || hasActiveFilters) && (
-        <div className="max-w-5xl mx-auto px-4 mb-8">
-          <div className="bg-white/40 glass rounded-2xl border border-white/60 p-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              {/* Search Input */}
-              <div className="relative flex-1">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Search className="w-4 h-4 text-neutral-400" />
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search agents..."
-                  className="w-full pl-11 pr-4 py-3 bg-white/70 hover:bg-white/90 focus:bg-white rounded-xl border border-neutral-200/60 hover:border-neutral-300/60 focus:border-neutral-300 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none transition-all duration-200"
-                />
-              </div>
-
-              {/* Status Filters */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {['all', 'active', 'paused', 'error'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => setStatusFilter(status === 'all' ? null : status)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${(status === 'all' && statusFilter === null) || statusFilter === status
-                      ? 'bg-neutral-900 text-white shadow-md'
-                      : 'bg-white/60 text-neutral-600 hover:bg-white/80 border border-neutral-200/60'
-                      }`}
-                  >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                    {status !== 'all' && (
-                      <span className="ml-1.5 opacity-60">
-                        {stats[status] || 0}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Agent list */}
-      <div className="max-w-5xl mx-auto px-4">
-        {filteredAgents.length === 0 ? (
-          <AgentEmptyState
-            hasFilters={hasActiveFilters}
-            onClearFilters={handleClearFilters}
-          />
-        ) : (
-          <div className="space-y-4">
-            {filteredAgents.map((agent, index) => (
-              <div
-                key={agent.id}
-                className="animate-slide-up"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <AgentCard
-                  agent={agent}
-                  expanded={expandedId === agent.id}
-                  onToggleExpand={() => setExpandedId(expandedId === agent.id ? null : agent.id)}
-                  onPause={handlePause}
-                  onResume={handleResume}
-                  onView={handleView}
-                  onSettings={handleSettings}
-                />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Load more */}
-      {hasMore && (
-        <div className="flex justify-center mt-8">
-          <Button
-            variant="outline"
-            onClick={() => {/* TODO: Load more */ }}
-            className="rounded-xl border-neutral-200/60 hover:bg-white/60"
-          >
-            Load more agents
-          </Button>
-        </div>
+      {/* Top Row: Stats + Notifications side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Stats Card */}
+        <Card className="bg-white/60 backdrop-blur-sm border-neutral-200/40 shadow-sm">
+          <CardHeader className="pb-3 pt-4 px-5">
+            <CardTitle className="text-sm font-semibold text-neutral-900">
+              Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5 pt-0 h-[calc(100%-56px)]">
+            <AgentStatsGrid stats={stats} isLoading={statsLoading} />
+          </CardContent>
+        </Card>
+
+        {/* Notifications Card */}
+        <Card className="bg-white/60 backdrop-blur-sm border-neutral-200/40 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-5">
+            <CardTitle className="text-sm font-semibold text-neutral-900">
+              Activity Feed
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setFullscreenOpen(true)}
+              className="h-7 w-7 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100/80 rounded-lg"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </Button>
+          </CardHeader>
+          <CardContent className="px-5 pb-5 pt-0">
+            {workspaceId && (
+              <NotificationFeed
+                workspaceId={workspaceId}
+                maxHeight={180}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Row: Agents - Full Width */}
+      <Card className="bg-white/40 glass border-white/60">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base font-semibold text-neutral-900">
+            Agents
+          </CardTitle>
+          <span className="text-sm text-neutral-500">
+            {filteredAgents.length} {filteredAgents.length === 1 ? 'agent' : 'agents'}
+          </span>
+        </CardHeader>
+        <CardContent>
+          {/* Search & Filters */}
+          {(agents.length > 0 || hasActiveFilters) && (
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                {/* Search Input */}
+                <div className="relative flex-1">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Search className="w-4 h-4 text-neutral-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search agents..."
+                    className="w-full pl-11 pr-4 py-2.5 bg-white/70 hover:bg-white/90 focus:bg-white rounded-xl border border-neutral-200/60 hover:border-neutral-300/60 focus:border-neutral-300 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none transition-all duration-200"
+                  />
+                </div>
+
+                {/* Status Filters */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {['all', 'active', 'paused', 'error'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status === 'all' ? null : status)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${(status === 'all' && statusFilter === null) || statusFilter === status
+                        ? 'bg-neutral-900 text-white shadow-sm'
+                        : 'bg-white/60 text-neutral-600 hover:bg-white/80 border border-neutral-200/60'
+                        }`}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                      {status !== 'all' && (
+                        <span className="ml-1.5 opacity-60">
+                          {localStats[status] || 0}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Agent list */}
+          {filteredAgents.length === 0 ? (
+            <AgentEmptyState
+              hasFilters={hasActiveFilters}
+              onClearFilters={handleClearFilters}
+            />
+          ) : (
+            <div className="space-y-4">
+              {filteredAgents.map((agent, index) => (
+                <div
+                  key={agent.id}
+                  className="animate-slide-up"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <AgentCard
+                    agent={agent}
+                    expanded={expandedId === agent.id}
+                    onToggleExpand={() => setExpandedId(expandedId === agent.id ? null : agent.id)}
+                    onPause={handlePause}
+                    onResume={handleResume}
+                    onView={handleView}
+                    onSettings={handleSettings}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Load more */}
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {/* TODO: Load more */}}
+                className="rounded-xl border-neutral-200/60 hover:bg-white/60"
+              >
+                Load more agents
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Fullscreen notification modal */}
+      {workspaceId && (
+        <NotificationFeedFullscreen
+          open={fullscreenOpen}
+          onClose={() => setFullscreenOpen(false)}
+          workspaceId={workspaceId}
+        />
       )}
     </div>
   );
