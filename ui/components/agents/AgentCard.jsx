@@ -107,6 +107,34 @@ function conditionToSummary(condition) {
   }
 }
 
+function formatScheduleSummary(schedule, dateRange) {
+  if (!schedule || schedule.type === 'realtime') {
+    return 'Scheduled report';
+  }
+
+  const pad = (value) => value.toString().padStart(2, '0');
+  const time = `${pad(schedule.hour ?? 0)}:${pad(schedule.minute ?? 0)}`;
+  const tz = schedule.timezone || 'UTC';
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dateRangeLabels = {
+    yesterday: 'Yesterday',
+    today: 'Today',
+    last_7_days: 'Last 7 days',
+    last_30_days: 'Last 30 days',
+  };
+
+  let cadence = 'Daily';
+  if (schedule.type === 'weekly') {
+    const dayLabel = days[schedule.day_of_week ?? 0];
+    cadence = `Weekly (${dayLabel})`;
+  } else if (schedule.type === 'monthly') {
+    cadence = `Monthly (${schedule.day_of_month ?? 1})`;
+  }
+
+  const rangeLabel = dateRangeLabels[dateRange?.type] ? ` · ${dateRangeLabels[dateRange.type]}` : '';
+  return `Scheduled report · ${cadence} at ${time} ${tz}${rangeLabel}`;
+}
+
 /**
  * AgentCard - Premium glass card component
  */
@@ -131,6 +159,9 @@ export function AgentCard({
     actions,
     scope,
     accumulation,
+    schedule,
+    condition_required,
+    date_range,
     entities_count = 0,
     last_evaluated_at,
     total_evaluations = 0,
@@ -160,6 +191,10 @@ export function AgentCard({
 
   // Status config
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+  const isReportAgent = condition_required === false;
+  const summaryText = isReportAgent
+    ? formatScheduleSummary(schedule, date_range)
+    : conditionToSummary(condition);
 
   return (
     <div
@@ -222,7 +257,7 @@ export function AgentCard({
             </span>
           </div>
           <p className="text-sm text-neutral-500 truncate mt-1">
-            {conditionToSummary(condition)}
+            {summaryText}
           </p>
         </div>
 

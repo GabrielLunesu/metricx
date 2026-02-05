@@ -514,6 +514,54 @@ async def scheduled_agent_evaluation(ctx: Dict) -> Dict:
         db.close()
 
 
+async def scheduled_agent_check(ctx: Dict) -> Dict:
+    """Scheduled job: check and run scheduled agents.
+
+    WHAT:
+        Checks all scheduled agents (daily, weekly, monthly) and runs those
+        whose schedule time has arrived.
+
+    WHEN:
+        Every minute - checks if any scheduled agent should run now.
+
+    WHY:
+        - Users want scheduled reports (daily at 1am, weekly summaries)
+        - Separate from realtime evaluation (runs every 15 min)
+        - Allows "always send" mode without condition requirement
+
+    REFERENCES:
+        - Scheduled Reports & Multi-Channel Notifications Plan
+        - backend/app/services/agents/evaluation_engine.py
+    """
+    logger.info("[ARQ] Checking scheduled agents")
+
+    db = SessionLocal()
+    try:
+        from app.services.agents.evaluation_engine import AgentEvaluationEngine
+
+        engine = AgentEvaluationEngine(db)
+        results = await engine.evaluate_scheduled_agents()
+
+        if results.get("agents_evaluated", 0) > 0:
+            logger.info(
+                "[ARQ] Scheduled agent check: ran=%d, triggers=%d, errors=%d",
+                results.get("agents_evaluated", 0),
+                results.get("triggers", 0),
+                results.get("errors", 0),
+            )
+        else:
+            logger.debug("[ARQ] Scheduled agent check: no agents due to run")
+
+        return results
+
+    except Exception as e:
+        logger.exception("[ARQ] Scheduled agent check failed: %s", e)
+        capture_exception(e, extra={"operation": "scheduled_agent_check"})
+        return {"error": str(e)}
+    finally:
+        db.close()
+
+
 # =============================================================================
 # SHOPIFY SYNC (Separate from ad platforms)
 # =============================================================================
@@ -646,6 +694,7 @@ class WorkerSettings:
         scheduled_attribution_sync,
         scheduled_compaction,
         scheduled_agent_evaluation,
+        scheduled_agent_check,
     ]
 
     # NO cron_jobs here - the scheduler handles cron scheduling

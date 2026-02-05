@@ -70,6 +70,8 @@ from ..schemas import (
     AccumulationConfig,
     TriggerConfig,
     SafetyConfig,
+    ScheduleConfig,
+    DateRangeConfig,
     AgentPauseRequest,
     AgentResumeRequest,
     AgentTestRequest,
@@ -400,6 +402,12 @@ def list_agents(
                 ),
                 actions=agent.actions,
                 safety=SafetyConfig(**agent.safety_config) if agent.safety_config else None,
+                schedule=ScheduleConfig(
+                    type=agent.schedule_type,
+                    **(agent.schedule_config or {}),
+                ),
+                condition_required=agent.condition_required,
+                date_range=DateRangeConfig(type=agent.date_range_type) if agent.date_range_type else None,
                 entities_count=len(entity_states),
                 last_evaluated_at=agent.last_evaluated_at,
                 total_evaluations=agent.total_evaluations or 0,
@@ -461,6 +469,17 @@ def create_agent(
     if validation_error:
         raise HTTPException(status_code=400, detail=validation_error)
 
+    # Schedule and date range mapping
+    schedule_type = "realtime"
+    schedule_config = None
+    if agent_in.schedule:
+        schedule_type = agent_in.schedule.type
+        schedule_config = agent_in.schedule.model_dump(exclude={"type"})
+        if schedule_type == "realtime":
+            schedule_config = None
+
+    date_range_type = agent_in.date_range.type if agent_in.date_range else None
+
     # Create agent
     agent = Agent(
         id=uuid.uuid4(),
@@ -479,6 +498,10 @@ def create_agent(
         continuous_interval_minutes=agent_in.trigger.continuous_interval_minutes,
         actions=agent_in.actions,
         safety_config=agent_in.safety.model_dump() if agent_in.safety else None,
+        schedule_type=schedule_type,
+        schedule_config=schedule_config,
+        condition_required=agent_in.condition_required,
+        date_range_type=date_range_type,
         status=AgentStatusEnum(agent_in.status),
         created_by=current_user.id,
     )
@@ -511,6 +534,12 @@ def create_agent(
         ),
         actions=agent.actions,
         safety=SafetyConfig(**agent.safety_config) if agent.safety_config else None,
+        schedule=ScheduleConfig(
+            type=agent.schedule_type,
+            **(agent.schedule_config or {}),
+        ),
+        condition_required=agent.condition_required,
+        date_range=DateRangeConfig(type=agent.date_range_type) if agent.date_range_type else None,
         entities_count=0,
         last_evaluated_at=agent.last_evaluated_at,
         total_evaluations=0,
@@ -918,6 +947,12 @@ def get_agent(
         ),
         actions=agent.actions,
         safety=SafetyConfig(**agent.safety_config) if agent.safety_config else None,
+        schedule=ScheduleConfig(
+            type=agent.schedule_type,
+            **(agent.schedule_config or {}),
+        ),
+        condition_required=agent.condition_required,
+        date_range=DateRangeConfig(type=agent.date_range_type) if agent.date_range_type else None,
         entities_count=len(entity_states),
         last_evaluated_at=agent.last_evaluated_at,
         total_evaluations=agent.total_evaluations or 0,
@@ -998,6 +1033,23 @@ def update_agent(
         agent.actions = update_data["actions"]
     if "safety" in update_data:
         agent.safety_config = update_data["safety"].model_dump() if update_data["safety"] else None
+    if "schedule" in update_data:
+        schedule = update_data["schedule"]
+        if schedule:
+            schedule_type = schedule.get("type", "realtime")
+            agent.schedule_type = schedule_type
+            if schedule_type == "realtime":
+                agent.schedule_config = None
+            else:
+                agent.schedule_config = {k: v for k, v in schedule.items() if k != "type"}
+        else:
+            agent.schedule_type = "realtime"
+            agent.schedule_config = None
+    if "condition_required" in update_data:
+        agent.condition_required = update_data["condition_required"]
+    if "date_range" in update_data:
+        date_range = update_data["date_range"]
+        agent.date_range_type = date_range.get("type") if date_range else None
 
     agent.updated_at = datetime.now(timezone.utc)
     db.commit()
