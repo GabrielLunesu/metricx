@@ -31,11 +31,11 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, time as dt_time
 from typing import Any, Dict, List, Optional, Tuple
 import logging
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import Session
 
 from sqlalchemy import func
@@ -146,22 +146,24 @@ class AgentEvaluationEngine:
 
     async def evaluate_all_agents(self) -> Dict[str, Any]:
         """
-        Evaluate all active agents.
+        Evaluate all active REALTIME agents.
 
         Called every 15 minutes by ARQ scheduler.
+        Only evaluates agents with schedule_type='realtime'.
 
         Returns:
             Summary of evaluation cycle
         """
         start_time = time.time()
-        logger.info("Starting agent evaluation cycle")
+        logger.info("Starting agent evaluation cycle (realtime agents)")
 
-        # Get all active agents
+        # Get all active REALTIME agents (exclude scheduled ones)
         agents = self.db.query(Agent).filter(
-            Agent.status == AgentStatusEnum.active
+            Agent.status == AgentStatusEnum.active,
+            Agent.schedule_type == "realtime"
         ).all()
 
-        logger.info(f"Found {len(agents)} active agents to evaluate")
+        logger.info(f"Found {len(agents)} active realtime agents to evaluate")
 
         results = {
             "agents_evaluated": 0,
@@ -189,7 +191,205 @@ class AgentEvaluationEngine:
 
         return results
 
-    async def evaluate_agent(self, agent: Agent) -> Dict[str, Any]:
+    async def evaluate_scheduled_agents(self) -> Dict[str, Any]:
+        """
+        Evaluate all scheduled agents whose schedule time has arrived.
+
+        Called every minute by ARQ scheduler.
+        Checks agents with schedule_type in ('daily', 'weekly', 'monthly').
+
+        Returns:
+            Summary of scheduled evaluation cycle
+        """
+        start_time = time.time()
+        now = datetime.now(timezone.utc)
+        logger.info(f"Checking scheduled agents at {now.isoformat()}")
+
+        # Get all active SCHEDULED agents (not realtime)
+        scheduled_agents = self.db.query(Agent).filter(
+            Agent.status == AgentStatusEnum.active,
+            Agent.schedule_type.in_(["daily", "weekly", "monthly"])
+        ).all()
+
+        logger.info(f"Found {len(scheduled_agents)} scheduled agents to check")
+
+        results = {
+            "agents_checked": len(scheduled_agents),
+            "agents_evaluated": 0,
+            "triggers": 0,
+            "errors": 0,
+            "duration_ms": 0,
+        }
+
+        for agent in scheduled_agents:
+            try:
+                # Check if this agent should run now
+                if not self._should_run_scheduled_agent(agent, now):
+                    continue
+
+                logger.info(f"Running scheduled agent {agent.id}: {agent.name}")
+
+                # For scheduled agents, check if condition is required
+                skip_condition = not getattr(agent, 'condition_required', True)
+
+                agent_result = await self.evaluate_agent(
+                    agent,
+                    skip_condition=skip_condition
+                )
+                results["agents_evaluated"] += 1
+                results["triggers"] += agent_result.get("triggers", 0)
+                results["errors"] += agent_result.get("errors", 0)
+
+                # Update last_scheduled_run_at
+                agent.last_scheduled_run_at = now
+                self.db.commit()
+
+            except Exception as e:
+                logger.exception(f"Failed to evaluate scheduled agent {agent.id}: {e}")
+                results["errors"] += 1
+                await self._mark_agent_error(agent, str(e))
+
+        results["duration_ms"] = int((time.time() - start_time) * 1000)
+        logger.info(f"Scheduled agent check complete: {results}")
+
+        return results
+
+    def _should_run_scheduled_agent(self, agent: Agent, now: datetime) -> bool:
+        """
+        Check if a scheduled agent should run at the given time.
+
+        Parameters:
+            agent: Agent with schedule_type and schedule_config
+            now: Current UTC time
+
+        Returns:
+            True if agent should run now
+        """
+        schedule_config = agent.schedule_config or {}
+        schedule_type = agent.schedule_type
+
+        # Get schedule parameters with defaults
+        target_hour = schedule_config.get("hour", 0)
+        target_minute = schedule_config.get("minute", 0)
+        tz_name = schedule_config.get("timezone", "UTC")
+
+        # Convert now to the agent's timezone for comparison
+        try:
+            import pytz
+            tz = pytz.timezone(tz_name)
+            local_now = now.astimezone(tz)
+        except Exception:
+            # Fallback to UTC if timezone is invalid
+            local_now = now
+
+        current_hour = local_now.hour
+        current_minute = local_now.minute
+        current_day_of_week = local_now.weekday()  # 0 = Monday
+        current_day_of_month = local_now.day
+
+        # Check if current time matches schedule
+        # Allow a 5-minute window to account for cron timing
+        time_matches = (
+            current_hour == target_hour and
+            abs(current_minute - target_minute) <= 5
+        )
+
+        if not time_matches:
+            return False
+
+        # Check day constraints for weekly/monthly
+        if schedule_type == "weekly":
+            target_day = schedule_config.get("day_of_week", 0)  # 0 = Monday
+            if current_day_of_week != target_day:
+                return False
+
+        elif schedule_type == "monthly":
+            target_day = schedule_config.get("day_of_month", 1)
+            if current_day_of_month != target_day:
+                return False
+
+        # Check if we already ran in this window
+        # Prevent double-runs within the same 10-minute window
+        if agent.last_scheduled_run_at:
+            minutes_since_last_run = (now - agent.last_scheduled_run_at).total_seconds() / 60
+            if minutes_since_last_run < 10:
+                logger.debug(f"Agent {agent.id} already ran {minutes_since_last_run:.1f} minutes ago")
+                return False
+
+        return True
+
+    def _resolve_event_type(self, agent: Agent) -> str:
+        """Resolve event type for notifications."""
+        if agent.schedule_type != "realtime" and not agent.condition_required:
+            return "report"
+        return "trigger"
+
+    def _resolve_date_range_type(self, agent: Agent) -> str:
+        """Resolve effective date range type for metrics."""
+        if agent.date_range_type:
+            return agent.date_range_type
+        if agent.schedule_type != "realtime":
+            return "yesterday"
+        return "rolling_24h"
+
+    def _compute_date_window(
+        self,
+        date_range_type: Optional[str],
+        tz_name: str,
+    ) -> Dict[str, Any]:
+        """Compute date window for metric queries."""
+        now_utc = datetime.now(timezone.utc)
+        if not date_range_type or date_range_type == "rolling_24h":
+            return {
+                "mode": "captured_at",
+                "start_dt": now_utc - timedelta(hours=24),
+                "end_dt": now_utc,
+            }
+
+        try:
+            import pytz
+            tz = pytz.timezone(tz_name)
+            local_now = now_utc.astimezone(tz)
+        except Exception:
+            tz = None
+            local_now = now_utc
+
+        today = local_now.date()
+        if date_range_type == "today":
+            start_date = end_date = today
+        elif date_range_type == "yesterday":
+            start_date = end_date = today - timedelta(days=1)
+        elif date_range_type == "last_7_days":
+            start_date = today - timedelta(days=6)
+            end_date = today
+        elif date_range_type == "last_30_days":
+            start_date = today - timedelta(days=29)
+            end_date = today
+        else:
+            return {
+                "mode": "captured_at",
+                "start_dt": now_utc - timedelta(hours=24),
+                "end_dt": now_utc,
+            }
+
+        if tz:
+            local_start = tz.localize(datetime.combine(start_date, dt_time.min))
+            local_end = tz.localize(datetime.combine(end_date, dt_time.max))
+            start_dt = local_start.astimezone(timezone.utc)
+            end_dt = local_end.astimezone(timezone.utc)
+        else:
+            start_dt = datetime.combine(start_date, dt_time.min, tzinfo=timezone.utc)
+            end_dt = datetime.combine(end_date, dt_time.max, tzinfo=timezone.utc)
+
+        return {
+            "mode": "metrics_date",
+            "start_date": start_date,
+            "end_date": end_date,
+            "start_dt": start_dt,
+            "end_dt": end_dt,
+        }
+
+    async def evaluate_agent(self, agent: Agent, skip_condition: bool = False) -> Dict[str, Any]:
         """
         Evaluate a single agent across all scoped entities.
 
@@ -199,11 +399,13 @@ class AgentEvaluationEngine:
 
         Parameters:
             agent: Agent to evaluate
+            skip_condition: If True, skip condition evaluation and always trigger
+                           (used for scheduled "always send" reports)
 
         Returns:
             Summary of agent evaluation
         """
-        logger.debug(f"Evaluating agent {agent.id}: {agent.name}")
+        logger.debug(f"Evaluating agent {agent.id}: {agent.name} (skip_condition={skip_condition})")
 
         # Get entities in scope
         entities = self._get_scoped_entities(agent)
@@ -218,11 +420,19 @@ class AgentEvaluationEngine:
         # Check if this is an AGGREGATE agent (evaluate totals, not individuals)
         scope_config = agent.scope_config or {}
         is_aggregate = scope_config.get("aggregate", False)
+        date_range_type = self._resolve_date_range_type(agent)
+        schedule_timezone = (agent.schedule_config or {}).get("timezone", "UTC")
 
         if is_aggregate and entities:
             # AGGREGATE MODE: Sum metrics across all entities, evaluate ONCE
             try:
-                eval_result = await self.evaluate_agent_aggregate(agent, entities)
+                eval_result = await self.evaluate_agent_aggregate(
+                    agent,
+                    entities,
+                    skip_condition=skip_condition,
+                    date_range_type=date_range_type,
+                    schedule_timezone=schedule_timezone,
+                )
                 results["entities_evaluated"] = 1  # One aggregate evaluation
                 if eval_result.should_trigger:
                     results["triggers"] += 1
@@ -235,7 +445,13 @@ class AgentEvaluationEngine:
             # INDIVIDUAL MODE: Evaluate each entity separately
             for entity in entities:
                 try:
-                    eval_result = await self.evaluate_agent_entity(agent, entity)
+                    eval_result = await self.evaluate_agent_entity(
+                        agent,
+                        entity,
+                        skip_condition=skip_condition,
+                        date_range_type=date_range_type,
+                        schedule_timezone=schedule_timezone,
+                    )
                     results["entities_evaluated"] += 1
 
                     if eval_result.should_trigger:
@@ -257,7 +473,12 @@ class AgentEvaluationEngine:
         return results
 
     async def evaluate_agent_aggregate(
-        self, agent: Agent, entities: List[Entity]
+        self,
+        agent: Agent,
+        entities: List[Entity],
+        skip_condition: bool = False,
+        date_range_type: Optional[str] = None,
+        schedule_timezone: str = "UTC",
     ) -> EvaluationResult:
         """
         Evaluate agent against AGGREGATED metrics across all entities.
@@ -319,7 +540,11 @@ class AgentEvaluationEngine:
 
         try:
             # 1. Aggregate metrics across all entities
-            aggregated_observations = await self._aggregate_observations(entities)
+            aggregated_observations = await self._aggregate_observations(
+                entities,
+                date_range_type=date_range_type,
+                schedule_timezone=schedule_timezone,
+            )
             result.observations = aggregated_observations
 
             logger.info(
@@ -328,41 +553,59 @@ class AgentEvaluationEngine:
                 f"revenue=${aggregated_observations.get('revenue', 0):.2f}"
             )
 
-            # 2. Evaluate condition against aggregated metrics
-            condition = condition_from_dict(agent.condition)
-            eval_context = EvalContext(
-                observations=aggregated_observations,
-                entity_id="aggregate",
-                entity_name=aggregate_name,
-                evaluated_at=evaluated_at,
-            )
-            condition_result = condition.evaluate(eval_context)
-            result.condition_result = condition_result.met
-            result.condition_inputs = condition_result.inputs
-            result.condition_explanation = condition_result.explanation
+            # 2. Evaluate condition against aggregated metrics (unless skip_condition)
+            if skip_condition:
+                # For scheduled "always send" reports, skip condition and trigger
+                result.condition_result = True
+                result.condition_inputs = {"skip_condition": True}
+                result.condition_explanation = "Scheduled report (condition skipped)"
+                should_trigger = True
+            else:
+                condition = condition_from_dict(agent.condition)
+                eval_context = EvalContext(
+                    observations=aggregated_observations,
+                    entity_id="aggregate",
+                    entity_name=aggregate_name,
+                    evaluated_at=evaluated_at,
+                )
+                condition_result = condition.evaluate(eval_context)
+                result.condition_result = condition_result.met
+                result.condition_inputs = condition_result.inputs
+                result.condition_explanation = condition_result.explanation
+                should_trigger = condition_result.met
 
             # 3. For aggregate mode, trigger immediately if condition met (no accumulation)
             # This simplifies the logic - aggregate agents trigger on first match
-            if condition_result.met:
+            if should_trigger:
                 result.result_type = AgentResultTypeEnum.triggered
                 result.should_trigger = True
-                result.headline = f"Triggered: {condition_result.explanation}"
-                result.trigger_explanation = "Aggregate condition met"
+                if skip_condition:
+                    result.headline = f"Scheduled report for {aggregate_name}"
+                    result.trigger_explanation = "Scheduled report triggered"
+                else:
+                    result.headline = f"Triggered: {result.condition_explanation}"
+                    result.trigger_explanation = "Aggregate condition met"
                 result.state_after = "triggered"
 
                 # 4. Execute actions
                 result.action_results = await self._execute_aggregate_actions(
-                    agent, aggregate_name, provider.lower(), result
+                    agent,
+                    aggregate_name,
+                    provider.lower(),
+                    result,
+                    event_type=self._resolve_event_type(agent),
+                    date_range_type=date_range_type,
+                    schedule_timezone=schedule_timezone,
                 )
             else:
                 result.result_type = AgentResultTypeEnum.condition_not_met
-                result.headline = f"Condition not met: {condition_result.explanation}"
+                result.headline = f"Condition not met: {result.condition_explanation}"
                 result.trigger_explanation = "Aggregate condition not met"
 
             # 5. Generate summary
             result.summary = (
                 f"Agent '{agent.name}' evaluated {aggregate_name}: "
-                f"{condition_result.explanation}"
+                f"{result.condition_explanation}"
             )
 
         except Exception as e:
@@ -380,68 +623,98 @@ class AgentEvaluationEngine:
 
         return result
 
-    async def _aggregate_observations(self, entities: List[Entity]) -> Dict[str, float]:
+    async def _aggregate_observations(
+        self,
+        entities: List[Entity],
+        date_range_type: Optional[str] = None,
+        schedule_timezone: str = "UTC",
+    ) -> Dict[str, float]:
         """
         Aggregate metrics across multiple entities.
 
-        Sums: spend, revenue, clicks, impressions, conversions
+        Sums: spend, revenue, profit, clicks, impressions, conversions
         Calculates: ROAS, CPC, CTR from aggregated values
         """
-        from datetime import timedelta
+        if not entities:
+            return {
+                "spend": 0.0,
+                "revenue": 0.0,
+                "profit": 0.0,
+                "roas": 0.0,
+                "clicks": 0,
+                "impressions": 0,
+                "conversions": 0.0,
+                "cpc": 0.0,
+                "ctr": 0.0,
+            }
 
-        totals = {
-            "spend": 0.0,
-            "revenue": 0.0,
-            "clicks": 0,
-            "impressions": 0,
-            "conversions": 0.0,
-        }
+        entity_ids = [e.id for e in entities]
+        window = self._compute_date_window(date_range_type, schedule_timezone)
 
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        query = select(
+            func.sum(MetricSnapshot.spend).label("spend"),
+            func.sum(MetricSnapshot.revenue).label("revenue"),
+            func.sum(MetricSnapshot.profit).label("profit"),
+            func.sum(MetricSnapshot.clicks).label("clicks"),
+            func.sum(MetricSnapshot.impressions).label("impressions"),
+            func.sum(MetricSnapshot.conversions).label("conversions"),
+        ).where(MetricSnapshot.entity_id.in_(entity_ids))
 
-        for entity in entities:
-            result = self.db.execute(
-                select(
-                    func.sum(MetricSnapshot.spend).label("spend"),
-                    func.sum(MetricSnapshot.revenue).label("revenue"),
-                    func.sum(MetricSnapshot.clicks).label("clicks"),
-                    func.sum(MetricSnapshot.impressions).label("impressions"),
-                    func.sum(MetricSnapshot.conversions).label("conversions"),
-                )
-                .where(
+        if window["mode"] == "metrics_date":
+            query = query.where(
+                or_(
                     and_(
-                        MetricSnapshot.entity_id == entity.id,
-                        MetricSnapshot.captured_at >= cutoff,
-                    )
+                        MetricSnapshot.metrics_date >= window["start_date"],
+                        MetricSnapshot.metrics_date <= window["end_date"],
+                    ),
+                    and_(
+                        MetricSnapshot.metrics_date.is_(None),
+                        MetricSnapshot.captured_at >= window["start_dt"],
+                        MetricSnapshot.captured_at <= window["end_dt"],
+                    ),
                 )
-            ).first()
+            )
+        else:
+            query = query.where(
+                and_(
+                    MetricSnapshot.captured_at >= window["start_dt"],
+                    MetricSnapshot.captured_at <= window["end_dt"],
+                )
+            )
 
-            if result and result.spend is not None:
-                totals["spend"] += float(result.spend or 0)
-                totals["revenue"] += float(result.revenue or 0)
-                totals["clicks"] += int(result.clicks or 0)
-                totals["impressions"] += int(result.impressions or 0)
-                totals["conversions"] += float(result.conversions or 0)
+        result = self.db.execute(query).first()
 
-        # Calculate derived metrics
-        spend = totals["spend"]
-        revenue = totals["revenue"]
-        clicks = totals["clicks"]
-        impressions = totals["impressions"]
+        spend = float(result.spend or 0) if result else 0.0
+        revenue = float(result.revenue or 0) if result else 0.0
+        if result and result.profit is None:
+            profit = revenue - spend
+        else:
+            profit = float(result.profit or 0) if result else 0.0
+        clicks = int(result.clicks or 0) if result else 0
+        impressions = int(result.impressions or 0) if result else 0
+        conversions = float(result.conversions or 0) if result else 0.0
 
         return {
             "spend": round(spend, 2),
             "revenue": round(revenue, 2),
+            "profit": round(profit, 2),
             "roas": round(revenue / spend, 2) if spend > 0 else 0.0,
             "clicks": clicks,
             "impressions": impressions,
-            "conversions": round(totals["conversions"], 2),
+            "conversions": round(conversions, 2),
             "cpc": round(spend / clicks, 2) if clicks > 0 else 0.0,
             "ctr": round((clicks / impressions * 100), 2) if impressions > 0 else 0.0,
         }
 
     async def _execute_aggregate_actions(
-        self, agent: Agent, aggregate_name: str, provider: str, result: EvaluationResult
+        self,
+        agent: Agent,
+        aggregate_name: str,
+        provider: str,
+        result: EvaluationResult,
+        event_type: Optional[str] = None,
+        date_range_type: Optional[str] = None,
+        schedule_timezone: Optional[str] = None,
     ) -> List[ActionResult]:
         """Execute actions for an aggregate trigger."""
         from .action_executor import PlatformActionExecutor
@@ -478,6 +751,9 @@ class AgentEvaluationEngine:
                     workspace_id=str(agent.workspace_id),
                     observations=result.observations,
                     evaluation_event_id="",
+                    event_type=event_type,
+                    date_range_type=date_range_type,
+                    schedule_timezone=schedule_timezone,
                     user_email=user_email,
                 )
 
@@ -569,7 +845,12 @@ class AgentEvaluationEngine:
         return event
 
     async def evaluate_agent_entity(
-        self, agent: Agent, entity: Entity
+        self,
+        agent: Agent,
+        entity: Entity,
+        skip_condition: bool = False,
+        date_range_type: Optional[str] = None,
+        schedule_timezone: str = "UTC",
     ) -> EvaluationResult:
         """
         Evaluate a single agent against a single entity.
@@ -577,7 +858,7 @@ class AgentEvaluationEngine:
         This is the core evaluation logic:
         1. Get or create entity state
         2. Fetch current metrics
-        3. Evaluate condition
+        3. Evaluate condition (unless skip_condition=True)
         4. Update state machine
         5. Determine if should trigger
         6. Execute actions if triggered
@@ -586,6 +867,8 @@ class AgentEvaluationEngine:
         Parameters:
             agent: Agent to evaluate
             entity: Entity to evaluate against
+            skip_condition: If True, skip condition check and always trigger
+                           (used for scheduled "always send" reports)
 
         Returns:
             EvaluationResult with full details
@@ -633,21 +916,33 @@ class AgentEvaluationEngine:
             }
 
             # 3. Fetch current metrics
-            observations = await self._fetch_observations(entity)
+            observations = await self._fetch_observations(
+                entity,
+                date_range_type=date_range_type,
+                schedule_timezone=schedule_timezone,
+            )
             result.observations = observations
 
-            # 4. Evaluate condition
-            condition = condition_from_dict(agent.condition)
-            eval_context = EvalContext(
-                observations=observations,
-                entity_id=str(entity.id),
-                entity_name=entity.name,
-                evaluated_at=evaluated_at,
-            )
-            condition_result = condition.evaluate(eval_context)
-            result.condition_result = condition_result.met
-            result.condition_inputs = condition_result.inputs
-            result.condition_explanation = condition_result.explanation
+            # 4. Evaluate condition (unless skip_condition for scheduled reports)
+            if skip_condition:
+                # For scheduled "always send" reports, skip condition and trigger
+                condition_met = True
+                result.condition_result = True
+                result.condition_inputs = {"skip_condition": True}
+                result.condition_explanation = "Scheduled report (condition skipped)"
+            else:
+                condition = condition_from_dict(agent.condition)
+                eval_context = EvalContext(
+                    observations=observations,
+                    entity_id=str(entity.id),
+                    entity_name=entity.name,
+                    evaluated_at=evaluated_at,
+                )
+                condition_result = condition.evaluate(eval_context)
+                condition_met = condition_result.met
+                result.condition_result = condition_result.met
+                result.condition_inputs = condition_result.inputs
+                result.condition_explanation = condition_result.explanation
 
             # 5. Build accumulation state
             accumulation_state = AccumulationState(
@@ -678,7 +973,7 @@ class AgentEvaluationEngine:
 
             transition = state_machine.process_evaluation(
                 current_state=entity_state.state,
-                condition_met=condition_result.met,
+                condition_met=condition_met,
                 accumulation_state=accumulation_state,
                 evaluated_at=evaluated_at,
                 last_triggered_at=entity_state.last_triggered_at,
@@ -695,16 +990,19 @@ class AgentEvaluationEngine:
             # 7. Determine result type
             if transition.should_trigger:
                 result.result_type = AgentResultTypeEnum.triggered
-                result.headline = f"Triggered: {condition_result.explanation}"
+                if skip_condition:
+                    result.headline = f"Scheduled report for {entity.name}"
+                else:
+                    result.headline = f"Triggered: {result.condition_explanation}"
             elif transition.state_after == AgentStateEnum.cooldown:
                 result.result_type = AgentResultTypeEnum.cooldown
                 result.headline = f"In cooldown until {entity_state.next_eligible_trigger_at}"
-            elif condition_result.met:
+            elif condition_met:
                 result.result_type = AgentResultTypeEnum.condition_met
-                result.headline = f"Condition met: {condition_result.explanation}"
+                result.headline = f"Condition met: {result.condition_explanation}"
             else:
                 result.result_type = AgentResultTypeEnum.condition_not_met
-                result.headline = f"Condition not met: {condition_result.explanation}"
+                result.headline = f"Condition not met: {result.condition_explanation}"
 
             # 8. Update entity state
             entity_state.state = transition.state_after
@@ -731,7 +1029,14 @@ class AgentEvaluationEngine:
 
             # 9. Execute actions if triggered
             if transition.should_trigger:
-                result.action_results = await self._execute_actions(agent, entity, result)
+                result.action_results = await self._execute_actions(
+                    agent,
+                    entity,
+                    result,
+                    event_type=self._resolve_event_type(agent),
+                    date_range_type=date_range_type,
+                    schedule_timezone=schedule_timezone,
+                )
 
             # 10. Generate summary
             result.summary = self._generate_summary(agent, entity, result)
@@ -861,7 +1166,12 @@ class AgentEvaluationEngine:
 
         return state
 
-    async def _fetch_observations(self, entity: Entity) -> Dict[str, float]:
+    async def _fetch_observations(
+        self,
+        entity: Entity,
+        date_range_type: Optional[str] = None,
+        schedule_timezone: str = "UTC",
+    ) -> Dict[str, float]:
         """
         Fetch current metrics for entity from MetricSnapshot.
 
@@ -889,6 +1199,7 @@ class AgentEvaluationEngine:
         default_observations = {
             "spend": 0.0,
             "revenue": 0.0,
+            "profit": 0.0,
             "roas": 0.0,
             "clicks": 0,
             "impressions": 0,
@@ -898,32 +1209,52 @@ class AgentEvaluationEngine:
         }
 
         try:
-            # Query last 24 hours of metric snapshots for this entity
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+            window = self._compute_date_window(date_range_type, schedule_timezone)
 
-            result = self.db.execute(
-                select(
-                    func.sum(MetricSnapshot.spend).label("spend"),
-                    func.sum(MetricSnapshot.revenue).label("revenue"),
-                    func.sum(MetricSnapshot.clicks).label("clicks"),
-                    func.sum(MetricSnapshot.impressions).label("impressions"),
-                    func.sum(MetricSnapshot.conversions).label("conversions"),
-                )
-                .where(
-                    and_(
-                        MetricSnapshot.entity_id == entity.id,
-                        MetricSnapshot.captured_at >= cutoff,
+            query = select(
+                func.sum(MetricSnapshot.spend).label("spend"),
+                func.sum(MetricSnapshot.revenue).label("revenue"),
+                func.sum(MetricSnapshot.profit).label("profit"),
+                func.sum(MetricSnapshot.clicks).label("clicks"),
+                func.sum(MetricSnapshot.impressions).label("impressions"),
+                func.sum(MetricSnapshot.conversions).label("conversions"),
+            ).where(MetricSnapshot.entity_id == entity.id)
+
+            if window["mode"] == "metrics_date":
+                query = query.where(
+                    or_(
+                        and_(
+                            MetricSnapshot.metrics_date >= window["start_date"],
+                            MetricSnapshot.metrics_date <= window["end_date"],
+                        ),
+                        and_(
+                            MetricSnapshot.metrics_date.is_(None),
+                            MetricSnapshot.captured_at >= window["start_dt"],
+                            MetricSnapshot.captured_at <= window["end_dt"],
+                        ),
                     )
                 )
-            ).first()
+            else:
+                query = query.where(
+                    and_(
+                        MetricSnapshot.captured_at >= window["start_dt"],
+                        MetricSnapshot.captured_at <= window["end_dt"],
+                    )
+                )
+
+            result = self.db.execute(query).first()
 
             if not result or result.spend is None:
-                logger.debug(f"No metrics found for entity {entity.id} in last 24h")
+                logger.debug(f"No metrics found for entity {entity.id} in selected window")
                 return default_observations
 
             # Extract base metrics (handle None values)
             spend = float(result.spend or 0)
             revenue = float(result.revenue or 0)
+            if result.profit is None:
+                profit = revenue - spend
+            else:
+                profit = float(result.profit or 0)
             clicks = int(result.clicks or 0)
             impressions = int(result.impressions or 0)
             conversions = float(result.conversions or 0)
@@ -936,6 +1267,7 @@ class AgentEvaluationEngine:
             observations = {
                 "spend": round(spend, 2),
                 "revenue": round(revenue, 2),
+                "profit": round(profit, 2),
                 "roas": round(roas, 2),
                 "clicks": clicks,
                 "impressions": impressions,
@@ -956,7 +1288,13 @@ class AgentEvaluationEngine:
             return default_observations
 
     async def _execute_actions(
-        self, agent: Agent, entity: Entity, result: EvaluationResult
+        self,
+        agent: Agent,
+        entity: Entity,
+        result: EvaluationResult,
+        event_type: Optional[str] = None,
+        date_range_type: Optional[str] = None,
+        schedule_timezone: Optional[str] = None,
     ) -> List[ActionResult]:
         """
         Execute all actions for triggered agent using PlatformActionExecutor.
@@ -1021,6 +1359,9 @@ class AgentEvaluationEngine:
             observations=result.observations,
             evaluation_event_id=None,  # Will be set after event is stored
             user_email=user_email,
+            event_type=event_type,
+            date_range_type=date_range_type,
+            schedule_timezone=schedule_timezone,
         )
 
         # Log results

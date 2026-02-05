@@ -3,7 +3,7 @@
 from datetime import datetime, date
 from enum import Enum
 from uuid import UUID
-from typing import Optional, List, Literal, Union, Any
+from typing import Optional, List, Literal, Union, Any, Dict
 from decimal import Decimal
 from pydantic import (
     BaseModel,
@@ -1946,7 +1946,121 @@ class WebhookAction(BaseModel):
     )
 
 
-ActionConfig = Union[EmailAction, ScaleBudgetAction, PauseCampaignAction, WebhookAction]
+# --- Multi-Channel Notification Configuration ---
+
+
+class NotificationChannelConfig(BaseModel):
+    """Configuration for a single notification channel.
+
+    WHAT: Defines how to send notifications via a specific channel
+    WHY: Allows users to configure multiple notification channels per agent
+
+    Supported channels:
+    - email: Send via Resend (existing)
+    - slack: Send via Slack incoming webhook
+    - webhook: Send to custom HTTP endpoint
+    """
+
+    type: Literal["email", "slack", "webhook"] = Field(
+        description="Channel type: email, slack, or webhook"
+    )
+    enabled: bool = Field(default=True, description="Whether this channel is active")
+
+    # Email-specific fields
+    recipients: Optional[List[EmailStr]] = Field(
+        None, description="Email recipients (defaults to workspace members)"
+    )
+
+    # Slack-specific fields
+    webhook_url: Optional[str] = Field(
+        None, description="Slack incoming webhook URL"
+    )
+    channel: Optional[str] = Field(
+        None, description="Override default Slack channel (e.g., #alerts)"
+    )
+
+    # Webhook-specific fields
+    url: Optional[str] = Field(
+        None, description="Webhook URL for custom integrations"
+    )
+    method: Literal["GET", "POST", "PUT"] = Field(
+        default="POST", description="HTTP method for webhook"
+    )
+    headers: Optional[dict] = Field(
+        None, description="Custom headers for webhook"
+    )
+
+
+class NotificationEventOverride(BaseModel):
+    """Optional per-event override for notify action."""
+
+    channels: Optional[List[NotificationChannelConfig]] = Field(
+        default=None,
+        description="Override channels for this event",
+    )
+    message_template: Optional[str] = Field(
+        default=None,
+        description="Override message template for this event",
+    )
+    template_preset: Optional[str] = Field(
+        default=None,
+        description="Override template preset for this event",
+    )
+    include_metrics: Optional[List[str]] = Field(
+        default=None,
+        description="Override included metrics for this event",
+    )
+
+
+class NotifyAction(BaseModel):
+    """Multi-channel notification action.
+
+    WHAT: Send notifications to multiple channels (email, Slack, webhook)
+    WHY: Users want to receive alerts via their preferred channels
+
+    USAGE:
+        {
+            "type": "notify",
+            "channels": [
+                {"type": "email", "recipients": ["user@example.com"]},
+                {"type": "slack", "webhook_url": "https://hooks.slack.com/..."}
+            ],
+            "template_preset": "daily_summary",
+            "include_metrics": ["revenue", "spend", "roas", "profit"]
+        }
+
+    TEMPLATE VARIABLES:
+        {{agent_name}} - Name of the agent
+        {{entity_name}} - Name of the entity (campaign, account, etc.)
+        {{headline}} - Auto-generated headline
+        {{revenue}}, {{spend}}, {{roas}}, {{profit}} - Metric values
+        {{date}} - Report date
+        {{dashboard_url}} - Link to dashboard
+    """
+
+    type: Literal["notify"] = "notify"
+    channels: List[NotificationChannelConfig] = Field(
+        description="List of notification channels to send to"
+    )
+    message_template: Optional[str] = Field(
+        None,
+        description="Custom message template with {{variables}}. If not provided, uses template_preset.",
+    )
+    template_preset: Optional[str] = Field(
+        default="alert",
+        description="Preset template: 'alert', 'daily_summary', or 'digest'",
+    )
+    include_metrics: List[str] = Field(
+        default=["spend", "revenue", "roas", "profit"],
+        description="Which metrics to include in the notification",
+    )
+    event_overrides: Optional[Dict[str, NotificationEventOverride]] = Field(
+        default=None,
+        description="Optional per-event overrides (e.g., report/trigger) for channels and templates",
+    )
+
+
+ActionConfig = Union[EmailAction, ScaleBudgetAction, PauseCampaignAction, WebhookAction, NotifyAction]
 
 
 # --- Accumulation Configuration ---
@@ -2003,6 +2117,79 @@ class TriggerConfig(BaseModel):
         None,
         description="Minutes between triggers while condition holds (continuous mode)",
         example=60,
+    )
+
+
+# --- Schedule Configuration ---
+
+
+class ScheduleConfig(BaseModel):
+    """Schedule configuration for agent evaluation.
+
+    WHAT: When the agent should run
+    WHY: Enables scheduled reports (daily at 1am) vs realtime alerts
+
+    SCHEDULE TYPES:
+    - realtime: Evaluate every 15 minutes (existing behavior)
+    - daily: Evaluate once per day at specified time
+    - weekly: Evaluate once per week on specified day and time
+    - monthly: Evaluate once per month on specified day and time
+
+    EXAMPLE:
+        Daily at 1am UTC:
+        {"type": "daily", "hour": 1, "minute": 0, "timezone": "UTC"}
+
+        Weekly on Monday at 9am:
+        {"type": "weekly", "hour": 9, "minute": 0, "day_of_week": 0, "timezone": "America/New_York"}
+    """
+
+    type: Literal["realtime", "daily", "weekly", "monthly"] = Field(
+        default="realtime",
+        description="Schedule type: realtime (every 15 min), daily, weekly, or monthly",
+    )
+    hour: int = Field(
+        default=0,
+        ge=0,
+        le=23,
+        description="Hour of day to run (0-23)",
+    )
+    minute: int = Field(
+        default=0,
+        ge=0,
+        le=59,
+        description="Minute of hour to run (0-59)",
+    )
+    day_of_week: Optional[int] = Field(
+        None,
+        ge=0,
+        le=6,
+        description="Day of week for weekly schedule (0=Monday, 6=Sunday)",
+    )
+    day_of_month: Optional[int] = Field(
+        None,
+        ge=1,
+        le=31,
+        description="Day of month for monthly schedule (1-31)",
+    )
+    timezone: str = Field(
+        default="UTC",
+        description="Timezone for schedule (e.g., 'America/New_York', 'Europe/Amsterdam')",
+    )
+
+
+class DateRangeConfig(BaseModel):
+    """Date range configuration for report data.
+
+    WHAT: What time period to report on
+    WHY: Scheduled reports need to know "yesterday's data" vs "last 7 days"
+
+    For scheduled daily reports, "yesterday" is typically what you want.
+    For realtime alerts, "rolling_24h" matches existing behavior.
+    """
+
+    type: Literal["rolling_24h", "today", "yesterday", "last_7_days", "last_30_days"] = Field(
+        default="yesterday",
+        description="Date range for metrics: rolling_24h, today, yesterday, last_7_days, last_30_days",
     )
 
 
@@ -2086,6 +2273,24 @@ class AgentCreate(BaseModel):
         None, description="Safety limits and circuit breakers"
     )
 
+    # Schedule (NEW: for scheduled reports)
+    schedule: Optional[ScheduleConfig] = Field(
+        None,
+        description="Schedule configuration for when to evaluate. Default: realtime (every 15 min)",
+    )
+
+    # Condition requirement (NEW: for always-send reports)
+    condition_required: bool = Field(
+        default=True,
+        description="If False, agent triggers at schedule time regardless of condition (for scheduled reports)",
+    )
+
+    # Date range for metrics (NEW: for scheduled reports)
+    date_range: Optional[DateRangeConfig] = Field(
+        None,
+        description="Date range for metrics. Default: rolling_24h for realtime, yesterday for scheduled",
+    )
+
     # Status
     status: Literal["active", "draft"] = Field(
         default="active",
@@ -2132,6 +2337,9 @@ class AgentUpdate(BaseModel):
     trigger: Optional[TriggerConfig] = None
     actions: Optional[List[dict]] = None
     safety: Optional[SafetyConfig] = None
+    schedule: Optional[ScheduleConfig] = None
+    condition_required: Optional[bool] = None
+    date_range: Optional[DateRangeConfig] = None
 
 
 class AgentEntityStateSummary(BaseModel):
@@ -2175,6 +2383,9 @@ class AgentOut(BaseModel):
     trigger: TriggerConfig
     actions: List[dict]
     safety: Optional[SafetyConfig] = None
+    schedule: Optional[ScheduleConfig] = None
+    condition_required: bool = True
+    date_range: Optional[DateRangeConfig] = None
 
     # Stats
     entities_count: int = Field(

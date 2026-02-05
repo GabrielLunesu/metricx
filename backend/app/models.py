@@ -2040,12 +2040,14 @@ class ActionTypeEnum(str, enum.Enum):
         scale_budget: Adjust campaign budget up/down
         pause_campaign: Pause the campaign
         webhook: Call external webhook URL
+        notify: Multi-channel notification (email, Slack, webhook)
     """
 
     email = "email"
     scale_budget = "scale_budget"
     pause_campaign = "pause_campaign"
     webhook = "webhook"
+    notify = "notify"
 
 
 class Agent(Base):
@@ -2136,6 +2138,21 @@ class Agent(Base):
     # Hard limits and circuit breaker settings
     # Example: {"max_budget": 1000, "pause_if_roas_drops_percent": 30, ...}
     safety_config = Column(JSON, nullable=True)
+
+    # Schedule configuration (NEW: for scheduled reports)
+    # schedule_type: 'realtime' (every 15 min), 'daily', 'weekly', 'monthly'
+    # schedule_config: {"hour": 1, "minute": 0, "timezone": "UTC", "day_of_week": 0}
+    schedule_type = Column(String(20), nullable=False, default="realtime")
+    schedule_config = Column(JSON, nullable=True)
+    last_scheduled_run_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Condition requirement (NEW: for always-send reports)
+    # If False, agent triggers at schedule time regardless of condition
+    condition_required = Column(Boolean, nullable=False, default=True)
+
+    # Date range for metrics (NEW: for scheduled reports)
+    # 'rolling_24h', 'today', 'yesterday', 'last_7_days', 'last_30_days'
+    date_range_type = Column(String(20), nullable=True)
 
     # Status
     status = Column(

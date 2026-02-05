@@ -59,6 +59,9 @@ class ExecutionContext:
     observations: Dict[str, float]
     evaluation_event_id: Optional[UUID] = None
     user_email: Optional[str] = None
+    event_type: Optional[str] = None
+    date_range_type: Optional[str] = None
+    schedule_timezone: Optional[str] = None
 
 
 class PlatformActionExecutor:
@@ -578,6 +581,9 @@ class PlatformActionExecutor:
             workspace_id=str(context.workspace_id),
             observations=context.observations,
             evaluation_event_id=str(context.evaluation_event_id) if context.evaluation_event_id else "",
+            event_type=context.event_type,
+            date_range_type=context.date_range_type,
+            schedule_timezone=context.schedule_timezone,
             user_email=context.user_email,
         )
 
@@ -605,6 +611,9 @@ async def execute_agent_actions(
     observations: Dict[str, float],
     evaluation_event_id: Optional[UUID] = None,
     user_email: Optional[str] = None,
+    event_type: Optional[str] = None,
+    date_range_type: Optional[str] = None,
+    schedule_timezone: Optional[str] = None,
 ) -> List[ActionResult]:
     """
     Execute all actions for an agent trigger.
@@ -637,6 +646,9 @@ async def execute_agent_actions(
         observations=observations,
         evaluation_event_id=evaluation_event_id,
         user_email=user_email,
+        event_type=event_type,
+        date_range_type=date_range_type,
+        schedule_timezone=schedule_timezone,
     )
 
     results = []

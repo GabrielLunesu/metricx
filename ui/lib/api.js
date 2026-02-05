@@ -1588,6 +1588,9 @@ export async function fetchAgent({ workspaceId, agentId }) {
  * @param {Object} params.trigger - Trigger mode config
  * @param {Array} params.actions - Array of action configurations
  * @param {Object} params.safety - Safety configuration (optional)
+ * @param {Object} params.schedule - Schedule configuration (optional)
+ * @param {boolean} params.condition_required - Whether condition must be met (optional)
+ * @param {Object} params.date_range - Date range configuration (optional)
  * @param {string} params.status - Initial status (active, draft)
  * @returns {Promise<Object>} Created agent
  */
@@ -1602,6 +1605,9 @@ export async function createAgent({
   trigger = { mode: 'once' },
   actions,
   safety = null,
+  schedule,
+  condition_required,
+  date_range,
   status = 'active'
 }) {
   const res = await authFetch(`${BASE}/agents`, {
@@ -1618,6 +1624,9 @@ export async function createAgent({
       trigger,
       actions,
       safety,
+      schedule,
+      condition_required,
+      date_range,
       status
     })
   });

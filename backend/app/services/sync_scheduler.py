@@ -90,6 +90,7 @@ from app.workers.arq_worker import (
     scheduled_attribution_sync,
     scheduled_compaction,
     scheduled_agent_evaluation,
+    scheduled_agent_check,
 )
 
 
@@ -109,6 +110,7 @@ async def scheduler_startup(ctx: Dict) -> None:
     logger.info("[SCHEDULER] Cron schedule:")
     logger.info("[SCHEDULER]   - Realtime sync: every 15 min (:00, :15, :30, :45)")
     logger.info("[SCHEDULER]   - Agent evaluation: every 15 min (:05, :20, :35, :50)")
+    logger.info("[SCHEDULER]   - Scheduled agent check: every minute")
     logger.info("[SCHEDULER]   - Compaction: daily at 01:00 UTC")
     logger.info("[SCHEDULER]   - Attribution: daily at 03:00 UTC")
     logger.info("=" * 60)
@@ -154,6 +156,7 @@ class SchedulerSettings:
         scheduled_attribution_sync,
         scheduled_compaction,
         scheduled_agent_evaluation,
+        scheduled_agent_check,
     ]
 
     # Cron jobs (the main purpose of this service)
@@ -167,9 +170,13 @@ class SchedulerSettings:
         # Daily at 03:00 UTC: re-fetch last 7 days for attribution
         cron(scheduled_attribution_sync, hour=3, minute=0, run_at_startup=False),
 
-        # Every 15 minutes (5 min offset): evaluate all active agents
+        # Every 15 minutes (5 min offset): evaluate all active REALTIME agents
         # Runs after metric sync completes to ensure fresh data
         cron(scheduled_agent_evaluation, minute={5, 20, 35, 50}, run_at_startup=False),
+
+        # Every minute: check scheduled agents (daily, weekly, monthly)
+        # Runs frequently to catch scheduled times accurately
+        cron(scheduled_agent_check, minute=set(range(60)), run_at_startup=False),
     ]
 
     # Lifecycle hooks

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-/* SF Pro Display - System font stack for Apple-like appearance */
+/* SF Pro Display - System font stack fallback */
+/* Note: Google Fonts (Newsreader, Inter) loaded via <link> in layout.jsx */
 @font-face {
   font-family: 'SF Pro Display';
   src: local('SF Pro Display'), local('SFProDisplay-Regular'), local('-apple-system'), local('BlinkMacSystemFont');
@@ -37,8 +38,10 @@
 }
 
 @theme inline {
-  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* New Design Language - Blue palette (Apple-inspired) */
+  --font-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
 
   /* metricx Brand Colors - Neutral-first palette */
   --color-metricx-black: #171717;
@@ -975,4 +978,270 @@ body {
 .btn-sm:hover {
   background: #fafafa;
   border-color: #d4d4d4;
+}
+
+/* ==========================================
+   New Landing Page Design System - template.html
+   Indigo/Slate palette with scroll animations
+   ========================================== */
+
+/* Scroll Enter Animation - Fade up on viewport entry */
+.scroll-enter {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered delays for scroll animations */
+.delay-100 { transition-delay: 0.1s; }
+.delay-200 { transition-delay: 0.2s; }
+.delay-300 { transition-delay: 0.3s; }
+.delay-400 { transition-delay: 0.4s; }
+.delay-500 { transition-delay: 0.5s; }
+
+/* Landing page specific styles */
+.landing-gradient {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* Landing card style */
+.landing-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 2rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+}
+
+/* Feature card hover gradient */
+.feature-card-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card-hover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.feature-card-hover:hover::before {
+  opacity: 1;
+}
+
+/* Pricing card gradient hover */
+.pricing-card-hover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.02) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.pricing-card-hover:hover::before {
+  opacity: 1;
+}
+
+/* Testimonial 3D transform */
+.testimonial-3d {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.testimonial-card-left {
+  transform: rotateY(8deg) scale(0.9);
+}
+
+.testimonial-card-right {
+  transform: rotateY(-8deg) scale(0.9);
+}
+
+/* Browser mockup */
+.browser-mockup {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+.browser-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.browser-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Floating decoration elements */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@keyframes float-medium {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-15px) rotate(-3deg); }
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float-medium 6s ease-in-out infinite;
+}
+
+/* Blue gradient text (Apple-inspired) */
+.text-gradient-blue {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Heading font class - SF Pro Display Bold (Apple style) */
+.font-heading {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Parallax container */
+.parallax-container {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.parallax-layer {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Sticky scroll section */
+.sticky-scroll-section {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Primary button style (indigo) */
+.btn-primary-indigo {
+  background: #0F172A;
+  color: white;
+  padding: 0.875rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary-indigo:hover {
+  background: #1e293b;
+  transform: scale(1.02);
+}
+
+.btn-primary-indigo:active {
+  transform: scale(0.98);
+}
+
+/* Secondary button style */
+.btn-secondary-landing {
+  background: white;
+  color: #0F172A;
+  padding: 0.875rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary-landing:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Stats number animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stat-number {
+  animation: countUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Trust badge */
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 9999px;
+  color: #4F46E5;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Newsletter input */
+.newsletter-input {
+  width: 100%;
+  padding: 1rem 9rem 1rem 1.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.newsletter-input:focus {
+  outline: none;
+  background: white;
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Feature icon container */
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+}
+
+/* Gradient move animation for browser mockup glow */
+@keyframes gradient-move {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

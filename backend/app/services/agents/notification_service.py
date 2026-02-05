@@ -3,7 +3,7 @@ Agent Notification Service.
 
 WHAT:
     Handles sending notifications when agents trigger, error, or stop.
-    Uses Resend for email delivery with professional HTML templates.
+    Supports multiple channels: Email (Resend), Slack (Webhooks), HTTP Webhooks.
 
 WHY:
     Users need to be notified about agent events:
@@ -13,21 +13,28 @@ WHY:
     - Circuit Breaker: Safety mechanism tripped
 
 DESIGN:
+    - Multi-channel: Email, Slack, Webhooks
     - Beautiful HTML emails with dark/light mode support
+    - Slack Block Kit for rich Slack messages
     - Plain text fallbacks
     - Settings integration for API keys
-    - Graceful fallback when Resend not configured
+    - Graceful fallback when services not configured
 
 REFERENCES:
     - Agent System Implementation Plan (Phase 4: Notifications)
     - Resend Python SDK: https://resend.com/docs/api-reference/emails/send-email
+    - Slack Incoming Webhooks: https://api.slack.com/messaging/webhooks
 """
 
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
+
+import httpx
+
+from .slack_formatter import format_slack_message
 
 logger = logging.getLogger(__name__)
 
@@ -609,6 +616,44 @@ class NotificationResult:
     recipients: Optional[List[str]] = None
 
 
+@dataclass
+class ChannelResult:
+    """
+    Result of sending to a single notification channel.
+
+    Attributes:
+        channel_type: The channel type (email, slack, webhook)
+        success: Whether notification was sent
+        message_id: Provider message ID if successful
+        error: Error message if failed
+        details: Additional details about the result
+    """
+
+    channel_type: Literal["email", "slack", "webhook"]
+    success: bool
+    message_id: Optional[str] = None
+    error: Optional[str] = None
+    details: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class MultiChannelResult:
+    """
+    Result of sending to multiple notification channels.
+
+    Attributes:
+        overall_success: True if at least one channel succeeded
+        channel_results: List of individual channel results
+        total_channels: Number of channels attempted
+        successful_channels: Number of successful channels
+    """
+
+    overall_success: bool
+    channel_results: List[ChannelResult]
+    total_channels: int = 0
+    successful_channels: int = 0
+
+
 class AgentNotificationService:
     """
     Service for sending agent-related notifications.
@@ -955,3 +1000,377 @@ Review agent: {dashboard_url}
                 error=str(e),
                 recipients=to,
             )
+
+    # =========================================================================
+    # SLACK CHANNEL
+    # =========================================================================
+
+    async def _send_slack(
+        self,
+        webhook_url: str,
+        payload: Dict[str, Any],
+        channel_override: Optional[str] = None,
+    ) -> ChannelResult:
+        """
+        Send message to Slack via incoming webhook.
+
+        Parameters:
+            webhook_url: Slack incoming webhook URL
+            payload: Slack Block Kit payload
+            channel_override: Optional channel override (e.g., '#alerts')
+
+        Returns:
+            ChannelResult
+        """
+        if not webhook_url:
+            return ChannelResult(
+                channel_type="slack",
+                success=False,
+                error="No webhook URL provided",
+            )
+
+        # Add channel override if specified
+        if channel_override:
+            payload["channel"] = channel_override
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    webhook_url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+
+                if response.status_code == 200 and response.text == "ok":
+                    logger.info(f"[NotificationService] Slack message sent successfully")
+                    return ChannelResult(
+                        channel_type="slack",
+                        success=True,
+                        message_id=f"slack-{hash(webhook_url) % 10000}",
+                        details={"status_code": response.status_code},
+                    )
+                else:
+                    error_msg = f"Slack API error: {response.status_code} - {response.text}"
+                    logger.error(f"[NotificationService] {error_msg}")
+                    return ChannelResult(
+                        channel_type="slack",
+                        success=False,
+                        error=error_msg,
+                        details={"status_code": response.status_code, "response": response.text},
+                    )
+
+        except httpx.TimeoutException:
+            logger.error("[NotificationService] Slack webhook timeout")
+            return ChannelResult(
+                channel_type="slack",
+                success=False,
+                error="Request timeout",
+            )
+        except Exception as e:
+            logger.exception(f"[NotificationService] Failed to send Slack message: {e}")
+            return ChannelResult(
+                channel_type="slack",
+                success=False,
+                error=str(e),
+            )
+
+    # =========================================================================
+    # WEBHOOK CHANNEL
+    # =========================================================================
+
+    async def _send_webhook(
+        self,
+        url: str,
+        payload: Dict[str, Any],
+        method: str = "POST",
+        headers: Optional[Dict[str, str]] = None,
+    ) -> ChannelResult:
+        """
+        Send notification to custom HTTP webhook.
+
+        Parameters:
+            url: Webhook URL
+            payload: JSON payload to send
+            method: HTTP method (GET, POST, PUT)
+            headers: Optional custom headers
+
+        Returns:
+            ChannelResult
+        """
+        if not url:
+            return ChannelResult(
+                channel_type="webhook",
+                success=False,
+                error="No webhook URL provided",
+            )
+
+        request_headers = {"Content-Type": "application/json"}
+        if headers:
+            request_headers.update(headers)
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                if method.upper() == "GET":
+                    response = await client.get(url, headers=request_headers)
+                elif method.upper() == "PUT":
+                    response = await client.put(url, json=payload, headers=request_headers)
+                else:  # Default POST
+                    response = await client.post(url, json=payload, headers=request_headers)
+
+                is_success = 200 <= response.status_code < 300
+
+                if is_success:
+                    logger.info(f"[NotificationService] Webhook sent successfully to {url}")
+                    return ChannelResult(
+                        channel_type="webhook",
+                        success=True,
+                        message_id=f"webhook-{hash(url) % 10000}",
+                        details={
+                            "status_code": response.status_code,
+                            "url": url,
+                        },
+                    )
+                else:
+                    error_msg = f"Webhook error: {response.status_code}"
+                    logger.error(f"[NotificationService] {error_msg} for {url}")
+                    return ChannelResult(
+                        channel_type="webhook",
+                        success=False,
+                        error=error_msg,
+                        details={
+                            "status_code": response.status_code,
+                            "url": url,
+                            "response": response.text[:500],
+                        },
+                    )
+
+        except httpx.TimeoutException:
+            logger.error(f"[NotificationService] Webhook timeout for {url}")
+            return ChannelResult(
+                channel_type="webhook",
+                success=False,
+                error="Request timeout",
+            )
+        except Exception as e:
+            logger.exception(f"[NotificationService] Failed to send webhook: {e}")
+            return ChannelResult(
+                channel_type="webhook",
+                success=False,
+                error=str(e),
+            )
+
+    # =========================================================================
+    # MULTI-CHANNEL NOTIFICATION
+    # =========================================================================
+
+    async def send_multi_channel_notification(
+        self,
+        channels: List[Dict[str, Any]],
+        agent_id: str,
+        agent_name: str,
+        entity_name: str,
+        entity_provider: str,
+        observations: Dict[str, float],
+        condition_explanation: str,
+        action_results: List[Dict[str, Any]],
+        workspace_id: str,
+        template_preset: str = "alert",
+        custom_template: Optional[str] = None,
+        date_range: str = "",
+        start_date: str = "",
+        end_date: str = "",
+        event_type: str = "trigger",
+    ) -> MultiChannelResult:
+        """
+        Send notification to multiple channels.
+
+        This is the unified entry point for the NotifyAction.
+
+        Parameters:
+            channels: List of channel configurations (NotificationChannelConfig dicts)
+            agent_id: Agent UUID
+            agent_name: Agent display name
+            entity_name: Entity display name
+            entity_provider: Platform (Meta, Google, etc.)
+            observations: Metric values
+            condition_explanation: What condition was met
+            action_results: Actions taken
+            workspace_id: Workspace UUID
+            template_preset: Template to use ('alert', 'daily_summary', 'digest')
+            custom_template: Custom template text (if preset is 'custom')
+            date_range: Date range string (for summaries)
+            start_date: Period start (for digests)
+            end_date: Period end (for digests)
+            event_type: Event type label (trigger, report, etc.)
+
+        Returns:
+            MultiChannelResult with results for each channel
+        """
+        results: List[ChannelResult] = []
+        dashboard_url = f"{self.dashboard_base_url}/agents/{agent_id}"
+
+        # Generate headline for this notification
+        headline, emoji, _ = _generate_trigger_headline(condition_explanation, observations)
+
+        for channel_config in channels:
+            if not channel_config.get("enabled", True):
+                continue
+
+            channel_type = channel_config.get("type")
+
+            if channel_type == "email":
+                # Use existing email flow
+                recipients = channel_config.get("recipients", [])
+                if recipients:
+                    email_result = await self.send_trigger_notification(
+                        agent_id=agent_id,
+                        agent_name=agent_name,
+                        entity_name=entity_name,
+                        entity_provider=entity_provider,
+                        condition_explanation=condition_explanation,
+                        observations=observations,
+                        action_results=action_results,
+                        recipients=recipients,
+                        workspace_id=workspace_id,
+                    )
+                    results.append(ChannelResult(
+                        channel_type="email",
+                        success=email_result.success,
+                        message_id=email_result.message_id,
+                        error=email_result.error,
+                        details={"recipients": recipients},
+                    ))
+
+            elif channel_type == "slack":
+                webhook_url = channel_config.get("webhook_url")
+                channel_override = channel_config.get("channel")
+
+                if webhook_url:
+                    # Format Slack message using template
+                    slack_payload = format_slack_message(
+                        template_preset=template_preset,
+                        agent_name=agent_name,
+                        entity_name=entity_name,
+                        observations=observations,
+                        dashboard_url=dashboard_url,
+                        entity_provider=entity_provider,
+                        headline=headline,
+                        condition_explanation=condition_explanation,
+                        action_results=action_results,
+                        date_range=date_range,
+                        start_date=start_date,
+                        end_date=end_date,
+                        custom_template=custom_template or "",
+                    )
+
+                    slack_result = await self._send_slack(
+                        webhook_url=webhook_url,
+                        payload=slack_payload,
+                        channel_override=channel_override,
+                    )
+                    results.append(slack_result)
+                else:
+                    results.append(ChannelResult(
+                        channel_type="slack",
+                        success=False,
+                        error="No Slack webhook URL configured",
+                    ))
+
+            elif channel_type == "webhook":
+                webhook_url = channel_config.get("url")
+                method = channel_config.get("method", "POST")
+                headers = channel_config.get("headers")
+
+                if webhook_url:
+                    # Build webhook payload with all the notification data
+                    webhook_payload = {
+                        "event": f"agent_{event_type}",
+                        "event_type": event_type,
+                        "agent_id": agent_id,
+                        "agent_name": agent_name,
+                        "workspace_id": workspace_id,
+                        "entity_name": entity_name,
+                        "entity_provider": entity_provider,
+                        "headline": headline,
+                        "condition_explanation": condition_explanation,
+                        "observations": observations,
+                        "action_results": action_results,
+                        "date_range": date_range,
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "dashboard_url": dashboard_url,
+                    }
+
+                    webhook_result = await self._send_webhook(
+                        url=webhook_url,
+                        payload=webhook_payload,
+                        method=method,
+                        headers=headers,
+                    )
+                    results.append(webhook_result)
+                else:
+                    results.append(ChannelResult(
+                        channel_type="webhook",
+                        success=False,
+                        error="No webhook URL configured",
+                    ))
+
+        # Calculate overall success
+        successful = [r for r in results if r.success]
+
+        return MultiChannelResult(
+            overall_success=len(successful) > 0,
+            channel_results=results,
+            total_channels=len(results),
+            successful_channels=len(successful),
+        )
+
+    async def send_slack_alert(
+        self,
+        webhook_url: str,
+        agent_name: str,
+        entity_name: str,
+        entity_provider: str,
+        headline: str,
+        condition_explanation: str,
+        observations: Dict[str, float],
+        action_results: List[Dict[str, Any]],
+        dashboard_url: str,
+        channel_override: Optional[str] = None,
+    ) -> ChannelResult:
+        """
+        Convenience method for sending a single Slack alert.
+
+        Parameters:
+            webhook_url: Slack incoming webhook URL
+            agent_name: Agent display name
+            entity_name: Entity that triggered
+            entity_provider: Platform (Meta, Google, etc.)
+            headline: Alert headline
+            condition_explanation: What condition was met
+            observations: Current metric values
+            action_results: Results of actions taken
+            dashboard_url: Link to agent in dashboard
+            channel_override: Optional channel override
+
+        Returns:
+            ChannelResult
+        """
+        payload = format_slack_message(
+            template_preset="alert",
+            agent_name=agent_name,
+            entity_name=entity_name,
+            observations=observations,
+            dashboard_url=dashboard_url,
+            entity_provider=entity_provider,
+            headline=headline,
+            condition_explanation=condition_explanation,
+            action_results=action_results,
+        )
+
+        return await self._send_slack(
+            webhook_url=webhook_url,
+            payload=payload,
+            channel_override=channel_override,
+        )

@@ -61,6 +61,11 @@ import {
   Globe,
   Layers,
   Filter,
+  Clock,
+  Calendar,
+  Send,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -83,6 +88,7 @@ const METRICS = [
   { value: 'roas', label: 'ROAS', description: 'Return on ad spend', icon: TrendingUp, format: 'number' },
   { value: 'spend', label: 'Spend', description: 'Total spend ($)', icon: DollarSign, format: 'currency' },
   { value: 'revenue', label: 'Revenue', description: 'Total revenue ($)', icon: DollarSign, format: 'currency' },
+  { value: 'profit', label: 'Profit', description: 'Revenue minus spend ($)', icon: DollarSign, format: 'currency' },
   { value: 'cpc', label: 'CPC', description: 'Cost per click ($)', icon: Target, format: 'currency' },
   { value: 'cpm', label: 'CPM', description: 'Cost per 1000 impressions', icon: Activity, format: 'currency' },
   { value: 'ctr', label: 'CTR', description: 'Click-through rate (%)', icon: Activity, format: 'percent' },
@@ -104,11 +110,21 @@ const OPERATORS = [
 // Action types with configuration options
 const ACTION_TYPES = [
   {
+    value: 'notify',
+    label: 'Multi-Channel Notify',
+    icon: Send,
+    color: 'indigo',
+    description: 'Send to Email, Slack, and/or Webhook',
+    configurable: true,
+    recommended: true,
+    configFields: ['channels', 'template_preset'],
+  },
+  {
     value: 'email',
-    label: 'Send Email',
+    label: 'Email Only',
     icon: Mail,
     color: 'blue',
-    description: 'Get notified when triggered',
+    description: 'Simple email notification',
     configurable: false,
   },
   {
@@ -139,8 +155,88 @@ const ACTION_TYPES = [
   },
 ];
 
+// Schedule type options
+const SCHEDULE_TYPES = [
+  { value: 'realtime', label: 'Real-time', description: 'Check every 15 minutes' },
+  { value: 'daily', label: 'Daily', description: 'Run once per day at a specific time' },
+  { value: 'weekly', label: 'Weekly', description: 'Run once per week' },
+  { value: 'monthly', label: 'Monthly', description: 'Run once per month' },
+];
+
+const DATE_RANGES = [
+  { value: 'yesterday', label: 'Yesterday', description: 'Most common for daily reports' },
+  { value: 'today', label: 'Today', description: 'Use current-day totals' },
+  { value: 'last_7_days', label: 'Last 7 days', description: 'Rolling weekly summary' },
+  { value: 'last_30_days', label: 'Last 30 days', description: 'Rolling monthly summary' },
+];
+
+// Template presets for notifications
+const TEMPLATE_PRESETS = [
+  { value: 'alert', label: 'Alert', description: 'Real-time alert with full details' },
+  { value: 'daily_summary', label: 'Daily Summary', description: 'Clean daily report format' },
+  { value: 'digest', label: 'Digest', description: 'Weekly/monthly performance summary' },
+];
+
+// Days of week for weekly schedule
+const DAYS_OF_WEEK = [
+  { value: 0, label: 'Monday' },
+  { value: 1, label: 'Tuesday' },
+  { value: 2, label: 'Wednesday' },
+  { value: 3, label: 'Thursday' },
+  { value: 4, label: 'Friday' },
+  { value: 5, label: 'Saturday' },
+  { value: 6, label: 'Sunday' },
+];
+
+// Common timezones
+const TIMEZONES = [
+  { value: 'UTC', label: 'UTC' },
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago', label: 'Central Time (CT)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+  { value: 'Europe/London', label: 'London (GMT)' },
+  { value: 'Europe/Paris', label: 'Paris (CET)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
+];
+
+// Slack icon component
+function SlackIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+    </svg>
+  );
+}
+
 // Agent templates for quick start
 const TEMPLATES = [
+  {
+    id: 'daily-report',
+    name: 'Daily Performance Report',
+    description: 'Send a daily summary of profit, revenue, spend, and ROAS',
+    icon: Bell,
+    color: 'blue',
+    config: {
+      condition: { type: 'threshold', metric: 'roas', operator: 'gt', value: 0 },
+      actions: [{
+        type: 'notify',
+        channels: [{ type: 'email', enabled: true, recipients: [] }],
+        template_preset: 'daily_summary',
+        include_metrics: ['profit', 'revenue', 'spend', 'roas'],
+      }],
+      schedule: {
+        type: 'daily',
+        hour: 1,
+        minute: 0,
+        timezone: 'UTC',
+      },
+      condition_required: false,
+      date_range_type: 'yesterday',
+      aggregate_mode: true,
+    },
+  },
   {
     id: 'high-roas-alert',
     name: 'High ROAS Alert',
@@ -234,6 +330,9 @@ export default function CreateAgentPage() {
   const [platform, setPlatform] = useState('all');
   const [entityLevel, setEntityLevel] = useState('campaign');
   const [scopeType, setScopeType] = useState('all'); // 'all', 'filter', 'specific'
+  const [aggregateMode, setAggregateMode] = useState(true);
+  const [agentMode, setAgentMode] = useState('alert'); // 'alert' | 'report'
+  const [useDefaultScope, setUseDefaultScope] = useState(false);
   const [selectedEntities, setSelectedEntities] = useState([]);
   const [availableEntities, setAvailableEntities] = useState([]);
   const [entitySearchQuery, setEntitySearchQuery] = useState('');
@@ -255,6 +354,59 @@ export default function CreateAgentPage() {
   // Actions
   const [triggerMode, setTriggerMode] = useState({ mode: 'once', cooldown_minutes: 60 });
   const [actions, setActions] = useState([{ type: 'email' }]);
+
+  // Schedule
+  const [scheduleType, setScheduleType] = useState('realtime');
+  const [scheduleConfig, setScheduleConfig] = useState({
+    hour: 9,
+    minute: 0,
+    timezone: 'UTC',
+    day_of_week: 0,
+    day_of_month: 1,
+  });
+  const [conditionRequired, setConditionRequired] = useState(true);
+  const [dateRangeType, setDateRangeType] = useState('yesterday');
+
+  const applyDefaultScope = () => {
+    setUseDefaultScope(true);
+    setScopeType('all');
+    setAggregateMode(true);
+  };
+
+  const handleModeChange = (mode) => {
+    setAgentMode(mode);
+    if (mode === 'report') {
+      setConditionRequired(false);
+      if (scheduleType === 'realtime') {
+        setScheduleType('daily');
+      }
+      setDateRangeType((prev) => prev || 'yesterday');
+      applyDefaultScope();
+      setActions((prev) =>
+        prev.map((action) => {
+          if (action.type !== 'notify') return action;
+          const next = { ...action };
+          const nextPreset = next.template_preset && next.template_preset !== 'alert'
+            ? next.template_preset
+            : 'daily_summary';
+          next.template_preset = nextPreset;
+
+          const overrides = { ...(next.event_overrides || {}) };
+          if (!overrides.report) {
+            overrides.report = {};
+          }
+          if (!overrides.report.template_preset && !overrides.report.message_template) {
+            overrides.report = { ...overrides.report, template_preset: nextPreset };
+          }
+          next.event_overrides = overrides;
+          return next;
+        })
+      );
+    } else {
+      setConditionRequired(true);
+      setUseDefaultScope(false);
+    }
+  };
 
   // Get workspace
   useEffect(() => {
@@ -294,11 +446,29 @@ export default function CreateAgentPage() {
 
   // Apply template
   const applyTemplate = (template) => {
+    const mode = template.config?.condition_required === false ? 'report' : 'alert';
+    handleModeChange(mode);
     setName(template.name);
     setDescription(template.description);
     if (template.config.condition) setCondition(template.config.condition);
     if (template.config.accumulation) setAccumulation(template.config.accumulation);
     if (template.config.actions) setActions(template.config.actions);
+    if (template.config.schedule) {
+      setScheduleType(template.config.schedule.type || 'realtime');
+      setScheduleConfig({
+        ...scheduleConfig,
+        ...template.config.schedule,
+      });
+    }
+    if (typeof template.config.aggregate_mode === 'boolean') {
+      setAggregateMode(template.config.aggregate_mode);
+    }
+    if (typeof template.config.condition_required === 'boolean') {
+      setConditionRequired(template.config.condition_required);
+    }
+    if (template.config.date_range_type) {
+      setDateRangeType(template.config.date_range_type);
+    }
     setStep(1);
   };
 
@@ -327,14 +497,26 @@ export default function CreateAgentPage() {
       // summed across all matched entities and evaluated once (workspace-level).
       // Per-entity evaluation only makes sense for 'specific' scope.
       const scopeConfig = {
-        platform: platform === 'all' ? null : platform,
+        provider: platform === 'all' ? null : platform,
         level: entityLevel,
-        aggregate: scopeType !== 'specific',
+        aggregate: scopeType !== 'specific' ? aggregateMode : false,
       };
 
       if (scopeType === 'specific') {
         scopeConfig.entity_ids = selectedEntities.map((e) => e.id);
       }
+
+      // Build schedule data
+      const schedule = {
+        type: scheduleType,
+        ...(scheduleType !== 'realtime' && {
+          hour: scheduleConfig.hour,
+          minute: scheduleConfig.minute,
+          timezone: scheduleConfig.timezone,
+          ...(scheduleType === 'weekly' && { day_of_week: scheduleConfig.day_of_week }),
+          ...(scheduleType === 'monthly' && { day_of_month: scheduleConfig.day_of_month }),
+        }),
+      };
 
       const agent = await createAgent({
         workspaceId,
@@ -347,6 +529,9 @@ export default function CreateAgentPage() {
         trigger: triggerMode,
         actions,
         status: 'active',
+        schedule,
+        condition_required: conditionRequired,
+        ...(scheduleType !== 'realtime' && { date_range: { type: dateRangeType } }),
       });
 
       toast.success('Agent created successfully');
@@ -358,15 +543,144 @@ export default function CreateAgentPage() {
     }
   };
 
-  // Steps config
-  const steps = [
-    { title: 'Template', icon: Sparkles },
-    { title: 'Basics', icon: Bot },
-    { title: 'Scope', icon: Target },
-    { title: 'Condition', icon: Zap },
-    { title: 'Actions', icon: Bell },
-    { title: 'Review', icon: CheckCircle2 },
+  const stepDefinitions = [
+    {
+      key: 'template',
+      title: 'Template',
+      icon: Sparkles,
+      show: true,
+      render: (
+        <StepTemplate templates={TEMPLATES} onSelect={applyTemplate} onSkip={() => setStep(1)} />
+      ),
+    },
+    {
+      key: 'basics',
+      title: 'Basics',
+      icon: Bot,
+      show: true,
+      render: (
+        <StepBasics
+          name={name}
+          setName={setName}
+          description={description}
+          setDescription={setDescription}
+          agentMode={agentMode}
+          onModeChange={handleModeChange}
+          useDefaultScope={useDefaultScope}
+          setUseDefaultScope={setUseDefaultScope}
+          onUseDefaultScope={applyDefaultScope}
+        />
+      ),
+    },
+    {
+      key: 'scope',
+      title: 'Scope',
+      icon: Target,
+      show: !useDefaultScope,
+      render: (
+        <StepScope
+          platform={platform}
+          setPlatform={setPlatform}
+          entityLevel={entityLevel}
+          setEntityLevel={setEntityLevel}
+          scopeType={scopeType}
+          setScopeType={setScopeType}
+          aggregateMode={aggregateMode}
+          setAggregateMode={setAggregateMode}
+          selectedEntities={selectedEntities}
+          setSelectedEntities={setSelectedEntities}
+          availableEntities={availableEntities}
+          entitySearchQuery={entitySearchQuery}
+          setEntitySearchQuery={setEntitySearchQuery}
+          loadingEntities={loadingEntities}
+        />
+      ),
+    },
+    {
+      key: 'condition',
+      title: 'Condition',
+      icon: Zap,
+      show: agentMode !== 'report',
+      render: (
+        <StepCondition
+          condition={condition}
+          setCondition={setCondition}
+          accumulation={accumulation}
+          setAccumulation={setAccumulation}
+        />
+      ),
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      icon: Bell,
+      show: true,
+      render: (
+        <StepActions
+          actions={actions}
+          setActions={setActions}
+          triggerMode={triggerMode}
+          setTriggerMode={setTriggerMode}
+          scheduleType={scheduleType}
+          conditionRequired={conditionRequired}
+          agentMode={agentMode}
+        />
+      ),
+    },
+    {
+      key: 'schedule',
+      title: 'Schedule',
+      icon: Clock,
+      show: true,
+      render: (
+        <StepSchedule
+          scheduleType={scheduleType}
+          setScheduleType={setScheduleType}
+          scheduleConfig={scheduleConfig}
+          setScheduleConfig={setScheduleConfig}
+          conditionRequired={conditionRequired}
+          setConditionRequired={setConditionRequired}
+          dateRangeType={dateRangeType}
+          setDateRangeType={setDateRangeType}
+          agentMode={agentMode}
+        />
+      ),
+    },
+    {
+      key: 'review',
+      title: 'Review',
+      icon: CheckCircle2,
+      show: true,
+      render: (
+        <StepReview
+          name={name}
+          description={description}
+          platform={platform}
+          entityLevel={entityLevel}
+          scopeType={scopeType}
+          aggregateMode={aggregateMode}
+          selectedEntities={selectedEntities}
+          condition={condition}
+          accumulation={accumulation}
+          actions={actions}
+          triggerMode={triggerMode}
+          scheduleType={scheduleType}
+          scheduleConfig={scheduleConfig}
+          conditionRequired={conditionRequired}
+          dateRangeType={dateRangeType}
+          agentMode={agentMode}
+        />
+      ),
+    },
   ];
+
+  const steps = stepDefinitions.filter((step) => step.show);
+
+  useEffect(() => {
+    if (step >= steps.length) {
+      setStep(Math.max(steps.length - 1, 0));
+    }
+  }, [steps.length, step]);
 
   return (
     <div className="min-h-screen pb-12">
@@ -431,63 +745,7 @@ export default function CreateAgentPage() {
       {/* Step Content */}
       <div className="max-w-4xl mx-auto px-4 mb-8">
         <div className="animate-fade-in-up">
-          {step === 0 && (
-            <StepTemplate templates={TEMPLATES} onSelect={applyTemplate} onSkip={() => setStep(1)} />
-          )}
-          {step === 1 && (
-            <StepBasics
-              name={name}
-              setName={setName}
-              description={description}
-              setDescription={setDescription}
-            />
-          )}
-          {step === 2 && (
-            <StepScope
-              platform={platform}
-              setPlatform={setPlatform}
-              entityLevel={entityLevel}
-              setEntityLevel={setEntityLevel}
-              scopeType={scopeType}
-              setScopeType={setScopeType}
-              selectedEntities={selectedEntities}
-              setSelectedEntities={setSelectedEntities}
-              availableEntities={availableEntities}
-              entitySearchQuery={entitySearchQuery}
-              setEntitySearchQuery={setEntitySearchQuery}
-              loadingEntities={loadingEntities}
-            />
-          )}
-          {step === 3 && (
-            <StepCondition
-              condition={condition}
-              setCondition={setCondition}
-              accumulation={accumulation}
-              setAccumulation={setAccumulation}
-            />
-          )}
-          {step === 4 && (
-            <StepActions
-              actions={actions}
-              setActions={setActions}
-              triggerMode={triggerMode}
-              setTriggerMode={setTriggerMode}
-            />
-          )}
-          {step === 5 && (
-            <StepReview
-              name={name}
-              description={description}
-              platform={platform}
-              entityLevel={entityLevel}
-              scopeType={scopeType}
-              selectedEntities={selectedEntities}
-              condition={condition}
-              accumulation={accumulation}
-              actions={actions}
-              triggerMode={triggerMode}
-            />
-          )}
+          {steps[step]?.render}
         </div>
       </div>
 
@@ -592,7 +850,17 @@ function StepTemplate({ templates, onSelect, onSkip }) {
 }
 
 // Step 1: Basics
-function StepBasics({ name, setName, description, setDescription }) {
+function StepBasics({
+  name,
+  setName,
+  description,
+  setDescription,
+  agentMode,
+  onModeChange,
+  useDefaultScope,
+  setUseDefaultScope,
+  onUseDefaultScope,
+}) {
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -601,6 +869,116 @@ function StepBasics({ name, setName, description, setDescription }) {
       </div>
 
       <div className="bg-white/40 glass rounded-[24px] p-6 border border-white/60 space-y-6">
+        <div>
+          <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Bot size={14} />
+            Mission
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => onModeChange('alert')}
+              className={cn(
+                'flex flex-col items-start p-4 rounded-xl border transition-all',
+                agentMode === 'alert'
+                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                  : 'bg-white/50 border-neutral-200/60 hover:bg-white/80'
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Bell size={16} className={agentMode === 'alert' ? 'text-white' : 'text-neutral-500'} />
+                <span className="font-semibold">Alert Agent</span>
+              </div>
+              <span className={cn(
+                'text-sm mt-1',
+                agentMode === 'alert' ? 'text-white/70' : 'text-neutral-500'
+              )}>
+                Watches conditions and triggers when thresholds are met
+              </span>
+            </button>
+            <button
+              onClick={() => onModeChange('report')}
+              className={cn(
+                'flex flex-col items-start p-4 rounded-xl border transition-all',
+                agentMode === 'report'
+                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                  : 'bg-white/50 border-neutral-200/60 hover:bg-white/80'
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Send size={16} className={agentMode === 'report' ? 'text-white' : 'text-neutral-500'} />
+                <span className="font-semibold">Report Agent</span>
+              </div>
+              <span className={cn(
+                'text-sm mt-1',
+                agentMode === 'report' ? 'text-white/70' : 'text-neutral-500'
+              )}>
+                Sends scheduled summaries without a condition check
+              </span>
+            </button>
+          </div>
+
+          {agentMode === 'report' && (
+            <div className="mt-4 flex items-start gap-3 p-4 bg-blue-500/5 border border-blue-200/60 rounded-xl">
+              <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-neutral-600">
+                <span className="font-medium text-neutral-800">Report mode:</span>{' '}
+                Condition step is skipped and the agent runs on a schedule.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {agentMode === 'report' && (
+          <div>
+            <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Target size={14} />
+              Scope Defaults
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  if (onUseDefaultScope) {
+                    onUseDefaultScope();
+                  } else {
+                    setUseDefaultScope(true);
+                  }
+                }}
+                className={cn(
+                  'flex flex-col items-start p-4 rounded-xl border transition-all',
+                  useDefaultScope
+                    ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                    : 'bg-white/50 border-neutral-200/60 hover:bg-white/80'
+                )}
+              >
+                <span className="font-semibold">Default (All campaigns)</span>
+                <span className={cn(
+                  'text-sm mt-1',
+                  useDefaultScope ? 'text-white/70' : 'text-neutral-500'
+                )}>
+                  Aggregate totals across all campaigns
+                </span>
+              </button>
+              <button
+                onClick={() => setUseDefaultScope(false)}
+                className={cn(
+                  'flex flex-col items-start p-4 rounded-xl border transition-all',
+                  !useDefaultScope
+                    ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                    : 'bg-white/50 border-neutral-200/60 hover:bg-white/80'
+                )}
+              >
+                <span className="font-semibold">Customize scope</span>
+                <span className={cn(
+                  'text-sm mt-1',
+                  !useDefaultScope ? 'text-white/70' : 'text-neutral-500'
+                )}>
+                  Pick platform, level, and evaluation mode
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-2">Agent Name *</label>
           <input
@@ -637,6 +1015,8 @@ function StepScope({
   setEntityLevel,
   scopeType,
   setScopeType,
+  aggregateMode,
+  setAggregateMode,
   selectedEntities,
   setSelectedEntities,
   availableEntities,
@@ -752,7 +1132,12 @@ function StepScope({
             return (
               <button
                 key={option.value}
-                onClick={() => setScopeType(option.value)}
+                onClick={() => {
+                  setScopeType(option.value);
+                  if (option.value === 'specific') {
+                    setAggregateMode(false);
+                  }
+                }}
                 className={cn(
                   'w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-300',
                   scopeType === option.value
@@ -788,19 +1173,61 @@ function StepScope({
           })}
         </div>
 
+        {scopeType !== 'specific' && (
+          <div className="mt-6">
+            <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Activity size={14} />
+              Evaluation Mode
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[
+                {
+                  value: true,
+                  label: 'Aggregate totals',
+                  description: `Combine all ${entityLevel}s into one report`,
+                },
+                {
+                  value: false,
+                  label: 'Per-entity',
+                  description: `Evaluate each ${entityLevel} separately`,
+                },
+              ].map((option) => (
+                <button
+                  key={String(option.value)}
+                  onClick={() => setAggregateMode(option.value)}
+                  className={cn(
+                    'flex flex-col items-start p-4 rounded-xl border transition-all',
+                    aggregateMode === option.value
+                      ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                      : 'bg-white/50 border-neutral-200/60 hover:bg-white/80'
+                  )}
+                >
+                  <span className="font-semibold">{option.label}</span>
+                  <span className={cn(
+                    'text-sm mt-1',
+                    aggregateMode === option.value ? 'text-white/70' : 'text-neutral-500'
+                  )}>
+                    {option.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Scope mode explanation */}
         <div className={cn(
           'flex items-start gap-3 p-4 rounded-xl border mt-4',
-          scopeType === 'all'
+          scopeType !== 'specific' && aggregateMode
             ? 'bg-blue-500/5 border-blue-200/60'
             : 'bg-amber-500/5 border-amber-200/60'
         )}>
           <Info size={16} className={cn(
             'mt-0.5 flex-shrink-0',
-            scopeType === 'all' ? 'text-blue-500' : 'text-amber-500'
+            scopeType !== 'specific' && aggregateMode ? 'text-blue-500' : 'text-amber-500'
           )} />
           <div className="text-sm text-neutral-600">
-            {scopeType === 'all' ? (
+            {scopeType !== 'specific' && aggregateMode ? (
               <>
                 <span className="font-medium text-neutral-800">Combined mode: </span>
                 Revenue, spend, and other metrics from all your {entityLevel}s are added together.
@@ -1076,7 +1503,15 @@ function StepCondition({ condition, setCondition, accumulation, setAccumulation 
 }
 
 // Step 4: Enhanced Actions
-function StepActions({ actions, setActions, triggerMode, setTriggerMode }) {
+function StepActions({
+  actions,
+  setActions,
+  triggerMode,
+  setTriggerMode,
+  scheduleType,
+  conditionRequired,
+  agentMode,
+}) {
   const toggleAction = (type) => {
     const exists = actions.find((a) => a.type === type);
     if (exists) {
@@ -1086,7 +1521,13 @@ function StepActions({ actions, setActions, triggerMode, setTriggerMode }) {
       const actionType = ACTION_TYPES.find((a) => a.value === type);
       const newAction = { type };
 
-      if (type === 'scale_budget') {
+      if (type === 'notify') {
+        newAction.channels = [
+          { type: 'email', enabled: true, recipients: [] },
+        ];
+        newAction.template_preset = agentMode === 'report' ? 'daily_summary' : 'alert';
+        newAction.include_metrics = ['spend', 'revenue', 'roas', 'profit'];
+      } else if (type === 'scale_budget') {
         newAction.direction = 'up';
         newAction.scale_percent = 20;
         newAction.min_budget = null;
@@ -1106,20 +1547,122 @@ function StepActions({ actions, setActions, triggerMode, setTriggerMode }) {
   };
 
   const getAction = (type) => actions.find((a) => a.type === type);
+  const showReportOverrides = scheduleType !== 'realtime' && !conditionRequired;
+
+  const metricTemplateLines = {
+    profit: '• Profit: {{profit}}',
+    revenue: '• Revenue: {{revenue}}',
+    spend: '• Spend: {{spend}}',
+    roas: '• ROAS: {{roas}}',
+    cpc: '• CPC: {{cpc}}',
+    cpm: '• CPM: {{cpm}}',
+    ctr: '• CTR: {{ctr}}',
+    conversions: '• Conversions: {{conversions}}',
+    cpa: '• CPA: {{cpa}}',
+    impressions: '• Impressions: {{impressions}}',
+    clicks: '• Clicks: {{clicks}}',
+  };
+
+  const buildDefaultReportTemplate = (metrics = []) => {
+    const fallback = ['profit', 'revenue', 'spend', 'roas'];
+    const selected = metrics.length ? metrics : fallback;
+    const ordered = METRICS.map((m) => m.value).filter((value) => selected.includes(value));
+    const lines = ordered.map((metric) => metricTemplateLines[metric]).filter(Boolean);
+    return [
+      '*{{agent_name}}* daily report for *{{entity_name}}* ({{date_range}})',
+      ...lines,
+      '• Range: {{start_date}} → {{end_date}}',
+      'Dashboard: {{dashboard_url}}',
+    ].join('\n');
+  };
+
+  const sampleValues = {
+    agent_name: 'Daily Performance',
+    entity_name: 'All Campaigns',
+    profit: '$4,120.00',
+    revenue: '$12,450.00',
+    spend: '$8,330.00',
+    roas: '1.49x',
+    cpc: '$1.42',
+    cpm: '$12.20',
+    ctr: '2.91%',
+    conversions: '342',
+    cpa: '$24.35',
+    impressions: '1,240,000',
+    clicks: '36,200',
+    date_range: 'Yesterday',
+    start_date: '2026-02-04',
+    end_date: '2026-02-04',
+    dashboard_url: 'https://metricx.ai/agents/123',
+  };
+  const renderTemplatePreview = (template) => {
+    let message = template || '';
+    Object.entries(sampleValues).forEach(([key, value]) => {
+      message = message.replaceAll(`{{${key}}}`, value);
+    });
+    return message;
+  };
 
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-semibold text-neutral-900 mb-2">What should happen when triggered?</h2>
-        <p className="text-neutral-500">Select actions and configure their parameters</p>
+        <h2 className="text-2xl font-semibold text-neutral-900 mb-2">
+          {agentMode === 'report' ? 'Where should this report go?' : 'What should happen when triggered?'}
+        </h2>
+        <p className="text-neutral-500">
+          {agentMode === 'report'
+            ? 'Pick delivery channels and customize the report content'
+            : 'Select actions and configure their parameters'}
+        </p>
       </div>
 
       {/* Action selection */}
       <div className="space-y-4">
-        {ACTION_TYPES.map((actionType) => {
+        {ACTION_TYPES.filter((actionType) => {
+          if (agentMode !== 'report') return true;
+          return actionType.value === 'notify';
+        }).map((actionType) => {
           const Icon = actionType.icon;
           const isSelected = actions.some((a) => a.type === actionType.value);
           const action = getAction(actionType.value);
+          const isNotify = actionType.value === 'notify';
+          const reportOverrides = isNotify ? (action?.event_overrides?.report || {}) : {};
+          const rawIncludedMetrics = isNotify
+            ? (showReportOverrides && agentMode === 'report'
+              ? (reportOverrides.include_metrics || action?.include_metrics || [])
+              : (action?.include_metrics || []))
+            : [];
+          const resolvedMetrics = rawIncludedMetrics.length
+            ? rawIncludedMetrics
+            : ['profit', 'revenue', 'spend', 'roas'];
+          const defaultReportTemplate = isNotify ? buildDefaultReportTemplate(resolvedMetrics) : '';
+          const activeReportPreset = isNotify
+            ? (reportOverrides.template_preset || action?.template_preset || 'daily_summary')
+            : 'daily_summary';
+          const toggleMetric = (metricValue) => {
+            const current = resolvedMetrics;
+            const next = current.includes(metricValue)
+              ? current.filter((m) => m !== metricValue)
+              : [...current, metricValue];
+
+            if (next.length === 0) {
+              toast.error('Select at least one metric');
+              return;
+            }
+
+            setActions((prev) =>
+              prev.map((a) => {
+                if (a.type !== 'notify') return a;
+                const nextAction = { ...a, include_metrics: next };
+                if (showReportOverrides && agentMode === 'report') {
+                  const overrides = { ...(a.event_overrides || {}) };
+                  overrides.report = { ...(overrides.report || {}), include_metrics: next };
+                  nextAction.event_overrides = overrides;
+                }
+                return nextAction;
+              })
+            );
+          };
 
           return (
             <div key={actionType.value} className="space-y-0">
@@ -1289,6 +1832,346 @@ function StepActions({ actions, setActions, triggerMode, setTriggerMode }) {
                     </div>
                   )}
 
+                  {actionType.value === 'notify' && (
+                    <div className="space-y-6">
+                      {/* Channels */}
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-3">Notification Channels</label>
+                        <div className="space-y-3">
+                          {/* Email Channel */}
+                          <div className={cn(
+                            'p-4 rounded-xl border transition-all',
+                            action?.channels?.find(c => c.type === 'email')?.enabled
+                              ? 'border-blue-300 bg-blue-50/50'
+                              : 'border-neutral-200/60 bg-white/50'
+                          )}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                  <Mail size={16} className="text-blue-500" />
+                                </div>
+                                <span className="font-medium text-neutral-800">Email</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const channels = action?.channels || [];
+                                  const emailIdx = channels.findIndex(c => c.type === 'email');
+                                  if (emailIdx >= 0) {
+                                    channels[emailIdx].enabled = !channels[emailIdx].enabled;
+                                  } else {
+                                    channels.push({ type: 'email', enabled: true, recipients: [] });
+                                  }
+                                  updateAction('notify', 'channels', [...channels]);
+                                }}
+                                className={cn(
+                                  'w-10 h-6 rounded-full transition-colors',
+                                  action?.channels?.find(c => c.type === 'email')?.enabled
+                                    ? 'bg-blue-500'
+                                    : 'bg-neutral-200'
+                                )}
+                              >
+                                <div className={cn(
+                                  'w-4 h-4 rounded-full bg-white shadow transition-transform',
+                                  action?.channels?.find(c => c.type === 'email')?.enabled
+                                    ? 'translate-x-5'
+                                    : 'translate-x-1'
+                                )} />
+                              </button>
+                            </div>
+                            <p className="text-xs text-neutral-500">Sends to all workspace members by default</p>
+                          </div>
+
+                          {/* Slack Channel */}
+                          <div className={cn(
+                            'p-4 rounded-xl border transition-all',
+                            action?.channels?.find(c => c.type === 'slack')?.enabled
+                              ? 'border-purple-300 bg-purple-50/50'
+                              : 'border-neutral-200/60 bg-white/50'
+                          )}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                                  <SlackIcon className="w-4 h-4 text-purple-500" />
+                                </div>
+                                <span className="font-medium text-neutral-800">Slack</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const channels = action?.channels || [];
+                                  const slackIdx = channels.findIndex(c => c.type === 'slack');
+                                  if (slackIdx >= 0) {
+                                    channels[slackIdx].enabled = !channels[slackIdx].enabled;
+                                  } else {
+                                    channels.push({ type: 'slack', enabled: true, webhook_url: '' });
+                                  }
+                                  updateAction('notify', 'channels', [...channels]);
+                                }}
+                                className={cn(
+                                  'w-10 h-6 rounded-full transition-colors',
+                                  action?.channels?.find(c => c.type === 'slack')?.enabled
+                                    ? 'bg-purple-500'
+                                    : 'bg-neutral-200'
+                                )}
+                              >
+                                <div className={cn(
+                                  'w-4 h-4 rounded-full bg-white shadow transition-transform',
+                                  action?.channels?.find(c => c.type === 'slack')?.enabled
+                                    ? 'translate-x-5'
+                                    : 'translate-x-1'
+                                )} />
+                              </button>
+                            </div>
+                            {action?.channels?.find(c => c.type === 'slack')?.enabled && (
+                              <div className="mt-3">
+                                <input
+                                  type="url"
+                                  value={action?.channels?.find(c => c.type === 'slack')?.webhook_url || ''}
+                                  onChange={(e) => {
+                                    const channels = action?.channels || [];
+                                    const slackIdx = channels.findIndex(c => c.type === 'slack');
+                                    if (slackIdx >= 0) {
+                                      channels[slackIdx].webhook_url = e.target.value;
+                                      updateAction('notify', 'channels', [...channels]);
+                                    }
+                                  }}
+                                  placeholder="https://hooks.slack.com/services/..."
+                                  className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-200/60 text-sm text-neutral-700 focus:outline-none focus:border-purple-300"
+                                />
+                                <p className="text-xs text-neutral-400 mt-1.5 flex items-center gap-1">
+                                  <ExternalLink size={10} />
+                                  <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                    Create a Slack webhook
+                                  </a>
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Webhook Channel */}
+                          <div className={cn(
+                            'p-4 rounded-xl border transition-all',
+                            action?.channels?.find(c => c.type === 'webhook')?.enabled
+                              ? 'border-amber-300 bg-amber-50/50'
+                              : 'border-neutral-200/60 bg-white/50'
+                          )}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                  <Webhook size={16} className="text-amber-500" />
+                                </div>
+                                <span className="font-medium text-neutral-800">Custom Webhook</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const channels = action?.channels || [];
+                                  const webhookIdx = channels.findIndex(c => c.type === 'webhook');
+                                  if (webhookIdx >= 0) {
+                                    channels[webhookIdx].enabled = !channels[webhookIdx].enabled;
+                                  } else {
+                                    channels.push({ type: 'webhook', enabled: true, url: '', method: 'POST' });
+                                  }
+                                  updateAction('notify', 'channels', [...channels]);
+                                }}
+                                className={cn(
+                                  'w-10 h-6 rounded-full transition-colors',
+                                  action?.channels?.find(c => c.type === 'webhook')?.enabled
+                                    ? 'bg-amber-500'
+                                    : 'bg-neutral-200'
+                                )}
+                              >
+                                <div className={cn(
+                                  'w-4 h-4 rounded-full bg-white shadow transition-transform',
+                                  action?.channels?.find(c => c.type === 'webhook')?.enabled
+                                    ? 'translate-x-5'
+                                    : 'translate-x-1'
+                                )} />
+                              </button>
+                            </div>
+                            {action?.channels?.find(c => c.type === 'webhook')?.enabled && (
+                              <div className="mt-3">
+                                <input
+                                  type="url"
+                                  value={action?.channels?.find(c => c.type === 'webhook')?.url || ''}
+                                  onChange={(e) => {
+                                    const channels = action?.channels || [];
+                                    const webhookIdx = channels.findIndex(c => c.type === 'webhook');
+                                    if (webhookIdx >= 0) {
+                                      channels[webhookIdx].url = e.target.value;
+                                      updateAction('notify', 'channels', [...channels]);
+                                    }
+                                  }}
+                                  placeholder="https://your-api.com/webhook"
+                                  className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-200/60 text-sm text-neutral-700 focus:outline-none focus:border-amber-300"
+                                />
+                                <p className="text-xs text-neutral-400 mt-1.5">POST JSON payload with event details</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Metrics */}
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-3">
+                          {agentMode === 'report' ? 'Report Metrics' : 'Metrics Included'}
+                        </label>
+                        <div className="grid sm:grid-cols-3 gap-2">
+                          {METRICS.map((metric) => (
+                            <button
+                              key={metric.value}
+                              onClick={() => toggleMetric(metric.value)}
+                              className={cn(
+                                'p-3 rounded-xl border transition-all text-left',
+                                resolvedMetrics.includes(metric.value)
+                                  ? 'border-neutral-900 bg-neutral-900 text-white shadow-sm'
+                                  : 'border-neutral-200/60 bg-white hover:border-neutral-300'
+                              )}
+                            >
+                              <div className={cn(
+                                'font-medium text-sm',
+                                resolvedMetrics.includes(metric.value) ? 'text-white' : 'text-neutral-800'
+                              )}>
+                                {metric.label}
+                              </div>
+                              <div className={cn(
+                                'text-xs mt-0.5',
+                                resolvedMetrics.includes(metric.value) ? 'text-white/70' : 'text-neutral-500'
+                              )}>
+                                {metric.description}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-2">
+                          {agentMode === 'report'
+                            ? 'These metrics appear in the scheduled report and Slack/webhook payload.'
+                            : 'These metrics appear in the notification payload.'}
+                        </p>
+                      </div>
+
+                      {/* Template Preset */}
+                      {agentMode !== 'report' && (
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-3">Message Template</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {TEMPLATE_PRESETS.map((preset) => (
+                              <button
+                                key={preset.value}
+                                onClick={() => updateAction('notify', 'template_preset', preset.value)}
+                                className={cn(
+                                  'p-3 rounded-xl border transition-all text-left',
+                                  action?.template_preset === preset.value
+                                    ? 'border-indigo-500 bg-indigo-50'
+                                    : 'border-neutral-200/60 bg-white hover:border-neutral-300'
+                                )}
+                              >
+                                <div className="font-medium text-sm text-neutral-800">{preset.label}</div>
+                                <div className="text-xs text-neutral-500 mt-0.5">{preset.description}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {showReportOverrides && agentMode === 'report' && (
+                        <div className="mt-6 border-t border-neutral-200/60 pt-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium text-neutral-700">Report Message</div>
+                              <div className="text-xs text-neutral-500">
+                                Preview what gets sent on schedule and customize with variables.
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const overrides = { ...(action?.event_overrides || {}) };
+                                const existing = overrides.report || {};
+                                if (existing.message_template) {
+                                  const nextPreset = action?.template_preset || 'daily_summary';
+                                  overrides.report = {
+                                    ...(existing.include_metrics ? { include_metrics: existing.include_metrics } : {}),
+                                    template_preset: nextPreset,
+                                  };
+                                } else {
+                                  overrides.report = {
+                                    ...existing,
+                                    template_preset: 'custom',
+                                    message_template: defaultReportTemplate,
+                                  };
+                                }
+                                updateAction('notify', 'event_overrides', overrides);
+                              }}
+                              className={cn(
+                                'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                                action?.event_overrides?.report?.message_template
+                                  ? 'bg-neutral-900 text-white border-neutral-900'
+                                  : 'bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50'
+                              )}
+                            >
+                              {action?.event_overrides?.report?.message_template ? 'Use Preset' : 'Customize'}
+                            </button>
+                          </div>
+
+                          {action?.event_overrides?.report?.message_template ? (
+                            <div className="space-y-3">
+                              <textarea
+                                value={action?.event_overrides?.report?.message_template || ''}
+                                onChange={(e) => {
+                                  const overrides = { ...(action?.event_overrides || {}) };
+                                  overrides.report = {
+                                    ...(overrides.report || {}),
+                                    template_preset: 'custom',
+                                    message_template: e.target.value,
+                                  };
+                                  updateAction('notify', 'event_overrides', overrides);
+                                }}
+                                rows={7}
+                                className="w-full px-4 py-3 bg-white rounded-xl border border-neutral-200/60 text-sm text-neutral-700 focus:outline-none focus:border-neutral-300"
+                              />
+                              <div className="text-xs text-neutral-500">
+                                Variables: {'{{agent_name}}'}, {'{{entity_name}}'}, {'{{profit}}'}, {'{{revenue}}'},{' '}
+                                {'{{spend}}'}, {'{{roas}}'}, {'{{date_range}}'}, {'{{start_date}}'}, {'{{end_date}}'},{' '}
+                                {'{{dashboard_url}}'}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2">
+                              {TEMPLATE_PRESETS.map((preset) => (
+                                <button
+                                  key={`report-${preset.value}`}
+                                  onClick={() => {
+                                    const overrides = { ...(action?.event_overrides || {}) };
+                                    const existing = overrides.report || {};
+                                    overrides.report = {
+                                      ...(existing.include_metrics ? { include_metrics: existing.include_metrics } : {}),
+                                      template_preset: preset.value,
+                                    };
+                                    updateAction('notify', 'event_overrides', overrides);
+                                  }}
+                                  className={cn(
+                                    'p-3 rounded-xl border transition-all text-left',
+                                    activeReportPreset === preset.value
+                                      ? 'border-indigo-500 bg-indigo-50'
+                                      : 'border-neutral-200/60 bg-white hover:border-neutral-300'
+                                  )}
+                                >
+                                  <div className="font-medium text-sm text-neutral-800">{preset.label}</div>
+                                  <div className="text-xs text-neutral-500 mt-0.5">{preset.description}</div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="bg-neutral-900 text-white rounded-xl p-4 text-sm whitespace-pre-wrap">
+                            {renderTemplatePreview(
+                              action?.event_overrides?.report?.message_template || defaultReportTemplate
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {actionType.value === 'webhook' && (
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">Webhook URL</label>
@@ -1312,90 +2195,389 @@ function StepActions({ actions, setActions, triggerMode, setTriggerMode }) {
       </div>
 
       {/* Trigger mode */}
-      <div className="bg-white/40 glass rounded-[24px] p-6 border border-white/60">
-        <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Zap size={14} />
-          Trigger Frequency
-        </div>
-        <div className="space-y-3">
-          {[
-            { value: 'once', label: 'Once per entity', description: 'Only trigger once, then stop watching' },
-            { value: 'cooldown', label: 'With cooldown', description: 'Can trigger again after a cooldown period' },
-            { value: 'continuous', label: 'Every check', description: 'Trigger every time the condition is met' },
-          ].map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setTriggerMode({ ...triggerMode, mode: option.value })}
-              className={cn(
-                'w-full flex items-center gap-3 p-3 rounded-xl transition-all',
-                triggerMode.mode === option.value
-                  ? 'bg-neutral-900 text-white'
-                  : 'bg-white/50 text-neutral-700 hover:bg-white/80'
-              )}
-            >
-              <div
+      {agentMode !== 'report' && (
+        <div className="bg-white/40 glass rounded-[24px] p-6 border border-white/60">
+          <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Zap size={14} />
+            Trigger Frequency
+          </div>
+          <div className="space-y-3">
+            {[
+              { value: 'once', label: 'Once per entity', description: 'Only trigger once, then stop watching' },
+              { value: 'cooldown', label: 'With cooldown', description: 'Can trigger again after a cooldown period' },
+              { value: 'continuous', label: 'Every check', description: 'Trigger every time the condition is met' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setTriggerMode({ ...triggerMode, mode: option.value })}
                 className={cn(
-                  'w-4 h-4 rounded-full border-2',
-                  triggerMode.mode === option.value ? 'border-white bg-white' : 'border-neutral-300'
+                  'w-full flex items-center gap-3 p-3 rounded-xl transition-all',
+                  triggerMode.mode === option.value
+                    ? 'bg-neutral-900 text-white'
+                    : 'bg-white/50 text-neutral-700 hover:bg-white/80'
                 )}
               >
-                {triggerMode.mode === option.value && (
-                  <div className="w-2 h-2 bg-neutral-900 rounded-full m-auto mt-0.5" />
-                )}
-              </div>
-              <div className="text-left flex-1">
-                <div className="font-medium">{option.label}</div>
                 <div
                   className={cn(
-                    'text-sm',
-                    triggerMode.mode === option.value ? 'text-white/70' : 'text-neutral-500'
+                    'w-4 h-4 rounded-full border-2',
+                    triggerMode.mode === option.value ? 'border-white bg-white' : 'border-neutral-300'
                   )}
                 >
-                  {option.description}
+                  {triggerMode.mode === option.value && (
+                    <div className="w-2 h-2 bg-neutral-900 rounded-full m-auto mt-0.5" />
+                  )}
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Cooldown duration */}
-        {triggerMode.mode === 'cooldown' && (
-          <div className="mt-4 pt-4 border-t border-neutral-200/30">
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Cooldown Period</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={triggerMode.cooldown_minutes || 60}
-                onChange={(e) =>
-                  setTriggerMode({ ...triggerMode, cooldown_minutes: parseInt(e.target.value) || 60 })
-                }
-                className="w-24 px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
-                min="15"
-              />
-              <span className="text-neutral-500">minutes</span>
-              <span className="text-sm text-neutral-400">
-                ({((triggerMode.cooldown_minutes || 60) / 60).toFixed(1)} hours)
-              </span>
-            </div>
+                <div className="text-left flex-1">
+                  <div className="font-medium">{option.label}</div>
+                  <div
+                    className={cn(
+                      'text-sm',
+                      triggerMode.mode === option.value ? 'text-white/70' : 'text-neutral-500'
+                    )}
+                  >
+                    {option.description}
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+
+          {/* Cooldown duration */}
+          {triggerMode.mode === 'cooldown' && (
+            <div className="mt-4 pt-4 border-t border-neutral-200/30">
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Cooldown Period</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={triggerMode.cooldown_minutes || 60}
+                  onChange={(e) =>
+                    setTriggerMode({ ...triggerMode, cooldown_minutes: parseInt(e.target.value) || 60 })
+                  }
+                  className="w-24 px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
+                  min="15"
+                />
+                <span className="text-neutral-500">minutes</span>
+                <span className="text-sm text-neutral-400">
+                  ({((triggerMode.cooldown_minutes || 60) / 60).toFixed(1)} hours)
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// Step 5: Enhanced Review
+// Step 5: Schedule Configuration
+function StepSchedule({
+  scheduleType,
+  setScheduleType,
+  scheduleConfig,
+  setScheduleConfig,
+  conditionRequired,
+  setConditionRequired,
+  dateRangeType,
+  setDateRangeType,
+  agentMode,
+}) {
+  const updateConfig = (field, value) => {
+    setScheduleConfig({ ...scheduleConfig, [field]: value });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-semibold text-neutral-900 mb-2">When should this agent run?</h2>
+        <p className="text-neutral-500">Set up real-time monitoring or scheduled reports</p>
+      </div>
+
+      {/* Schedule Type */}
+      <div className="bg-white/40 glass rounded-[24px] p-6 border border-white/60">
+        <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Clock size={14} />
+          Schedule Type
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {SCHEDULE_TYPES.map((type) => (
+            <button
+              key={type.value}
+              onClick={() => {
+                if (agentMode === 'report' && type.value === 'realtime') return;
+                setScheduleType(type.value);
+              }}
+              className={cn(
+                'flex flex-col items-start p-4 rounded-xl border transition-all',
+                scheduleType === type.value
+                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                  : 'bg-white/50 border-neutral-200/60 hover:bg-white/80',
+                agentMode === 'report' && type.value === 'realtime' && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <span className="font-semibold">{type.label}</span>
+              <span className={cn(
+                'text-sm mt-1',
+                scheduleType === type.value ? 'text-white/70' : 'text-neutral-500'
+              )}>
+                {type.description}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Time Configuration (for scheduled types) */}
+      {scheduleType !== 'realtime' && (
+        <div className="bg-white/40 glass rounded-[24px] p-6 border border-white/60">
+          <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Calendar size={14} />
+            Schedule Details
+          </div>
+
+          <div className="space-y-5">
+            {/* Time */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Time</label>
+              <div className="flex items-center gap-3">
+                <select
+                  value={scheduleConfig.hour}
+                  onChange={(e) => updateConfig('hour', parseInt(e.target.value))}
+                  className="px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>
+                      {i.toString().padStart(2, '0')}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-neutral-400">:</span>
+                <select
+                  value={scheduleConfig.minute}
+                  onChange={(e) => updateConfig('minute', parseInt(e.target.value))}
+                  className="px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
+                >
+                  {[0, 15, 30, 45].map((m) => (
+                    <option key={m} value={m}>
+                      {m.toString().padStart(2, '0')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Timezone */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Timezone</label>
+              <select
+                value={scheduleConfig.timezone}
+                onChange={(e) => updateConfig('timezone', e.target.value)}
+                className="w-full px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
+              >
+                {TIMEZONES.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Report Date Range</label>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {DATE_RANGES.map((range) => (
+                  <button
+                    key={range.value}
+                    onClick={() => setDateRangeType(range.value)}
+                    className={cn(
+                      'flex flex-col items-start p-4 rounded-xl border transition-all',
+                      dateRangeType === range.value
+                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg'
+                        : 'bg-white/50 border-neutral-200/60 hover:bg-white/80'
+                    )}
+                  >
+                    <span className="font-semibold">{range.label}</span>
+                    <span className={cn(
+                      'text-sm mt-1',
+                      dateRangeType === range.value ? 'text-white/70' : 'text-neutral-500'
+                    )}>
+                      {range.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Day of week (for weekly) */}
+            {scheduleType === 'weekly' && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Day of Week</label>
+                <select
+                  value={scheduleConfig.day_of_week}
+                  onChange={(e) => updateConfig('day_of_week', parseInt(e.target.value))}
+                  className="w-full px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
+                >
+                  {DAYS_OF_WEEK.map((day) => (
+                    <option key={day.value} value={day.value}>
+                      {day.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Day of month (for monthly) */}
+            {scheduleType === 'monthly' && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Day of Month</label>
+                <select
+                  value={scheduleConfig.day_of_month}
+                  onChange={(e) => updateConfig('day_of_month', parseInt(e.target.value))}
+                  className="w-full px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
+                >
+                  {Array.from({ length: 28 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Limited to 1-28 to ensure it runs every month
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Condition Required Toggle (for scheduled types) */}
+      {scheduleType !== 'realtime' && agentMode !== 'report' && (
+        <div className="bg-white/40 glass rounded-[24px] p-6 border border-white/60">
+          <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Zap size={14} />
+            Trigger Mode
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => setConditionRequired(true)}
+              className={cn(
+                'w-full flex items-center gap-4 p-4 rounded-xl border transition-all',
+                conditionRequired
+                  ? 'border-neutral-900 bg-white/60 shadow-lg'
+                  : 'border-white/60 bg-white/40 hover:bg-white/60'
+              )}
+            >
+              <div className={cn(
+                'w-10 h-10 rounded-xl flex items-center justify-center',
+                conditionRequired ? 'bg-neutral-900' : 'bg-neutral-100'
+              )}>
+                <Zap size={18} className={conditionRequired ? 'text-white' : 'text-neutral-500'} />
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-semibold text-neutral-900">Only when condition is met</div>
+                <div className="text-sm text-neutral-500">
+                  Agent checks the condition at schedule time and only triggers if met
+                </div>
+              </div>
+              <div className={cn(
+                'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                conditionRequired ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-300'
+              )}>
+                {conditionRequired && <Check size={12} className="text-white" />}
+              </div>
+            </button>
+
+            <button
+              onClick={() => setConditionRequired(false)}
+              className={cn(
+                'w-full flex items-center gap-4 p-4 rounded-xl border transition-all',
+                !conditionRequired
+                  ? 'border-neutral-900 bg-white/60 shadow-lg'
+                  : 'border-white/60 bg-white/40 hover:bg-white/60'
+              )}
+            >
+              <div className={cn(
+                'w-10 h-10 rounded-xl flex items-center justify-center',
+                !conditionRequired ? 'bg-neutral-900' : 'bg-neutral-100'
+              )}>
+                <Send size={18} className={!conditionRequired ? 'text-white' : 'text-neutral-500'} />
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-semibold text-neutral-900">Always send (scheduled report)</div>
+                <div className="text-sm text-neutral-500">
+                  Send notification at schedule time regardless of condition
+                </div>
+              </div>
+              <div className={cn(
+                'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                !conditionRequired ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-300'
+              )}>
+                {!conditionRequired && <Check size={12} className="text-white" />}
+              </div>
+            </button>
+          </div>
+
+          {!conditionRequired && (
+            <div className="flex items-start gap-3 p-4 mt-4 bg-blue-500/5 border border-blue-200/60 rounded-xl">
+              <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-neutral-600">
+                <span className="font-medium text-neutral-800">Scheduled Report Mode:</span>{' '}
+                Your metrics will be sent at the scheduled time as a report, even if the condition
+                isn't met. Perfect for daily summaries or weekly digests.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {scheduleType !== 'realtime' && agentMode === 'report' && (
+        <div className="bg-white/40 glass rounded-[24px] p-6 border border-white/60">
+          <div className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Send size={14} />
+            Report Mode
+          </div>
+          <div className="flex items-start gap-3 p-4 bg-blue-500/5 border border-blue-200/60 rounded-xl">
+            <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-neutral-600">
+              This agent will always send a report at the scheduled time. No condition check is required.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info for realtime */}
+      {scheduleType === 'realtime' && (
+        <div className="flex items-start gap-3 p-4 bg-neutral-100 rounded-xl">
+          <Info size={16} className="text-neutral-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-neutral-600">
+            <span className="font-medium text-neutral-800">Real-time monitoring:</span>{' '}
+            The agent will check your metrics every 15 minutes and trigger immediately
+            when the condition is met.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Step 6: Enhanced Review
 function StepReview({
   name,
   description,
   platform,
   entityLevel,
   scopeType,
+  aggregateMode,
   selectedEntities,
   condition,
   accumulation,
   actions,
   triggerMode,
+  scheduleType,
+  scheduleConfig,
+  conditionRequired,
+  dateRangeType,
+  agentMode,
 }) {
   const getOperatorSymbol = (op) => {
     const map = { gt: '>', gte: '≥', lt: '<', lte: '≤', eq: '=' };
@@ -1404,6 +2586,24 @@ function StepReview({
 
   const selectedMetric = METRICS.find((m) => m.value === condition.metric);
   const scaleAction = actions.find((a) => a.type === 'scale_budget');
+  const notifyAction = actions.find((a) => a.type === 'notify');
+
+  const formatScheduleTime = () => {
+    if (scheduleType === 'realtime') return 'Every 15 minutes';
+    const hour = scheduleConfig.hour.toString().padStart(2, '0');
+    const minute = scheduleConfig.minute.toString().padStart(2, '0');
+    const tz = TIMEZONES.find(t => t.value === scheduleConfig.timezone)?.label || scheduleConfig.timezone;
+    let schedule = `${hour}:${minute} ${tz}`;
+    if (scheduleType === 'weekly') {
+      const day = DAYS_OF_WEEK.find(d => d.value === scheduleConfig.day_of_week)?.label || 'Monday';
+      schedule = `Every ${day} at ${schedule}`;
+    } else if (scheduleType === 'monthly') {
+      schedule = `Day ${scheduleConfig.day_of_month} of each month at ${schedule}`;
+    } else if (scheduleType === 'daily') {
+      schedule = `Daily at ${schedule}`;
+    }
+    return schedule;
+  };
 
   return (
     <div className="space-y-6">
@@ -1443,9 +2643,14 @@ function StepReview({
                 {selectedEntities.length !== 1 ? 's' : ''} — evaluated individually, one notification per {entityLevel}
               </div>
             )}
-            {scopeType === 'all' && (
+            {scopeType === 'all' && aggregateMode && (
               <div className="text-sm text-neutral-500">
                 All {entityLevel}s combined — metrics totaled, one notification for overall performance
+              </div>
+            )}
+            {scopeType === 'all' && !aggregateMode && (
+              <div className="text-sm text-neutral-500">
+                All {entityLevel}s individually — each {entityLevel} can trigger its own notification
               </div>
             )}
           </div>
@@ -1456,15 +2661,23 @@ function StepReview({
           <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">
             Condition
           </div>
-          <div className="font-semibold text-neutral-900">
-            When {selectedMetric?.label || condition.metric} {getOperatorSymbol(condition.operator)}{' '}
-            {selectedMetric?.format === 'currency' && '$'}
-            {condition.value}
-            {selectedMetric?.format === 'percent' && '%'}
-          </div>
-          <div className="text-sm text-neutral-500 mt-1">
-            For {accumulation.required} {accumulation.unit} ({accumulation.mode})
-          </div>
+          {agentMode === 'report' ? (
+            <div className="text-sm text-neutral-500">
+              Condition is skipped in report mode.
+            </div>
+          ) : (
+            <>
+              <div className="font-semibold text-neutral-900">
+                When {selectedMetric?.label || condition.metric} {getOperatorSymbol(condition.operator)}{' '}
+                {selectedMetric?.format === 'currency' && '$'}
+                {condition.value}
+                {selectedMetric?.format === 'percent' && '%'}
+              </div>
+              <div className="text-sm text-neutral-500 mt-1">
+                For {accumulation.required} {accumulation.unit} ({accumulation.mode})
+              </div>
+            </>
+          )}
         </div>
 
         {/* Actions */}
@@ -1487,11 +2700,76 @@ function StepReview({
               </div>
             ))}
           </div>
-          <div className="text-sm text-neutral-500 mt-3">
-            Trigger mode: <span className="font-medium">{triggerMode.mode}</span>
-            {triggerMode.mode === 'cooldown' && ` (${triggerMode.cooldown_minutes} min cooldown)`}
+          {agentMode !== 'report' && (
+            <div className="text-sm text-neutral-500 mt-3">
+              Trigger mode: <span className="font-medium">{triggerMode.mode}</span>
+              {triggerMode.mode === 'cooldown' && ` (${triggerMode.cooldown_minutes} min cooldown)`}
+            </div>
+          )}
+          {agentMode === 'report' && (
+            <div className="text-sm text-neutral-500 mt-3">
+              Report mode: scheduled delivery
+            </div>
+          )}
+        </div>
+
+        {/* Schedule */}
+        <div className="bg-white/40 glass rounded-[20px] p-5 border border-white/60">
+          <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-3">
+            Schedule
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-neutral-500" />
+              <span className="font-medium text-neutral-900">{formatScheduleTime()}</span>
+            </div>
+            {scheduleType !== 'realtime' && (
+              <div className="text-sm text-neutral-500">
+                {conditionRequired
+                  ? 'Will only trigger if condition is met at schedule time'
+                  : 'Will always send report at schedule time (condition optional)'
+                }
+              </div>
+            )}
+            {scheduleType !== 'realtime' && (
+              <div className="text-sm text-neutral-500">
+                Report range:{' '}
+                <span className="font-medium capitalize">
+                  {dateRangeType?.replace(/_/g, ' ') || 'yesterday'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Notify Channels (if using notify action) */}
+        {notifyAction && (
+          <div className="bg-white/40 glass rounded-[20px] p-5 border border-white/60">
+            <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-3">
+              Notification Channels
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {notifyAction.channels?.filter(c => c.enabled).map((channel) => (
+                <span
+                  key={channel.type}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-sm font-medium capitalize',
+                    channel.type === 'email' && 'bg-blue-500/10 text-blue-700',
+                    channel.type === 'slack' && 'bg-purple-500/10 text-purple-700',
+                    channel.type === 'webhook' && 'bg-amber-500/10 text-amber-700'
+                  )}
+                >
+                  {channel.type === 'slack' ? 'Slack' : channel.type}
+                </span>
+              ))}
+            </div>
+            {notifyAction.template_preset && (
+              <div className="text-sm text-neutral-500 mt-2">
+                Template: <span className="font-medium capitalize">{notifyAction.template_preset}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Ready indicator */}

@@ -31,7 +31,7 @@ REFERENCES:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Literal, Optional
 import logging
 import httpx
@@ -68,6 +68,9 @@ class ActionContext:
     workspace_id: str
     observations: Dict[str, float]
     evaluation_event_id: str
+    event_type: Optional[str] = None  # "trigger", "report", etc.
+    date_range_type: Optional[str] = None
+    schedule_timezone: Optional[str] = None
     user_email: Optional[str] = None
     workspace_members: Optional[List[str]] = None
     live_entity_state: Optional[Dict[str, Any]] = None  # From platform API
@@ -792,6 +795,300 @@ class WebhookAction(Action):
         )
 
 
+class NotifyAction(Action):
+    """
+    Multi-channel notification action.
+
+    WHAT: Send notifications to multiple channels (Email, Slack, Webhook)
+    WHY: Users want flexible notifications to different destinations
+
+    This is the recommended action for new agents. It replaces EmailAction
+    for users who want multi-channel support.
+
+    Channels:
+        - email: Send via Resend (existing email infrastructure)
+        - slack: Send via Slack incoming webhook
+        - webhook: Send to custom HTTP endpoint
+
+    Templates:
+        - alert: Real-time trigger notification (default)
+        - daily_summary: Daily report format
+        - digest: Weekly/monthly summary
+        - custom: User-defined template with {{variables}}
+
+    REFERENCES:
+        - backend/app/services/agents/notification_service.py
+        - backend/app/services/agents/slack_formatter.py
+        - backend/app/schemas.py (NotificationChannelConfig)
+    """
+
+    def __init__(
+        self,
+        channels: List[Dict[str, Any]],
+        template_preset: str = "alert",
+        message_template: Optional[str] = None,
+        include_metrics: Optional[List[str]] = None,
+        event_overrides: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        Initialize multi-channel notify action.
+
+        Parameters:
+            channels: List of channel configurations. Each channel is a dict:
+                - type: "email", "slack", or "webhook"
+                - enabled: bool (default True)
+                - Email: recipients (list of emails)
+                - Slack: webhook_url, channel (optional override)
+                - Webhook: url, method (GET/POST/PUT), headers
+            template_preset: One of "alert", "daily_summary", "digest", "custom"
+            message_template: Custom template text (if preset is "custom")
+            include_metrics: List of metrics to include (default: all)
+        """
+        self.channels = channels or []
+        self.template_preset = template_preset
+        self.message_template = message_template
+        self.include_metrics = include_metrics or ["spend", "revenue", "roas", "profit"]
+        self.event_overrides = event_overrides or {}
+
+    def _resolve_event_config(self, event_type: str) -> Dict[str, Any]:
+        """Resolve per-event overrides with sane fallbacks."""
+        overrides = self.event_overrides.get(event_type) or {}
+
+        channels = overrides.get("channels")
+        if channels is None:
+            channels = self.channels
+
+        template_preset = overrides.get("template_preset")
+        if template_preset is None:
+            template_preset = self.template_preset
+
+        message_template = overrides.get("message_template")
+        if message_template is None:
+            message_template = self.message_template
+
+        include_metrics = overrides.get("include_metrics")
+        if include_metrics is None:
+            include_metrics = self.include_metrics
+
+        return {
+            "channels": channels,
+            "template_preset": template_preset,
+            "message_template": message_template,
+            "include_metrics": include_metrics,
+        }
+
+    def _format_date_range(self, date_range_type: Optional[str], tz_name: Optional[str]) -> Dict[str, str]:
+        """Return label and start/end for date-range-aware templates."""
+        if not date_range_type:
+            return {"label": "", "start": "", "end": ""}
+
+        try:
+            import pytz
+            tz = pytz.timezone(tz_name or "UTC")
+            now = datetime.now(timezone.utc).astimezone(tz)
+        except Exception:
+            now = datetime.now(timezone.utc)
+
+        today = now.date()
+        if date_range_type == "today":
+            start = end = today
+            label = "Today"
+        elif date_range_type == "yesterday":
+            start = end = today - timedelta(days=1)
+            label = "Yesterday"
+        elif date_range_type == "last_7_days":
+            start = today - timedelta(days=6)
+            end = today
+            label = "Last 7 days"
+        elif date_range_type == "last_30_days":
+            start = today - timedelta(days=29)
+            end = today
+            label = "Last 30 days"
+        else:
+            return {"label": "", "start": "", "end": ""}
+
+        return {
+            "label": label,
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+        }
+
+    async def execute(self, context: ActionContext) -> ActionResult:
+        """
+        Send notifications to all configured channels.
+
+        Parameters:
+            context: ActionContext with entity and observation data
+
+        Returns:
+            ActionResult with combined results from all channels
+        """
+        import time
+        start = time.time()
+
+        try:
+            event_type = context.event_type or "trigger"
+            event_config = self._resolve_event_config(event_type)
+            include_metrics = event_config.get("include_metrics") or []
+            channels = event_config.get("channels") or []
+            template_preset = event_config.get("template_preset") or "alert"
+            message_template = event_config.get("message_template")
+
+            # Filter observations to only included metrics
+            filtered_observations = {
+                k: v for k, v in context.observations.items()
+                if k in include_metrics or not include_metrics
+            }
+
+            # Build condition explanation from context
+            if event_type == "report":
+                condition_explanation = f"Scheduled report for {context.entity_name}"
+            else:
+                condition_explanation = f"Condition met for {context.entity_name}"
+
+            # Import and use the notification service
+            from .notification_service import AgentNotificationService
+
+            notification_service = AgentNotificationService.from_settings()
+
+            # Resolve email recipients if not specified
+            resolved_channels = []
+            for channel in channels:
+                ch = dict(channel)  # Copy to avoid mutation
+                if ch.get("type") == "email" and not ch.get("recipients"):
+                    # Default to workspace members
+                    if context.workspace_members:
+                        ch["recipients"] = context.workspace_members
+                    elif context.user_email:
+                        ch["recipients"] = [context.user_email]
+                resolved_channels.append(ch)
+
+            date_range = self._format_date_range(context.date_range_type, context.schedule_timezone)
+
+            # Send to all channels
+            result = await notification_service.send_multi_channel_notification(
+                channels=resolved_channels,
+                agent_id=context.agent_id,
+                agent_name=context.agent_name,
+                entity_name=context.entity_name,
+                entity_provider=context.entity_provider,
+                observations=filtered_observations,
+                condition_explanation=condition_explanation,
+                action_results=[],  # This notify IS the action
+                workspace_id=context.workspace_id,
+                template_preset=template_preset,
+                custom_template=message_template,
+                event_type=event_type,
+                date_range=date_range["label"],
+                start_date=date_range["start"],
+                end_date=date_range["end"],
+            )
+
+            duration_ms = int((time.time() - start) * 1000)
+
+            # Build description
+            channel_types = [ch.get("type") for ch in channels if ch.get("enabled", True)]
+            channel_summary = ", ".join(channel_types)
+
+            if result.overall_success:
+                description = f"Notification sent to {result.successful_channels}/{result.total_channels} channels ({channel_summary})"
+                logger.info(f"NotifyAction succeeded: {description}")
+                return ActionResult(
+                    success=True,
+                    description=description,
+                    details={
+                        "channels_attempted": result.total_channels,
+                        "channels_succeeded": result.successful_channels,
+                        "channel_results": [
+                            {
+                                "type": cr.channel_type,
+                                "success": cr.success,
+                                "error": cr.error,
+                            }
+                            for cr in result.channel_results
+                        ],
+                    },
+                    duration_ms=duration_ms,
+                )
+            else:
+                # All channels failed
+                errors = [
+                    f"{cr.channel_type}: {cr.error}"
+                    for cr in result.channel_results
+                    if not cr.success
+                ]
+                error_summary = "; ".join(errors)
+                description = f"Failed to notify {result.total_channels} channels"
+                logger.warning(f"NotifyAction failed: {error_summary}")
+                return ActionResult(
+                    success=False,
+                    description=description,
+                    error=error_summary,
+                    details={
+                        "channels_attempted": result.total_channels,
+                        "channels_succeeded": result.successful_channels,
+                        "channel_results": [
+                            {
+                                "type": cr.channel_type,
+                                "success": cr.success,
+                                "error": cr.error,
+                            }
+                            for cr in result.channel_results
+                        ],
+                    },
+                    duration_ms=duration_ms,
+                )
+
+        except Exception as e:
+            duration_ms = int((time.time() - start) * 1000)
+            logger.exception(f"NotifyAction failed: {e}")
+            return ActionResult(
+                success=False,
+                description="Failed to send notifications",
+                error=str(e),
+                duration_ms=duration_ms,
+            )
+
+    def describe(self) -> str:
+        """Generate human-readable description."""
+        enabled_channels = [
+            ch.get("type") for ch in self.channels if ch.get("enabled", True)
+        ]
+        if not enabled_channels:
+            return "Notify (no channels enabled)"
+
+        channel_list = ", ".join(enabled_channels)
+        return f"Notify via {channel_list}"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize to dictionary."""
+        return {
+            "type": "notify",
+            "channels": self.channels,
+            "template_preset": self.template_preset,
+            "message_template": self.message_template,
+            "include_metrics": self.include_metrics,
+            "event_overrides": self.event_overrides,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "NotifyAction":
+        """
+        Deserialize from dictionary.
+
+        Handles both flat and nested config structures.
+        """
+        config = data.get("config", {})
+
+        return cls(
+            channels=data.get("channels") or config.get("channels") or [],
+            template_preset=data.get("template_preset") or config.get("template_preset") or "alert",
+            message_template=data.get("message_template") or config.get("message_template"),
+            include_metrics=data.get("include_metrics") or config.get("include_metrics"),
+            event_overrides=data.get("event_overrides") or config.get("event_overrides") or {},
+        )
+
+
 def action_from_dict(data: Dict[str, Any]) -> Action:
     """
     Factory function to deserialize action from dictionary.
@@ -818,5 +1115,7 @@ def action_from_dict(data: Dict[str, Any]) -> Action:
         return PauseCampaignAction.from_dict(data)
     elif action_type == "webhook":
         return WebhookAction.from_dict(data)
+    elif action_type == "notify":
+        return NotifyAction.from_dict(data)
     else:
         raise ValueError(f"Unknown action type: {action_type}")
