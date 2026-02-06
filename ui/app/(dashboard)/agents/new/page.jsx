@@ -2356,7 +2356,7 @@ function StepSchedule({
                   onChange={(e) => updateConfig('minute', parseInt(e.target.value))}
                   className="px-4 py-2.5 bg-white/70 rounded-xl border border-neutral-200/60 text-neutral-700 focus:outline-none focus:border-neutral-300"
                 >
-                  {[0, 15, 30, 45].map((m) => (
+                  {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
                     <option key={m} value={m}>
                       {m.toString().padStart(2, '0')}
                     </option>
