@@ -366,7 +366,7 @@ function MobileNav({ pathname, navItems, billingTier, onLockedClick, workspace }
                 </SheetTrigger>
 
                 {/* Sheet Content - slides up from bottom */}
-                <SheetContent side="bottom" showCloseButton={false} className="rounded-t-3xl px-6 pb-10 pt-4 z-[70]" aria-describedby={undefined}>
+                <SheetContent side="bottom" showCloseButton={false} className="rounded-t-3xl px-6 pb-10 pt-4 z-[70] bg-white" aria-describedby={undefined}>
                     {/* Drag handle */}
                     <div className="w-10 h-1 bg-neutral-200 rounded-full mx-auto mb-6" />
 
