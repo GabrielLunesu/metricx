@@ -69,7 +69,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen antialiased text-gray-900 font-geist scroll-smooth flex flex-col relative">
       {/* Mesh Gradient Shader Hero Background — GPU-accelerated via @paper-design/shaders */}
-      <div className="absolute top-0 left-0 w-full h-[120vh] z-0 overflow-hidden pointer-events-none">
+      <div className="absolute top-0 left-0 w-full h-[250vh] lg:h-[120vh] z-0 overflow-hidden pointer-events-none">
         <MeshGradientShader
           style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
           colors={['#0ea5e9', '#38bdf8', '#7dd3fc', '#0284c7', '#06b6d4']}
@@ -124,7 +124,7 @@ function Header({ onSmoothScroll }) {
     <header className="relative z-10 w-full pt-4 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
         {/* Floating dock container */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 rounded-2xl bg-white backdrop-blur-xl border border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset]">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl bg-white backdrop-blur-xl border border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset]">
           {/* Brand with Logo */}
           <Link href="/" className="inline-flex items-center gap-2 shrink-0">
             <Image

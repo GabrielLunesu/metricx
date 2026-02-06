@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
+from sqlalchemy.exc import IntegrityError
 
 from .. import schemas
 from ..database import get_db
@@ -1132,77 +1133,181 @@ def delete_workspace(
                 user.role = RoleEnum.owner
                 db.add(user)
 
-    # 3. Delete all workspace data (Cascade logic)
-    # Import models locally to avoid circular imports if any, though they are available at module level
+    # 3. Delete all workspace data in FK-safe order.
+    # NOTE: We use bulk deletes for performance, so ORM cascades won't run.
+    # Explicit order is required to avoid FK violations.
     from ..models import (
-        MetricFact, Entity, ManualCost, Connection, Token, QaQueryLog, ComputeRun, Pnl
+        MetricFact,
+        MetricSnapshot,
+        Entity,
+        ManualCost,
+        Connection,
+        Token,
+        QaQueryLog,
+        QaFeedback,
+        ComputeRun,
+        Pnl,
+        Fetch,
+        Import,
+        ShopifyShop,
+        ShopifyProduct,
+        ShopifyCustomer,
+        ShopifyOrder,
+        ShopifyOrderLineItem,
+        PixelEvent,
+        CustomerJourney,
+        JourneyTouchpoint,
+        Attribution,
+        PolarCheckoutMapping,
+        Agent,
+        AgentEvaluationEvent,
+        AgentActionExecution,
     )
-    
-    # Delete metric facts
-    db.query(MetricFact).filter(
-        MetricFact.entity_id.in_(
-            db.query(Entity.id).filter(Entity.workspace_id == workspace_id)
-        )
-    ).delete(synchronize_session=False)
-    
-    # Delete PnLs (via ComputeRuns or Entities)
-    # PnLs are linked to ComputeRuns and Entities. 
-    # Deleting Entities will cascade to PnLs if configured, but let's be explicit.
-    db.query(Pnl).filter(
-        Pnl.run_id.in_(
-            db.query(ComputeRun.id).filter(ComputeRun.workspace_id == workspace_id)
-        )
-    ).delete(synchronize_session=False)
-    
-    # Delete ComputeRuns
-    db.query(ComputeRun).filter(ComputeRun.workspace_id == workspace_id).delete(synchronize_session=False)
 
-    # Delete entities
-    db.query(Entity).filter(Entity.workspace_id == workspace_id).delete(synchronize_session=False)
-    
-    # Delete manual costs
-    db.query(ManualCost).filter(ManualCost.workspace_id == workspace_id).delete(synchronize_session=False)
-    
-    # Delete connections and orphaned tokens
-    connection_ids = [c.id for c in db.query(Connection.id).filter(
-        Connection.workspace_id == workspace_id
-    ).all()]
-    
-    if connection_ids:
-        token_ids = [t[0] for t in db.query(Connection.token_id).filter(
-            Connection.id.in_(connection_ids),
-            Connection.token_id.isnot(None)
-        ).all()]
-        
-        db.query(Connection).filter(Connection.workspace_id == workspace_id).delete(synchronize_session=False)
-        
-        if token_ids:
-            # Only delete tokens if they are not used by other connections (though tokens are usually 1:1)
-            # For safety, check if token is used elsewhere? 
-            # Our model implies 1:N but usually 1:1. Let's assume safe to delete if we are deleting the connection.
-            # Actually, let's check if any other connection uses these tokens
-            used_tokens = db.query(Connection.token_id).filter(
-                Connection.token_id.in_(token_ids),
-                Connection.workspace_id != workspace_id
+    try:
+        entity_ids_q = db.query(Entity.id).filter(Entity.workspace_id == workspace_id)
+        run_ids_q = db.query(ComputeRun.id).filter(ComputeRun.workspace_id == workspace_id)
+        connection_ids_q = db.query(Connection.id).filter(Connection.workspace_id == workspace_id)
+        fetch_ids_q = db.query(Fetch.id).filter(Fetch.connection_id.in_(connection_ids_q))
+        query_log_ids_q = db.query(QaQueryLog.id).filter(QaQueryLog.workspace_id == workspace_id)
+        journey_ids_q = db.query(CustomerJourney.id).filter(CustomerJourney.workspace_id == workspace_id)
+        order_ids_q = db.query(ShopifyOrder.id).filter(ShopifyOrder.workspace_id == workspace_id)
+
+        # Agent subsystem
+        db.query(AgentActionExecution).filter(
+            AgentActionExecution.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.query(AgentEvaluationEvent).filter(
+            AgentEvaluationEvent.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.query(Agent).filter(Agent.workspace_id == workspace_id).delete(
+            synchronize_session=False
+        )
+
+        # Attribution subsystem (must be deleted before entities/orders)
+        db.query(Attribution).filter(Attribution.workspace_id == workspace_id).delete(
+            synchronize_session=False
+        )
+        db.query(JourneyTouchpoint).filter(
+            JourneyTouchpoint.journey_id.in_(journey_ids_q)
+        ).delete(synchronize_session=False)
+        db.query(CustomerJourney).filter(
+            CustomerJourney.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.query(PixelEvent).filter(PixelEvent.workspace_id == workspace_id).delete(
+            synchronize_session=False
+        )
+
+        # QA subsystem
+        db.query(QaFeedback).filter(
+            QaFeedback.query_log_id.in_(query_log_ids_q)
+        ).delete(synchronize_session=False)
+        db.query(QaQueryLog).filter(QaQueryLog.workspace_id == workspace_id).delete(
+            synchronize_session=False
+        )
+
+        # Shopify subsystem
+        db.query(ShopifyOrderLineItem).filter(
+            ShopifyOrderLineItem.order_id.in_(order_ids_q)
+        ).delete(synchronize_session=False)
+        db.query(ShopifyOrder).filter(
+            ShopifyOrder.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.query(ShopifyCustomer).filter(
+            ShopifyCustomer.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.query(ShopifyProduct).filter(
+            ShopifyProduct.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.query(ShopifyShop).filter(
+            ShopifyShop.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+
+        # Metrics/finance
+        db.query(MetricSnapshot).filter(
+            MetricSnapshot.entity_id.in_(entity_ids_q)
+        ).delete(synchronize_session=False)
+        db.query(MetricFact).filter(
+            MetricFact.entity_id.in_(entity_ids_q)
+        ).delete(synchronize_session=False)
+        db.query(Pnl).filter(Pnl.entity_id.in_(entity_ids_q)).delete(
+            synchronize_session=False
+        )
+        db.query(Pnl).filter(Pnl.run_id.in_(run_ids_q)).delete(
+            synchronize_session=False
+        )
+        db.query(ComputeRun).filter(ComputeRun.workspace_id == workspace_id).delete(
+            synchronize_session=False
+        )
+
+        # Entity tree and workspace-scoped data
+        db.query(Entity).filter(Entity.workspace_id == workspace_id).delete(
+            synchronize_session=False
+        )
+        db.query(ManualCost).filter(ManualCost.workspace_id == workspace_id).delete(
+            synchronize_session=False
+        )
+        db.query(PolarCheckoutMapping).filter(
+            PolarCheckoutMapping.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+
+        # Connection subsystem
+        db.query(Import).filter(Import.fetch_id.in_(fetch_ids_q)).delete(
+            synchronize_session=False
+        )
+        db.query(Fetch).filter(Fetch.connection_id.in_(connection_ids_q)).delete(
+            synchronize_session=False
+        )
+
+        # Delete connections and orphaned tokens
+        connection_ids = [
+            row[0]
+            for row in db.query(Connection.id).filter(
+                Connection.workspace_id == workspace_id
             ).all()
-            used_token_ids = {t[0] for t in used_tokens}
-            tokens_to_delete = set(token_ids) - used_token_ids
-            
-            if tokens_to_delete:
-                db.query(Token).filter(Token.id.in_(tokens_to_delete)).delete(synchronize_session=False)
+        ]
 
-    # Delete query logs
-    db.query(QaQueryLog).filter(QaQueryLog.workspace_id == workspace_id).delete(synchronize_session=False)
-    
-    # Delete invites
-    db.query(WorkspaceInvite).filter(WorkspaceInvite.workspace_id == workspace_id).delete(synchronize_session=False)
-    
-    # Delete members
-    db.query(WorkspaceMember).filter(WorkspaceMember.workspace_id == workspace_id).delete(synchronize_session=False)
+        if connection_ids:
+            token_ids = [
+                row[0]
+                for row in db.query(Connection.token_id).filter(
+                    Connection.id.in_(connection_ids),
+                    Connection.token_id.isnot(None),
+                ).all()
+            ]
 
-    # Delete workspace
-    db.delete(workspace)
-    
-    db.commit()
+            db.query(Connection).filter(Connection.workspace_id == workspace_id).delete(
+                synchronize_session=False
+            )
+
+            if token_ids:
+                used_tokens = db.query(Connection.token_id).filter(
+                    Connection.token_id.in_(token_ids),
+                    Connection.workspace_id != workspace_id,
+                ).all()
+                used_token_ids = {row[0] for row in used_tokens}
+                tokens_to_delete = set(token_ids) - used_token_ids
+
+                if tokens_to_delete:
+                    db.query(Token).filter(Token.id.in_(tokens_to_delete)).delete(
+                        synchronize_session=False
+                    )
+
+        # Membership and workspace
+        db.query(WorkspaceInvite).filter(
+            WorkspaceInvite.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.query(WorkspaceMember).filter(
+            WorkspaceMember.workspace_id == workspace_id
+        ).delete(synchronize_session=False)
+        db.delete(workspace)
+
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Workspace contains related records that could not be deleted safely.",
+        ) from exc
     
     return schemas.SuccessResponse(detail="Workspace deleted successfully")
