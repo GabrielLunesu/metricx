@@ -28,12 +28,13 @@
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Users, ChevronDown, Bot } from "lucide-react";
-import { useEffect, useState } from "react";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Users, ChevronDown, Bot, Menu, X } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../components/ui/popover";
 import { Button } from "../../../../components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "../../../../components/ui/sheet";
 import { fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
 import { getBillingStatus } from "../../../../lib/workspace";
 import NavItem from "./NavItem";
@@ -293,57 +294,14 @@ export default function Sidebar() {
                 </div>
             </aside>
 
-            {/* Mobile Bottom Nav - New design */}
-            <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-neutral-200/40 p-2 flex justify-around items-center z-[60] h-[68px]">
-                <Link
-                    href="/dashboard"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/dashboard"
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <LayoutDashboard className="w-5 h-5" />
-                </Link>
-                <Link
-                    href="/analytics"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname?.startsWith("/analytics")
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <BarChart2 className="w-5 h-5" />
-                </Link>
-
-                {/* Center Action - Copilot */}
-                <Link
-                    href="/copilot"
-                    className="relative -translate-y-3 group active:scale-95 transition-transform duration-150"
-                    aria-label="Open Copilot"
-                >
-                    <div className="w-14 h-14 rounded-full bg-neutral-900 flex items-center justify-center text-white shadow-xl shadow-neutral-900/30 ring-4 ring-white relative overflow-hidden">
-                        <Sparkles className="w-6 h-6 relative z-10" />
-                    </div>
-                </Link>
-
-                <Link
-                    href="/finance"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/finance"
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <Wallet className="w-5 h-5" />
-                </Link>
-                <Link
-                    href="/settings"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/settings"
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <User className="w-5 h-5" />
-                </Link>
-            </nav>
+            {/* Mobile FAB + Sheet Navigation */}
+            <MobileNav
+                pathname={pathname}
+                navItems={navItems}
+                billingTier={billingTier}
+                onLockedClick={handleLockedClick}
+                workspace={workspace}
+            />
 
             {/* Upgrade Modal for locked features */}
             <UpgradeModal
@@ -352,5 +310,108 @@ export default function Sidebar() {
                 feature={upgradeModal.feature}
             />
         </>
+    );
+}
+
+/**
+ * MobileNav - Floating action button with bottom sheet navigation
+ *
+ * WHAT: Single FAB that opens a sheet with all navigation items
+ * WHY: Frees up screen real estate on mobile vs a full bottom dock
+ */
+function MobileNav({ pathname, navItems, billingTier, onLockedClick, workspace }) {
+    const [open, setOpen] = useState(false);
+    const router = useRouter();
+
+    // Close sheet on route change
+    useEffect(() => {
+        setOpen(false);
+    }, [pathname]);
+
+    // All navigation items for the sheet menu
+    const mobileNavItems = [
+        ...navItems,
+        { href: "/settings", label: "Settings", icon: Settings, active: pathname === "/settings", requiresPaid: false },
+    ];
+
+    const handleNavClick = useCallback((item) => {
+        const isLocked = item.requiresPaid && billingTier === 'free';
+        if (isLocked) {
+            setOpen(false);
+            onLockedClick(item.label);
+            return;
+        }
+        router.push(item.href);
+        setOpen(false);
+    }, [billingTier, onLockedClick, router]);
+
+    // Find active nav label for the FAB indicator
+    const activeItem = mobileNavItems.find(item => item.active);
+
+    return (
+        <div className="md:hidden">
+            <Sheet open={open} onOpenChange={setOpen}>
+                {/* FAB Button - fixed bottom right */}
+                <SheetTrigger asChild>
+                    <button
+                        className="fixed bottom-5 right-5 z-[60] w-14 h-14 rounded-full bg-neutral-900 text-white shadow-xl shadow-neutral-900/30 flex items-center justify-center active:scale-95 transition-all duration-200"
+                        aria-label="Open navigation"
+                    >
+                        {open ? (
+                            <X className="w-5 h-5" />
+                        ) : (
+                            <Menu className="w-5 h-5" />
+                        )}
+                    </button>
+                </SheetTrigger>
+
+                {/* Sheet Content - slides up from bottom */}
+                <SheetContent side="bottom" showCloseButton={false} className="rounded-t-3xl px-6 pb-10 pt-4 z-[70]" aria-describedby={undefined}>
+                    {/* Drag handle */}
+                    <div className="w-10 h-1 bg-neutral-200 rounded-full mx-auto mb-6" />
+
+                    {/* Workspace indicator */}
+                    {workspace?.name && (
+                        <div className="flex items-center gap-2 mb-5 px-1">
+                            <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-700 text-xs font-semibold border border-neutral-200/50">
+                                {workspace.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-sm text-neutral-500">{workspace.name}</span>
+                        </div>
+                    )}
+
+                    {/* Navigation Grid */}
+                    <nav className="grid grid-cols-3 gap-3">
+                        {mobileNavItems.map((item) => {
+                            const Icon = item.icon;
+                            const isLocked = item.requiresPaid && billingTier === 'free';
+                            const isActive = item.active;
+
+                            return (
+                                <button
+                                    key={item.href}
+                                    onClick={() => handleNavClick(item)}
+                                    className={`
+                                        flex flex-col items-center gap-2 py-4 px-2 rounded-2xl transition-all duration-200 relative
+                                        ${isActive
+                                            ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20'
+                                            : 'bg-neutral-50 text-neutral-600 active:bg-neutral-100'
+                                        }
+                                    `}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span className="text-[11px] font-medium leading-none">{item.label}</span>
+                                    {isLocked && (
+                                        <span className="absolute top-2 right-2 text-[8px] font-bold text-amber-500 bg-amber-50 px-1 rounded">
+                                            PRO
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </nav>
+                </SheetContent>
+            </Sheet>
+        </div>
     );
 }

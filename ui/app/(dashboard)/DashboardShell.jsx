@@ -123,7 +123,7 @@ export default function DashboardShell({ children }) {
 
   const contentClass = immersive || isCopilot
     ? "w-full h-full"
-    : "p-6 lg:p-8";
+    : "p-4 md:p-6 lg:p-8";
 
   // Show loading while checking access
   if (checkingAccess) {
@@ -184,7 +184,7 @@ export default function DashboardShell({ children }) {
           className={`
             flex-1 h-full overflow-x-hidden relative
             ${!isCopilot ? 'overflow-y-auto' : 'overflow-hidden'}
-            ${!immersive ? "ml-20 lg:ml-72" : ""}
+            ${!immersive ? "md:ml-20 lg:ml-72" : ""}
           `}
         >
           <div className={contentClass}>
