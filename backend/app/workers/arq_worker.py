@@ -252,21 +252,40 @@ def _validate_connection_tokens(connection: Connection) -> Optional[str]:
 # =============================================================================
 
 async def scheduled_realtime_sync(ctx: Dict) -> Dict:
-    """Scheduled job: sync today's data for all connections.
+    """Cron job: enqueue realtime sync dispatcher to worker.
 
     WHAT:
-        Enqueues sync jobs for ALL active connections in PARALLEL.
-        Each connection syncs today's cumulative metrics to MetricSnapshot.
+        Lightweight cron function that enqueues the heavier realtime
+        sync dispatch work to the worker queue.
 
     WHEN:
         Every 15 minutes at :00, :15, :30, :45.
 
     WHY:
-        - Captures intraday spend progression for stop-loss rules
-        - Enables real-time dashboard updates
-        - Parallel enqueueing for maximum throughput
+        Keeps scheduler lightweight and avoids cron timing drift.
     """
-    logger.info("[ARQ] Starting scheduled realtime sync")
+    logger.info("[ARQ] Enqueueing realtime sync dispatcher to worker")
+
+    try:
+        from app.workers.arq_enqueue import enqueue_realtime_sync_dispatch_job
+        return await enqueue_realtime_sync_dispatch_job()
+    except Exception as e:
+        logger.exception("[ARQ] Failed to enqueue realtime sync dispatcher: %s", e)
+        capture_exception(e, extra={"operation": "scheduled_realtime_sync"})
+        return {"error": str(e)}
+
+
+async def worker_realtime_sync_dispatch(ctx: Dict) -> Dict:
+    """Worker job: dispatch today's sync for all active connections.
+
+    WHAT:
+        Enqueues per-connection sync jobs in parallel.
+        Each connection then syncs cumulative metrics to MetricSnapshot.
+
+    WHY:
+        Runs in worker queue so cron scheduler stays thin and responsive.
+    """
+    logger.info("[ARQ] Starting realtime sync dispatch (worker)")
 
     db = SessionLocal()
     try:
@@ -367,8 +386,8 @@ async def scheduled_realtime_sync(ctx: Dict) -> Dict:
         }
 
     except Exception as e:
-        logger.exception("[ARQ] Scheduled realtime sync failed: %s", e)
-        capture_exception(e, extra={"operation": "scheduled_realtime_sync"})
+        logger.exception("[ARQ] Realtime sync dispatch failed: %s", e)
+        capture_exception(e, extra={"operation": "worker_realtime_sync_dispatch"})
         return {"error": str(e)}
     finally:
         db.close()
@@ -468,26 +487,80 @@ async def scheduled_compaction(ctx: Dict) -> Dict:
 # AGENT EVALUATION (Autonomous monitoring)
 # =============================================================================
 
+# --- Lightweight cron functions (run in scheduler, just enqueue) ---
+
 async def scheduled_agent_evaluation(ctx: Dict) -> Dict:
-    """Scheduled job: evaluate all active agents.
+    """Cron job: enqueue agent evaluation to worker.
+
+    WHAT:
+        Lightweight cron function that enqueues the heavy evaluation
+        work to the worker queue. Takes <10ms.
+
+    WHEN:
+        Every 15 minutes at :05, :20, :35, :50 (after metric sync).
+
+    WHY:
+        The scheduler must stay lightweight. Running evaluation inline
+        blocks all other cron jobs and causes timing drift.
+        The actual work runs in worker_agent_evaluation().
+    """
+    logger.info("[ARQ] Enqueueing agent evaluation to worker")
+
+    try:
+        from app.workers.arq_enqueue import enqueue_agent_evaluation_job
+        result = await enqueue_agent_evaluation_job()
+        return result
+    except Exception as e:
+        logger.exception("[ARQ] Failed to enqueue agent evaluation: %s", e)
+        capture_exception(e, extra={"operation": "scheduled_agent_evaluation"})
+        return {"error": str(e)}
+
+
+async def scheduled_agent_check(ctx: Dict) -> Dict:
+    """Cron job: enqueue scheduled agent check to worker.
+
+    WHAT:
+        Lightweight cron function that enqueues the scheduled agent
+        check to the worker queue. Takes <10ms.
+
+    WHEN:
+        Every minute.
+
+    WHY:
+        This fires every minute. Running evaluation inline would block
+        the scheduler for seconds, causing all other cron jobs to drift.
+        Uses singleton job ID so only one check runs at a time.
+    """
+    logger.debug("[ARQ] Enqueueing scheduled agent check to worker")
+
+    try:
+        from app.workers.arq_enqueue import enqueue_agent_check_job
+        result = await enqueue_agent_check_job()
+        return result
+    except Exception as e:
+        logger.exception("[ARQ] Failed to enqueue agent check: %s", e)
+        capture_exception(e, extra={"operation": "scheduled_agent_check"})
+        return {"error": str(e)}
+
+
+# --- Heavy worker functions (run in worker, do the actual work) ---
+
+async def worker_agent_evaluation(ctx: Dict) -> Dict:
+    """Worker job: evaluate all active realtime agents.
 
     WHAT:
         Evaluates all active agents against their scoped entities.
         Executes actions when conditions are met.
 
-    WHEN:
-        Every 15 minutes at :00, :15, :30, :45 (after metric sync).
-
     WHY:
-        - Agents need fresh data to evaluate accurately
-        - Runs after metric sync to have latest data
-        - 15-min cadence matches metric granularity
+        Runs in the worker (not scheduler) to avoid blocking cron jobs.
+        Agents need fresh data to evaluate accurately.
 
     REFERENCES:
         - Agent System Implementation Plan
         - backend/app/services/agents/evaluation_engine.py
     """
-    logger.info("[ARQ] Starting scheduled agent evaluation")
+    logger.info("[ARQ] Starting agent evaluation (worker)")
 
     db = SessionLocal()
     try:
@@ -508,32 +581,29 @@ async def scheduled_agent_evaluation(ctx: Dict) -> Dict:
 
     except Exception as e:
         logger.exception("[ARQ] Agent evaluation failed: %s", e)
-        capture_exception(e, extra={"operation": "scheduled_agent_evaluation"})
+        capture_exception(e, extra={"operation": "worker_agent_evaluation"})
         return {"error": str(e)}
     finally:
         db.close()
 
 
-async def scheduled_agent_check(ctx: Dict) -> Dict:
-    """Scheduled job: check and run scheduled agents.
+async def worker_agent_check(ctx: Dict) -> Dict:
+    """Worker job: check and run scheduled agents.
 
     WHAT:
         Checks all scheduled agents (daily, weekly, monthly) and runs those
         whose schedule time has arrived.
 
-    WHEN:
-        Every minute - checks if any scheduled agent should run now.
-
     WHY:
-        - Users want scheduled reports (daily at 1am, weekly summaries)
-        - Separate from realtime evaluation (runs every 15 min)
-        - Allows "always send" mode without condition requirement
+        Runs in the worker (not scheduler) to avoid blocking cron jobs.
+        Users want scheduled reports (daily at 1am, weekly summaries).
+        Uses singleton job ID so at most one check runs at a time.
 
     REFERENCES:
         - Scheduled Reports & Multi-Channel Notifications Plan
         - backend/app/services/agents/evaluation_engine.py
     """
-    logger.info("[ARQ] Checking scheduled agents")
+    logger.info("[ARQ] Checking scheduled agents (worker)")
 
     db = SessionLocal()
     try:
@@ -556,7 +626,7 @@ async def scheduled_agent_check(ctx: Dict) -> Dict:
 
     except Exception as e:
         logger.exception("[ARQ] Scheduled agent check failed: %s", e)
-        capture_exception(e, extra={"operation": "scheduled_agent_check"})
+        capture_exception(e, extra={"operation": "worker_agent_check"})
         return {"error": str(e)}
     finally:
         db.close()
@@ -686,15 +756,15 @@ class WorkerSettings:
     """
 
     # Job functions (what can be executed)
-    # NOTE: scheduled_* functions are included so they can be called by the scheduler
+    # NOTE: worker_* functions do the heavy agent work, enqueued by scheduler cron jobs
     functions = [
         process_sync_job,
         process_shopify_sync_job,
-        scheduled_realtime_sync,
+        worker_realtime_sync_dispatch,
         scheduled_attribution_sync,
         scheduled_compaction,
-        scheduled_agent_evaluation,
-        scheduled_agent_check,
+        worker_agent_evaluation,
+        worker_agent_check,
     ]
 
     # NO cron_jobs here - the scheduler handles cron scheduling

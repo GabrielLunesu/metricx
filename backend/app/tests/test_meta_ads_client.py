@@ -83,6 +83,37 @@ class TestRateLimiting:
         assert dummy_func.__name__ == "dummy_func"
         assert "Test function docstring" in dummy_func.__doc__
 
+    @patch("app.services.meta_ads_client.sleep")
+    @patch("app.services.meta_ads_client.time")
+    def test_rate_limit_shares_budget_for_same_client_token(
+        self, mock_time, mock_sleep
+    ):
+        """WHAT: Different decorated methods should share one budget per client token.
+        WHY: Meta rate limits apply across API endpoints for the same client/account.
+        """
+        from app.services import meta_ads_client as module
+
+        module._rate_limit_call_times.clear()
+        mock_time.side_effect = [0.0, 0.0, 0.0, 3602.0]
+
+        class FakeClient:
+            access_token = "token-1"
+
+        @rate_limit(calls_per_hour=2)
+        def f1(client):
+            return "f1"
+
+        @rate_limit(calls_per_hour=2)
+        def f2(client):
+            return "f2"
+
+        client = FakeClient()
+        assert f1(client) == "f1"
+        assert f2(client) == "f2"
+        assert f1(client) == "f1"  # 3rd call should trigger limiter sleep path
+
+        mock_sleep.assert_called_once()
+
 
 class TestMetaAdsClientInitialization:
     """Test client initialization."""
@@ -186,7 +217,7 @@ class TestGetCampaigns:
         # Mock 401 error
         error = FacebookRequestError(
             message="Invalid token",
-            request_context=Mock(),
+            request_context={},
             http_status=401,
             http_headers={},
             body={}
@@ -211,7 +242,7 @@ class TestGetCampaigns:
         
         error = FacebookRequestError(
             message="Permission denied",
-            request_context=Mock(),
+            request_context={},
             http_status=403,
             http_headers={},
             body={}
@@ -381,7 +412,7 @@ class TestGetInsights:
         
         error = FacebookRequestError(
             message="Invalid date range",
-            request_context=Mock(),
+            request_context={},
             http_status=400,
             http_headers={},
             body={}
@@ -535,7 +566,7 @@ class TestErrorHandling:
         
         error = FacebookRequestError(
             message="Rate limit exceeded",
-            request_context=Mock(),
+            request_context={},
             http_status=429,
             http_headers={},
             body={}
@@ -560,7 +591,7 @@ class TestErrorHandling:
         
         error = FacebookRequestError(
             message="Internal server error",
-            request_context=Mock(),
+            request_context={},
             http_status=500,
             http_headers={},
             body={}
@@ -573,4 +604,3 @@ class TestErrorHandling:
             client.get_campaigns("act_123")
         
         assert "API error" in str(exc_info.value)
-

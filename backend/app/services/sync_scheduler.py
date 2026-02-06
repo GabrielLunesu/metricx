@@ -83,14 +83,14 @@ def get_redis_settings() -> RedisSettings:
 # CRON JOB FUNCTIONS - Import from arq_worker to avoid duplication
 # =============================================================================
 
-# Import the scheduled job functions from arq_worker
-# These functions enqueue work to be processed by the worker
+# Import cron job functions from arq_worker
+# These are lightweight functions that enqueue heavy work to the worker queue
 from app.workers.arq_worker import (
     scheduled_realtime_sync,
     scheduled_attribution_sync,
     scheduled_compaction,
-    scheduled_agent_evaluation,
-    scheduled_agent_check,
+    scheduled_agent_evaluation,   # lightweight: just enqueues worker_agent_evaluation
+    scheduled_agent_check,        # lightweight: just enqueues worker_agent_check
 )
 
 
@@ -107,10 +107,10 @@ async def scheduler_startup(ctx: Dict) -> None:
     logger.info("=" * 60)
     logger.info(f"[SCHEDULER] Python: {platform.python_version()}")
     logger.info(f"[SCHEDULER] Host: {platform.node()}")
-    logger.info("[SCHEDULER] Cron schedule:")
-    logger.info("[SCHEDULER]   - Realtime sync: every 15 min (:00, :15, :30, :45)")
-    logger.info("[SCHEDULER]   - Agent evaluation: every 15 min (:05, :20, :35, :50)")
-    logger.info("[SCHEDULER]   - Scheduled agent check: every minute")
+    logger.info("[SCHEDULER] Cron schedule (all cron jobs enqueue to worker):")
+    logger.info("[SCHEDULER]   - Realtime sync: every 15 min (:00, :15, :30, :45) -> enqueued to worker")
+    logger.info("[SCHEDULER]   - Agent evaluation: every 15 min (:05, :20, :35, :50) -> enqueued to worker")
+    logger.info("[SCHEDULER]   - Scheduled agent check: every minute -> enqueued to worker")
     logger.info("[SCHEDULER]   - Compaction: daily at 01:00 UTC")
     logger.info("[SCHEDULER]   - Attribution: daily at 03:00 UTC")
     logger.info("=" * 60)

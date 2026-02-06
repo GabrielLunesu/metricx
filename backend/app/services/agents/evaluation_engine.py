@@ -35,7 +35,7 @@ from datetime import datetime, timezone, timedelta, time as dt_time
 from typing import Any, Dict, List, Optional, Tuple
 import logging
 
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, update
 from sqlalchemy.orm import Session
 
 from sqlalchemy import func
@@ -227,6 +227,13 @@ class AgentEvaluationEngine:
                 if not self._should_run_scheduled_agent(agent, now):
                     continue
 
+                # Atomically claim this scheduled run so only one scheduler instance executes it.
+                if not self._try_claim_scheduled_agent_run(agent.id, now):
+                    logger.info(
+                        f"Agent {agent.id}: scheduled run already claimed by another scheduler instance"
+                    )
+                    continue
+
                 logger.info(f"Running scheduled agent {agent.id}: {agent.name}")
 
                 # For scheduled agents, check if condition is required
@@ -239,10 +246,6 @@ class AgentEvaluationEngine:
                 results["agents_evaluated"] += 1
                 results["triggers"] += agent_result.get("triggers", 0)
                 results["errors"] += agent_result.get("errors", 0)
-
-                # Update last_scheduled_run_at
-                agent.last_scheduled_run_at = now
-                self.db.commit()
 
             except Exception as e:
                 logger.exception(f"Failed to evaluate scheduled agent {agent.id}: {e}")
@@ -336,13 +339,48 @@ class AgentEvaluationEngine:
         # Check if we already ran in this window
         # Prevent double-runs within the same 10-minute window
         if agent.last_scheduled_run_at:
-            minutes_since_last_run = (now - agent.last_scheduled_run_at).total_seconds() / 60
+            last_run = self._normalize_utc_datetime(agent.last_scheduled_run_at)
+            minutes_since_last_run = (now - last_run).total_seconds() / 60
             if minutes_since_last_run < 10:
                 logger.info(f"Agent {agent.id}: cooldown - ran {minutes_since_last_run:.1f} minutes ago")
                 return False
 
         logger.info(f"Agent {agent.id}: schedule MATCHED, will evaluate")
         return True
+
+    @staticmethod
+    def _normalize_utc_datetime(value: datetime) -> datetime:
+        """Normalize datetimes loaded from DB to UTC-aware for safe subtraction."""
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+    def _try_claim_scheduled_agent_run(self, agent_id: uuid.UUID, now: datetime) -> bool:
+        """
+        Atomically claim a scheduled run.
+
+        Returns True for exactly one scheduler instance, False for all others.
+        """
+        cooldown_cutoff = now - timedelta(minutes=10)
+        claim_stmt = (
+            update(Agent)
+            .where(Agent.id == agent_id)
+            .where(Agent.status == AgentStatusEnum.active)
+            .where(
+                or_(
+                    Agent.last_scheduled_run_at.is_(None),
+                    Agent.last_scheduled_run_at <= cooldown_cutoff,
+                )
+            )
+            .values(
+                last_scheduled_run_at=now,
+                updated_at=now,
+            )
+        )
+
+        result = self.db.execute(claim_stmt)
+        self.db.commit()
+        return bool(result.rowcount)
 
     def _resolve_event_type(self, agent: Agent) -> str:
         """Resolve event type for notifications."""
@@ -824,8 +862,13 @@ class AgentEvaluationEngine:
                 user_email = workspace_user.email
 
         action_results = []
+        logger.info(
+            f"Agent {agent.id}: executing {len(agent.actions)} actions: "
+            f"{[a.get('type') for a in agent.actions]}"
+        )
         for action_config in agent.actions:
             try:
+                logger.info(f"Agent {agent.id}: executing action {action_config.get('type')}, channels={[c.get('type') for c in action_config.get('channels', [])]}")
                 action = action_from_dict(action_config)
 
                 # Build context for aggregate (no specific entity)

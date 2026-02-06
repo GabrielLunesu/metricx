@@ -84,7 +84,11 @@ class SnapshotSyncResult:
 # ENTITY SYNC (Status Updates)
 # =============================================================================
 
-def _sync_entities_for_connection(db: Session, connection: Connection) -> None:
+def _sync_entities_for_connection(
+    db: Session,
+    connection: Connection,
+    entity_sync_mode: str = "full",
+) -> None:
     """Sync entity hierarchy and status for a connection.
 
     WHAT:
@@ -97,18 +101,46 @@ def _sync_entities_for_connection(db: Session, connection: Connection) -> None:
     Args:
         db: Database session
         connection: Connection to sync entities for
+        entity_sync_mode: "full" or "active_only" (Meta only)
     """
-    logger.info("[ENTITY_SYNC] Syncing entities for connection %s", connection.id)
+    logger.info(
+        "[ENTITY_SYNC] Syncing entities for connection %s (mode=%s)",
+        connection.id,
+        entity_sync_mode,
+    )
 
     if connection.provider == ProviderEnum.meta:
         from app.services.meta_sync_service import sync_meta_entities
-        sync_meta_entities(db, connection.workspace_id, connection.id)
+        sync_meta_entities(
+            db,
+            connection.workspace_id,
+            connection.id,
+            entity_sync_mode=entity_sync_mode,
+        )
 
     elif connection.provider == ProviderEnum.google:
         from app.services.google_sync_service import sync_google_entities
         sync_google_entities(db, connection.workspace_id, connection.id)
 
     logger.info("[ENTITY_SYNC] Entity sync complete for connection %s", connection.id)
+
+
+def _resolve_entity_sync_strategy(
+    mode: str,
+    now_utc: Optional[datetime] = None,
+) -> Tuple[bool, str]:
+    """Resolve whether to run entity sync and which strategy to use.
+
+    Realtime sync runs every 15 minutes, but entity sync runs every 30 minutes
+    in active-only mode to reduce Meta API load.
+    """
+    if mode == "realtime":
+        current = now_utc or datetime.now(timezone.utc)
+        # Run entity status sync at :00 and :30 only.
+        return (current.minute % 30 == 0, "active_only")
+
+    # Attribution/backfill/manual modes do full reconciliation.
+    return (True, "full")
 
 
 # =============================================================================
@@ -158,16 +190,29 @@ def sync_snapshots_for_connection(
         connection_id, connection.provider.value, mode, sync_entities
     )
 
-    # STEP 1: Sync entity hierarchy and status (captures paused/active changes)
+    # STEP 1: Sync entity hierarchy and status
     if sync_entities:
+        should_sync_entities, entity_sync_mode = _resolve_entity_sync_strategy(mode)
         try:
-            _sync_entities_for_connection(db, connection)
+            if should_sync_entities:
+                _sync_entities_for_connection(
+                    db,
+                    connection,
+                    entity_sync_mode=entity_sync_mode,
+                )
+            else:
+                logger.debug(
+                    "[SNAPSHOT_SYNC] Skipping entity sync for connection %s in %s mode (15-min slot without 30-min entity run)",
+                    connection_id,
+                    mode,
+                )
         except Exception as e:
             logger.warning("[SNAPSHOT_SYNC] Entity sync failed, continuing with metrics: %s", e)
             capture_exception(e, extra={
                 "operation": "entity_sync",
                 "connection_id": str(connection_id),
                 "provider": connection.provider.value,
+                "entity_sync_mode": entity_sync_mode,
             })
             # CRITICAL: Rollback the failed session to allow subsequent operations
             # Without this, the session remains in PendingRollback state and all

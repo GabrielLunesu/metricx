@@ -32,6 +32,7 @@ import logging
 from functools import wraps
 from time import time, sleep
 from collections import deque
+from threading import Lock
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -45,6 +46,11 @@ from facebook_business.adobjects.adsinsights import AdsInsights
 from facebook_business.exceptions import FacebookRequestError
 
 logger = logging.getLogger(__name__)
+
+# Shared in-process limiter state.
+# Keyed by (scope, calls_per_hour), where scope is usually client token.
+_rate_limit_call_times: Dict[tuple[str, int], deque] = {}
+_rate_limit_lock = Lock()
 
 
 def rate_limit(calls_per_hour: int):
@@ -64,27 +70,45 @@ def rate_limit(calls_per_hour: int):
     Returns:
         Decorated function that enforces rate limiting
     """
-    call_times = deque(maxlen=calls_per_hour)
-    
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             now = time()
-            
-            # Remove calls older than 1 hour (3600 seconds)
-            while call_times and call_times[0] < now - 3600:
-                call_times.popleft()
-            
-            # If at limit, sleep until oldest call expires
-            if len(call_times) >= calls_per_hour:
-                sleep_time = 3600 - (now - call_times[0]) + 1
+
+            # For MetaAdsClient instance methods, scope by client token so
+            # all decorated API methods share one budget per client.
+            if args and hasattr(args[0], "access_token"):
+                scope = f"token:{getattr(args[0], 'access_token')}"
+            else:
+                # Keep plain function usage deterministic for unit tests.
+                scope = f"func:{func.__module__}.{func.__qualname__}"
+            key = (scope, calls_per_hour)
+
+            while True:
+                with _rate_limit_lock:
+                    call_times = _rate_limit_call_times.get(key)
+                    if call_times is None:
+                        call_times = deque(maxlen=calls_per_hour)
+                        _rate_limit_call_times[key] = call_times
+
+                    # Remove calls older than 1 hour (3600 seconds)
+                    while call_times and call_times[0] < now - 3600:
+                        call_times.popleft()
+
+                    # Reserve a slot if available.
+                    if len(call_times) < calls_per_hour:
+                        call_times.append(now)
+                        break
+
+                    sleep_time = max(0.0, 3600 - (now - call_times[0]) + 1)
+
                 logger.warning(
                     f"[META_CLIENT] Rate limit reached ({calls_per_hour} calls/hour). "
                     f"Sleeping for {sleep_time:.1f}s"
                 )
                 sleep(sleep_time)
-            
-            call_times.append(now)
+                now = time()
+
             return func(*args, **kwargs)
         return wrapper
     return decorator
@@ -660,6 +684,9 @@ class MetaAdsClient:
                     AdsInsights.Field.action_values,
                     AdsInsights.Field.account_currency,
                 ]
+            else:
+                # Avoid mutating caller-provided list across calls.
+                fields = list(fields)
 
             # Add level-specific ID field
             if level == "ad":
@@ -748,4 +775,3 @@ class MetaAdsClient:
             raise MetaAdsClientError(
                 f"API error while {context}: HTTP {http_status}, {error_message}"
             )
-
