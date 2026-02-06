@@ -18,7 +18,7 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta, date
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional, Literal
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -118,6 +118,7 @@ def sync_meta_entities(
     db: Session,
     workspace_id: UUID,
     connection_id: UUID,
+    entity_sync_mode: Literal["full", "active_only"] = "full",
 ) -> EntitySyncResponse:
     """Sync entity hierarchy from Meta to metricx."""
 
@@ -170,7 +171,9 @@ def sync_meta_entities(
             account_id = f"act_{account_id}"
 
         logger.info(
-            "[META_SYNC] Fetching campaigns for account: %s", account_id
+            "[META_SYNC] Fetching campaigns for account: %s (mode=%s)",
+            account_id,
+            entity_sync_mode,
         )
         campaigns = client.get_campaigns(account_id)
         logger.info(
@@ -179,6 +182,10 @@ def sync_meta_entities(
 
         for campaign_data in campaigns:
             try:
+                campaign_status = (campaign_data.get("status") or "unknown").upper()
+                if entity_sync_mode == "active_only" and campaign_status != "ACTIVE":
+                    continue
+
                 campaign_entity, campaign_created = _upsert_entity(
                     db=db,
                     connection=connection,
@@ -204,6 +211,10 @@ def sync_meta_entities(
                 )
 
                 for adset_data in adsets:
+                    adset_status = (adset_data.get("status") or "unknown").upper()
+                    if entity_sync_mode == "active_only" and adset_status != "ACTIVE":
+                        continue
+
                     adset_entity, adset_created = _upsert_entity(
                         db=db,
                         connection=connection,
@@ -219,69 +230,73 @@ def sync_meta_entities(
                     else:
                         stats.adsets_updated += 1
 
-                ads = client.get_ads(adset_data["id"])
-                logger.debug(
-                    "[META_SYNC] Adset %s has %s ads",
-                    adset_data["id"],
-                    len(ads),
-                )
-
-                for ad_data in ads:
-                    # Extract creative details if available (Meta only)
-                    thumbnail_url = None
-                    image_url = None
-                    media_type = None
-                    tracking_params = None
-
-                    creative_ref = ad_data.get("creative")
-                    # Note: creative_ref can be a dict OR an AdCreative object from SDK
-                    # Both support .get("id") or have an "id" key/attribute
-                    creative_id = None
-                    if creative_ref:
-                        if isinstance(creative_ref, dict):
-                            creative_id = creative_ref.get("id")
-                        elif hasattr(creative_ref, "get"):
-                            # AdCreative object from Meta SDK
-                            creative_id = creative_ref.get("id")
-                        elif hasattr(creative_ref, "id"):
-                            creative_id = creative_ref.id
-                    if creative_id:
-                        creative_details = client.get_creative_details(creative_id)
-                        if creative_details:
-                            thumbnail_url = creative_details.get("thumbnail_url")
-                            image_url = creative_details.get("image_url")
-                            media_type_str = creative_details.get("media_type")
-                            if media_type_str:
-                                try:
-                                    media_type = MediaTypeEnum(media_type_str)
-                                except ValueError:
-                                    media_type = MediaTypeEnum.unknown
-
-                            # Extract tracking params from url_tags for UTM detection
-                            # WHY: Enables proactive attribution warnings
-                            # url_tags is on AdCreative, not Ad
-                            url_tags = creative_details.get("url_tags")
-                            if url_tags:
-                                tracking_params = _parse_url_tags(url_tags)
-
-                    _, ad_created = _upsert_entity(
-                        db=db,
-                        connection=connection,
-                        external_id=ad_data["id"],
-                        level=LevelEnum.ad,
-                        name=ad_data.get("name", "Unnamed Ad"),
-                        status=ad_data.get("status", "unknown"),
-                        parent_id=adset_entity.id,
-                        thumbnail_url=thumbnail_url,
-                        image_url=image_url,
-                        media_type=media_type,
-                        tracking_params=tracking_params,
+                    ads = client.get_ads(adset_data["id"])
+                    logger.debug(
+                        "[META_SYNC] Adset %s has %s ads",
+                        adset_data["id"],
+                        len(ads),
                     )
 
-                    if ad_created:
-                        stats.ads_created += 1
-                    else:
-                        stats.ads_updated += 1
+                    for ad_data in ads:
+                        ad_status = (ad_data.get("status") or "unknown").upper()
+                        if entity_sync_mode == "active_only" and ad_status != "ACTIVE":
+                            continue
+
+                        # Extract creative details if available (Meta only)
+                        thumbnail_url = None
+                        image_url = None
+                        media_type = None
+                        tracking_params = None
+
+                        creative_ref = ad_data.get("creative")
+                        # Note: creative_ref can be a dict OR an AdCreative object from SDK
+                        # Both support .get("id") or have an "id" key/attribute
+                        creative_id = None
+                        if creative_ref:
+                            if isinstance(creative_ref, dict):
+                                creative_id = creative_ref.get("id")
+                            elif hasattr(creative_ref, "get"):
+                                # AdCreative object from Meta SDK
+                                creative_id = creative_ref.get("id")
+                            elif hasattr(creative_ref, "id"):
+                                creative_id = creative_ref.id
+                        if creative_id:
+                            creative_details = client.get_creative_details(creative_id)
+                            if creative_details:
+                                thumbnail_url = creative_details.get("thumbnail_url")
+                                image_url = creative_details.get("image_url")
+                                media_type_str = creative_details.get("media_type")
+                                if media_type_str:
+                                    try:
+                                        media_type = MediaTypeEnum(media_type_str)
+                                    except ValueError:
+                                        media_type = MediaTypeEnum.unknown
+
+                                # Extract tracking params from url_tags for UTM detection
+                                # WHY: Enables proactive attribution warnings
+                                # url_tags is on AdCreative, not Ad
+                                url_tags = creative_details.get("url_tags")
+                                if url_tags:
+                                    tracking_params = _parse_url_tags(url_tags)
+
+                        _, ad_created = _upsert_entity(
+                            db=db,
+                            connection=connection,
+                            external_id=ad_data["id"],
+                            level=LevelEnum.ad,
+                            name=ad_data.get("name", "Unnamed Ad"),
+                            status=ad_data.get("status", "unknown"),
+                            parent_id=adset_entity.id,
+                            thumbnail_url=thumbnail_url,
+                            image_url=image_url,
+                            media_type=media_type,
+                            tracking_params=tracking_params,
+                        )
+
+                        if ad_created:
+                            stats.ads_created += 1
+                        else:
+                            stats.ads_updated += 1
 
             except MetaAdsPermissionError as e:
                 logger.error(
@@ -333,97 +348,6 @@ def sync_meta_entities(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unexpected error: {e}",
         ) from e
-
-
-def _determine_date_range(
-    connection: Connection,
-    db: Session,
-    request: MetricsSyncRequest
-) -> Tuple[date, date]:
-    """Determine date range for metrics sync.
-    
-    WHAT:
-        Calculates start/end dates based on request and sync history.
-        Implements 90-day policy and incremental sync logic.
-    
-    WHY:
-        - 90-day historical backfill on first sync
-        - Incremental sync on subsequent runs (only new dates)
-        - Force refresh allows manual override
-    """
-    if request.start_date and request.end_date:
-        return request.start_date, request.end_date
-    
-    end_date = datetime.utcnow().date() - timedelta(days=1)
-    
-    if request.force_refresh:
-        start_date = end_date - timedelta(days=90)
-    else:
-        last_fact = db.query(MetricFact).join(Entity).filter(
-            Entity.connection_id == connection.id,
-            MetricFact.provider == ProviderEnum.meta
-        ).order_by(desc(MetricFact.event_date)).first()
-        
-        if last_fact:
-            last_date = last_fact.event_date.date()
-            start_date = last_date + timedelta(days=1)
-        else:
-            days_back = 90
-            if connection.connected_at.date() >= end_date:
-                days_back = 30
-            start_date = end_date - timedelta(days=days_back)
-    
-    if start_date > end_date:
-        start_date = end_date - timedelta(days=30)
-    
-    return start_date, end_date
-
-
-def _chunk_date_range(start: date, end: date, chunk_days: int = 7) -> List[Tuple[date, date]]:
-    """Split date range into chunks for rate limit safety."""
-    chunks = []
-    current = start
-    
-    while current <= end:
-        chunk_end = min(current + timedelta(days=chunk_days - 1), end)
-        chunks.append((current, chunk_end))
-        current = chunk_end + timedelta(days=1)
-    
-    return chunks
-
-
-def _parse_actions(insight: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse Meta actions array into metricx metrics."""
-    actions = insight.get("actions", [])
-    action_values = insight.get("action_values", [])
-    
-    result = {
-        "purchases": 0,
-        "leads": 0,
-        "installs": 0,
-        "conversions": 0,
-        "revenue": 0.0
-    }
-    
-    for action in actions:
-        action_type = action.get("action_type", "")
-        value = int(float(action.get("value", 0)))
-        
-        if action_type == "omni_purchase":
-            result["purchases"] = value
-        elif action_type == "lead":
-            result["leads"] = value
-        elif action_type == "app_install":
-            result["installs"] = value
-        elif action_type in ["offsite_conversion", "onsite_conversion"]:
-            result["conversions"] += value
-    
-    for action_value in action_values:
-        action_type = action_value.get("action_type", "")
-        if action_type == "omni_purchase":
-            result["revenue"] = float(action_value.get("value", 0))
-    
-    return result
 
 
 def sync_meta_metrics(
@@ -838,27 +762,41 @@ def _chunk_date_range(
 def _parse_actions(insight: Dict[str, Any]) -> Dict[str, Any]:
     """Parse Meta actions array into flat metrics."""
     result = {
-        "purchases": None,
-        "purchase_value": None,
-        "leads": None,
-        "installs": None,
+        "purchases": 0.0,
+        "purchase_value": 0.0,
+        "leads": 0.0,
+        "installs": 0,
     }
 
     actions = insight.get("actions") or []
     action_values = insight.get("action_values") or []
 
-    action_map = {a["action_type"]: a.get("value") for a in actions}
-    value_map = {a["action_type"]: a.get("value") for a in action_values}
+    for action in actions:
+        action_type = (action.get("action_type") or "").lower()
+        raw_value = action.get("value")
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
 
-    if "purchase" in action_map:
-        result["purchases"] = float(action_map["purchase"])
-    if "purchase" in value_map:
-        result["purchase_value"] = float(value_map["purchase"])
-    if "lead" in action_map:
-        result["leads"] = float(action_map["lead"])
-    if "install" in action_map:
-        result["installs"] = float(action_map["install"])
+        # Meta exposes many variants: purchase, omni_purchase,
+        # offsite_conversion.fb_pixel_purchase, etc.
+        if "purchase" in action_type:
+            result["purchases"] += value
+        if "lead" in action_type:
+            result["leads"] += value
+        if "install" in action_type:
+            result["installs"] += int(value)
+
+    for action_value in action_values:
+        action_type = (action_value.get("action_type") or "").lower()
+        raw_value = action_value.get("value")
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+
+        if "purchase" in action_type:
+            result["purchase_value"] += value
 
     return result
-
-

@@ -6,7 +6,7 @@
  * Uses Inter font family with system fallbacks
  *
  * Features:
- * - UnicornStudio interactive gradient background
+ * - Heatmap shader background (Paper Design shaders, GPU-accelerated)
  * - Animated hero section with stats cards
  * - Problem/Solution sections
  * - Core features grid
@@ -21,6 +21,18 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+/**
+ * MeshGradientShader - Dynamically imported to avoid SSR (WebGL canvas)
+ * and to code-split the shader bundle from the initial page load.
+ * Uses @paper-design/shaders-react for zero-dependency GPU shaders.
+ * MeshGradient is more reliable than Heatmap across browsers.
+ */
+const MeshGradientShader = dynamic(
+  () => import('@paper-design/shaders-react').then((mod) => ({ default: mod.MeshGradient })),
+  { ssr: false, loading: () => <div className="w-full h-full bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50" /> }
+);
 
 export default function HomePage() {
   // Initialize scroll animations
@@ -54,36 +66,19 @@ export default function HomePage() {
     }
   };
 
-  // Initialize UnicornStudio after component mounts
-  useEffect(() => {
-    // Load UnicornStudio script
-    if (!window.UnicornStudio) {
-      window.UnicornStudio = { isInitialized: false };
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.29/dist/unicornStudio.umd.js';
-      script.onload = () => {
-        if (!window.UnicornStudio.isInitialized) {
-          window.UnicornStudio.init();
-          window.UnicornStudio.isInitialized = true;
-        }
-      };
-      document.head.appendChild(script);
-    } else if (!window.UnicornStudio.isInitialized && window.UnicornStudio.init) {
-      window.UnicornStudio.init();
-      window.UnicornStudio.isInitialized = true;
-    }
-  }, []);
-
   return (
-    <div className="min-h-screen antialiased text-gray-900 bg-white font-geist scroll-smooth flex flex-col">
-      {/* UnicornStudio Interactive Gradient Background */}
-      <div className="aura-background-component top-0 w-full -z-10 h-screen absolute">
-        <div className="aura-background-component top-0 w-full -z-10 absolute h-full">
-          <div
-            data-us-project="yACzULFKkgXAmEcep6hu"
-            className="absolute w-full h-full left-0 top-0 -z-10"
-          />
-        </div>
+    <div className="min-h-screen antialiased text-gray-900 font-geist scroll-smooth flex flex-col relative">
+      {/* Mesh Gradient Shader Hero Background — GPU-accelerated via @paper-design/shaders */}
+      <div className="absolute top-0 left-0 w-full h-[120vh] z-0 overflow-hidden pointer-events-none">
+        <MeshGradientShader
+          style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+          colors={['#0ea5e9', '#38bdf8', '#7dd3fc', '#0284c7', '#06b6d4']}
+          speed={2}
+          distortion={0.4}
+          swirl={0.3}
+        />
+        {/* Soft fade to white at bottom — starts at 60% down the viewport */}
+        <div className="absolute bottom-0 left-0 right-0 h-[60%] z-10" style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.2) 30%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.9) 70%, #ffffff 85%, #ffffff 100%)' }} />
       </div>
 
       {/* Top Navigation */}
@@ -92,79 +87,84 @@ export default function HomePage() {
       {/* Hero */}
       <Hero />
 
-      {/* The Problem Section */}
-      <ProblemSection />
+      {/* Sections below hero get white bg to cover the shader */}
+      <div className="relative z-[1] bg-white">
+        <ProblemSection />
 
-      {/* The Solution Section */}
-      <SolutionSection />
+        {/* The Solution Section */}
+        <SolutionSection />
 
-      {/* Core Features Section */}
-      <FeaturesSection />
+        {/* Core Features Section */}
+        <FeaturesSection />
 
-      {/* Pricing Section */}
-      <PricingSection />
+        {/* Pricing Section */}
+        <PricingSection />
 
-      {/* Why metricx Section */}
-      <WhyMetricxSection />
+        {/* Why metricx Section */}
+        <WhyMetricxSection />
 
-      {/* Final CTA Section */}
-      <FinalCTASection />
+        {/* Final CTA Section */}
+        <FinalCTASection />
 
-      {/* Footer */}
-      <Footer />
+        {/* Footer */}
+        <Footer />
+      </div>
     </div>
   );
 }
 
 /**
- * Header - Top navigation with mobile menu and logo
+ * Header - Floating dock navigation with glassmorphic background
+ * Sits on top of the hero shader for a modern, immersive feel.
  */
 function Header({ onSmoothScroll }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="relative z-20 border-b border-gray-100 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between py-4 sm:py-6">
+    <header className="relative z-10 w-full pt-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        {/* Floating dock container */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 rounded-2xl bg-white backdrop-blur-xl border border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset]">
           {/* Brand with Logo */}
-          <div className="flex items-center gap-3">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <Image
-                src="/logo.png"
-                alt="metricx"
-                width={160}
-                height={48}
-                className="h-10 sm:h-11 w-auto"
-                priority
-              />
-            </Link>
-          </div>
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-sm text-gray-600">
+          <Link href="/" className="inline-flex items-center gap-2 shrink-0">
+            <Image
+              src="/logo.png"
+              alt="metricx"
+              width={160}
+              height={48}
+              className="h-8 sm:h-9 w-auto"
+              priority
+            />
+          </Link>
+
+          {/* Center Nav */}
+          <nav className="hidden md:flex items-center gap-1 text-sm text-gray-600">
             <a
               href="#features"
               onClick={(e) => onSmoothScroll(e, 'features')}
-              className="hover:text-gray-900 transition-colors font-geist"
+              className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
             >
               Features
             </a>
             <a
               href="#pricing"
               onClick={(e) => onSmoothScroll(e, 'pricing')}
-              className="hover:text-gray-900 transition-colors font-geist"
+              className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
             >
               Pricing
             </a>
-            <Link href="#" className="hover:text-gray-900 transition-colors font-geist">Docs</Link>
-            <Link href="#" className="hover:text-gray-900 transition-colors font-geist">Blog</Link>
+            <Link href="#" className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist">Docs</Link>
+            <Link href="#" className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist">Blog</Link>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="hidden sm:inline-flex text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors font-geist">
+
+          {/* Right actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link href="/login" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors font-geist px-3 py-1.5 rounded-lg hover:bg-black/5">
               Log in
             </Link>
             <Link
               href="/signup"
-              className="hidden sm:inline-flex items-center rounded-full bg-gray-900 px-3 sm:px-4 py-2 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
+              className="hidden sm:inline-flex items-center rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
             >
               Start Free Trial
             </Link>
@@ -173,7 +173,7 @@ function Header({ onSmoothScroll }) {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-controls="mobileMenu"
               aria-expanded={mobileMenuOpen}
-              className="md:hidden inline-flex items-center rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+              className="md:hidden inline-flex items-center rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-black/5 focus:outline-none"
             >
               {!mobileMenuOpen ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
@@ -191,29 +191,28 @@ function Header({ onSmoothScroll }) {
             </button>
           </div>
         </div>
-      </div>
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div id="mobileMenu" className="md:hidden bg-white border-t border-gray-100">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="py-3 space-y-1 divide-y divide-gray-100 border-b border-gray-100">
-              <a href="#features" onClick={(e) => { onSmoothScroll(e, 'features'); setMobileMenuOpen(false); }} className="block px-2 py-3 text-sm text-gray-700 hover:text-gray-900 font-geist">Features</a>
-              <a href="#pricing" onClick={(e) => { onSmoothScroll(e, 'pricing'); setMobileMenuOpen(false); }} className="block px-2 py-3 text-sm text-gray-700 hover:text-gray-900 font-geist">Pricing</a>
-              <Link href="#" className="block px-2 py-3 text-sm text-gray-700 hover:text-gray-900 font-geist">Docs</Link>
-              <Link href="#" className="block px-2 py-3 text-sm text-gray-700 hover:text-gray-900 font-geist">Blog</Link>
-              <div className="pt-3 space-y-2">
-                <Link href="/login" className="block text-sm text-gray-700 hover:text-gray-900 font-geist">Log in</Link>
+
+        {/* Mobile Menu - drops below the dock */}
+        {mobileMenuOpen && (
+          <div id="mobileMenu" className="md:hidden mt-2 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden">
+            <div className="p-4 space-y-1">
+              <a href="#features" onClick={(e) => { onSmoothScroll(e, 'features'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Features</a>
+              <a href="#pricing" onClick={(e) => { onSmoothScroll(e, 'pricing'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Pricing</a>
+              <Link href="#" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Docs</Link>
+              <Link href="#" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Blog</Link>
+              <div className="pt-2 mt-2 border-t border-black/5 space-y-2">
+                <Link href="/login" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 font-geist">Log in</Link>
                 <Link
                   href="/signup"
-                  className="inline-flex w-full items-center justify-center rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
+                  className="flex w-full items-center justify-center rounded-full bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
                 >
                   Start Free Trial
                 </Link>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }
@@ -223,28 +222,28 @@ function Header({ onSmoothScroll }) {
  */
 function Hero() {
   return (
-    <main className="relative">
-      <div className="sm:px-6 lg:px-8 sm:pt-24 lg:pt-32 xl:pt-40 sm:pb-24 lg:pb-32 xl:pb-40 max-w-7xl mr-auto ml-auto pt-24 pr-4 pb-24 pl-4">
+    <main className="relative z-[1]">
+      <div className="sm:px-6 lg:px-8 sm:pt-12 lg:pt-16 xl:pt-20 sm:pb-32 lg:pb-44 xl:pb-52 max-w-7xl mr-auto ml-auto pt-12 pr-4 pb-32 pl-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-16 lg:gap-24 xl:gap-32 items-center">
           {/* Left: Copy */}
-          <section className="order-2 lg:order-1 relative">
+          <section className="order-1 lg:order-1 relative">
             <div
-              className="inline-flex text-xs text-gray-700 font-geist bg-white/50 border-gray-200 border rounded-full pt-1 pr-3 pb-1 pl-3 backdrop-blur-md gap-x-2 items-center animate-fade-slide-in"
+              className="inline-flex text-xs text-gray-700 font-geist bg-white/60 border-white/80 border rounded-full pt-1 pr-3 pb-1 pl-3 backdrop-blur-md gap-x-2 items-center animate-fade-slide-in"
               style={{ animationDelay: '0.1s' }}
             >
-              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex h-1.5 w-1.5 rounded-full text-white bg-emerald-500 animate-pulse" />
               Ad Analytics for E-commerce
             </div>
 
             <h1
-              className="sm:mt-6 sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl 2xl:text-7xl leading-[0.95] text-4xl tracking-tighter font-geist mt-6 animate-fade-slide-in"
+              className="sm:mt-6 sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl 2xl:text-7xl leading-[0.95] text-4xl tracking-tighter font-geist mt-6 text-white animate-fade-slide-in"
               style={{ animationDelay: '0.2s' }}
             >
               Stop guessing which ads make you money.
             </h1>
 
             <p
-              className="sm:mt-6 sm:text-lg lg:text-base xl:text-lg lg:max-w-none text-base text-gray-600 font-geist max-w-xl mt-6 animate-fade-slide-in"
+              className="sm:mt-6 sm:text-lg lg:text-base xl:text-lg lg:max-w-none text-base text-white font-geist max-w-xl mt-6 animate-fade-slide-in"
               style={{ animationDelay: '0.3s' }}
             >
               Connect your ad accounts, see unified performance data, and finally understand your true return on ad spend.
@@ -256,7 +255,7 @@ function Hero() {
             >
               <Link
                 href="/signup"
-                className="group inline-flex items-center gap-3 hover:bg-gray-800 hover:shadow-xl transition-all duration-300 transform hover:scale-105 xl:pt-4 xl:pb-4 text-sm font-medium text-white bg-black rounded-full pt-3 pr-8 pb-3 pl-8 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]"
+                className="group inline-flex items-center gap-3 hover:bg-gray-800 hover:shadow-xl transition-all duration-300 transform hover:scale-105 xl:pt-4 xl:pb-4 text-sm font-medium text-white bg-gray-900 rounded-full pt-3 pr-8 pb-3 pl-8 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]"
               >
                 <span>Start Free Trial</span>
                 <div className="relative flex items-center justify-center w-5 h-5 bg-white/20 rounded-full group-hover:bg-white/30 transition-all duration-300">
@@ -266,7 +265,7 @@ function Hero() {
                   </svg>
                 </div>
               </Link>
-              <button className="inline-flex sm:px-5 hover:bg-gray-100 transition sm:w-auto text-sm font-medium text-gray-900 font-geist bg-white/80 w-full border-gray-200 border rounded-full pt-3 pr-4 pb-3 pl-4 shadow-sm backdrop-blur-md gap-x-2 items-center justify-center">
+              <button className="inline-flex sm:px-5 hover:bg-white/80 transition sm:w-auto text-sm font-medium text-gray-900 font-geist bg-white/60 w-full border-white/80 border rounded-full pt-3 pr-4 pb-3 pl-4 shadow-sm backdrop-blur-md gap-x-2 items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-700">
                   <path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z" />
                   <circle cx="12" cy="12" r="10" />
@@ -276,7 +275,7 @@ function Hero() {
             </div>
 
             {/* Divider */}
-            <div className="sm:mt-8 h-px bg-gray-200 mt-6" />
+            <div className="sm:mt-8 h-px bg-gray-200/50 mt-6" />
 
             {/* Feature bullets */}
             <div
@@ -325,6 +324,8 @@ function Hero() {
           <HeroVisual />
         </div>
       </div>
+      {/* Bottom fade — ensures seamless transition to white sections below */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-white pointer-events-none" />
     </main>
   );
 }
@@ -335,12 +336,12 @@ function Hero() {
 function FeatureBullet({ icon, title, description }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex shrink-0 sm:w-9 sm:h-9 bg-white/80 w-8 h-8 border-gray-200 border rounded-lg mt-0.5 shadow-sm backdrop-blur-md items-center justify-center">
+      <div className="flex shrink-0 sm:w-9 sm:h-9 bg-white/60 w-8 h-8 border-white/80 border rounded-lg mt-0.5 shadow-sm backdrop-blur-md items-center justify-center">
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-gray-900 font-geist">{title}</p>
-        <p className="text-sm text-gray-600 font-geist">{description}</p>
+        <p className="text-sm font-bold text-white font-geist">{title}</p>
+        <p className="text-sm text-white font-geist">{description}</p>
       </div>
     </div>
   );
@@ -362,11 +363,11 @@ function HeroVisual() {
   }, []);
 
   return (
-    <section className="order-1 lg:order-2 relative animate-fade-slide-in" style={{ animationDelay: '0.6s' }}>
+    <section className="order-2 lg:order-2 relative animate-fade-slide-in" style={{ animationDelay: '0.6s' }}>
       {/* Subtle background glow */}
       <div className="-inset-6 sm:-inset-10 pointer-events-none absolute">
-        <div className="absolute right-6 sm:right-10 top-0 h-48 w-48 sm:h-64 sm:w-64 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute left-2 sm:left-5 bottom-12 h-48 w-48 sm:h-64 sm:w-64 rounded-full bg-indigo-500/20 blur-3xl" />
+        <div className="absolute right-6 sm:right-10 top-0 h-48 w-48 sm:h-64 sm:w-64 rounded-full bg-blue-400/30 blur-3xl" />
+        <div className="absolute left-2 sm:left-5 bottom-12 h-48 w-48 sm:h-64 sm:w-64 rounded-full bg-red-500/20 blur-3xl" />
       </div>
 
       {/* Main Card */}
@@ -378,11 +379,10 @@ function HeroVisual() {
             <button
               key={slide}
               onClick={() => setActiveSlide(index)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300 font-geist ${
-                activeSlide === index
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300 font-geist ${activeSlide === index
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
             >
               {slide}
             </button>
@@ -538,10 +538,10 @@ function HeroVisual() {
       <div className="flex justify-center mt-4 sm:mt-6">
         <div className="z-10 flex gap-2 sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3 bg-white/90 ring-black/5 ring-1 rounded-xl pt-2 pr-3 pb-2 pl-3 relative shadow-xl backdrop-blur items-center">
           <div className="flex -space-x-1.5 sm:-space-x-2">
-            <img alt="Client 1" className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" />
-            <img alt="Client 2" className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" />
-            <img alt="Client 3" className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" />
-            <img alt="Client 4" className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" />
+            <img alt="Client 1" width={32} height={32} className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" />
+            <img alt="Client 2" width={32} height={32} className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" />
+            <img alt="Client 3" width={32} height={32} className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" />
+            <img alt="Client 4" width={32} height={32} className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-white" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" />
           </div>
           <div className="text-xs">
             <p className="font-medium text-gray-900 font-geist">Trusted by merchants</p>

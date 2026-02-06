@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from uuid import UUID
 
@@ -28,6 +29,19 @@ logger = logging.getLogger(__name__)
 
 # Global pool reference
 _arq_pool: Optional[ArqRedis] = None
+
+
+def _utc_slot(interval_minutes: int) -> datetime:
+    """Return current UTC slot rounded down to interval minutes."""
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    minute = (now.minute // interval_minutes) * interval_minutes
+    return now.replace(minute=minute)
+
+
+def _slot_job_id(prefix: str, interval_minutes: int) -> str:
+    """Build deterministic job id for one scheduling slot."""
+    slot = _utc_slot(interval_minutes)
+    return f"{prefix}:{slot.strftime('%Y%m%d%H%M')}"
 
 
 def get_redis_settings() -> RedisSettings:
@@ -135,6 +149,90 @@ async def get_job_status(job_id: str) -> Dict[str, Any]:
         "status": status.name,
         "result": result,
     }
+
+
+async def enqueue_agent_evaluation_job() -> Dict[str, Any]:
+    """Enqueue agent evaluation to the worker.
+
+    WHAT:
+        Sends agent evaluation work to the worker queue so the scheduler
+        stays lightweight and doesn't block on heavy DB queries.
+
+    WHY:
+        Agent evaluation involves DB queries + condition evaluation + action
+        execution. Running this inline in the scheduler causes timing drift
+        for all other cron jobs.
+
+    Returns:
+        Dict with job_id and status
+    """
+    pool = await get_arq_pool()
+
+    job_id = _slot_job_id("worker_agent_evaluation", 15)
+
+    job = await pool.enqueue_job(
+        "worker_agent_evaluation",
+        _queue_name="arq:queue",
+        _job_id=job_id,
+    )
+
+    if job:
+        logger.info("[ARQ-ENQUEUE] Enqueued agent evaluation job %s", job.job_id)
+        return {"job_id": job.job_id, "status": "enqueued"}
+    else:
+        logger.debug("[ARQ-ENQUEUE] Agent evaluation job already queued for slot %s, skipping", job_id)
+        return {"job_id": None, "status": "skipped_duplicate"}
+
+
+async def enqueue_agent_check_job() -> Dict[str, Any]:
+    """Enqueue scheduled agent check to the worker.
+
+    WHAT:
+        Sends scheduled agent check work to the worker queue.
+
+    WHY:
+        This runs every minute. If it ran inline in the scheduler,
+        it would block all other cron jobs (including itself).
+        Enqueueing is <10ms vs potentially seconds of DB work.
+
+    Returns:
+        Dict with job_id and status
+    """
+    pool = await get_arq_pool()
+
+    job_id = _slot_job_id("worker_agent_check", 1)
+
+    job = await pool.enqueue_job(
+        "worker_agent_check",
+        _queue_name="arq:queue",
+        _job_id=job_id,
+    )
+
+    if job:
+        logger.info("[ARQ-ENQUEUE] Enqueued agent check job %s", job.job_id)
+        return {"job_id": job.job_id, "status": "enqueued"}
+    else:
+        logger.debug("[ARQ-ENQUEUE] Agent check job already queued for slot %s, skipping", job_id)
+        return {"job_id": None, "status": "skipped_duplicate"}
+
+
+async def enqueue_realtime_sync_dispatch_job() -> Dict[str, Any]:
+    """Enqueue realtime sync dispatcher to worker (15-min slot dedup)."""
+    pool = await get_arq_pool()
+    job_id = _slot_job_id("worker_realtime_sync_dispatch", 15)
+
+    job = await pool.enqueue_job(
+        "worker_realtime_sync_dispatch",
+        _queue_name="arq:queue",
+        _job_id=job_id,
+    )
+
+    if job:
+        logger.info("[ARQ-ENQUEUE] Enqueued realtime sync dispatcher job %s", job.job_id)
+        return {"job_id": job.job_id, "status": "enqueued"}
+    else:
+        logger.debug("[ARQ-ENQUEUE] Realtime sync dispatcher already queued for slot %s, skipping", job_id)
+        return {"job_id": None, "status": "skipped_duplicate"}
 
 
 def enqueue_sync_job_sync(
