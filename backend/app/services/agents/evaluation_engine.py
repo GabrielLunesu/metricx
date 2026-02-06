@@ -268,24 +268,42 @@ class AgentEvaluationEngine:
         schedule_config = agent.schedule_config or {}
         schedule_type = agent.schedule_type
 
-        # Get schedule parameters with defaults
-        target_hour = schedule_config.get("hour", 0)
-        target_minute = schedule_config.get("minute", 0)
-        tz_name = schedule_config.get("timezone", "UTC")
+        # Get schedule parameters with defaults (use `or` to handle None values)
+        target_hour = schedule_config.get("hour") if schedule_config.get("hour") is not None else 0
+        target_minute = schedule_config.get("minute") if schedule_config.get("minute") is not None else 0
+        tz_name = schedule_config.get("timezone") or "UTC"
+
+        logger.info(
+            f"Schedule check for agent {agent.id} ({agent.name}): "
+            f"config={schedule_config}, target={target_hour:02d}:{target_minute:02d} {tz_name}, "
+            f"type={schedule_type}"
+        )
 
         # Convert now to the agent's timezone for comparison
+        # Use zoneinfo (stdlib since Python 3.9) with pytz as fallback
         try:
-            import pytz
-            tz = pytz.timezone(tz_name)
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo(tz_name)
             local_now = now.astimezone(tz)
         except Exception:
-            # Fallback to UTC if timezone is invalid
-            local_now = now
+            try:
+                import pytz
+                tz = pytz.timezone(tz_name)
+                local_now = now.astimezone(tz)
+            except Exception as e:
+                logger.warning(f"Agent {agent.id}: timezone '{tz_name}' failed ({e}), using UTC")
+                local_now = now
 
         current_hour = local_now.hour
         current_minute = local_now.minute
         current_day_of_week = local_now.weekday()  # 0 = Monday
         current_day_of_month = local_now.day
+
+        logger.info(
+            f"Agent {agent.id}: local_now={local_now.isoformat()}, "
+            f"current={current_hour:02d}:{current_minute:02d}, "
+            f"target={target_hour:02d}:{target_minute:02d}"
+        )
 
         # Check if current time matches schedule
         # Allow a 5-minute window to account for cron timing
@@ -295,17 +313,24 @@ class AgentEvaluationEngine:
         )
 
         if not time_matches:
+            logger.info(
+                f"Agent {agent.id}: time mismatch - "
+                f"current={current_hour:02d}:{current_minute:02d} vs "
+                f"target={target_hour:02d}:{target_minute:02d}"
+            )
             return False
 
         # Check day constraints for weekly/monthly
         if schedule_type == "weekly":
-            target_day = schedule_config.get("day_of_week", 0)  # 0 = Monday
+            target_day = schedule_config.get("day_of_week") if schedule_config.get("day_of_week") is not None else 0
             if current_day_of_week != target_day:
+                logger.info(f"Agent {agent.id}: day_of_week mismatch - current={current_day_of_week} vs target={target_day}")
                 return False
 
         elif schedule_type == "monthly":
-            target_day = schedule_config.get("day_of_month", 1)
+            target_day = schedule_config.get("day_of_month") if schedule_config.get("day_of_month") is not None else 1
             if current_day_of_month != target_day:
+                logger.info(f"Agent {agent.id}: day_of_month mismatch - current={current_day_of_month} vs target={target_day}")
                 return False
 
         # Check if we already ran in this window
@@ -313,9 +338,10 @@ class AgentEvaluationEngine:
         if agent.last_scheduled_run_at:
             minutes_since_last_run = (now - agent.last_scheduled_run_at).total_seconds() / 60
             if minutes_since_last_run < 10:
-                logger.debug(f"Agent {agent.id} already ran {minutes_since_last_run:.1f} minutes ago")
+                logger.info(f"Agent {agent.id}: cooldown - ran {minutes_since_last_run:.1f} minutes ago")
                 return False
 
+        logger.info(f"Agent {agent.id}: schedule MATCHED, will evaluate")
         return True
 
     def _resolve_event_type(self, agent: Agent) -> str:
@@ -346,13 +372,20 @@ class AgentEvaluationEngine:
                 "end_dt": now_utc,
             }
 
+        # Use zoneinfo (stdlib since Python 3.9) with pytz as fallback
+        tz = None
         try:
-            import pytz
-            tz = pytz.timezone(tz_name)
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo(tz_name)
             local_now = now_utc.astimezone(tz)
         except Exception:
-            tz = None
-            local_now = now_utc
+            try:
+                import pytz
+                tz = pytz.timezone(tz_name)
+                local_now = now_utc.astimezone(tz)
+            except Exception:
+                tz = None
+                local_now = now_utc
 
         today = local_now.date()
         if date_range_type == "today":
@@ -373,8 +406,8 @@ class AgentEvaluationEngine:
             }
 
         if tz:
-            local_start = tz.localize(datetime.combine(start_date, dt_time.min))
-            local_end = tz.localize(datetime.combine(end_date, dt_time.max))
+            local_start = datetime.combine(start_date, dt_time.min, tzinfo=tz)
+            local_end = datetime.combine(end_date, dt_time.max, tzinfo=tz)
             start_dt = local_start.astimezone(timezone.utc)
             end_dt = local_end.astimezone(timezone.utc)
         else:
@@ -503,7 +536,7 @@ class AgentEvaluationEngine:
 
         # Build aggregate entity name for display
         scope_config = agent.scope_config or {}
-        provider = scope_config.get("provider", "all").title()
+        provider = (scope_config.get("provider") or "all").title()
         aggregate_name = f"{provider} Account Total ({len(entities)} campaigns)"
 
         # Initialize result
@@ -651,34 +684,88 @@ class AgentEvaluationEngine:
         entity_ids = [e.id for e in entities]
         window = self._compute_date_window(date_range_type, schedule_timezone)
 
-        query = select(
-            func.sum(MetricSnapshot.spend).label("spend"),
-            func.sum(MetricSnapshot.revenue).label("revenue"),
-            func.sum(MetricSnapshot.profit).label("profit"),
-            func.sum(MetricSnapshot.clicks).label("clicks"),
-            func.sum(MetricSnapshot.impressions).label("impressions"),
-            func.sum(MetricSnapshot.conversions).label("conversions"),
-        ).where(MetricSnapshot.entity_id.in_(entity_ids))
-
+        # Each MetricSnapshot row contains cumulative daily metrics from the ad platform.
+        # Multiple rows exist per entity per date (one per 15-min sync).
+        # We must take the LATEST snapshot per entity per date, then sum across entities.
         if window["mode"] == "metrics_date":
-            query = query.where(
-                or_(
+            # Subquery: latest captured_at per entity per metrics_date
+            latest = (
+                select(
+                    MetricSnapshot.entity_id,
+                    MetricSnapshot.metrics_date,
+                    func.max(MetricSnapshot.captured_at).label("max_captured_at"),
+                )
+                .where(MetricSnapshot.entity_id.in_(entity_ids))
+                .where(
+                    or_(
+                        and_(
+                            MetricSnapshot.metrics_date >= window["start_date"],
+                            MetricSnapshot.metrics_date <= window["end_date"],
+                        ),
+                        and_(
+                            MetricSnapshot.metrics_date.is_(None),
+                            MetricSnapshot.captured_at >= window["start_dt"],
+                            MetricSnapshot.captured_at <= window["end_dt"],
+                        ),
+                    )
+                )
+                .group_by(MetricSnapshot.entity_id, MetricSnapshot.metrics_date)
+                .subquery("latest")
+            )
+
+            query = (
+                select(
+                    func.sum(MetricSnapshot.spend).label("spend"),
+                    func.sum(MetricSnapshot.revenue).label("revenue"),
+                    func.sum(MetricSnapshot.profit).label("profit"),
+                    func.sum(MetricSnapshot.clicks).label("clicks"),
+                    func.sum(MetricSnapshot.impressions).label("impressions"),
+                    func.sum(MetricSnapshot.conversions).label("conversions"),
+                )
+                .join(
+                    latest,
                     and_(
-                        MetricSnapshot.metrics_date >= window["start_date"],
-                        MetricSnapshot.metrics_date <= window["end_date"],
-                    ),
-                    and_(
-                        MetricSnapshot.metrics_date.is_(None),
-                        MetricSnapshot.captured_at >= window["start_dt"],
-                        MetricSnapshot.captured_at <= window["end_dt"],
+                        MetricSnapshot.entity_id == latest.c.entity_id,
+                        MetricSnapshot.captured_at == latest.c.max_captured_at,
+                        or_(
+                            MetricSnapshot.metrics_date == latest.c.metrics_date,
+                            and_(
+                                MetricSnapshot.metrics_date.is_(None),
+                                latest.c.metrics_date.is_(None),
+                            ),
+                        ),
                     ),
                 )
             )
         else:
-            query = query.where(
-                and_(
-                    MetricSnapshot.captured_at >= window["start_dt"],
-                    MetricSnapshot.captured_at <= window["end_dt"],
+            # For captured_at mode (rolling_24h), get latest per entity
+            latest = (
+                select(
+                    MetricSnapshot.entity_id,
+                    func.max(MetricSnapshot.captured_at).label("max_captured_at"),
+                )
+                .where(MetricSnapshot.entity_id.in_(entity_ids))
+                .where(MetricSnapshot.captured_at >= window["start_dt"])
+                .where(MetricSnapshot.captured_at <= window["end_dt"])
+                .group_by(MetricSnapshot.entity_id)
+                .subquery("latest")
+            )
+
+            query = (
+                select(
+                    func.sum(MetricSnapshot.spend).label("spend"),
+                    func.sum(MetricSnapshot.revenue).label("revenue"),
+                    func.sum(MetricSnapshot.profit).label("profit"),
+                    func.sum(MetricSnapshot.clicks).label("clicks"),
+                    func.sum(MetricSnapshot.impressions).label("impressions"),
+                    func.sum(MetricSnapshot.conversions).label("conversions"),
+                )
+                .join(
+                    latest,
+                    and_(
+                        MetricSnapshot.entity_id == latest.c.entity_id,
+                        MetricSnapshot.captured_at == latest.c.max_captured_at,
+                    ),
                 )
             )
 
@@ -1211,35 +1298,74 @@ class AgentEvaluationEngine:
         try:
             window = self._compute_date_window(date_range_type, schedule_timezone)
 
-            query = select(
-                func.sum(MetricSnapshot.spend).label("spend"),
-                func.sum(MetricSnapshot.revenue).label("revenue"),
-                func.sum(MetricSnapshot.profit).label("profit"),
-                func.sum(MetricSnapshot.clicks).label("clicks"),
-                func.sum(MetricSnapshot.impressions).label("impressions"),
-                func.sum(MetricSnapshot.conversions).label("conversions"),
-            ).where(MetricSnapshot.entity_id == entity.id)
-
+            # Each MetricSnapshot row contains cumulative daily metrics.
+            # Multiple rows exist per date (one per 15-min sync).
+            # We must take the LATEST snapshot per date, then sum across dates.
             if window["mode"] == "metrics_date":
-                query = query.where(
-                    or_(
+                # Subquery: latest captured_at per metrics_date for this entity
+                latest = (
+                    select(
+                        MetricSnapshot.metrics_date,
+                        func.max(MetricSnapshot.captured_at).label("max_captured_at"),
+                    )
+                    .where(MetricSnapshot.entity_id == entity.id)
+                    .where(
+                        or_(
+                            and_(
+                                MetricSnapshot.metrics_date >= window["start_date"],
+                                MetricSnapshot.metrics_date <= window["end_date"],
+                            ),
+                            and_(
+                                MetricSnapshot.metrics_date.is_(None),
+                                MetricSnapshot.captured_at >= window["start_dt"],
+                                MetricSnapshot.captured_at <= window["end_dt"],
+                            ),
+                        )
+                    )
+                    .group_by(MetricSnapshot.metrics_date)
+                    .subquery("latest")
+                )
+
+                query = (
+                    select(
+                        func.sum(MetricSnapshot.spend).label("spend"),
+                        func.sum(MetricSnapshot.revenue).label("revenue"),
+                        func.sum(MetricSnapshot.profit).label("profit"),
+                        func.sum(MetricSnapshot.clicks).label("clicks"),
+                        func.sum(MetricSnapshot.impressions).label("impressions"),
+                        func.sum(MetricSnapshot.conversions).label("conversions"),
+                    )
+                    .where(MetricSnapshot.entity_id == entity.id)
+                    .join(
+                        latest,
                         and_(
-                            MetricSnapshot.metrics_date >= window["start_date"],
-                            MetricSnapshot.metrics_date <= window["end_date"],
-                        ),
-                        and_(
-                            MetricSnapshot.metrics_date.is_(None),
-                            MetricSnapshot.captured_at >= window["start_dt"],
-                            MetricSnapshot.captured_at <= window["end_dt"],
+                            MetricSnapshot.captured_at == latest.c.max_captured_at,
+                            or_(
+                                MetricSnapshot.metrics_date == latest.c.metrics_date,
+                                and_(
+                                    MetricSnapshot.metrics_date.is_(None),
+                                    latest.c.metrics_date.is_(None),
+                                ),
+                            ),
                         ),
                     )
                 )
             else:
-                query = query.where(
-                    and_(
-                        MetricSnapshot.captured_at >= window["start_dt"],
-                        MetricSnapshot.captured_at <= window["end_dt"],
+                # For captured_at mode (rolling_24h), get only the latest snapshot
+                query = (
+                    select(
+                        MetricSnapshot.spend.label("spend"),
+                        MetricSnapshot.revenue.label("revenue"),
+                        MetricSnapshot.profit.label("profit"),
+                        MetricSnapshot.clicks.label("clicks"),
+                        MetricSnapshot.impressions.label("impressions"),
+                        MetricSnapshot.conversions.label("conversions"),
                     )
+                    .where(MetricSnapshot.entity_id == entity.id)
+                    .where(MetricSnapshot.captured_at >= window["start_dt"])
+                    .where(MetricSnapshot.captured_at <= window["end_dt"])
+                    .order_by(MetricSnapshot.captured_at.desc())
+                    .limit(1)
                 )
 
             result = self.db.execute(query).first()

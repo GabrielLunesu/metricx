@@ -26,6 +26,7 @@ from ..models import (
     RoleEnum,
     InviteStatusEnum,
     BillingStatusEnum,
+    BillingPlanEnum,
 )
 from ..services.workspace_factory import create_workspace_with_trial, generate_workspace_name
 
