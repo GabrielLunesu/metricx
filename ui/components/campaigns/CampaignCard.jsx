@@ -253,28 +253,32 @@ export default function CampaignCard({
           </div>
 
           {/* Spend */}
-          <div className="md:w-28 flex flex-col items-end">
+          <div className="md:w-28 flex flex-col items-start md:items-end">
+            <span className="text-[10px] font-medium text-neutral-400 uppercase md:hidden">Spend</span>
             <span className={`text-sm font-medium tabular-nums ${isPaused ? "text-neutral-500" : "text-neutral-900"}`}>
               {formatCurrency(campaign.spendRaw)}
             </span>
           </div>
 
           {/* Revenue */}
-          <div className="md:w-28 flex flex-col items-end">
+          <div className="md:w-28 flex flex-col items-start md:items-end">
+            <span className="text-[10px] font-medium text-neutral-400 uppercase md:hidden">Revenue</span>
             <span className={`text-sm font-medium tabular-nums ${isPaused ? "text-neutral-500" : "text-neutral-900"}`}>
               {formatCurrency(campaign.revenueRaw)}
             </span>
           </div>
 
           {/* ROAS */}
-          <div className="md:w-24 flex flex-col items-end">
+          <div className="md:w-24 flex flex-col items-start md:items-end">
+            <span className="text-[10px] font-medium text-neutral-400 uppercase md:hidden">ROAS</span>
             <span className={`text-sm font-medium tabular-nums ${getRoasColorClass(campaign.roasRaw)}`}>
               {formatRoas(campaign.roasRaw)}
             </span>
           </div>
 
           {/* Conversions */}
-          <div className="md:w-24 flex flex-col items-end pr-2">
+          <div className="md:w-24 flex flex-col items-start md:items-end pr-2">
+            <span className="text-[10px] font-medium text-neutral-400 uppercase md:hidden">Conv.</span>
             <span className={`text-sm font-medium tabular-nums ${isPaused ? "text-neutral-500" : "text-neutral-900"}`}>
               {formatConversions(campaign.conversionsRaw)}
             </span>

@@ -28,13 +28,12 @@
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Users, ChevronDown, Bot, Menu, X } from "lucide-react";
+import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Users, ChevronDown, Bot } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../components/ui/popover";
 import { Button } from "../../../../components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "../../../../components/ui/sheet";
 import { fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
 import { getBillingStatus } from "../../../../lib/workspace";
 import NavItem from "./NavItem";
@@ -314,104 +313,62 @@ export default function Sidebar() {
 }
 
 /**
- * MobileNav - Floating action button with bottom sheet navigation
+ * MobileNav - Horizontally scrollable bottom icon dock
  *
- * WHAT: Single FAB that opens a sheet with all navigation items
- * WHY: Frees up screen real estate on mobile vs a full bottom dock
+ * WHAT: Fixed bottom bar with scrollable icon buttons
+ * WHY: Native-feeling navigation always visible on mobile, scrollable for nice UX
  */
-function MobileNav({ pathname, navItems, billingTier, onLockedClick, workspace }) {
-    const [open, setOpen] = useState(false);
+function MobileNav({ pathname, navItems, billingTier, onLockedClick }) {
     const router = useRouter();
 
-    // Close sheet on route change
-    useEffect(() => {
-        setOpen(false);
-    }, [pathname]);
-
-    // All navigation items for the sheet menu
-    const mobileNavItems = [
+    // All navigation items for the dock
+    const dockItems = [
         ...navItems,
         { href: "/settings", label: "Settings", icon: Settings, active: pathname === "/settings", requiresPaid: false },
     ];
 
-    const handleNavClick = useCallback((item) => {
+    const handleNavClick = (item) => {
         const isLocked = item.requiresPaid && billingTier === 'free';
         if (isLocked) {
-            setOpen(false);
             onLockedClick(item.label);
             return;
         }
         router.push(item.href);
-        setOpen(false);
-    }, [billingTier, onLockedClick, router]);
-
-    // Find active nav label for the FAB indicator
-    const activeItem = mobileNavItems.find(item => item.active);
+    };
 
     return (
-        <div className="md:hidden">
-            <Sheet open={open} onOpenChange={setOpen}>
-                {/* FAB Button - fixed bottom right */}
-                <SheetTrigger asChild>
-                    <button
-                        className="fixed bottom-5 right-5 z-[60] w-14 h-14 rounded-full bg-neutral-900 text-white shadow-xl shadow-neutral-900/30 flex items-center justify-center active:scale-95 transition-all duration-200"
-                        aria-label="Open navigation"
-                    >
-                        {open ? (
-                            <X className="w-5 h-5" />
-                        ) : (
-                            <Menu className="w-5 h-5" />
-                        )}
-                    </button>
-                </SheetTrigger>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[70] mobile-dock-enter safe-area-bottom">
+            <div className="bg-white border-t border-neutral-200/60 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center overflow-x-auto no-scrollbar px-3 h-14 gap-1">
+                    {dockItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = item.active;
+                        const isLocked = item.requiresPaid && billingTier === 'free';
 
-                {/* Sheet Content - slides up from bottom */}
-                <SheetContent side="bottom" showCloseButton={false} className="rounded-t-3xl px-6 pb-10 pt-4 z-[70] bg-white" aria-describedby={undefined}>
-                    {/* Drag handle */}
-                    <div className="w-10 h-1 bg-neutral-200 rounded-full mx-auto mb-6" />
-
-                    {/* Workspace indicator */}
-                    {workspace?.name && (
-                        <div className="flex items-center gap-2 mb-5 px-1">
-                            <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-700 text-xs font-semibold border border-neutral-200/50">
-                                {workspace.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="text-sm text-neutral-500">{workspace.name}</span>
-                        </div>
-                    )}
-
-                    {/* Navigation Grid */}
-                    <nav className="grid grid-cols-3 gap-3">
-                        {mobileNavItems.map((item) => {
-                            const Icon = item.icon;
-                            const isLocked = item.requiresPaid && billingTier === 'free';
-                            const isActive = item.active;
-
-                            return (
-                                <button
-                                    key={item.href}
-                                    onClick={() => handleNavClick(item)}
-                                    className={`
-                                        flex flex-col items-center gap-2 py-4 px-2 rounded-2xl transition-all duration-200 relative
-                                        ${isActive
-                                            ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20'
-                                            : 'bg-neutral-50 text-neutral-600 active:bg-neutral-100'
-                                        }
-                                    `}
-                                >
-                                    <Icon className="w-5 h-5" />
-                                    <span className="text-[11px] font-medium leading-none">{item.label}</span>
-                                    {isLocked && (
-                                        <span className="absolute top-2 right-2 text-[8px] font-bold text-amber-500 bg-amber-50 px-1 rounded">
-                                            PRO
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </nav>
-                </SheetContent>
-            </Sheet>
-        </div>
+                        return (
+                            <button
+                                key={item.href}
+                                onClick={() => handleNavClick(item)}
+                                aria-label={item.label}
+                                className="relative flex-shrink-0 flex items-center justify-center w-12 h-10 transition-transform duration-150 active:scale-90"
+                            >
+                                <div className={`
+                                    flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-150
+                                    ${isActive
+                                        ? 'bg-neutral-900 text-white'
+                                        : 'text-neutral-400'
+                                    }
+                                `}>
+                                    <Icon className="w-[18px] h-[18px]" />
+                                </div>
+                                {isLocked && (
+                                    <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        </nav>
     );
 }

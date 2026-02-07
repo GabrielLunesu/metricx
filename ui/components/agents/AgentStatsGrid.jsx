@@ -67,29 +67,29 @@ function StatItem({ icon: Icon, label, value, variant = 'default', iconBg, iconC
   return (
     <div
       className={cn(
-        'flex flex-col justify-center p-4 rounded-xl h-full',
+        'flex flex-col justify-center p-3 md:p-4 rounded-xl h-full',
         'bg-gradient-to-br from-white to-neutral-50/80',
         'border border-neutral-200/40',
         'transition-all duration-200',
         'hover:shadow-sm hover:border-neutral-200/60'
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 md:gap-3">
         <div
           className={cn(
-            'flex items-center justify-center w-10 h-10 rounded-xl',
+            'flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex-shrink-0',
             iconBg || styles.bg
           )}
         >
-          <Icon className={cn('h-5 w-5', iconColor || styles.icon)} />
+          <Icon className={cn('h-4 w-4 md:h-5 md:w-5', iconColor || styles.icon)} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-neutral-500 uppercase tracking-wide font-medium truncate">
+          <p className="text-[10px] md:text-[11px] text-neutral-500 uppercase tracking-wide font-medium leading-tight">
             {label}
           </p>
           <p
             className={cn(
-              'text-2xl font-bold tabular-nums',
+              'text-xl md:text-2xl font-bold tabular-nums',
               variant === 'error' && value > 0 ? 'text-red-600' : 'text-neutral-900'
             )}
           >

@@ -144,12 +144,12 @@ function KpiCard({ label, value, delta, format, currency, inverse, loading }) {
       </div>
 
       {/* Value */}
-      <div className="text-xl font-semibold text-neutral-900 tracking-tight tabular-nums">
+      <div className="text-lg md:text-xl font-semibold text-neutral-900 tracking-tight tabular-nums">
         {formatValue(value, format, currency)}
       </div>
 
       {/* Delta */}
-      <div className="flex items-center gap-1 mt-2">
+      <div className="flex items-center gap-1 mt-1 md:mt-2">
         {deltaInfo ? (
           <>
             {deltaInfo.isPositive ? (
@@ -221,7 +221,7 @@ export default function AnalyticsKpiGrid({
   };
 
   return (
-    <section className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-4">
+    <section className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2.5 md:gap-4">
       {KPIS.map((kpi) => (
         <KpiCard
           key={kpi.key}

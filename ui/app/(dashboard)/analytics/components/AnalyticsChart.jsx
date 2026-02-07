@@ -165,9 +165,9 @@ export default function AnalyticsChart({
   }
 
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-4 md:gap-6">
       {/* Header: Metric Tabs + Legend */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         {/* Metric Tabs */}
         <div className="metric-tabs">
           {METRIC_TABS.map((tab) => (
@@ -187,19 +187,19 @@ export default function AnalyticsChart({
         <div className="chart-legend">
           <div className="chart-legend-item">
             <span className="chart-legend-line" />
-            <span className="text-xs font-medium text-neutral-600">Current</span>
+            <span className="text-[11px] md:text-xs font-medium text-neutral-600">Current</span>
           </div>
           {compareEnabled && (
             <div className="chart-legend-item">
               <span className="chart-legend-line dashed" />
-              <span className="text-xs font-medium text-neutral-400">Previous</span>
+              <span className="text-[11px] md:text-xs font-medium text-neutral-400">Previous</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Chart Area */}
-      <div className="w-full h-80 relative">
+      <div className="w-full h-64 md:h-80 relative">
         {!hasData ? (
           <div className="h-full flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
@@ -248,8 +248,10 @@ export default function AnalyticsChart({
                 dataKey="date"
                 tickLine={false}
                 axisLine={{ stroke: "#f5f5f5" }}
-                tickMargin={12}
+                tickMargin={8}
                 tick={{ fontSize: 10, fill: "#a3a3a3" }}
+                interval="preserveStartEnd"
+                minTickGap={30}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleDateString("en-US", {
@@ -263,8 +265,8 @@ export default function AnalyticsChart({
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tickMargin={8}
-                width={55}
+                tickMargin={4}
+                width={45}
                 tick={{ fontSize: 10, fill: "#a3a3a3" }}
                 tickFormatter={(value) =>
                   formatValue(value, currentMetric.format, currency, true)

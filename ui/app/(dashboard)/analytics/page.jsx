@@ -573,7 +573,7 @@ export default function AnalyticsPage() {
       />
 
       {/* Main Content */}
-      <main className="space-y-6">
+      <main className="space-y-4 md:space-y-6 pb-16 md:pb-0">
         {/* KPI Grid */}
         <AnalyticsKpiGrid
           data={kpiData}
@@ -582,7 +582,7 @@ export default function AnalyticsPage() {
         />
 
         {/* Chart Section */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-4">
+        <div className="bg-white border border-neutral-200 rounded-xl p-3 md:p-4">
           <AnalyticsChart
             data={displayChartData}
             compareData={displayCompareData}

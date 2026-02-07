@@ -154,7 +154,7 @@ export default function DashboardPage() {
   const showSkeleton = dataLoading || !dashboardData;
 
   return (
-    <div className="pb-24 md:pb-8">
+    <div className="pb-16 md:pb-8">
       {/* Hero Header - Centered */}
       <HeroHeader
         user={user}

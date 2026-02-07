@@ -353,7 +353,7 @@ export default function FinancePage() {
       />
 
       {/* Main Content */}
-      <div className="space-y-6 max-w-[1600px] mx-auto">
+      <div className="space-y-4 md:space-y-6 max-w-[1600px] mx-auto pb-16 md:pb-0">
         {/* KPI Cards */}
         <FinanceKpiCards
           summary={viewModel?.summary}
@@ -362,7 +362,7 @@ export default function FinancePage() {
         />
 
         {/* Middle Section: P&L + Spend Breakdown */}
-        <section className="grid grid-cols-12 gap-6">
+        <section className="grid grid-cols-12 gap-4 md:gap-6">
           {/* P&L Table */}
           <div className="col-span-12 xl:col-span-7">
             <FinancePLTable
@@ -389,7 +389,7 @@ export default function FinancePage() {
         </section>
 
         {/* Bottom Section: Chart + Copilot */}
-        <section className="grid grid-cols-12 gap-6">
+        <section className="grid grid-cols-12 gap-4 md:gap-6">
           {/* Revenue Chart */}
           <div className="col-span-12 xl:col-span-8">
             <FinanceRevenueChart

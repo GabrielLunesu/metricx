@@ -18,6 +18,7 @@
  */
 
 import * as React from "react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -70,6 +71,7 @@ export default function FinanceHeader({
   const [open, setOpen] = React.useState(false);
   const [localRange, setLocalRange] = React.useState(dateRange);
   const [localPreset, setLocalPreset] = React.useState('this_month');
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   // Detect current preset based on dateRange
   React.useEffect(() => {
@@ -154,10 +156,10 @@ export default function FinanceHeader({
     <header className="pb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
       {/* Left: Title + Subtitle */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-neutral-900">
           Finance & P&L
         </h1>
-        <p className="text-sm text-neutral-500 font-medium">
+        <p className="text-xs md:text-sm text-neutral-500 font-medium">
           See how your ad spend turns into profit.
         </p>
       </div>
@@ -214,7 +216,7 @@ export default function FinanceHeader({
               mode="range"
               selected={localRange}
               onSelect={handleDateSelect}
-              numberOfMonths={2}
+              numberOfMonths={isDesktop ? 2 : 1}
               disabled={{ after: new Date() }}
               defaultMonth={localRange?.from || subMonths(new Date(), 1)}
             />

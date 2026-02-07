@@ -675,6 +675,20 @@ body {
   display: none;
 }
 
+/* iOS safe area for bottom dock */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile dock slide-up entrance */
+@keyframes dock-enter {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.mobile-dock-enter {
+  animation: dock-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Snap scroll for mobile carousels */
 .snap-x {
   scroll-snap-type: x mandatory;
@@ -739,9 +753,15 @@ body {
   background: white;
   border: 1px solid #e5e5e5;
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   transition: box-shadow 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .analytics-kpi-card {
+    padding: 16px;
+  }
 }
 
 .analytics-kpi-card:hover {
@@ -838,15 +858,15 @@ body {
 /* Metric tabs (pill style) */
 .metric-tabs {
   display: inline-flex;
-  padding: 4px;
+  padding: 3px;
   background: #f5f5f5;
   border-radius: 8px;
-  gap: 4px;
+  gap: 2px;
 }
 
 .metric-tab {
-  padding: 6px 16px;
-  font-size: 13px;
+  padding: 5px 10px;
+  font-size: 12px;
   font-weight: 500;
   color: #737373;
   border-radius: 6px;
@@ -867,19 +887,30 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
+@media (min-width: 768px) {
+  .metric-tabs {
+    padding: 4px;
+    gap: 4px;
+  }
+  .metric-tab {
+    padding: 6px 16px;
+    font-size: 13px;
+  }
+}
+
 /* Chart legend */
 .chart-legend {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 12px;
+  gap: 12px;
+  font-size: 11px;
   color: #737373;
 }
 
 .chart-legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chart-legend-line {
@@ -891,6 +922,16 @@ body {
 .chart-legend-line.dashed {
   background: linear-gradient(to right, #a3a3a3 50%, transparent 50%);
   background-size: 6px 2px;
+}
+
+@media (min-width: 768px) {
+  .chart-legend {
+    gap: 16px;
+    font-size: 12px;
+  }
+  .chart-legend-item {
+    gap: 8px;
+  }
 }
 
 /* Filter badge */

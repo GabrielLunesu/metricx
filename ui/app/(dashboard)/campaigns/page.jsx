@@ -51,7 +51,7 @@ function getDefaultDateRange() {
  */
 function TableHeader() {
   return (
-    <div className="flex items-center px-4 py-3 mb-2 text-xs font-medium text-neutral-400 uppercase tracking-wider border-b border-neutral-100 sticky top-0 bg-white z-20">
+    <div className="hidden md:flex items-center px-4 py-3 mb-2 text-xs font-medium text-neutral-400 uppercase tracking-wider border-b border-neutral-100 sticky top-0 bg-white z-20">
       <div className="flex-1 pl-2">Campaign</div>
       <div className="w-24 text-center">Status</div>
       <div className="w-28 text-right">Spend</div>
@@ -315,13 +315,13 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 pb-16 md:pb-0">
       {/* Header */}
-      <header className="flex flex-col gap-8">
+      <header className="flex flex-col gap-4 md:gap-8">
         {/* Title Row */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Campaigns</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-neutral-900">Campaigns</h1>
             {dataLoading && campaigns.length > 0 && (
               <span className="text-xs text-neutral-400 mt-1">Syncing...</span>
             )}

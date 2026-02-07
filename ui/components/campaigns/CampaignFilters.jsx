@@ -13,6 +13,7 @@
 "use client";
 
 import * as React from "react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { format, startOfDay, endOfDay, subDays, isSameDay } from "date-fns";
 import { Calendar as CalendarIcon, ChevronDown, Search, LayoutTemplate } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -108,6 +109,7 @@ export default function CampaignFilters({
   const [dateOpen, setDateOpen] = React.useState(false);
   const [localRange, setLocalRange] = React.useState(dateRange);
   const [localPreset, setLocalPreset] = React.useState("last_7_days");
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   // Platform dropdown state
   const [platformOpen, setPlatformOpen] = React.useState(false);
@@ -305,7 +307,7 @@ export default function CampaignFilters({
                 mode="range"
                 selected={localRange}
                 onSelect={handleDateSelect}
-                numberOfMonths={2}
+                numberOfMonths={isDesktop ? 2 : 1}
                 disabled={{ after: new Date() }}
                 defaultMonth={localRange?.from || subDays(new Date(), 30)}
               />
