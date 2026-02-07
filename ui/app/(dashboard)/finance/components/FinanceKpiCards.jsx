@@ -61,22 +61,22 @@ function KpiCard({ label, value, delta, isGoodWhenUp = true, loading }) {
 
   if (loading) {
     return (
-      <div className="p-5 border border-neutral-200 bg-white rounded-xl">
-        <div className="h-3 w-24 bg-neutral-100 rounded animate-pulse mb-3" />
-        <div className="h-7 w-32 bg-neutral-100 rounded animate-pulse mb-3" />
-        <div className="h-3 w-20 bg-neutral-100 rounded animate-pulse" />
+      <div className="p-3 md:p-5 border border-neutral-200 bg-white rounded-xl">
+        <div className="h-3 w-16 md:w-24 bg-neutral-100 rounded animate-pulse mb-2 md:mb-3" />
+        <div className="h-6 md:h-7 w-24 md:w-32 bg-neutral-100 rounded animate-pulse mb-2 md:mb-3" />
+        <div className="h-3 w-16 md:w-20 bg-neutral-100 rounded animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="p-5 border border-neutral-200 bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+    <div className="p-3 md:p-5 border border-neutral-200 bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-[0_2px_4px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center justify-between mb-1 md:mb-2">
+        <span className="text-[10px] md:text-xs font-medium text-neutral-500 uppercase tracking-wider">
           {label}
         </span>
       </div>
-      <div className="text-2xl font-semibold text-neutral-900 tracking-tight">
+      <div className="text-lg md:text-2xl font-semibold text-neutral-900 tracking-tight">
         {value}
       </div>
       {deltaValue && (
@@ -125,7 +125,7 @@ export default function FinanceKpiCards({
     : null;
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
       <KpiCard
         label="Total Revenue"
         value={formatCurrency(totalRevenue, currency)}

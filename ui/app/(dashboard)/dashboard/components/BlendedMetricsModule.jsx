@@ -105,38 +105,38 @@ export default function BlendedMetricsModule({
   // Loading state
   if (loading || !data) {
     return (
-      <div className="bg-white/40 glass rounded-[32px] border border-white/60 p-10 animate-pulse">
-        <div className="flex items-center justify-between mb-12">
+      <div className="bg-white/40 glass rounded-2xl md:rounded-[32px] border border-white/60 p-5 md:p-10 animate-pulse">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 md:mb-12">
           <div className="h-6 w-48 bg-neutral-200/50 rounded-lg"></div>
           <div className="flex gap-2">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-8 w-20 bg-neutral-200/50 rounded-lg"></div>
+              <div key={i} className="h-8 w-16 md:w-20 bg-neutral-200/50 rounded-lg"></div>
             ))}
           </div>
         </div>
-        <div className="h-64 lg:h-80 bg-neutral-200/30 rounded-2xl"></div>
+        <div className="h-56 md:h-64 lg:h-80 bg-neutral-200/30 rounded-2xl"></div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white/40 glass rounded-[32px] border border-white/60 p-10">
+    <div className="bg-white/40 glass rounded-2xl md:rounded-[32px] border border-white/60 p-5 md:p-10">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6 md:mb-12">
         <div>
-          <h2 className="text-lg font-medium text-neutral-900 tracking-tight">
+          <h2 className="text-base md:text-lg font-medium text-neutral-900 tracking-tight">
             Performance Overview
           </h2>
         </div>
 
-        {/* Metric Tabs */}
-        <div className="flex items-center gap-2 bg-neutral-100/50 p-1 rounded-xl">
+        {/* Metric Tabs - scrollable on mobile */}
+        <div className="flex items-center gap-1.5 md:gap-2 bg-neutral-100/50 p-1 rounded-xl overflow-x-auto no-scrollbar">
           {METRICS.map((metric) => (
             <button
               key={metric.key}
               onClick={() => onMetricChange?.(metric.key)}
               className={`
-                px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200
+                px-3 md:px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 whitespace-nowrap
                 ${selectedMetric === metric.key
                   ? 'bg-white text-neutral-900 shadow-sm'
                   : 'text-neutral-400 hover:text-neutral-600'
@@ -150,7 +150,7 @@ export default function BlendedMetricsModule({
       </div>
 
       {/* Chart */}
-      <div className="h-64 lg:h-80">
+      <div className="h-56 md:h-64 lg:h-80">
         {/* Intraday messaging */}
         {isSingleDay && !isIntraday && (
           <p className="text-[10px] text-neutral-400 mb-2">

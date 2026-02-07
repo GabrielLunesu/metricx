@@ -244,16 +244,16 @@ export default function AgentsPage() {
   }
 
   return (
-    <div className="min-h-screen pb-12 p-4 sm:p-6">
+    <div className="min-h-screen pb-16 md:pb-12 p-4 sm:p-6">
       {/* Header with Create button */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">Agents</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
+          <h1 className="text-xl md:text-2xl font-semibold text-neutral-900">Agents</h1>
+          <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
             Autonomous monitoring that watches, learns, and acts on your behalf
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <Button
             variant="outline"
             size="icon"
@@ -273,23 +273,23 @@ export default function AgentsPage() {
       </div>
 
       {/* Top Row: Stats + Notifications side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
         {/* Stats Card */}
         <Card className="bg-white/60 backdrop-blur-sm border-neutral-200/40 shadow-sm">
-          <CardHeader className="pb-3 pt-4 px-5">
-            <CardTitle className="text-sm font-semibold text-neutral-900">
+          <CardHeader className="pb-2 pt-3 md:pt-4 px-3 md:px-5">
+            <CardTitle className="text-xs md:text-sm font-semibold text-neutral-900">
               Overview
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5 pt-0 h-[calc(100%-56px)]">
+          <CardContent className="px-3 md:px-5 pb-3 md:pb-5 pt-0">
             <AgentStatsGrid stats={stats} isLoading={statsLoading} />
           </CardContent>
         </Card>
 
         {/* Notifications Card */}
         <Card className="bg-white/60 backdrop-blur-sm border-neutral-200/40 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-5">
-            <CardTitle className="text-sm font-semibold text-neutral-900">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3 md:pt-4 px-3 md:px-5">
+            <CardTitle className="text-xs md:text-sm font-semibold text-neutral-900">
               Activity Feed
             </CardTitle>
             <Button
@@ -301,11 +301,11 @@ export default function AgentsPage() {
               <Maximize2 className="h-3.5 w-3.5" />
             </Button>
           </CardHeader>
-          <CardContent className="px-5 pb-5 pt-0">
+          <CardContent className="px-3 md:px-5 pb-3 md:pb-5 pt-0">
             {workspaceId && (
               <NotificationFeed
                 workspaceId={workspaceId}
-                maxHeight={180}
+                maxHeight={160}
               />
             )}
           </CardContent>
@@ -314,53 +314,51 @@ export default function AgentsPage() {
 
       {/* Bottom Row: Agents - Full Width */}
       <Card className="bg-white/40 glass border-white/60">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base font-semibold text-neutral-900">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 md:pb-3 px-3 md:px-6 pt-3 md:pt-5">
+          <CardTitle className="text-sm md:text-base font-semibold text-neutral-900">
             Agents
           </CardTitle>
-          <span className="text-sm text-neutral-500">
+          <span className="text-xs text-neutral-500">
             {filteredAgents.length} {filteredAgents.length === 1 ? 'agent' : 'agents'}
           </span>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 md:px-6 pb-3 md:pb-6">
           {/* Search & Filters */}
           {(agents.length > 0 || hasActiveFilters) && (
-            <div className="mb-6">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                {/* Search Input */}
-                <div className="relative flex-1">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Search className="w-4 h-4 text-neutral-400" />
-                  </div>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search agents..."
-                    className="w-full pl-11 pr-4 py-2.5 bg-white/70 hover:bg-white/90 focus:bg-white rounded-xl border border-neutral-200/60 hover:border-neutral-300/60 focus:border-neutral-300 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none transition-all duration-200"
-                  />
+            <div className="mb-4 md:mb-6">
+              {/* Search Input */}
+              <div className="relative mb-3">
+                <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Search className="w-4 h-4 text-neutral-400" />
                 </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search agents..."
+                  className="w-full pl-10 md:pl-11 pr-4 py-2 md:py-2.5 bg-white/70 hover:bg-white/90 focus:bg-white rounded-xl border border-neutral-200/60 hover:border-neutral-300/60 focus:border-neutral-300 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none transition-all duration-200"
+                />
+              </div>
 
-                {/* Status Filters */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {['all', 'active', 'paused', 'error'].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => setStatusFilter(status === 'all' ? null : status)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${(status === 'all' && statusFilter === null) || statusFilter === status
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'bg-white/60 text-neutral-600 hover:bg-white/80 border border-neutral-200/60'
-                        }`}
-                    >
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                      {status !== 'all' && (
-                        <span className="ml-1.5 opacity-60">
-                          {localStats[status] || 0}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+              {/* Status Filters - scrollable on mobile */}
+              <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar">
+                {['all', 'active', 'paused', 'error'].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status === 'all' ? null : status)}
+                    className={`px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-150 flex-shrink-0 ${(status === 'all' && statusFilter === null) || statusFilter === status
+                      ? 'bg-neutral-900 text-white shadow-sm'
+                      : 'bg-white/60 text-neutral-600 active:bg-neutral-100 border border-neutral-200/60'
+                      }`}
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status !== 'all' && (
+                      <span className="ml-1 md:ml-1.5 opacity-60">
+                        {localStats[status] || 0}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -372,7 +370,7 @@ export default function AgentsPage() {
               onClearFilters={handleClearFilters}
             />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2 md:space-y-4">
               {filteredAgents.map((agent, index) => (
                 <div
                   key={agent.id}

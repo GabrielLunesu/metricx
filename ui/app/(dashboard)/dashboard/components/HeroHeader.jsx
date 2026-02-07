@@ -51,9 +51,9 @@ export default function HeroHeader({ user, lastSyncedAt, actions }) {
     const relativeTime = useMemo(() => formatRelativeTime(lastSyncedAt), [lastSyncedAt]);
 
     return (
-        <header className="flex flex-col items-center justify-center mb-8 max-w-4xl mx-auto text-center">
+        <header className="flex flex-col items-center justify-center mb-6 md:mb-8 max-w-4xl mx-auto text-center px-4 md:px-0">
             {/* Live Updates Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 border border-neutral-200/60 mb-6 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 border border-neutral-200/60 mb-4 md:mb-6 backdrop-blur-sm">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                 <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
                     {relativeTime ? `Updated ${relativeTime}` : 'Live'}
@@ -61,18 +61,18 @@ export default function HeroHeader({ user, lastSyncedAt, actions }) {
             </div>
 
             {/* Hero Title */}
-            <h1 className="text-5xl lg:text-7xl font-medium text-neutral-900 tracking-tighter mb-4 text-glow">
+            <h1 className="text-3xl md:text-5xl lg:text-7xl font-medium text-neutral-900 tracking-tighter mb-2 md:mb-4 text-glow">
                 Let's crush it, {displayName}
             </h1>
 
             {/* Subtitle */}
-            <p className="text-xl text-neutral-400 font-light tracking-tight">
+            <p className="text-base md:text-xl text-neutral-400 font-light tracking-tight">
                 Your daily performance overview is ready.
             </p>
 
             {/* Timeframe selector (subtle, positioned below subtitle) */}
             {actions && (
-                <div className="mt-6">
+                <div className="mt-4 md:mt-6">
                     {actions}
                 </div>
             )}

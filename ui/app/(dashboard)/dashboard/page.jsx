@@ -154,7 +154,7 @@ export default function DashboardPage() {
   const showSkeleton = dataLoading || !dashboardData;
 
   return (
-    <div className="pb-8">
+    <div className="pb-16 md:pb-8">
       {/* Hero Header - Centered */}
       <HeroHeader
         user={user}
@@ -163,7 +163,7 @@ export default function DashboardPage() {
       />
 
       {/* AI Search Bar - Centered */}
-      <div className="max-w-lg mx-auto mb-16">
+      <div className="max-w-lg mx-auto mb-8 md:mb-16 px-4 md:px-0">
         <form onSubmit={handleSearchSubmit} className="relative group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
             <Search className="w-4 h-4 text-neutral-400" />

@@ -30,12 +30,12 @@ export default function ChatConsole({ onSubmit, disabled, noWorkspace }) {
   };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-[80] pointer-events-none">
+    <div className="absolute bottom-14 md:bottom-0 left-0 right-0 z-[80] pointer-events-none">
       {/* Gradient Fade for background - subtle */}
       <div className="absolute bottom-0 w-full h-48 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent pointer-events-none"></div>
 
       <div className="relative w-full flex justify-center pointer-events-auto">
-        <div className="w-full max-w-[900px] px-4 pb-6 pt-4 flex flex-col gap-3">
+        <div className="w-full max-w-[900px] px-4 pb-6 md:pb-6 pt-4 flex flex-col gap-3">
 
         {/* Intent Chips - Subtle glass styling */}
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar w-full mask-linear pl-2">

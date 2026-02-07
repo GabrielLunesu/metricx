@@ -29,7 +29,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { LayoutDashboard, BarChart2, Sparkles, Wallet, Layers, Settings, User, LogOut, Users, ChevronDown, Bot } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../components/ui/popover";
@@ -293,57 +293,14 @@ export default function Sidebar() {
                 </div>
             </aside>
 
-            {/* Mobile Bottom Nav - New design */}
-            <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/80 backdrop-blur-2xl rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-neutral-200/40 p-2 flex justify-around items-center z-[60] h-[68px]">
-                <Link
-                    href="/dashboard"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/dashboard"
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <LayoutDashboard className="w-5 h-5" />
-                </Link>
-                <Link
-                    href="/analytics"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname?.startsWith("/analytics")
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <BarChart2 className="w-5 h-5" />
-                </Link>
-
-                {/* Center Action - Copilot */}
-                <Link
-                    href="/copilot"
-                    className="relative -translate-y-3 group active:scale-95 transition-transform duration-150"
-                    aria-label="Open Copilot"
-                >
-                    <div className="w-14 h-14 rounded-full bg-neutral-900 flex items-center justify-center text-white shadow-xl shadow-neutral-900/30 ring-4 ring-white relative overflow-hidden">
-                        <Sparkles className="w-6 h-6 relative z-10" />
-                    </div>
-                </Link>
-
-                <Link
-                    href="/finance"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/finance"
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <Wallet className="w-5 h-5" />
-                </Link>
-                <Link
-                    href="/settings"
-                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${pathname === "/settings"
-                        ? "text-white bg-neutral-900 shadow-lg shadow-neutral-900/20"
-                        : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                >
-                    <User className="w-5 h-5" />
-                </Link>
-            </nav>
+            {/* Mobile FAB + Sheet Navigation */}
+            <MobileNav
+                pathname={pathname}
+                navItems={navItems}
+                billingTier={billingTier}
+                onLockedClick={handleLockedClick}
+                workspace={workspace}
+            />
 
             {/* Upgrade Modal for locked features */}
             <UpgradeModal
@@ -352,5 +309,66 @@ export default function Sidebar() {
                 feature={upgradeModal.feature}
             />
         </>
+    );
+}
+
+/**
+ * MobileNav - Horizontally scrollable bottom icon dock
+ *
+ * WHAT: Fixed bottom bar with scrollable icon buttons
+ * WHY: Native-feeling navigation always visible on mobile, scrollable for nice UX
+ */
+function MobileNav({ pathname, navItems, billingTier, onLockedClick }) {
+    const router = useRouter();
+
+    // All navigation items for the dock
+    const dockItems = [
+        ...navItems,
+        { href: "/settings", label: "Settings", icon: Settings, active: pathname === "/settings", requiresPaid: false },
+    ];
+
+    const handleNavClick = (item) => {
+        const isLocked = item.requiresPaid && billingTier === 'free';
+        if (isLocked) {
+            onLockedClick(item.label);
+            return;
+        }
+        router.push(item.href);
+    };
+
+    return (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[70] mobile-dock-enter safe-area-bottom">
+            <div className="bg-white border-t border-neutral-200/60 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]">
+                <div className="flex items-center overflow-x-auto no-scrollbar px-3 h-14 gap-1">
+                    {dockItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = item.active;
+                        const isLocked = item.requiresPaid && billingTier === 'free';
+
+                        return (
+                            <button
+                                key={item.href}
+                                onClick={() => handleNavClick(item)}
+                                aria-label={item.label}
+                                className="relative flex-shrink-0 flex items-center justify-center w-12 h-10 transition-transform duration-150 active:scale-90"
+                            >
+                                <div className={`
+                                    flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-150
+                                    ${isActive
+                                        ? 'bg-neutral-900 text-white'
+                                        : 'text-neutral-400'
+                                    }
+                                `}>
+                                    <Icon className="w-[18px] h-[18px]" />
+                                </div>
+                                {isLocked && (
+                                    <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        </nav>
     );
 }

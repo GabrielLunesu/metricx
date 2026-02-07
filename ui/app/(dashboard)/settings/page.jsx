@@ -78,10 +78,10 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="flex items-center gap-3 mb-8">
-          <Settings className="w-6 h-6 text-neutral-600" />
-          <h1 className="text-2xl font-semibold text-neutral-900">Settings</h1>
+      <div className="max-w-4xl mx-auto p-4 md:p-8">
+        <div className="flex items-center gap-3 mb-6 md:mb-8">
+          <Settings className="w-5 md:w-6 h-5 md:h-6 text-neutral-600" />
+          <h1 className="text-xl md:text-2xl font-semibold text-neutral-900">Settings</h1>
         </div>
         <div className="flex justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
@@ -92,10 +92,10 @@ export default function SettingsPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="flex items-center gap-3 mb-8">
-          <Settings className="w-6 h-6 text-neutral-600" />
-          <h1 className="text-2xl font-semibold text-neutral-900">Settings</h1>
+      <div className="max-w-4xl mx-auto p-4 md:p-8">
+        <div className="flex items-center gap-3 mb-6 md:mb-8">
+          <Settings className="w-5 md:w-6 h-5 md:h-6 text-neutral-600" />
+          <h1 className="text-xl md:text-2xl font-semibold text-neutral-900">Settings</h1>
         </div>
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
           Error: {error}
@@ -105,11 +105,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
+    <div className="max-w-4xl mx-auto p-4 md:p-8 pb-16 md:pb-8">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <Settings className="w-6 h-6 text-neutral-600" />
-        <h1 className="text-2xl font-semibold text-neutral-900">Settings</h1>
+      <div className="flex items-center gap-3 mb-6 md:mb-8">
+        <Settings className="w-5 md:w-6 h-5 md:h-6 text-neutral-600" />
+        <h1 className="text-xl md:text-2xl font-semibold text-neutral-900">Settings</h1>
       </div>
 
       <SettingsTabs

@@ -138,15 +138,15 @@ export default function KpiCardsModule({
   // Loading skeleton
   if (loading || !data) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8 md:mb-12">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="bg-white/40 glass rounded-[32px] p-8 border border-white/60 animate-pulse">
-            <div className="flex flex-col h-full justify-between gap-4">
+          <div key={i} className="bg-white/40 glass rounded-2xl md:rounded-[32px] p-4 md:p-8 border border-white/60 animate-pulse">
+            <div className="flex flex-col h-full justify-between gap-2 md:gap-4">
               <div className="flex items-start justify-between">
-                <div className="h-4 w-20 bg-neutral-200/50 rounded"></div>
-                <div className="h-6 w-16 bg-neutral-200/50 rounded-lg"></div>
+                <div className="h-3 md:h-4 w-16 md:w-20 bg-neutral-200/50 rounded"></div>
+                <div className="h-5 md:h-6 w-14 md:w-16 bg-neutral-200/50 rounded-lg"></div>
               </div>
-              <div className="h-12 w-32 bg-neutral-200/50 rounded"></div>
+              <div className="h-8 md:h-12 w-24 md:w-32 bg-neutral-200/50 rounded"></div>
             </div>
           </div>
         ))}
@@ -155,7 +155,7 @@ export default function KpiCardsModule({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8 md:mb-12">
       {KPIS.map((kpi) => {
         const kpiData = kpiMap[kpi.key];
         const isSelected = selectedMetric === kpi.key;
@@ -170,19 +170,19 @@ export default function KpiCardsModule({
             key={kpi.key}
             onClick={() => onMetricClick?.(kpi.key)}
             className={`
-              bg-white/40 glass rounded-[32px] p-8 text-left transition-all duration-300 cursor-pointer
+              bg-white/40 glass rounded-2xl md:rounded-[32px] p-4 md:p-8 text-left transition-all duration-300 cursor-pointer
               border border-white/60 hover:bg-white/60 hover:-translate-y-0.5
             `}
           >
-            <div className="flex flex-col h-full justify-between  gap-2">
+            <div className="flex flex-col h-full justify-between gap-1.5 md:gap-2">
               {/* Header: Label + Delta Badge */}
-              <div className="flex items-start justify-between">
-                <span className="text-sm font-medium text-neutral-500 tracking-wide">
+              <div className="flex items-start justify-between gap-1">
+                <span className="text-xs md:text-sm font-medium text-neutral-500 tracking-wide">
                   {label}
                 </span>
                 {hasDelta && (
-                  <div className={`px-2 py-1 rounded-lg border ${getDeltaBadgeClass(deltaPct, kpi.deltaColor, kpi.inverse)}`}>
-                    <span className="text-xs font-semibold">
+                  <div className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded-md md:rounded-lg border ${getDeltaBadgeClass(deltaPct, kpi.deltaColor, kpi.inverse)}`}>
+                    <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">
                       {deltaPct >= 0 ? '+' : ''}{(deltaPct * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -191,7 +191,7 @@ export default function KpiCardsModule({
 
               {/* Value */}
               <div>
-                <div className="text-5xl font-medium text-neutral-900 number-display tracking-tighter">
+                <div className="text-2xl md:text-5xl font-medium text-neutral-900 number-display tracking-tighter">
                   {formatValue(kpiData?.value, kpi.format, data?.currency)}
                 </div>
               </div>

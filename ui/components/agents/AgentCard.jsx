@@ -199,7 +199,7 @@ export function AgentCard({
   return (
     <div
       className={cn(
-        'bg-white/40 glass rounded-[24px] border border-white/60 overflow-hidden',
+        'bg-white/40 glass rounded-2xl md:rounded-[24px] border border-white/60 overflow-hidden',
         'transition-all duration-300',
         'hover:bg-white/60 hover:-translate-y-0.5 hover:shadow-lg',
         expanded && 'ring-2 ring-neutral-200/50',
@@ -209,160 +209,173 @@ export function AgentCard({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Main row - always visible */}
-      <div className="flex items-center gap-4 p-5">
-        {/* Status indicator */}
-        <div className="flex-shrink-0">
-          <div
-            className={cn(
-              'w-10 h-10 rounded-2xl flex items-center justify-center',
-              statusConfig.color === 'emerald' && 'bg-emerald-500/10',
-              statusConfig.color === 'amber' && 'bg-amber-500/10',
-              statusConfig.color === 'red' && 'bg-red-500/10',
-              statusConfig.color === 'neutral' && 'bg-neutral-500/10'
-            )}
-          >
+      <div className="p-3 md:p-5">
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* Status indicator */}
+          <div className="flex-shrink-0">
             <div
               className={cn(
-                'w-2.5 h-2.5 rounded-full',
-                statusConfig.color === 'emerald' && 'bg-emerald-500',
-                statusConfig.color === 'amber' && 'bg-amber-500',
-                statusConfig.color === 'red' && 'bg-red-500',
-                statusConfig.color === 'neutral' && 'bg-neutral-400',
-                statusConfig.dot && 'animate-pulse'
+                'w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center',
+                statusConfig.color === 'emerald' && 'bg-emerald-500/10',
+                statusConfig.color === 'amber' && 'bg-amber-500/10',
+                statusConfig.color === 'red' && 'bg-red-500/10',
+                statusConfig.color === 'neutral' && 'bg-neutral-500/10'
               )}
-            />
+            >
+              <div
+                className={cn(
+                  'w-2 h-2 md:w-2.5 md:h-2.5 rounded-full',
+                  statusConfig.color === 'emerald' && 'bg-emerald-500',
+                  statusConfig.color === 'amber' && 'bg-amber-500',
+                  statusConfig.color === 'red' && 'bg-red-500',
+                  statusConfig.color === 'neutral' && 'bg-neutral-400',
+                  statusConfig.dot && 'animate-pulse'
+                )}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Name and condition */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            <h3 className="font-semibold text-neutral-900 truncate">{name}</h3>
-            {total_triggers > 0 && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-500/10 px-2 py-1 rounded-lg">
-                <Zap size={10} />
-                {total_triggers}
+          {/* Name and condition */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-neutral-900 truncate text-sm md:text-base">{name}</h3>
+              {total_triggers > 0 && (
+                <span className="flex-shrink-0 flex items-center gap-1 text-[10px] md:text-xs font-semibold text-amber-600 bg-amber-500/10 px-1.5 md:px-2 py-0.5 md:py-1 rounded-md md:rounded-lg">
+                  <Zap size={10} />
+                  {total_triggers}
+                </span>
+              )}
+              <span
+                className={cn(
+                  'flex-shrink-0 text-[9px] md:text-[10px] font-semibold uppercase tracking-wider px-1.5 md:px-2 py-0.5 rounded-md',
+                  statusConfig.color === 'emerald' && 'text-emerald-700 bg-emerald-500/10',
+                  statusConfig.color === 'amber' && 'text-amber-700 bg-amber-500/10',
+                  statusConfig.color === 'red' && 'text-red-700 bg-red-500/10',
+                  statusConfig.color === 'neutral' && 'text-neutral-500 bg-neutral-500/10'
+                )}
+              >
+                {statusConfig.label}
               </span>
+            </div>
+            <p className="text-xs md:text-sm text-neutral-500 truncate mt-0.5 md:mt-1">
+              {summaryText}
+            </p>
+            {/* Mobile: action type chips + trigger count below text */}
+            <div className="flex md:hidden items-center gap-1.5 mt-2">
+              {actionTypes.map(type => {
+                const config = ACTION_CONFIG[type] || { icon: Bell, color: 'text-neutral-500', bg: 'bg-neutral-500/10' };
+                const ActionIcon = config.icon;
+                return (
+                  <div
+                    key={type}
+                    className={cn('px-2 py-1 rounded-lg flex items-center gap-1', config.bg)}
+                  >
+                    <ActionIcon size={11} className={config.color} />
+                    <span className="text-[10px] font-medium text-neutral-600 capitalize">{type.replace('_', ' ')}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Stats - hidden on mobile */}
+          <div className="hidden lg:flex items-center gap-8 text-sm">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-neutral-900 number-display">{entities_count}</div>
+              <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Entities</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-neutral-900">{lastEvaluatedText}</div>
+              <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Last Check</div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {actionTypes.map(type => {
+                const config = ACTION_CONFIG[type] || { icon: Bell, color: 'text-neutral-500', bg: 'bg-neutral-500/10' };
+                const ActionIcon = config.icon;
+                return (
+                  <div
+                    key={type}
+                    className={cn('p-2 rounded-xl', config.bg)}
+                    title={type.replace('_', ' ')}
+                  >
+                    <ActionIcon size={14} className={config.color} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action buttons - minimal on mobile, full on desktop */}
+          <div
+            className={cn(
+              'flex items-center gap-0.5 md:gap-1 flex-shrink-0',
+              'transition-opacity duration-200',
+              isHovered ? 'opacity-100' : 'opacity-60 lg:opacity-100'
             )}
-            <span
-              className={cn(
-                'text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md',
-                statusConfig.color === 'emerald' && 'text-emerald-700 bg-emerald-500/10',
-                statusConfig.color === 'amber' && 'text-amber-700 bg-amber-500/10',
-                statusConfig.color === 'red' && 'text-red-700 bg-red-500/10',
-                statusConfig.color === 'neutral' && 'text-neutral-500 bg-neutral-500/10'
-              )}
-            >
-              {statusConfig.label}
-            </span>
-          </div>
-          <p className="text-sm text-neutral-500 truncate mt-1">
-            {summaryText}
-          </p>
-        </div>
-
-        {/* Stats - hidden on mobile */}
-        <div className="hidden lg:flex items-center gap-8 text-sm">
-          {/* Entities watched */}
-          <div className="text-center">
-            <div className="text-lg font-semibold text-neutral-900 number-display">{entities_count}</div>
-            <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Entities</div>
-          </div>
-
-          {/* Last evaluated */}
-          <div className="text-center">
-            <div className="text-lg font-semibold text-neutral-900">{lastEvaluatedText}</div>
-            <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Last Check</div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-1.5">
-            {actionTypes.map(type => {
-              const config = ACTION_CONFIG[type] || { icon: Bell, color: 'text-neutral-500', bg: 'bg-neutral-500/10' };
-              const Icon = config.icon;
-              return (
-                <div
-                  key={type}
-                  className={cn('p-2 rounded-xl', config.bg)}
-                  title={type.replace('_', ' ')}
-                >
-                  <Icon size={14} className={config.color} />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div
-          className={cn(
-            'flex items-center gap-1',
-            'transition-opacity duration-200',
-            isHovered ? 'opacity-100' : 'opacity-40 lg:opacity-100'
-          )}
-        >
-          {status === 'active' && (
+          >
+            {status === 'active' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPause?.(id);
+                }}
+                className="w-8 h-8 md:w-9 md:h-9 p-0 rounded-xl text-neutral-500 hover:text-amber-600 hover:bg-amber-500/10"
+              >
+                <Pause size={15} />
+              </Button>
+            )}
+            {status === 'paused' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onResume?.(id);
+                }}
+                className="w-8 h-8 md:w-9 md:h-9 p-0 rounded-xl text-neutral-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+              >
+                <Play size={15} />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                onPause?.(id);
+                onView?.(id);
               }}
-              className="w-9 h-9 p-0 rounded-xl text-neutral-500 hover:text-amber-600 hover:bg-amber-500/10"
+              className="hidden md:flex w-9 h-9 p-0 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-500/10"
             >
-              <Pause size={16} />
+              <Eye size={16} />
             </Button>
-          )}
-          {status === 'paused' && (
             <Button
               variant="ghost"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                onResume?.(id);
+                onSettings?.(id);
               }}
-              className="w-9 h-9 p-0 rounded-xl text-neutral-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+              className="hidden md:flex w-9 h-9 p-0 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-500/10"
             >
-              <Play size={16} />
+              <Settings size={16} />
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onView?.(id);
-            }}
-            className="w-9 h-9 p-0 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-500/10"
-          >
-            <Eye size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSettings?.(id);
-            }}
-            className="w-9 h-9 p-0 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-500/10"
-          >
-            <Settings size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onToggleExpand?.()}
-            className="w-9 h-9 p-0 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-500/10"
-          >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleExpand?.()}
+              className="w-8 h-8 md:w-9 md:h-9 p-0 rounded-xl text-neutral-500 hover:text-neutral-900 hover:bg-neutral-500/10"
+            >
+              {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Expanded content */}
       {expanded && (
-        <div className="border-t border-neutral-200/30 bg-white/30 px-5 py-4">
+        <div className="border-t border-neutral-200/30 bg-white/30 px-3 py-3 md:px-5 md:py-4">
           {/* Error message */}
           {status === 'error' && error_message && (
             <div className="mb-4 p-3 bg-red-500/5 border border-red-200/60 rounded-xl text-sm text-red-700 flex items-start gap-3">
@@ -457,15 +470,43 @@ export function AgentCard({
             </div>
           )}
 
-          {/* Mobile stats - shown only on mobile */}
-          <div className="lg:hidden mt-4 pt-4 border-t border-neutral-200/30 grid grid-cols-2 gap-3">
-            <div className="bg-white/50 rounded-xl p-3 text-center">
-              <div className="text-2xl font-semibold text-neutral-900 number-display">{entities_count}</div>
-              <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Entities</div>
+          {/* Mobile stats + quick actions - shown only on mobile */}
+          <div className="lg:hidden mt-4 pt-4 border-t border-neutral-200/30">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white/50 rounded-xl p-3 text-center">
+                <div className="text-xl font-semibold text-neutral-900 number-display">{entities_count}</div>
+                <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Entities</div>
+              </div>
+              <div className="bg-white/50 rounded-xl p-3 text-center">
+                <div className="text-sm font-semibold text-neutral-900">{lastEvaluatedText}</div>
+                <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Last Check</div>
+              </div>
             </div>
-            <div className="bg-white/50 rounded-xl p-3 text-center">
-              <div className="text-lg font-semibold text-neutral-900">{lastEvaluatedText}</div>
-              <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Last Check</div>
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView?.(id);
+                }}
+                className="flex-1 h-9 rounded-xl text-xs font-medium border-neutral-200/60"
+              >
+                <Eye size={14} className="mr-1.5" />
+                View Details
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSettings?.(id);
+                }}
+                className="flex-1 h-9 rounded-xl text-xs font-medium border-neutral-200/60"
+              >
+                <Settings size={14} className="mr-1.5" />
+                Settings
+              </Button>
             </div>
           </div>
         </div>
