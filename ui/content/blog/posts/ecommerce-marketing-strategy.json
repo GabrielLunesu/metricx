@@ -2,18 +2,24 @@
   "slug": "ecommerce-marketing-strategy",
   "title": "Ecommerce Marketing Strategy: A Framework for Shopify Stores in 2026",
   "excerpt": "Most Shopify stores throw budget at ads without a real strategy. Here's the framework experienced media buyers use to build ad mixes that actually scale.",
-  "category": "strategy",
+  "category": "ecommerce-strategy",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-02T10:00:00Z",
-  "updatedAt": "2026-03-02T10:00:00Z",
+  "publishedAt": "2026-02-03T10:00:00Z",
+  "updatedAt": "2026-02-03T10:00:00Z",
   "readTime": 9,
   "featured": true,
   "image": "/images/blog/ecommerce-marketing-strategy.jpg",
-  "tags": ["Strategy", "Ecommerce", "Marketing", "Shopify", "Ad Spend"],
+  "tags": [
+    "Strategy",
+    "Ecommerce",
+    "Marketing",
+    "Shopify",
+    "Ad Spend"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "Most ecommerce marketing strategies aren't really strategies — they're a collection of tactics that got added one at a time as the business grew. Run Meta ads, try Google, add an email sequence, test TikTok. There's no framework tying it together, no clear logic for how budget gets allocated, and no way to tell what's actually working. This post is the framework I use to build marketing systems that scale."
+      "text": "Most ecommerce marketing strategies aren't really strategies \u2014 they're a collection of tactics that got added one at a time as the business grew. Run Meta ads, try Google, add an email sequence, test TikTok. There's no framework tying it together, no clear logic for how budget gets allocated, and no way to tell what's actually working. This post is the framework I use to build marketing systems that scale."
     },
     {
       "type": "heading",
@@ -22,7 +28,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Before you touch a single campaign, you need to know three numbers: your gross margin, your average order value, and your customer lifetime value. These determine how much you can afford to spend to acquire a customer and still be profitable. Gross margin tells you your break-even ROAS. AOV tells you the revenue per transaction. LTV tells you how much a customer is worth over time — which tells you how much you can afford to lose on the first purchase if they come back."
+      "text": "Before you touch a single campaign, you need to know three numbers: your gross margin, your average order value, and your customer lifetime value. These determine how much you can afford to spend to acquire a customer and still be profitable. Gross margin tells you your break-even ROAS. AOV tells you the revenue per transaction. LTV tells you how much a customer is worth over time \u2014 which tells you how much you can afford to lose on the first purchase if they come back."
     },
     {
       "type": "paragraph",
@@ -35,7 +41,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Every ecommerce marketing strategy has three stages: acquisition (getting new people), conversion (turning visitors into buyers), and retention (getting buyers to come back). Most merchants over-invest in acquisition and under-invest in the other two. But improving conversion rates and retention dramatically improves the economics of acquisition — so you can afford to spend more per click."
+      "text": "Every ecommerce marketing strategy has three stages: acquisition (getting new people), conversion (turning visitors into buyers), and retention (getting buyers to come back). Most merchants over-invest in acquisition and under-invest in the other two. But improving conversion rates and retention dramatically improves the economics of acquisition \u2014 so you can afford to spend more per click."
     },
     {
       "type": "paragraph",
@@ -52,7 +58,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Once you have a profitable Meta setup, add Google Shopping. Shopping ads capture high-intent buyers who are already searching for what you sell — they convert better and often at lower CPCs than social. The two channels complement each other: Meta drives awareness and demand, Google captures it."
+      "text": "Once you have a profitable Meta setup, add Google Shopping. Shopping ads capture high-intent buyers who are already searching for what you sell \u2014 they convert better and often at lower CPCs than social. The two channels complement each other: Meta drives awareness and demand, Google captures it."
     },
     {
       "type": "paragraph",
@@ -65,7 +71,7 @@
     },
     {
       "type": "paragraph",
-      "text": "A simple starting allocation for a store with a working Meta setup adding Google: 60-70% Meta, 30-40% Google. As Google proves itself, shift budget toward it proportionally. The goal is to find the channel mix that produces the best blended ROAS — not to optimize each channel independently."
+      "text": "A simple starting allocation for a store with a working Meta setup adding Google: 60-70% Meta, 30-40% Google. As Google proves itself, shift budget toward it proportionally. The goal is to find the channel mix that produces the best blended ROAS \u2014 not to optimize each channel independently."
     },
     {
       "type": "paragraph",
@@ -82,7 +88,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The mistake most merchants make is relying entirely on platform dashboards for these numbers. Platform data is useful for campaign-level decisions within a channel. For overall strategy decisions, you need your actual Shopify data — real revenue, real orders, real customers — sitting alongside your spend data."
+      "text": "The mistake most merchants make is relying entirely on platform dashboards for these numbers. Platform data is useful for campaign-level decisions within a channel. For overall strategy decisions, you need your actual Shopify data \u2014 real revenue, real orders, real customers \u2014 sitting alongside your spend data."
     },
     {
       "type": "paragraph",

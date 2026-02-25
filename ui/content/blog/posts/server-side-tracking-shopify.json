@@ -4,16 +4,22 @@
   "excerpt": "Browser-based pixels miss 30-40% of conversions. Server-side tracking fixes the attribution gap that's costing you visibility into your real ad performance.",
   "category": "attribution",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-13T10:00:00Z",
-  "updatedAt": "2026-03-13T10:00:00Z",
+  "publishedAt": "2026-02-14T10:00:00Z",
+  "updatedAt": "2026-02-14T10:00:00Z",
   "readTime": 9,
   "featured": true,
   "image": "/images/blog/server-side-tracking-shopify.jpg",
-  "tags": ["Server-Side Tracking", "Attribution", "Shopify", "Meta Ads", "Privacy"],
+  "tags": [
+    "Server-Side Tracking",
+    "Attribution",
+    "Shopify",
+    "Meta Ads",
+    "Privacy"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "If you're running Meta or Google ads on your Shopify store and relying on browser-based pixels alone, you're missing a significant portion of your conversions. Studies consistently show that browser pixels miss 30-40% of purchase events due to ad blockers, iOS privacy restrictions, and browser-level tracking prevention. Server-side tracking closes that gap — and it's more important now than it's ever been."
+      "text": "If you're running Meta or Google ads on your Shopify store and relying on browser-based pixels alone, you're missing a significant portion of your conversions. Studies consistently show that browser pixels miss 30-40% of purchase events due to ad blockers, iOS privacy restrictions, and browser-level tracking prevention. Server-side tracking closes that gap \u2014 and it's more important now than it's ever been."
     },
     {
       "type": "heading",
@@ -22,11 +28,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Traditional tracking works client-side: a piece of JavaScript code (the pixel) runs in the user's browser, detects a purchase event, and sends data back to Meta or Google. This depends entirely on the browser allowing the pixel to run — which increasingly, browsers and users don't."
+      "text": "Traditional tracking works client-side: a piece of JavaScript code (the pixel) runs in the user's browser, detects a purchase event, and sends data back to Meta or Google. This depends entirely on the browser allowing the pixel to run \u2014 which increasingly, browsers and users don't."
     },
     {
       "type": "paragraph",
-      "text": "Server-side tracking moves this process to your server (or Shopify's infrastructure). When a purchase happens, your server sends the event data directly to the platform's API — Meta's Conversions API (CAPI) or Google's Measurement Protocol — bypassing the browser entirely. Browser restrictions become irrelevant because the data never goes through the browser."
+      "text": "Server-side tracking moves this process to your server (or Shopify's infrastructure). When a purchase happens, your server sends the event data directly to the platform's API \u2014 Meta's Conversions API (CAPI) or Google's Measurement Protocol \u2014 bypassing the browser entirely. Browser restrictions become irrelevant because the data never goes through the browser."
     },
     {
       "type": "heading",
@@ -74,7 +80,7 @@
     },
     {
       "type": "paragraph",
-      "text": "After setting up server-side tracking, verify it's working by comparing your platform-reported conversions against actual Shopify orders. You should see an increase in reported conversions — typically 15-30% depending on how much your previous pixel was missing. In Meta, check your Event Match Quality score in Events Manager; it should improve significantly with CAPI enabled."
+      "text": "After setting up server-side tracking, verify it's working by comparing your platform-reported conversions against actual Shopify orders. You should see an increase in reported conversions \u2014 typically 15-30% depending on how much your previous pixel was missing. In Meta, check your Event Match Quality score in Events Manager; it should improve significantly with CAPI enabled."
     },
     {
       "type": "paragraph",
@@ -82,7 +88,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Metricx uses Shopify's server-side data directly — actual purchase events from your store — to give you a ground-truth view of ad performance that doesn't depend on pixel accuracy. Try it free and see the real picture."
+      "text": "Metricx uses Shopify's server-side data directly \u2014 actual purchase events from your store \u2014 to give you a ground-truth view of ad performance that doesn't depend on pixel accuracy. Try it free and see the real picture."
     }
   ]
 }

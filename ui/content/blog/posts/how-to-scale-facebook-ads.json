@@ -2,14 +2,20 @@
   "slug": "how-to-scale-facebook-ads",
   "title": "How to Scale Facebook Ads Without Killing Your ROAS",
   "excerpt": "Scaling Meta Ads too fast is one of the most common ways merchants destroy profitable campaigns. Here's how to scale systematically while keeping ROAS intact.",
-  "category": "how-to",
+  "category": "meta-ads",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-11T10:00:00Z",
-  "updatedAt": "2026-03-11T10:00:00Z",
+  "publishedAt": "2026-02-12T10:00:00Z",
+  "updatedAt": "2026-02-12T10:00:00Z",
   "readTime": 7,
   "featured": false,
   "image": "/images/blog/how-to-scale-facebook-ads.jpg",
-  "tags": ["Meta Ads", "Scaling", "ROAS", "Ecommerce", "Facebook Ads"],
+  "tags": [
+    "Meta Ads",
+    "Scaling",
+    "ROAS",
+    "Ecommerce",
+    "Facebook Ads"
+  ],
   "content": [
     {
       "type": "paragraph",
@@ -22,11 +28,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Meta's algorithm is trained on your campaign's historical performance at a certain spend level. When you dramatically increase budget, the algorithm has to re-learn — it needs to find a larger pool of people who will convert at your target cost, and that exploration process is messy and inefficient. This is the learning phase, and it's why campaigns often spike in cost right after a large budget increase."
+      "text": "Meta's algorithm is trained on your campaign's historical performance at a certain spend level. When you dramatically increase budget, the algorithm has to re-learn \u2014 it needs to find a larger pool of people who will convert at your target cost, and that exploration process is messy and inefficient. This is the learning phase, and it's why campaigns often spike in cost right after a large budget increase."
     },
     {
       "type": "paragraph",
-      "text": "The other issue is audience saturation. A campaign working at $100/day might be reaching the most responsive segment of your target audience. At $500/day, you've exhausted those people and you're reaching progressively less responsive prospects — which means declining ROAS even with the same creative and targeting."
+      "text": "The other issue is audience saturation. A campaign working at $100/day might be reaching the most responsive segment of your target audience. At $500/day, you've exhausted those people and you're reaching progressively less responsive prospects \u2014 which means declining ROAS even with the same creative and targeting."
     },
     {
       "type": "heading",
@@ -35,7 +41,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The standard advice for scaling Meta campaigns is to increase budget by no more than 20-30% at a time. This is a real limit based on how Meta's algorithm handles budget changes — increases within this range tend not to trigger a full learning phase reset, while larger jumps almost always do. After each increase, wait at least 3-5 days for performance to stabilize before scaling again."
+      "text": "The standard advice for scaling Meta campaigns is to increase budget by no more than 20-30% at a time. This is a real limit based on how Meta's algorithm handles budget changes \u2014 increases within this range tend not to trigger a full learning phase reset, while larger jumps almost always do. After each increase, wait at least 3-5 days for performance to stabilize before scaling again."
     },
     {
       "type": "paragraph",
@@ -48,11 +54,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Vertical scaling means increasing the budget on your existing campaign. Horizontal scaling means duplicating the campaign and running it with a fresh audience or slightly different parameters. When vertical scaling starts hitting diminishing returns — ROAS drops consistently as you push more budget — horizontal scaling is the next move."
+      "text": "Vertical scaling means increasing the budget on your existing campaign. Horizontal scaling means duplicating the campaign and running it with a fresh audience or slightly different parameters. When vertical scaling starts hitting diminishing returns \u2014 ROAS drops consistently as you push more budget \u2014 horizontal scaling is the next move."
     },
     {
       "type": "paragraph",
-      "text": "Duplicate your winning campaign, keep the same creative, and change one variable — a different audience segment, a different lookalike source, or a different geographic focus. This lets you capture more budget without oversaturating your original audience."
+      "text": "Duplicate your winning campaign, keep the same creative, and change one variable \u2014 a different audience segment, a different lookalike source, or a different geographic focus. This lets you capture more budget without oversaturating your original audience."
     },
     {
       "type": "heading",
@@ -61,7 +67,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Creative fatigue is the silent ROAS killer. Even the best performing ads lose effectiveness over time as the same audience sees them repeatedly. When you're scaling, your creative consumption rate increases — more spend means more impressions, which means the same creative gets exhausted faster. Keep a steady flow of new creative coming into your testing pipeline so you always have fresh winners ready to replace fatiguing ads."
+      "text": "Creative fatigue is the silent ROAS killer. Even the best performing ads lose effectiveness over time as the same audience sees them repeatedly. When you're scaling, your creative consumption rate increases \u2014 more spend means more impressions, which means the same creative gets exhausted faster. Keep a steady flow of new creative coming into your testing pipeline so you always have fresh winners ready to replace fatiguing ads."
     },
     {
       "type": "heading",
@@ -70,7 +76,7 @@
     },
     {
       "type": "paragraph",
-      "text": "As you scale Meta spend, watch your blended ROAS — total Shopify revenue divided by total ad spend. Platform-reported Meta ROAS can look stable even when your actual business profitability is declining, because Meta's attribution doesn't change with scale. Your Shopify data doesn't lie. If blended ROAS starts declining as you push more into Meta, you've found the ceiling for this campaign cycle and it's time to refresh creative or test new audiences before pushing further."
+      "text": "As you scale Meta spend, watch your blended ROAS \u2014 total Shopify revenue divided by total ad spend. Platform-reported Meta ROAS can look stable even when your actual business profitability is declining, because Meta's attribution doesn't change with scale. Your Shopify data doesn't lie. If blended ROAS starts declining as you push more into Meta, you've found the ceiling for this campaign cycle and it's time to refresh creative or test new audiences before pushing further."
     },
     {
       "type": "paragraph",

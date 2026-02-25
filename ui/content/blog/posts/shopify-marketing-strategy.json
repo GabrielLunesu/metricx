@@ -2,18 +2,24 @@
   "slug": "shopify-marketing-strategy",
   "title": "Shopify Marketing Strategy: How to Build a Profitable Ad Mix",
   "excerpt": "Running ads on Shopify without a clear channel strategy is how you burn budget fast. Here's how to build an ad mix that grows revenue without destroying your margins.",
-  "category": "strategy",
+  "category": "ecommerce-strategy",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-03T10:00:00Z",
-  "updatedAt": "2026-03-03T10:00:00Z",
+  "publishedAt": "2026-02-17T10:00:00Z",
+  "updatedAt": "2026-02-17T10:00:00Z",
   "readTime": 8,
   "featured": false,
   "image": "/images/blog/shopify-marketing-strategy.jpg",
-  "tags": ["Strategy", "Shopify", "Marketing", "Meta Ads", "Google Ads"],
+  "tags": [
+    "Strategy",
+    "Shopify",
+    "Marketing",
+    "Meta Ads",
+    "Google Ads"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "There are thousands of Shopify stores stuck at the same revenue plateau, running the same playbook: boost some posts on Meta, run a Google Shopping campaign, check dashboards every morning, and wonder why growth has stalled. The problem is usually not the channels — it's the absence of a real strategy connecting them."
+      "text": "There are thousands of Shopify stores stuck at the same revenue plateau, running the same playbook: boost some posts on Meta, run a Google Shopping campaign, check dashboards every morning, and wonder why growth has stalled. The problem is usually not the channels \u2014 it's the absence of a real strategy connecting them."
     },
     {
       "type": "heading",
@@ -26,7 +32,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Meta Ads are best at generating demand — you're interrupting people in their feed and making them want something they weren't actively looking for. Google Ads are best at capturing demand — you're showing up when someone is already searching. Email and SMS retain customers at a fraction of the cost of acquiring new ones."
+      "text": "Meta Ads are best at generating demand \u2014 you're interrupting people in their feed and making them want something they weren't actively looking for. Google Ads are best at capturing demand \u2014 you're showing up when someone is already searching. Email and SMS retain customers at a fraction of the cost of acquiring new ones."
     },
     {
       "type": "heading",
@@ -39,7 +45,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The biggest lever in Meta is creative, not targeting. Meta's algorithm has gotten good enough that broad targeting often outperforms narrow interest targeting. What it can't figure out for you is what message resonates with your audience. Test aggressively on creative — hooks, formats, angles — and let performance data tell you what to scale."
+      "text": "The biggest lever in Meta is creative, not targeting. Meta's algorithm has gotten good enough that broad targeting often outperforms narrow interest targeting. What it can't figure out for you is what message resonates with your audience. Test aggressively on creative \u2014 hooks, formats, angles \u2014 and let performance data tell you what to scale."
     },
     {
       "type": "heading",
@@ -48,11 +54,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Once you have a profitable Meta setup, Google Shopping is the natural next step. Shopping ads show your products to people who are actively searching for them — that intent makes them cheaper to convert than cold social traffic. Start with a Performance Max campaign using your product feed, then layer in brand search campaigns to capture people searching your store name directly."
+      "text": "Once you have a profitable Meta setup, Google Shopping is the natural next step. Shopping ads show your products to people who are actively searching for them \u2014 that intent makes them cheaper to convert than cold social traffic. Start with a Performance Max campaign using your product feed, then layer in brand search campaigns to capture people searching your store name directly."
     },
     {
       "type": "paragraph",
-      "text": "When both channels are running, watch your blended ROAS. If adding Google spend increases blended ROAS, it's working — it's capturing demand that already existed. If blended ROAS stays flat or drops, Google is eating into budget that was working better on Meta."
+      "text": "When both channels are running, watch your blended ROAS. If adding Google spend increases blended ROAS, it's working \u2014 it's capturing demand that already existed. If blended ROAS stays flat or drops, Google is eating into budget that was working better on Meta."
     },
     {
       "type": "heading",
@@ -61,7 +67,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Acquiring a new customer costs 5-7x more than selling to an existing one. Yet most Shopify stores spend almost nothing on retention marketing. A basic retention system — a post-purchase email sequence, a win-back flow for lapsed customers, and a loyalty offer for repeat buyers — can add 20-30% to revenue with minimal ongoing cost."
+      "text": "Acquiring a new customer costs 5-7x more than selling to an existing one. Yet most Shopify stores spend almost nothing on retention marketing. A basic retention system \u2014 a post-purchase email sequence, a win-back flow for lapsed customers, and a loyalty offer for repeat buyers \u2014 can add 20-30% to revenue with minimal ongoing cost."
     },
     {
       "type": "paragraph",
@@ -74,7 +80,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The only way to know if your channel mix is working is to measure blended ROAS — total Shopify revenue divided by total ad spend — not the siloed ROAS numbers inside each platform. Platforms will always report numbers that make themselves look good. Your Shopify revenue is the ground truth."
+      "text": "The only way to know if your channel mix is working is to measure blended ROAS \u2014 total Shopify revenue divided by total ad spend \u2014 not the siloed ROAS numbers inside each platform. Platforms will always report numbers that make themselves look good. Your Shopify revenue is the ground truth."
     },
     {
       "type": "paragraph",

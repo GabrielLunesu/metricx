@@ -1,19 +1,25 @@
 {
   "slug": "what-is-cac",
   "title": "What is CAC? Customer Acquisition Cost Explained for Ecommerce",
-  "excerpt": "CAC tells you exactly how much it costs to win a new customer — and whether your business model actually works. Here's how to calculate it, benchmark it, and improve it.",
-  "category": "analytics",
+  "excerpt": "CAC tells you exactly how much it costs to win a new customer \u2014 and whether your business model actually works. Here's how to calculate it, benchmark it, and improve it.",
+  "category": "ad-analytics",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-02-26T10:00:00Z",
-  "updatedAt": "2026-02-26T10:00:00Z",
+  "publishedAt": "2026-02-19T10:00:00Z",
+  "updatedAt": "2026-02-19T10:00:00Z",
   "readTime": 7,
   "featured": true,
   "image": "/images/blog/what-is-cac.jpg",
-  "tags": ["CAC", "Analytics", "Ecommerce", "Profitability", "Ad Spend"],
+  "tags": [
+    "CAC",
+    "Analytics",
+    "Ecommerce",
+    "Profitability",
+    "Ad Spend"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "CAC — Customer Acquisition Cost — is the number that tells you whether your business model is viable. You can have great ROAS, healthy traffic, and strong conversion rates, and still be building a business that doesn't work if your CAC is too high relative to what your customers are worth. It's one of the most important metrics in ecommerce and one of the most undertracked."
+      "text": "CAC \u2014 Customer Acquisition Cost \u2014 is the number that tells you whether your business model is viable. You can have great ROAS, healthy traffic, and strong conversion rates, and still be building a business that doesn't work if your CAC is too high relative to what your customers are worth. It's one of the most important metrics in ecommerce and one of the most undertracked."
     },
     {
       "type": "heading",
@@ -26,7 +32,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The key word is new customers. CAC specifically measures the cost of bringing someone into your customer base for the first time — not repeat purchases from existing customers. This distinction matters because it tells you how efficiently you're growing, separate from how well you're retaining."
+      "text": "The key word is new customers. CAC specifically measures the cost of bringing someone into your customer base for the first time \u2014 not repeat purchases from existing customers. This distinction matters because it tells you how efficiently you're growing, separate from how well you're retaining."
     },
     {
       "type": "heading",
@@ -35,7 +41,7 @@
     },
     {
       "type": "paragraph",
-      "text": "A lot of merchants use CAC and CPA (Cost Per Acquisition) interchangeably. They're related but different. CPA is what your ad platform reports — the cost to generate a conversion event, which could be a purchase from anyone, including existing customers. CAC is specifically about new customers only."
+      "text": "A lot of merchants use CAC and CPA (Cost Per Acquisition) interchangeably. They're related but different. CPA is what your ad platform reports \u2014 the cost to generate a conversion event, which could be a purchase from anyone, including existing customers. CAC is specifically about new customers only."
     },
     {
       "type": "paragraph",
@@ -48,11 +54,11 @@
     },
     {
       "type": "paragraph",
-      "text": "There's no universal good CAC — it depends entirely on your LTV (Lifetime Value). The relationship between the two is what determines whether your business is healthy. The standard benchmark most businesses aim for is an LTV:CAC ratio of at least 3:1. That means for every dollar you spend acquiring a customer, that customer should generate at least three dollars in lifetime gross profit."
+      "text": "There's no universal good CAC \u2014 it depends entirely on your LTV (Lifetime Value). The relationship between the two is what determines whether your business is healthy. The standard benchmark most businesses aim for is an LTV:CAC ratio of at least 3:1. That means for every dollar you spend acquiring a customer, that customer should generate at least three dollars in lifetime gross profit."
     },
     {
       "type": "paragraph",
-      "text": "If your average customer spends $150 across their lifetime with you and your gross margin is 40%, your customer LTV is $60. That means your target CAC should be $20 or less. Spending more than that puts you in the red on every new customer you acquire — and you're hoping repeat purchases bail you out."
+      "text": "If your average customer spends $150 across their lifetime with you and your gross margin is 40%, your customer LTV is $60. That means your target CAC should be $20 or less. Spending more than that puts you in the red on every new customer you acquire \u2014 and you're hoping repeat purchases bail you out."
     },
     {
       "type": "heading",
@@ -61,7 +67,7 @@
     },
     {
       "type": "paragraph",
-      "text": "One thing almost every growing Shopify store experiences: CAC increases as you scale. The reason is audience saturation. When you launch, you're targeting the most responsive, most purchase-ready people in your audience. As you exhaust that group, you reach harder-to-convert prospects, and your ad efficiency drops. This isn't a failure — it's a natural pattern — but it means you can't assume your early CAC will hold as you grow."
+      "text": "One thing almost every growing Shopify store experiences: CAC increases as you scale. The reason is audience saturation. When you launch, you're targeting the most responsive, most purchase-ready people in your audience. As you exhaust that group, you reach harder-to-convert prospects, and your ad efficiency drops. This isn't a failure \u2014 it's a natural pattern \u2014 but it means you can't assume your early CAC will hold as you grow."
     },
     {
       "type": "paragraph",
@@ -74,11 +80,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Cutting your ad budget is the obvious way to lower CAC — but it also means acquiring fewer customers. The better approach is improving conversion efficiency. Better creatives improve click-through rate. Better landing pages improve conversion rate. Better audience targeting reduces wasted impressions. Each of these improves CAC without reducing volume."
+      "text": "Cutting your ad budget is the obvious way to lower CAC \u2014 but it also means acquiring fewer customers. The better approach is improving conversion efficiency. Better creatives improve click-through rate. Better landing pages improve conversion rate. Better audience targeting reduces wasted impressions. Each of these improves CAC without reducing volume."
     },
     {
       "type": "paragraph",
-      "text": "Another lever is channel mix. Some channels naturally produce lower CAC than others depending on your product and audience. Tracking CAC by channel gives you a real picture of where your acquisition dollars are working hardest — and where to shift budget."
+      "text": "Another lever is channel mix. Some channels naturally produce lower CAC than others depending on your product and audience. Tracking CAC by channel gives you a real picture of where your acquisition dollars are working hardest \u2014 and where to shift budget."
     },
     {
       "type": "heading",
@@ -87,11 +93,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Tracking CAC properly requires knowing two things: how much you spent, and how many net-new customers you acquired. The spend side is straightforward — pull it from Meta and Google. The new customer count requires either a CRM, a Shopify customer report filtered to first-time purchasers, or an analytics tool that tracks this automatically."
+      "text": "Tracking CAC properly requires knowing two things: how much you spent, and how many net-new customers you acquired. The spend side is straightforward \u2014 pull it from Meta and Google. The new customer count requires either a CRM, a Shopify customer report filtered to first-time purchasers, or an analytics tool that tracks this automatically."
     },
     {
       "type": "paragraph",
-      "text": "Metricx connects your ad spend data with your Shopify order data so you can see CAC alongside ROAS and revenue in one dashboard — no manual spreadsheet work required. If you want to start tracking the metrics that actually tell you whether your business is working, give it a try free."
+      "text": "Metricx connects your ad spend data with your Shopify order data so you can see CAC alongside ROAS and revenue in one dashboard \u2014 no manual spreadsheet work required. If you want to start tracking the metrics that actually tell you whether your business is working, give it a try free."
     }
   ]
 }

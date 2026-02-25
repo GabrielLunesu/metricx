@@ -2,18 +2,24 @@
   "slug": "ecommerce-conversion-rate",
   "title": "Ecommerce Conversion Rate: What's Good, What's Bad, and How to Fix It",
   "excerpt": "Your conversion rate is the multiplier on every dollar you spend on ads. Here's what the benchmarks actually look like and what to do if yours is falling short.",
-  "category": "attribution",
+  "category": "ecommerce-strategy",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-15T10:00:00Z",
-  "updatedAt": "2026-03-15T10:00:00Z",
+  "publishedAt": "2026-02-02T10:00:00Z",
+  "updatedAt": "2026-02-02T10:00:00Z",
   "readTime": 8,
   "featured": false,
   "image": "/images/blog/ecommerce-conversion-rate.jpg",
-  "tags": ["Conversion Rate", "CRO", "Ecommerce", "Shopify", "Analytics"],
+  "tags": [
+    "Conversion Rate",
+    "CRO",
+    "Ecommerce",
+    "Shopify",
+    "Analytics"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "Conversion rate is the most leveraged metric in ecommerce. Every improvement in conversion rate makes every other metric better — your ROAS improves, your CAC drops, and your ad budget goes further without changing a single campaign. Yet most merchants spend the majority of their optimization time on ad platforms and very little on the store itself. This is where the leverage is."
+      "text": "Conversion rate is the most leveraged metric in ecommerce. Every improvement in conversion rate makes every other metric better \u2014 your ROAS improves, your CAC drops, and your ad budget goes further without changing a single campaign. Yet most merchants spend the majority of their optimization time on ad platforms and very little on the store itself. This is where the leverage is."
     },
     {
       "type": "heading",
@@ -22,7 +28,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Ecommerce conversion rate = Purchases / Sessions, expressed as a percentage. If 100 people visit your store and 2 buy, your conversion rate is 2%. This sounds simple but there are important nuances. Shopify's default conversion rate includes all sessions — including people who arrive on your blog, your about page, or pages with no purchase intent. A more useful metric is add-to-cart conversion rate and checkout completion rate, which diagnose specific parts of your funnel."
+      "text": "Ecommerce conversion rate = Purchases / Sessions, expressed as a percentage. If 100 people visit your store and 2 buy, your conversion rate is 2%. This sounds simple but there are important nuances. Shopify's default conversion rate includes all sessions \u2014 including people who arrive on your blog, your about page, or pages with no purchase intent. A more useful metric is add-to-cart conversion rate and checkout completion rate, which diagnose specific parts of your funnel."
     },
     {
       "type": "heading",
@@ -35,7 +41,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Rather than benchmarking against industry averages, benchmark against yourself. Track your conversion rate by traffic source over time. If your Meta ad traffic converts at 1.2% and it was 1.8% three months ago, something changed — and finding out what is more actionable than knowing where you stand relative to competitors."
+      "text": "Rather than benchmarking against industry averages, benchmark against yourself. Track your conversion rate by traffic source over time. If your Meta ad traffic converts at 1.2% and it was 1.8% three months ago, something changed \u2014 and finding out what is more actionable than knowing where you stand relative to competitors."
     },
     {
       "type": "heading",
@@ -44,7 +50,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Slow page speed is still the number one silent killer. Every additional second of load time reduces conversion rate measurably. Run your store through Google PageSpeed Insights and fix whatever it flags — heavy images, unused scripts, render-blocking resources. Mobile page speed matters more than desktop for most Shopify stores."
+      "text": "Slow page speed is still the number one silent killer. Every additional second of load time reduces conversion rate measurably. Run your store through Google PageSpeed Insights and fix whatever it flags \u2014 heavy images, unused scripts, render-blocking resources. Mobile page speed matters more than desktop for most Shopify stores."
     },
     {
       "type": "paragraph",
@@ -52,7 +58,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Checkout friction is the third big one. Shopify's native checkout is already well-optimized, but unnecessary steps, required account creation, and limited payment options still kill conversions. Use Shop Pay where possible — it significantly reduces checkout abandonment."
+      "text": "Checkout friction is the third big one. Shopify's native checkout is already well-optimized, but unnecessary steps, required account creation, and limited payment options still kill conversions. Use Shop Pay where possible \u2014 it significantly reduces checkout abandonment."
     },
     {
       "type": "heading",
@@ -61,7 +67,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Map your funnel: Sessions → Product page views → Add to carts → Checkout initiations → Purchases. Calculate the drop-off rate at each step. Where's the biggest leak? If you're losing most visitors between product page view and add-to-cart, your product page needs work. If you're losing them between add-to-cart and checkout, your cart or offer structure is the issue. If checkout initiation to purchase is low, look at payment options and checkout experience."
+      "text": "Map your funnel: Sessions \u2192 Product page views \u2192 Add to carts \u2192 Checkout initiations \u2192 Purchases. Calculate the drop-off rate at each step. Where's the biggest leak? If you're losing most visitors between product page view and add-to-cart, your product page needs work. If you're losing them between add-to-cart and checkout, your cart or offer structure is the issue. If checkout initiation to purchase is low, look at payment options and checkout experience."
     },
     {
       "type": "heading",
@@ -70,7 +76,7 @@
     },
     {
       "type": "paragraph",
-      "text": "High-impact CRO tests for Shopify: product photography quality and quantity, product title and description rewrite, social proof placement (reviews above the fold), pricing and offer structure (bundles, free shipping thresholds), and hero image on homepage. Don't test button colors or minor copy tweaks until you've exhausted the big structural changes — the signal will be too small to measure reliably."
+      "text": "High-impact CRO tests for Shopify: product photography quality and quantity, product title and description rewrite, social proof placement (reviews above the fold), pricing and offer structure (bundles, free shipping thresholds), and hero image on homepage. Don't test button colors or minor copy tweaks until you've exhausted the big structural changes \u2014 the signal will be too small to measure reliably."
     },
     {
       "type": "paragraph",

@@ -1,19 +1,25 @@
 {
   "slug": "how-to-optimize-google-ads",
   "title": "How to Optimize Google Ads for Your Shopify Store",
-  "excerpt": "Google Ads optimization isn't about tweaking bids daily — it's about fixing the structural issues that are silently wasting your budget. Here's what to actually focus on.",
-  "category": "how-to",
+  "excerpt": "Google Ads optimization isn't about tweaking bids daily \u2014 it's about fixing the structural issues that are silently wasting your budget. Here's what to actually focus on.",
+  "category": "google-ads",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-09T10:00:00Z",
-  "updatedAt": "2026-03-09T10:00:00Z",
+  "publishedAt": "2026-02-10T10:00:00Z",
+  "updatedAt": "2026-02-10T10:00:00Z",
   "readTime": 8,
   "featured": false,
   "image": "/images/blog/how-to-optimize-google-ads.jpg",
-  "tags": ["Google Ads", "Optimization", "Shopify", "PPC", "ROAS"],
+  "tags": [
+    "Google Ads",
+    "Optimization",
+    "Shopify",
+    "PPC",
+    "ROAS"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "Most Google Ads optimization advice focuses on surface-level tweaks — add negative keywords, adjust bids, test ad copy. These things matter but they're not where the biggest leverage is. The biggest improvements come from fixing structural issues in how campaigns are set up and measured. This guide focuses on the changes that actually move the needle."
+      "text": "Most Google Ads optimization advice focuses on surface-level tweaks \u2014 add negative keywords, adjust bids, test ad copy. These things matter but they're not where the biggest leverage is. The biggest improvements come from fixing structural issues in how campaigns are set up and measured. This guide focuses on the changes that actually move the needle."
     },
     {
       "type": "heading",
@@ -22,7 +28,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Everything in Google Ads optimization depends on accurate conversion data. If your purchase events aren't firing correctly, Google's algorithm is optimizing for the wrong thing — and no amount of bid adjustment or audience refinement will fix that. Before touching anything else, compare your Google-reported conversions against your actual Shopify orders for the same period. They should be within 10-15% of each other. A larger gap means a tracking problem."
+      "text": "Everything in Google Ads optimization depends on accurate conversion data. If your purchase events aren't firing correctly, Google's algorithm is optimizing for the wrong thing \u2014 and no amount of bid adjustment or audience refinement will fix that. Before touching anything else, compare your Google-reported conversions against your actual Shopify orders for the same period. They should be within 10-15% of each other. A larger gap means a tracking problem."
     },
     {
       "type": "paragraph",
@@ -35,11 +41,11 @@
     },
     {
       "type": "paragraph",
-      "text": "For Shopping campaigns, the quality of your product feed is more important than your bids. Google uses your feed data — product title, description, category, price, images — to match products to search queries. A poorly optimized feed means your products show up for the wrong searches (wasted spend) and miss the right ones (lost revenue)."
+      "text": "For Shopping campaigns, the quality of your product feed is more important than your bids. Google uses your feed data \u2014 product title, description, category, price, images \u2014 to match products to search queries. A poorly optimized feed means your products show up for the wrong searches (wasted spend) and miss the right ones (lost revenue)."
     },
     {
       "type": "paragraph",
-      "text": "Start with product titles. Include the most important search terms in the title naturally: brand, product type, key attributes like color and size. Then review your product categories — make sure you're using the most specific Google Product Category for each item. These two changes alone often improve Shopping campaign performance significantly."
+      "text": "Start with product titles. Include the most important search terms in the title naturally: brand, product type, key attributes like color and size. Then review your product categories \u2014 make sure you're using the most specific Google Product Category for each item. These two changes alone often improve Shopping campaign performance significantly."
     },
     {
       "type": "heading",
@@ -52,7 +58,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Build a negative keyword list over time and apply it across campaigns. This is ongoing work but it compounds — every irrelevant term you block improves the efficiency of your remaining spend."
+      "text": "Build a negative keyword list over time and apply it across campaigns. This is ongoing work but it compounds \u2014 every irrelevant term you block improves the efficiency of your remaining spend."
     },
     {
       "type": "heading",
@@ -61,7 +67,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Target ROAS bidding is powerful but commonly misconfigured. The target you set needs to be achievable — if you set a target that's too high, Google can't find enough traffic to spend your budget and performance degrades. A good starting point is your actual average ROAS from the last 30 days, then incrementally increase it as campaign performance improves."
+      "text": "Target ROAS bidding is powerful but commonly misconfigured. The target you set needs to be achievable \u2014 if you set a target that's too high, Google can't find enough traffic to spend your budget and performance degrades. A good starting point is your actual average ROAS from the last 30 days, then incrementally increase it as campaign performance improves."
     },
     {
       "type": "paragraph",
@@ -83,7 +89,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Google's dashboard shows you Google's attributed performance. To understand Google's actual contribution to your business, you need to look at blended ROAS — how does your total Shopify revenue change as a function of your Google spend? Metricx connects your Google Ads data with your real Shopify orders so you can see this clearly. Try it free."
+      "text": "Google's dashboard shows you Google's attributed performance. To understand Google's actual contribution to your business, you need to look at blended ROAS \u2014 how does your total Shopify revenue change as a function of your Google spend? Metricx connects your Google Ads data with your real Shopify orders so you can see this clearly. Try it free."
     }
   ]
 }

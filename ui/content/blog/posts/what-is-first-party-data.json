@@ -2,18 +2,24 @@
   "slug": "what-is-first-party-data",
   "title": "What is First-Party Data and Why It Matters for Your Shopify Store",
   "excerpt": "Third-party cookies are dying, iOS privacy changes are hiding your customers, and platforms are becoming less reliable. First-party data is how smart Shopify merchants are fighting back.",
-  "category": "analytics",
+  "category": "attribution",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-02-27T10:00:00Z",
-  "updatedAt": "2026-02-27T10:00:00Z",
+  "publishedAt": "2026-02-20T10:00:00Z",
+  "updatedAt": "2026-02-20T10:00:00Z",
   "readTime": 7,
   "featured": false,
   "image": "/images/blog/what-is-first-party-data.jpg",
-  "tags": ["First-Party Data", "Privacy", "Tracking", "Shopify", "Analytics"],
+  "tags": [
+    "First-Party Data",
+    "Privacy",
+    "Tracking",
+    "Shopify",
+    "Analytics"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "The advertising landscape shifted dramatically when Apple introduced App Tracking Transparency and browsers began blocking third-party cookies. What used to work automatically — tracking users across the web, building audiences, measuring conversions — no longer works the way it did. First-party data is the foundation that replaces it."
+      "text": "The advertising landscape shifted dramatically when Apple introduced App Tracking Transparency and browsers began blocking third-party cookies. What used to work automatically \u2014 tracking users across the web, building audiences, measuring conversions \u2014 no longer works the way it did. First-party data is the foundation that replaces it."
     },
     {
       "type": "heading",
@@ -26,7 +32,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Contrast this with third-party data — information purchased or licensed from data brokers who aggregated it from other sources — and second-party data, which is another company's first-party data that they share with you directly. First-party is the most valuable because it's accurate, consented, and proprietary to your business."
+      "text": "Contrast this with third-party data \u2014 information purchased or licensed from data brokers who aggregated it from other sources \u2014 and second-party data, which is another company's first-party data that they share with you directly. First-party is the most valuable because it's accurate, consented, and proprietary to your business."
     },
     {
       "type": "heading",
@@ -52,7 +58,7 @@
     },
     {
       "type": "paragraph",
-      "text": "For a Shopify store, first-party data collection happens at a few key points. Every purchase creates a customer record — name, email, purchase history, product preferences. Every email signup adds to your list. If you have a Shopify Web Pixel or server-side tracking setup, you're capturing behavioral data like product views, add-to-carts, and checkout initiations directly from your own infrastructure rather than relying on platform pixels."
+      "text": "For a Shopify store, first-party data collection happens at a few key points. Every purchase creates a customer record \u2014 name, email, purchase history, product preferences. Every email signup adds to your list. If you have a Shopify Web Pixel or server-side tracking setup, you're capturing behavioral data like product views, add-to-carts, and checkout initiations directly from your own infrastructure rather than relying on platform pixels."
     },
     {
       "type": "paragraph",
@@ -65,7 +71,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Beyond improving measurement accuracy, first-party data gives you real advertising leverage. Your customer email list is one of the highest-quality audiences you can upload to Meta or Google — these are people who already bought from you, which means you can build lookalike audiences based on your actual best customers rather than generic interest targeting."
+      "text": "Beyond improving measurement accuracy, first-party data gives you real advertising leverage. Your customer email list is one of the highest-quality audiences you can upload to Meta or Google \u2014 these are people who already bought from you, which means you can build lookalike audiences based on your actual best customers rather than generic interest targeting."
     },
     {
       "type": "paragraph",

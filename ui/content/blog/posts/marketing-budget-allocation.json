@@ -1,19 +1,25 @@
 {
   "slug": "marketing-budget-allocation",
   "title": "How to Allocate Your Marketing Budget Across Meta, Google, and TikTok",
-  "excerpt": "Spreading budget evenly across channels isn't a strategy — it's a guess. Here's a data-driven framework for deciding where your ad spend should actually go.",
-  "category": "strategy",
+  "excerpt": "Spreading budget evenly across channels isn't a strategy \u2014 it's a guess. Here's a data-driven framework for deciding where your ad spend should actually go.",
+  "category": "ecommerce-strategy",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-06T10:00:00Z",
-  "updatedAt": "2026-03-06T10:00:00Z",
+  "publishedAt": "2026-02-13T10:00:00Z",
+  "updatedAt": "2026-02-13T10:00:00Z",
   "readTime": 8,
   "featured": false,
   "image": "/images/blog/marketing-budget-allocation.jpg",
-  "tags": ["Budget", "Strategy", "Meta Ads", "Google Ads", "Ecommerce"],
+  "tags": [
+    "Budget",
+    "Strategy",
+    "Meta Ads",
+    "Google Ads",
+    "Ecommerce"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "One of the most common questions from Shopify merchants scaling their ad spend: how do I decide how much goes to Meta vs. Google vs. TikTok? The honest answer is that there's no universal formula — but there is a logical process for figuring it out, and most merchants skip it entirely."
+      "text": "One of the most common questions from Shopify merchants scaling their ad spend: how do I decide how much goes to Meta vs. Google vs. TikTok? The honest answer is that there's no universal formula \u2014 but there is a logical process for figuring it out, and most merchants skip it entirely."
     },
     {
       "type": "heading",
@@ -26,7 +32,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The problem is that 'performance' is hard to measure accurately across channels because platforms all report attribution differently. Meta takes credit for things Google drove. Google takes credit for things that would have happened organically. To make real budget allocation decisions, you need to compare channels using a neutral metric — which is blended ROAS contribution, not platform-reported ROAS."
+      "text": "The problem is that 'performance' is hard to measure accurately across channels because platforms all report attribution differently. Meta takes credit for things Google drove. Google takes credit for things that would have happened organically. To make real budget allocation decisions, you need to compare channels using a neutral metric \u2014 which is blended ROAS contribution, not platform-reported ROAS."
     },
     {
       "type": "heading",
@@ -35,7 +41,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The cleanest way to understand a channel's true contribution is holdout testing — pausing the channel for a period and seeing how overall revenue changes. If you turn off Google for two weeks and your Shopify revenue drops by 15%, Google is contributing roughly 15% of your revenue. This is called incrementality testing and it's the gold standard."
+      "text": "The cleanest way to understand a channel's true contribution is holdout testing \u2014 pausing the channel for a period and seeing how overall revenue changes. If you turn off Google for two weeks and your Shopify revenue drops by 15%, Google is contributing roughly 15% of your revenue. This is called incrementality testing and it's the gold standard."
     },
     {
       "type": "paragraph",
@@ -48,7 +54,7 @@
     },
     {
       "type": "paragraph",
-      "text": "For stores under $30k/month: Focus 80-90% of budget on one channel — usually Meta — until you have a proven, profitable setup. Splitting budget too early means you don't have enough data to optimize either channel well. Prove the model on one platform first."
+      "text": "For stores under $30k/month: Focus 80-90% of budget on one channel \u2014 usually Meta \u2014 until you have a proven, profitable setup. Splitting budget too early means you don't have enough data to optimize either channel well. Prove the model on one platform first."
     },
     {
       "type": "paragraph",
@@ -74,11 +80,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Set a monthly cadence for reviewing channel allocation. Pull your total spend per channel, your actual Shopify revenue, and calculate blended ROAS overall and by channel. Look for channels where you're getting strong incremental returns and channels where performance is flat or declining with scale. Shift budget accordingly — but change one thing at a time so you can attribute the impact clearly."
+      "text": "Set a monthly cadence for reviewing channel allocation. Pull your total spend per channel, your actual Shopify revenue, and calculate blended ROAS overall and by channel. Look for channels where you're getting strong incremental returns and channels where performance is flat or declining with scale. Shift budget accordingly \u2014 but change one thing at a time so you can attribute the impact clearly."
     },
     {
       "type": "paragraph",
-      "text": "Metricx makes this analysis fast by pulling all your channel spend alongside your real Shopify revenue in one place. No spreadsheet assembly required — just the data you need to make allocation decisions confidently. Try it free."
+      "text": "Metricx makes this analysis fast by pulling all your channel spend alongside your real Shopify revenue in one place. No spreadsheet assembly required \u2014 just the data you need to make allocation decisions confidently. Try it free."
     }
   ]
 }

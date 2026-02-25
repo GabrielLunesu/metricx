@@ -2,18 +2,24 @@
   "slug": "what-is-blended-roas",
   "title": "What is Blended ROAS and Why It's the Metric You Should Actually Track",
   "excerpt": "Platform ROAS looks great on paper but doesn't tell you if your business is profitable. Blended ROAS cuts through the noise and shows you the truth about your ad performance.",
-  "category": "analytics",
+  "category": "ad-analytics",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-01T10:00:00Z",
-  "updatedAt": "2026-03-01T10:00:00Z",
+  "publishedAt": "2026-02-18T10:00:00Z",
+  "updatedAt": "2026-02-18T10:00:00Z",
   "readTime": 6,
   "featured": false,
   "image": "/images/blog/what-is-blended-roas.jpg",
-  "tags": ["ROAS", "Blended ROAS", "Analytics", "Ecommerce", "Ad Performance"],
+  "tags": [
+    "ROAS",
+    "Blended ROAS",
+    "Analytics",
+    "Ecommerce",
+    "Ad Performance"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "You're running Meta and Google ads. Meta reports 4.2x ROAS. Google reports 5.1x ROAS. You feel good. Then you look at your Shopify revenue and the numbers don't add up. That's because platform ROAS and blended ROAS are two completely different things — and only one of them reflects reality."
+      "text": "You're running Meta and Google ads. Meta reports 4.2x ROAS. Google reports 5.1x ROAS. You feel good. Then you look at your Shopify revenue and the numbers don't add up. That's because platform ROAS and blended ROAS are two completely different things \u2014 and only one of them reflects reality."
     },
     {
       "type": "heading",
@@ -22,7 +28,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Platform ROAS is what Meta or Google reports inside their own dashboards. It's calculated using their attribution model — which means they're taking credit for every conversion they can plausibly connect to an ad impression or click, including purchases that were already in progress and organic sales they had nothing to do with."
+      "text": "Platform ROAS is what Meta or Google reports inside their own dashboards. It's calculated using their attribution model \u2014 which means they're taking credit for every conversion they can plausibly connect to an ad impression or click, including purchases that were already in progress and organic sales they had nothing to do with."
     },
     {
       "type": "paragraph",
@@ -39,7 +45,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The result is that your combined platform-reported revenue is almost always significantly higher than your actual Shopify revenue. Some merchants see a 2x or 3x gap. It doesn't mean the platforms are useless — their data is still valuable for comparing campaigns within the same platform — but you can't use it as an absolute measure of business performance."
+      "text": "The result is that your combined platform-reported revenue is almost always significantly higher than your actual Shopify revenue. Some merchants see a 2x or 3x gap. It doesn't mean the platforms are useless \u2014 their data is still valuable for comparing campaigns within the same platform \u2014 but you can't use it as an absolute measure of business performance."
     },
     {
       "type": "heading",
@@ -52,7 +58,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The important thing is to use actual Shopify revenue, not platform-attributed revenue. This is why connecting your Shopify data directly to your analytics matters — it gives you the ground truth that platforms can't."
+      "text": "The important thing is to use actual Shopify revenue, not platform-attributed revenue. This is why connecting your Shopify data directly to your analytics matters \u2014 it gives you the ground truth that platforms can't."
     },
     {
       "type": "heading",
@@ -69,7 +75,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Metricx tracks both in one place — pulling your actual Shopify revenue alongside your Meta and Google spend so you can see the real picture without building a custom spreadsheet. Try it free and make decisions based on numbers that actually mean something."
+      "text": "Metricx tracks both in one place \u2014 pulling your actual Shopify revenue alongside your Meta and Google spend so you can see the real picture without building a custom spreadsheet. Try it free and make decisions based on numbers that actually mean something."
     }
   ]
 }

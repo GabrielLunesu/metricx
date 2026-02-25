@@ -2,18 +2,24 @@
   "slug": "how-to-improve-roas",
   "title": "How to Improve ROAS: 8 Tactics That Work for Shopify Stores",
   "excerpt": "Chasing higher ROAS without a systematic approach is how you waste weeks optimizing the wrong things. Here are 8 tactics that actually move the number.",
-  "category": "how-to",
+  "category": "ad-analytics",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-07T10:00:00Z",
-  "updatedAt": "2026-03-07T10:00:00Z",
+  "publishedAt": "2026-02-07T10:00:00Z",
+  "updatedAt": "2026-02-07T10:00:00Z",
   "readTime": 8,
   "featured": false,
   "image": "/images/blog/how-to-improve-roas.jpg",
-  "tags": ["ROAS", "Optimization", "Shopify", "Meta Ads", "Google Ads"],
+  "tags": [
+    "ROAS",
+    "Optimization",
+    "Shopify",
+    "Meta Ads",
+    "Google Ads"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "Before you can improve ROAS, you need to be measuring it correctly. Platform ROAS inside Meta or Google is a useful relative metric — good for comparing campaigns against each other — but your real target should be blended ROAS: total Shopify revenue divided by total ad spend. That's the number that tells you whether your advertising is actually profitable. These eight tactics are focused on improving that number."
+      "text": "Before you can improve ROAS, you need to be measuring it correctly. Platform ROAS inside Meta or Google is a useful relative metric \u2014 good for comparing campaigns against each other \u2014 but your real target should be blended ROAS: total Shopify revenue divided by total ad spend. That's the number that tells you whether your advertising is actually profitable. These eight tactics are focused on improving that number."
     },
     {
       "type": "heading",
@@ -22,7 +28,7 @@
     },
     {
       "type": "paragraph",
-      "text": "You can't improve ROAS without knowing what ROAS you need to be profitable. Calculate your break-even ROAS: 1 / gross margin. If your margin is 40%, break-even is 2.5x. If your margin is 60%, break-even is 1.67x. Every optimization decision should be measured against this floor — not an arbitrary industry benchmark."
+      "text": "You can't improve ROAS without knowing what ROAS you need to be profitable. Calculate your break-even ROAS: 1 / gross margin. If your margin is 40%, break-even is 2.5x. If your margin is 60%, break-even is 1.67x. Every optimization decision should be measured against this floor \u2014 not an arbitrary industry benchmark."
     },
     {
       "type": "heading",
@@ -40,7 +46,7 @@
     },
     {
       "type": "paragraph",
-      "text": "On Meta especially, creative quality is the biggest variable in ROAS. A better ad — one that stops the scroll, communicates value clearly, and makes someone want to click — will outperform a mediocre ad with the same budget every time. Test different hooks, formats, and angles systematically. Document what the top performers have in common and brief more content in that direction."
+      "text": "On Meta especially, creative quality is the biggest variable in ROAS. A better ad \u2014 one that stops the scroll, communicates value clearly, and makes someone want to click \u2014 will outperform a mediocre ad with the same budget every time. Test different hooks, formats, and angles systematically. Document what the top performers have in common and brief more content in that direction."
     },
     {
       "type": "heading",
@@ -49,7 +55,7 @@
     },
     {
       "type": "paragraph",
-      "text": "ROAS is a function of both click cost and conversion rate. Improving your conversion rate improves ROAS without touching your ads at all. Review the product page or landing page your ads point to. Does it answer objections? Does it load fast on mobile? Is the CTA clear? Even small improvements — 0.5% conversion rate increase — can have a significant impact on ROAS at scale."
+      "text": "ROAS is a function of both click cost and conversion rate. Improving your conversion rate improves ROAS without touching your ads at all. Review the product page or landing page your ads point to. Does it answer objections? Does it load fast on mobile? Is the CTA clear? Even small improvements \u2014 0.5% conversion rate increase \u2014 can have a significant impact on ROAS at scale."
     },
     {
       "type": "heading",
@@ -58,7 +64,7 @@
     },
     {
       "type": "paragraph",
-      "text": "On Meta, broad targeting often outperforms narrow targeting thanks to algorithmic optimization — but that doesn't mean audience quality is irrelevant. Custom audiences built from your customer list, website visitors, or past purchasers typically convert at much higher rates than cold audiences. Make sure you're running retargeting campaigns alongside your cold traffic campaigns and measuring their contribution separately."
+      "text": "On Meta, broad targeting often outperforms narrow targeting thanks to algorithmic optimization \u2014 but that doesn't mean audience quality is irrelevant. Custom audiences built from your customer list, website visitors, or past purchasers typically convert at much higher rates than cold audiences. Make sure you're running retargeting campaigns alongside your cold traffic campaigns and measuring their contribution separately."
     },
     {
       "type": "heading",
@@ -89,7 +95,7 @@
     },
     {
       "type": "paragraph",
-      "text": "The fix is to track blended ROAS consistently and use it as your north star. Metricx calculates this automatically by connecting your ad accounts with your actual Shopify revenue — so you always know whether your optimization efforts are moving the metric that matters. Try it free."
+      "text": "The fix is to track blended ROAS consistently and use it as your north star. Metricx calculates this automatically by connecting your ad accounts with your actual Shopify revenue \u2014 so you always know whether your optimization efforts are moving the metric that matters. Try it free."
     }
   ]
 }

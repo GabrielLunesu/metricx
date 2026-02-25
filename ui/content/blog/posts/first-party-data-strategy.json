@@ -4,16 +4,22 @@
   "excerpt": "Brands with strong first-party data infrastructure survive every platform privacy change. Here's how to build it for your Shopify store before you need it.",
   "category": "attribution",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-14T10:00:00Z",
-  "updatedAt": "2026-03-14T10:00:00Z",
+  "publishedAt": "2026-02-05T10:00:00Z",
+  "updatedAt": "2026-02-05T10:00:00Z",
   "readTime": 8,
   "featured": false,
   "image": "/images/blog/first-party-data-strategy.jpg",
-  "tags": ["First-Party Data", "Strategy", "Shopify", "Attribution", "Privacy"],
+  "tags": [
+    "First-Party Data",
+    "Strategy",
+    "Shopify",
+    "Attribution",
+    "Privacy"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "Every major privacy change of the last five years — iOS 14, cookie deprecation, browser restrictions — hit brands that relied on third-party data hardest. Brands with strong first-party data foundations barely flinched. This isn't a coincidence. Building a first-party data strategy now isn't just about attribution accuracy — it's about making your advertising resilient to the next round of platform changes, whenever they come."
+      "text": "Every major privacy change of the last five years \u2014 iOS 14, cookie deprecation, browser restrictions \u2014 hit brands that relied on third-party data hardest. Brands with strong first-party data foundations barely flinched. This isn't a coincidence. Building a first-party data strategy now isn't just about attribution accuracy \u2014 it's about making your advertising resilient to the next round of platform changes, whenever they come."
     },
     {
       "type": "heading",
@@ -44,7 +50,7 @@
     },
     {
       "type": "paragraph",
-      "text": "UTM parameters are the simplest and most underutilized first-party attribution tool available. Tag every paid ad link with utm_source, utm_medium, utm_campaign, and utm_content. When a customer clicks and purchases, you can trace that order back to the specific campaign in your own analytics — completely independent of what Meta or Google report."
+      "text": "UTM parameters are the simplest and most underutilized first-party attribution tool available. Tag every paid ad link with utm_source, utm_medium, utm_campaign, and utm_content. When a customer clicks and purchases, you can trace that order back to the specific campaign in your own analytics \u2014 completely independent of what Meta or Google report."
     },
     {
       "type": "paragraph",
@@ -57,11 +63,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Your customer email list is one of the most powerful targeting assets you have. Upload it to Meta and Google to create custom audiences — these people already bought from you, making them ideal for retention campaigns and the best possible seed audience for lookalike modeling. A lookalike built from your actual purchasers will outperform interest-based targeting almost every time."
+      "text": "Your customer email list is one of the most powerful targeting assets you have. Upload it to Meta and Google to create custom audiences \u2014 these people already bought from you, making them ideal for retention campaigns and the best possible seed audience for lookalike modeling. A lookalike built from your actual purchasers will outperform interest-based targeting almost every time."
     },
     {
       "type": "paragraph",
-      "text": "Segment your list before uploading. Your highest-LTV customers — those who bought multiple times or spent above a certain threshold — make a better lookalike seed than your full customer list, because you're telling the algorithm to find people who behave like your best customers specifically."
+      "text": "Segment your list before uploading. Your highest-LTV customers \u2014 those who bought multiple times or spent above a certain threshold \u2014 make a better lookalike seed than your full customer list, because you're telling the algorithm to find people who behave like your best customers specifically."
     },
     {
       "type": "heading",
@@ -70,7 +76,7 @@
     },
     {
       "type": "paragraph",
-      "text": "First-party data is just as valuable for excluding as it is for targeting. Upload your full customer list to Meta and Google to suppress existing buyers from cold acquisition campaigns. This ensures you're not paying to re-acquire someone who already converted — which wastes budget and inflates your apparent CAC. This single step often reduces acquisition campaign waste by 10-15%."
+      "text": "First-party data is just as valuable for excluding as it is for targeting. Upload your full customer list to Meta and Google to suppress existing buyers from cold acquisition campaigns. This ensures you're not paying to re-acquire someone who already converted \u2014 which wastes budget and inflates your apparent CAC. This single step often reduces acquisition campaign waste by 10-15%."
     },
     {
       "type": "heading",

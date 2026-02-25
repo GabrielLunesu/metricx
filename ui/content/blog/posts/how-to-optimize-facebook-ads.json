@@ -2,18 +2,24 @@
   "slug": "how-to-optimize-facebook-ads",
   "title": "How to Optimize Facebook Ads: A Data-Driven Process for Ecommerce",
   "excerpt": "Optimizing Meta Ads without a clear process is how you end up making reactive decisions based on daily fluctuations. Here's a systematic approach that actually works.",
-  "category": "how-to",
+  "category": "meta-ads",
   "author": "gabriel-lunesu",
-  "publishedAt": "2026-03-10T10:00:00Z",
-  "updatedAt": "2026-03-10T10:00:00Z",
+  "publishedAt": "2026-02-08T10:00:00Z",
+  "updatedAt": "2026-02-08T10:00:00Z",
   "readTime": 8,
   "featured": false,
   "image": "/images/blog/how-to-optimize-facebook-ads.jpg",
-  "tags": ["Meta Ads", "Facebook Ads", "Optimization", "Ecommerce", "ROAS"],
+  "tags": [
+    "Meta Ads",
+    "Facebook Ads",
+    "Optimization",
+    "Ecommerce",
+    "ROAS"
+  ],
   "content": [
     {
       "type": "paragraph",
-      "text": "Meta Ads optimization is one of those things that looks simple on the surface — check performance, pause what's bad, scale what's good — but in practice most merchants do it reactively, making decisions based on yesterday's numbers rather than statistically meaningful trends. This is a systematic process that removes the guesswork."
+      "text": "Meta Ads optimization is one of those things that looks simple on the surface \u2014 check performance, pause what's bad, scale what's good \u2014 but in practice most merchants do it reactively, making decisions based on yesterday's numbers rather than statistically meaningful trends. This is a systematic process that removes the guesswork."
     },
     {
       "type": "heading",
@@ -22,7 +28,7 @@
     },
     {
       "type": "paragraph",
-      "text": "Before you touch a campaign, define what 'good' looks like. This means knowing your break-even ROAS, your target CAC, and your minimum acceptable results after how many days and how much spend. If you don't define these upfront, you'll make inconsistent decisions — pausing things too early when they're in the learning phase or keeping underperformers alive too long because you're hoping they'll turn around."
+      "text": "Before you touch a campaign, define what 'good' looks like. This means knowing your break-even ROAS, your target CAC, and your minimum acceptable results after how many days and how much spend. If you don't define these upfront, you'll make inconsistent decisions \u2014 pausing things too early when they're in the learning phase or keeping underperformers alive too long because you're hoping they'll turn around."
     },
     {
       "type": "paragraph",
@@ -35,11 +41,11 @@
     },
     {
       "type": "paragraph",
-      "text": "Daily optimization is usually counterproductive. Meta's algorithm needs stability — frequent changes reset the learning phase and tank performance. Weekly reviews are the sweet spot. Every week, review results at the campaign and ad level, make decisions on clear underperformers, and introduce new creative tests. Monthly, review overall strategy and budget allocation."
+      "text": "Daily optimization is usually counterproductive. Meta's algorithm needs stability \u2014 frequent changes reset the learning phase and tank performance. Weekly reviews are the sweet spot. Every week, review results at the campaign and ad level, make decisions on clear underperformers, and introduce new creative tests. Monthly, review overall strategy and budget allocation."
     },
     {
       "type": "paragraph",
-      "text": "The exception is budget. If a campaign is running through its daily budget before the end of the day and producing strong ROAS, increase the budget. If a campaign is barely spending, something is structurally wrong — usually a too-narrow audience or a bid too low."
+      "text": "The exception is budget. If a campaign is running through its daily budget before the end of the day and producing strong ROAS, increase the budget. If a campaign is barely spending, something is structurally wrong \u2014 usually a too-narrow audience or a bid too low."
     },
     {
       "type": "heading",
@@ -74,11 +80,11 @@
     },
     {
       "type": "paragraph",
-      "text": "When a campaign is performing well — consistently above your target ROAS for at least 7-10 days — scale it. Increase budget by 20-30% at a time, wait 3-5 days for performance to stabilize, then scale again if it holds. Resist the urge to make multiple changes simultaneously — you need to know what's driving improvements."
+      "text": "When a campaign is performing well \u2014 consistently above your target ROAS for at least 7-10 days \u2014 scale it. Increase budget by 20-30% at a time, wait 3-5 days for performance to stabilize, then scale again if it holds. Resist the urge to make multiple changes simultaneously \u2014 you need to know what's driving improvements."
     },
     {
       "type": "paragraph",
-      "text": "Track your blended ROAS as you scale. If overall blended ROAS stays strong as you push more into Meta, you have headroom to keep going. If it starts dropping, you're hitting diminishing returns on the audience — time to either refresh creative or explore different audiences. Metricx gives you this blended view automatically. Try it free."
+      "text": "Track your blended ROAS as you scale. If overall blended ROAS stays strong as you push more into Meta, you have headroom to keep going. If it starts dropping, you're hitting diminishing returns on the audience \u2014 time to either refresh creative or explore different audiences. Metricx gives you this blended view automatically. Try it free."
     }
   ]
 }
