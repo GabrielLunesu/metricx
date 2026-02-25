@@ -1,0 +1,88 @@
+{
+  "slug": "server-side-tracking-shopify",
+  "title": "Server-Side Tracking for Shopify: Why It Matters and How to Set It Up",
+  "excerpt": "Browser-based pixels miss 30-40% of conversions. Server-side tracking fixes the attribution gap that's costing you visibility into your real ad performance.",
+  "category": "attribution",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-13T10:00:00Z",
+  "updatedAt": "2026-03-13T10:00:00Z",
+  "readTime": 9,
+  "featured": true,
+  "image": "/images/blog/server-side-tracking-shopify.jpg",
+  "tags": ["Server-Side Tracking", "Attribution", "Shopify", "Meta Ads", "Privacy"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "If you're running Meta or Google ads on your Shopify store and relying on browser-based pixels alone, you're missing a significant portion of your conversions. Studies consistently show that browser pixels miss 30-40% of purchase events due to ad blockers, iOS privacy restrictions, and browser-level tracking prevention. Server-side tracking closes that gap — and it's more important now than it's ever been."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What Server-Side Tracking Is"
+    },
+    {
+      "type": "paragraph",
+      "text": "Traditional tracking works client-side: a piece of JavaScript code (the pixel) runs in the user's browser, detects a purchase event, and sends data back to Meta or Google. This depends entirely on the browser allowing the pixel to run — which increasingly, browsers and users don't."
+    },
+    {
+      "type": "paragraph",
+      "text": "Server-side tracking moves this process to your server (or Shopify's infrastructure). When a purchase happens, your server sends the event data directly to the platform's API — Meta's Conversions API (CAPI) or Google's Measurement Protocol — bypassing the browser entirely. Browser restrictions become irrelevant because the data never goes through the browser."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Browser Pixels Are Increasingly Unreliable"
+    },
+    {
+      "type": "paragraph",
+      "text": "Three converging forces have made browser pixels unreliable. First, iOS 14's App Tracking Transparency framework: users who opt out of tracking have their browser-level activity hidden from ad platforms. With opt-in rates around 25%, the majority of iOS users are invisible to pixel tracking. Second, ad blockers: a significant percentage of desktop users run ad blockers that block pixel scripts entirely. Third, browser privacy defaults: Safari's Intelligent Tracking Prevention and Firefox's Enhanced Tracking Protection actively limit cross-site tracking."
+    },
+    {
+      "type": "paragraph",
+      "text": "The result is that for many Shopify stores, only 60-70% of actual purchases are being reported back to ad platforms via pixel. The algorithm is optimizing for an incomplete dataset, which means it's making suboptimal decisions about who to show your ads to."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Setting Up Meta Conversions API on Shopify"
+    },
+    {
+      "type": "paragraph",
+      "text": "Shopify has native support for Meta's Conversions API through the Meta channel integration. In your Shopify admin, go to Sales Channels, find the Meta integration, and look for the Conversions API section. Shopify handles the server-side event sending automatically once you connect your Meta account and enable CAPI."
+    },
+    {
+      "type": "paragraph",
+      "text": "The best setup is redundant: run both the browser pixel and server-side CAPI together. Meta uses deduplication to avoid counting the same event twice, and having both sources means you capture events that the pixel misses and events that CAPI misses. This 'both channels' approach maximizes your event match quality score."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Setting Up Google's Enhanced Conversions"
+    },
+    {
+      "type": "paragraph",
+      "text": "Google's equivalent is Enhanced Conversions, which supplements standard conversion tags with hashed first-party data (email addresses, phone numbers) sent from your server. When a customer purchases, you send their hashed contact information alongside the conversion event. Google matches this against its user database to attribute conversions that the browser tag missed."
+    },
+    {
+      "type": "paragraph",
+      "text": "Set this up through Google Tag Manager or Shopify's Google channel integration. Shopify's native integration handles most of the configuration automatically once you connect your Google Ads account."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Verifying Your Setup"
+    },
+    {
+      "type": "paragraph",
+      "text": "After setting up server-side tracking, verify it's working by comparing your platform-reported conversions against actual Shopify orders. You should see an increase in reported conversions — typically 15-30% depending on how much your previous pixel was missing. In Meta, check your Event Match Quality score in Events Manager; it should improve significantly with CAPI enabled."
+    },
+    {
+      "type": "paragraph",
+      "text": "The most reliable verification is to compare Shopify orders to platform conversions over 30 days. A well-configured server-side setup should get you within 15-20% of actual orders. Better tracking means better algorithmic optimization, which means better ROAS over time."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx uses Shopify's server-side data directly — actual purchase events from your store — to give you a ground-truth view of ad performance that doesn't depend on pixel accuracy. Try it free and see the real picture."
+    }
+  ]
+}

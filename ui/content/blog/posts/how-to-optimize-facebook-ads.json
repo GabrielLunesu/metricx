@@ -1,0 +1,84 @@
+{
+  "slug": "how-to-optimize-facebook-ads",
+  "title": "How to Optimize Facebook Ads: A Data-Driven Process for Ecommerce",
+  "excerpt": "Optimizing Meta Ads without a clear process is how you end up making reactive decisions based on daily fluctuations. Here's a systematic approach that actually works.",
+  "category": "how-to",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-10T10:00:00Z",
+  "updatedAt": "2026-03-10T10:00:00Z",
+  "readTime": 8,
+  "featured": false,
+  "image": "/images/blog/how-to-optimize-facebook-ads.jpg",
+  "tags": ["Meta Ads", "Facebook Ads", "Optimization", "Ecommerce", "ROAS"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "Meta Ads optimization is one of those things that looks simple on the surface — check performance, pause what's bad, scale what's good — but in practice most merchants do it reactively, making decisions based on yesterday's numbers rather than statistically meaningful trends. This is a systematic process that removes the guesswork."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Set Your Evaluation Criteria Before You Optimize"
+    },
+    {
+      "type": "paragraph",
+      "text": "Before you touch a campaign, define what 'good' looks like. This means knowing your break-even ROAS, your target CAC, and your minimum acceptable results after how many days and how much spend. If you don't define these upfront, you'll make inconsistent decisions — pausing things too early when they're in the learning phase or keeping underperformers alive too long because you're hoping they'll turn around."
+    },
+    {
+      "type": "paragraph",
+      "text": "A simple framework: give a campaign $100-150 of spend before drawing conclusions. If it hasn't produced at least one purchase by then and you're in a low-price-point category, it's a signal to test a different creative or audience. For higher-ticket items, give it more spend before calling it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Weekly Optimization Cadence"
+    },
+    {
+      "type": "paragraph",
+      "text": "Daily optimization is usually counterproductive. Meta's algorithm needs stability — frequent changes reset the learning phase and tank performance. Weekly reviews are the sweet spot. Every week, review results at the campaign and ad level, make decisions on clear underperformers, and introduce new creative tests. Monthly, review overall strategy and budget allocation."
+    },
+    {
+      "type": "paragraph",
+      "text": "The exception is budget. If a campaign is running through its daily budget before the end of the day and producing strong ROAS, increase the budget. If a campaign is barely spending, something is structurally wrong — usually a too-narrow audience or a bid too low."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Creative Testing: The Highest-Leverage Activity"
+    },
+    {
+      "type": "paragraph",
+      "text": "On Meta, creative is the main optimization lever you control. Algorithm-driven targeting has reduced the impact of audience changes, but nothing the algorithm does can save bad creative. Build a systematic creative testing process: generate 3-5 new creatives per week, run them in a dedicated testing campaign with equal budget, identify winners after a week of spend, and graduate winners to your main scaling campaign."
+    },
+    {
+      "type": "paragraph",
+      "text": "When a creative wins, analyze why. What was the hook? What was the format? What emotion or pain point did it address? Document this and use it to brief better creative faster. Over time you build a playbook of what works for your specific audience."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading the Metrics Correctly"
+    },
+    {
+      "type": "paragraph",
+      "text": "Within Meta, the metrics that matter most for optimization are: Cost Per Purchase (or ROAS) for campaign-level efficiency, CPM for audience cost and competitive pressure, CTR for creative quality, and Landing Page View rate for ad-to-landing-page alignment. Use these together to diagnose problems. High CPM but strong CTR means you're in a competitive space but your creative is good. Low CTR means the creative needs work regardless of anything else."
+    },
+    {
+      "type": "paragraph",
+      "text": "For overall business performance, always sanity check Meta's attributed numbers against your actual Shopify revenue. If Meta claims 5x ROAS but your blended ROAS is 2.5x, you're getting a distorted picture inside the platform."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Scaling What Works"
+    },
+    {
+      "type": "paragraph",
+      "text": "When a campaign is performing well — consistently above your target ROAS for at least 7-10 days — scale it. Increase budget by 20-30% at a time, wait 3-5 days for performance to stabilize, then scale again if it holds. Resist the urge to make multiple changes simultaneously — you need to know what's driving improvements."
+    },
+    {
+      "type": "paragraph",
+      "text": "Track your blended ROAS as you scale. If overall blended ROAS stays strong as you push more into Meta, you have headroom to keep going. If it starts dropping, you're hitting diminishing returns on the audience — time to either refresh creative or explore different audiences. Metricx gives you this blended view automatically. Try it free."
+    }
+  ]
+}

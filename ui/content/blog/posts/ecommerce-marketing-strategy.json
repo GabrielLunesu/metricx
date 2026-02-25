@@ -1,0 +1,92 @@
+{
+  "slug": "ecommerce-marketing-strategy",
+  "title": "Ecommerce Marketing Strategy: A Framework for Shopify Stores in 2026",
+  "excerpt": "Most Shopify stores throw budget at ads without a real strategy. Here's the framework experienced media buyers use to build ad mixes that actually scale.",
+  "category": "strategy",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-02T10:00:00Z",
+  "updatedAt": "2026-03-02T10:00:00Z",
+  "readTime": 9,
+  "featured": true,
+  "image": "/images/blog/ecommerce-marketing-strategy.jpg",
+  "tags": ["Strategy", "Ecommerce", "Marketing", "Shopify", "Ad Spend"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "Most ecommerce marketing strategies aren't really strategies — they're a collection of tactics that got added one at a time as the business grew. Run Meta ads, try Google, add an email sequence, test TikTok. There's no framework tying it together, no clear logic for how budget gets allocated, and no way to tell what's actually working. This post is the framework I use to build marketing systems that scale."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Start With the Unit Economics"
+    },
+    {
+      "type": "paragraph",
+      "text": "Before you touch a single campaign, you need to know three numbers: your gross margin, your average order value, and your customer lifetime value. These determine how much you can afford to spend to acquire a customer and still be profitable. Gross margin tells you your break-even ROAS. AOV tells you the revenue per transaction. LTV tells you how much a customer is worth over time — which tells you how much you can afford to lose on the first purchase if they come back."
+    },
+    {
+      "type": "paragraph",
+      "text": "If you don't know these numbers, stop running ads until you do. You're optimizing for the wrong things."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Build the Funnel Before You Scale It"
+    },
+    {
+      "type": "paragraph",
+      "text": "Every ecommerce marketing strategy has three stages: acquisition (getting new people), conversion (turning visitors into buyers), and retention (getting buyers to come back). Most merchants over-invest in acquisition and under-invest in the other two. But improving conversion rates and retention dramatically improves the economics of acquisition — so you can afford to spend more per click."
+    },
+    {
+      "type": "paragraph",
+      "text": "Before scaling ad spend, make sure your conversion funnel is solid. That means a product page that sells, a checkout that doesn't leak, a post-purchase email sequence that encourages a second buy, and an offer structure that makes sense for your margins. Getting the funnel right first means every dollar you put into acquisition works harder."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Channel Strategy: Where to Start"
+    },
+    {
+      "type": "paragraph",
+      "text": "For most Shopify stores starting out, Meta is still the highest-leverage first channel. The targeting capabilities, creative formats, and audience scale give you the fastest feedback loop on what resonates. Start with broad targeting and let the algorithm find your buyers. Run 3-5 creative variations per ad set. Measure cost per purchase against your break-even CAC, not ROAS."
+    },
+    {
+      "type": "paragraph",
+      "text": "Once you have a profitable Meta setup, add Google Shopping. Shopping ads capture high-intent buyers who are already searching for what you sell — they convert better and often at lower CPCs than social. The two channels complement each other: Meta drives awareness and demand, Google captures it."
+    },
+    {
+      "type": "paragraph",
+      "text": "TikTok and other channels come after you have a stable foundation on Meta and Google. Spreading budget too thin across too many channels too early is one of the most common mistakes growing stores make."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Budget Allocation Logic"
+    },
+    {
+      "type": "paragraph",
+      "text": "A simple starting allocation for a store with a working Meta setup adding Google: 60-70% Meta, 30-40% Google. As Google proves itself, shift budget toward it proportionally. The goal is to find the channel mix that produces the best blended ROAS — not to optimize each channel independently."
+    },
+    {
+      "type": "paragraph",
+      "text": "Review budget allocation monthly, not weekly. Weekly fluctuations are noise. Monthly trends tell you something real. Look at blended ROAS by channel, not just platform-reported ROAS, and let actual Shopify revenue data guide where you shift spend."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measuring What Matters"
+    },
+    {
+      "type": "paragraph",
+      "text": "Track blended ROAS as your north star. Track CAC by channel to understand acquisition efficiency. Track LTV cohorts monthly to see if customers acquired through different channels behave differently over time. These three metrics tell you nearly everything you need to know about whether your strategy is working."
+    },
+    {
+      "type": "paragraph",
+      "text": "The mistake most merchants make is relying entirely on platform dashboards for these numbers. Platform data is useful for campaign-level decisions within a channel. For overall strategy decisions, you need your actual Shopify data — real revenue, real orders, real customers — sitting alongside your spend data."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx connects your Meta and Google data with your actual Shopify orders so you can make strategy decisions based on real numbers, not platform-reported ones. Try it free and build a marketing strategy that's grounded in data."
+    }
+  ]
+}

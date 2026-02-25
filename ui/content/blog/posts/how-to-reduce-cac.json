@@ -1,0 +1,76 @@
+{
+  "slug": "how-to-reduce-cac",
+  "title": "How to Reduce CAC Without Cutting Ad Spend",
+  "excerpt": "Cutting your ad budget to lower CAC is the lazy solution. Here's how to reduce what you pay per customer while actually acquiring more of them.",
+  "category": "how-to",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-08T10:00:00Z",
+  "updatedAt": "2026-03-08T10:00:00Z",
+  "readTime": 7,
+  "featured": false,
+  "image": "/images/blog/how-to-reduce-cac.jpg",
+  "tags": ["CAC", "Optimization", "Ecommerce", "Shopify", "Profitability"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "CAC creep is real. As you scale, your customer acquisition cost tends to rise — you exhaust your most responsive audiences, competition increases, and platform costs go up. Accepting this as inevitable is wrong. There are specific, actionable ways to reduce CAC without cutting the spend that's fueling your growth."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Understand Where Your CAC Is Coming From"
+    },
+    {
+      "type": "paragraph",
+      "text": "Before optimizing CAC, break it down by channel. Your blended CAC (total spend / new customers) is useful as a north star, but it hides the fact that some channels might be delivering excellent CAC and others are dragging the average up. Pull CAC by Meta, Google, and any other paid channels separately. This almost always reveals at least one channel that's significantly underperforming — and that's where you start."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Improve Conversion Rate Before Touching Ad Spend"
+    },
+    {
+      "type": "paragraph",
+      "text": "CAC = Ad Spend / New Customers. You can reduce CAC by spending less or by getting more customers from the same spend. Getting more customers from the same spend means improving conversion rate — and most Shopify stores have significant room to improve. Review your product pages, checkout flow, mobile experience, and page speed. A 1% improvement in conversion rate on significant traffic can reduce CAC by 15-20%."
+    },
+    {
+      "type": "paragraph",
+      "text": "Run qualitative research too. Session recordings, on-site surveys, and abandoned cart analysis tell you why people don't buy — which is more valuable than any A/B test hypothesis you'll come up with yourself."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Fix Audience Quality Issues"
+    },
+    {
+      "type": "paragraph",
+      "text": "High CAC often signals you're reaching the wrong people. On Meta, check your audience overlap — if your cold traffic and retargeting audiences are heavily overlapping, you're paying for the same impressions twice. On Google, review your search term reports for irrelevant queries eating budget. Both of these are common and fixable without reducing spend."
+    },
+    {
+      "type": "paragraph",
+      "text": "Also make sure you're excluding existing customers from acquisition campaigns. If you're paying to re-acquire someone who already bought from you, that purchase doesn't count as a new customer acquisition — but it does count against your CAC calculation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Improve Creative Quality"
+    },
+    {
+      "type": "paragraph",
+      "text": "Better creative means higher click-through rates and more engaged traffic — both of which lower CAC. On Meta, your creative is the main variable you control. Test new hooks, formats, and angles regularly. When you find a creative that significantly outperforms your average CTR, analyze why and brief more content in that direction. A 50% improvement in CTR from creative testing alone can meaningfully reduce CAC."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Use LTV to Justify Higher CAC Where It Makes Sense"
+    },
+    {
+      "type": "paragraph",
+      "text": "Sometimes the right answer isn't to reduce CAC — it's to improve LTV so you can afford a higher CAC. If certain customer segments have significantly higher repeat purchase rates, you can profitably acquire them at a higher initial CAC because they're worth more over time. Identifying these segments and bidding more aggressively for them is often smarter than trying to drive down blended CAC across the board."
+    },
+    {
+      "type": "paragraph",
+      "text": "Tracking CAC alongside LTV and understanding the relationship between them is what separates merchants who scale profitably from those who grow revenue while watching margins disappear. Metricx connects your ad data with your Shopify order data so you can see these metrics in one place. Try it free."
+    }
+  ]
+}

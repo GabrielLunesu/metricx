@@ -1,0 +1,84 @@
+{
+  "slug": "shopify-marketing-strategy",
+  "title": "Shopify Marketing Strategy: How to Build a Profitable Ad Mix",
+  "excerpt": "Running ads on Shopify without a clear channel strategy is how you burn budget fast. Here's how to build an ad mix that grows revenue without destroying your margins.",
+  "category": "strategy",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-03T10:00:00Z",
+  "updatedAt": "2026-03-03T10:00:00Z",
+  "readTime": 8,
+  "featured": false,
+  "image": "/images/blog/shopify-marketing-strategy.jpg",
+  "tags": ["Strategy", "Shopify", "Marketing", "Meta Ads", "Google Ads"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "There are thousands of Shopify stores stuck at the same revenue plateau, running the same playbook: boost some posts on Meta, run a Google Shopping campaign, check dashboards every morning, and wonder why growth has stalled. The problem is usually not the channels — it's the absence of a real strategy connecting them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a Profitable Ad Mix Actually Looks Like"
+    },
+    {
+      "type": "paragraph",
+      "text": "A profitable ad mix for a Shopify store has three jobs: generate demand (make people aware of you and want what you sell), capture demand (convert people who are already searching), and retain customers (bring buyers back for a second and third purchase). Most paid ad strategies only focus on the first two and ignore retention entirely, which is where a huge amount of leverage is hiding."
+    },
+    {
+      "type": "paragraph",
+      "text": "Meta Ads are best at generating demand — you're interrupting people in their feed and making them want something they weren't actively looking for. Google Ads are best at capturing demand — you're showing up when someone is already searching. Email and SMS retain customers at a fraction of the cost of acquiring new ones."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Meta Ads Foundation"
+    },
+    {
+      "type": "paragraph",
+      "text": "For most Shopify stores, Meta is where you start and where you spend the majority of your budget. The playbook that works in 2026 is simpler than most people think: broad targeting, multiple creative variations, Advantage+ Shopping Campaigns for scaling proven winners, and a retargeting layer for people who visited but didn't buy."
+    },
+    {
+      "type": "paragraph",
+      "text": "The biggest lever in Meta is creative, not targeting. Meta's algorithm has gotten good enough that broad targeting often outperforms narrow interest targeting. What it can't figure out for you is what message resonates with your audience. Test aggressively on creative — hooks, formats, angles — and let performance data tell you what to scale."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Adding Google to the Mix"
+    },
+    {
+      "type": "paragraph",
+      "text": "Once you have a profitable Meta setup, Google Shopping is the natural next step. Shopping ads show your products to people who are actively searching for them — that intent makes them cheaper to convert than cold social traffic. Start with a Performance Max campaign using your product feed, then layer in brand search campaigns to capture people searching your store name directly."
+    },
+    {
+      "type": "paragraph",
+      "text": "When both channels are running, watch your blended ROAS. If adding Google spend increases blended ROAS, it's working — it's capturing demand that already existed. If blended ROAS stays flat or drops, Google is eating into budget that was working better on Meta."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Retention: The Underrated Growth Lever"
+    },
+    {
+      "type": "paragraph",
+      "text": "Acquiring a new customer costs 5-7x more than selling to an existing one. Yet most Shopify stores spend almost nothing on retention marketing. A basic retention system — a post-purchase email sequence, a win-back flow for lapsed customers, and a loyalty offer for repeat buyers — can add 20-30% to revenue with minimal ongoing cost."
+    },
+    {
+      "type": "paragraph",
+      "text": "More importantly, strong retention improves the economics of acquisition. If your customers come back twice instead of once, your LTV doubles and you can afford to spend more to acquire them. This is how brands break through ad spend plateaus."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measuring the Mix"
+    },
+    {
+      "type": "paragraph",
+      "text": "The only way to know if your channel mix is working is to measure blended ROAS — total Shopify revenue divided by total ad spend — not the siloed ROAS numbers inside each platform. Platforms will always report numbers that make themselves look good. Your Shopify revenue is the ground truth."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx connects your Meta and Google accounts to your Shopify data so you can see blended ROAS, channel-level performance, and real revenue in one place. Try it free and stop making strategy decisions based on platform-reported numbers."
+    }
+  ]
+}

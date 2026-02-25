@@ -1,0 +1,84 @@
+{
+  "slug": "marketing-budget-allocation",
+  "title": "How to Allocate Your Marketing Budget Across Meta, Google, and TikTok",
+  "excerpt": "Spreading budget evenly across channels isn't a strategy — it's a guess. Here's a data-driven framework for deciding where your ad spend should actually go.",
+  "category": "strategy",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-06T10:00:00Z",
+  "updatedAt": "2026-03-06T10:00:00Z",
+  "readTime": 8,
+  "featured": false,
+  "image": "/images/blog/marketing-budget-allocation.jpg",
+  "tags": ["Budget", "Strategy", "Meta Ads", "Google Ads", "Ecommerce"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "One of the most common questions from Shopify merchants scaling their ad spend: how do I decide how much goes to Meta vs. Google vs. TikTok? The honest answer is that there's no universal formula — but there is a logical process for figuring it out, and most merchants skip it entirely."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Principle Behind Budget Allocation"
+    },
+    {
+      "type": "paragraph",
+      "text": "Budget should follow performance, not intuition or convention. The channel that produces profitable returns at scale gets more money. The channel that doesn't, gets less. This sounds obvious but in practice, most merchants allocate budget based on habit, platform recommendations, or what they've always done rather than what the data shows."
+    },
+    {
+      "type": "paragraph",
+      "text": "The problem is that 'performance' is hard to measure accurately across channels because platforms all report attribution differently. Meta takes credit for things Google drove. Google takes credit for things that would have happened organically. To make real budget allocation decisions, you need to compare channels using a neutral metric — which is blended ROAS contribution, not platform-reported ROAS."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How to Measure Each Channel's Real Contribution"
+    },
+    {
+      "type": "paragraph",
+      "text": "The cleanest way to understand a channel's true contribution is holdout testing — pausing the channel for a period and seeing how overall revenue changes. If you turn off Google for two weeks and your Shopify revenue drops by 15%, Google is contributing roughly 15% of your revenue. This is called incrementality testing and it's the gold standard."
+    },
+    {
+      "type": "paragraph",
+      "text": "Most stores can't afford to pause channels for weeks. A practical alternative: track blended ROAS as you adjust spend by channel. If you increase Meta budget by 30% and blended ROAS improves or stays flat, Meta was underinvested. If blended ROAS drops, you've hit diminishing returns. Use these signals to find the efficient frontier for each channel."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A Starting Framework by Business Stage"
+    },
+    {
+      "type": "paragraph",
+      "text": "For stores under $30k/month: Focus 80-90% of budget on one channel — usually Meta — until you have a proven, profitable setup. Splitting budget too early means you don't have enough data to optimize either channel well. Prove the model on one platform first."
+    },
+    {
+      "type": "paragraph",
+      "text": "For stores between $30k-$100k/month: Add Google Shopping once Meta is profitable. A common starting split is 65% Meta, 35% Google. Adjust based on performance data over 60-90 days. If Google consistently delivers strong blended ROAS contribution, shift more toward it."
+    },
+    {
+      "type": "paragraph",
+      "text": "For stores above $100k/month: You're likely hitting audience saturation on one or both platforms. This is when TikTok, Pinterest, or other channels become worth testing. Allocate 10-15% of budget to test a new channel for 60 days before deciding whether to scale it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Role of Retention in Budget Allocation"
+    },
+    {
+      "type": "paragraph",
+      "text": "Email and SMS are so cost-efficient compared to paid acquisition that most stores underinvest in them. If you're spending nothing on retention marketing, allocating 10-15% of total marketing budget there typically delivers higher incremental revenue per dollar than adding the same amount to paid acquisition. Better LTV also improves the economics of every paid channel."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reviewing and Adjusting Allocation"
+    },
+    {
+      "type": "paragraph",
+      "text": "Set a monthly cadence for reviewing channel allocation. Pull your total spend per channel, your actual Shopify revenue, and calculate blended ROAS overall and by channel. Look for channels where you're getting strong incremental returns and channels where performance is flat or declining with scale. Shift budget accordingly — but change one thing at a time so you can attribute the impact clearly."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx makes this analysis fast by pulling all your channel spend alongside your real Shopify revenue in one place. No spreadsheet assembly required — just the data you need to make allocation decisions confidently. Try it free."
+    }
+  ]
+}

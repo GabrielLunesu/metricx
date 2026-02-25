@@ -1,0 +1,101 @@
+{
+  "slug": "what-is-roas",
+  "title": "What is ROAS? A Plain-English Guide for Shopify Merchants",
+  "excerpt": "ROAS is the single most important metric for measuring ad performance — but most merchants misread it. Here's what it actually means and how to use it to make better decisions.",
+  "category": "analytics",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-02-25T10:00:00Z",
+  "updatedAt": "2026-02-25T10:00:00Z",
+  "readTime": 7,
+  "featured": true,
+  "image": "/images/blog/what-is-roas.jpg",
+  "tags": ["ROAS", "Analytics", "Ecommerce", "Shopify", "Ad Performance"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "ROAS — Return on Ad Spend — is the most commonly referenced metric in ecommerce advertising, and also one of the most commonly misunderstood. If you're running ads on Meta or Google for your Shopify store, ROAS is the number you're probably staring at every morning. But are you actually reading it correctly?"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Simple Definition"
+    },
+    {
+      "type": "paragraph",
+      "text": "ROAS measures how much revenue you generate for every dollar you spend on ads. The formula is straightforward: ROAS = Revenue from Ads / Ad Spend. So if you spent $1,000 on a campaign and it generated $4,000 in revenue, your ROAS is 4x — or sometimes expressed as 400%."
+    },
+    {
+      "type": "paragraph",
+      "text": "That's the easy part. The harder part is knowing what that number actually means for your business — and that depends entirely on your margins."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why a 'Good' ROAS Is Different for Every Store"
+    },
+    {
+      "type": "paragraph",
+      "text": "Here's where most merchants get tripped up. They hear '3x ROAS is the benchmark' and anchor to that number without doing the math on their own business. A 3x ROAS on a product with 60% margins is very profitable. A 3x ROAS on a product with 20% margins means you're losing money."
+    },
+    {
+      "type": "paragraph",
+      "text": "The break-even ROAS formula gives you the floor you need to stay profitable: Break-even ROAS = 1 / Gross Margin. If your gross margin is 40%, your break-even ROAS is 2.5x. Anything above that is profitable. Anything below is burning cash."
+    },
+    {
+      "type": "paragraph",
+      "text": "Once you know your break-even ROAS, you have a real target to work with rather than chasing an arbitrary benchmark that has nothing to do with your business model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Platform ROAS vs. True ROAS"
+    },
+    {
+      "type": "paragraph",
+      "text": "There's another layer that catches people out: the ROAS number in your Meta or Google Ads dashboard is not the same as your actual ROAS. Platform-reported ROAS counts attributed revenue — clicks and views that the platform takes credit for. It doesn't account for overlapping attribution, organic sales that would have happened anyway, or the fact that both Meta and Google are often claiming credit for the same order."
+    },
+    {
+      "type": "paragraph",
+      "text": "This is why many stores see 4x ROAS in Meta and 5x in Google, but their Shopify revenue doesn't add up to the sum of both. Both platforms are overcounting. The real number — what some call blended ROAS or true ROAS — is your total revenue divided by your total ad spend across all channels."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Blended ROAS: The Number That Actually Matters"
+    },
+    {
+      "type": "paragraph",
+      "text": "Blended ROAS = Total Shopify Revenue / Total Ad Spend. This is the most honest view of how your advertising is performing. It strips away the platform-level politics and shows you what the business is actually doing. If your blended ROAS is above your break-even threshold, you're profitable. Simple."
+    },
+    {
+      "type": "paragraph",
+      "text": "The downside of blended ROAS is that it doesn't tell you which channel or campaign is driving the results. That's where channel-level tracking and attribution come in — but blended ROAS is always the starting point for understanding overall health."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How to Track ROAS Properly"
+    },
+    {
+      "type": "paragraph",
+      "text": "For platform-level ROAS, you're relying on what Meta and Google report — which is useful for comparing campaigns within the same platform, but shouldn't be taken as absolute truth. For blended ROAS, you need to pull your actual Shopify revenue and compare it to your total spend across all channels. Most merchants do this manually in a spreadsheet, which takes time and introduces errors."
+    },
+    {
+      "type": "paragraph",
+      "text": "The better approach is to connect your ad accounts and your Shopify store to a single analytics tool that calculates both automatically. That's exactly what Metricx does — it pulls your Meta and Google data alongside your actual Shopify orders, so you can see both platform ROAS and blended ROAS in one place without touching a spreadsheet."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key Takeaways"
+    },
+    {
+      "type": "paragraph",
+      "text": "ROAS = Revenue / Ad Spend. Your target ROAS depends on your margins, not an industry benchmark. Platform-reported ROAS overcounts because both Meta and Google claim credit for the same sales. Blended ROAS — total revenue divided by total ad spend — is the most honest measure of your advertising performance. Know your break-even ROAS and use it as your floor."
+    },
+    {
+      "type": "paragraph",
+      "text": "If you want to start tracking ROAS properly without building a manual spreadsheet system, try Metricx free. Connect your Meta and Google accounts in a few minutes and get a real-time view of your ad performance."
+    }
+  ]
+}

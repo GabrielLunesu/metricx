@@ -1,0 +1,113 @@
+{
+  "slug": "shopify-conversion-rate-optimization",
+  "title": "Shopify Conversion Rate Optimization: 10 Changes That Move the Needle",
+  "excerpt": "Most Shopify CRO advice is noise. These 10 changes are backed by patterns from high-performing stores and will actually impact your conversion rate.",
+  "category": "attribution",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-16T10:00:00Z",
+  "updatedAt": "2026-03-16T10:00:00Z",
+  "readTime": 9,
+  "featured": false,
+  "image": "/images/blog/shopify-conversion-rate-optimization.jpg",
+  "tags": ["CRO", "Shopify", "Conversion Rate", "Ecommerce", "Optimization"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "Shopify conversion rate optimization has a lot of myths around it — that it's all about A/B testing button colors, or that you need a CRO agency charging five figures a month to move the needle. The reality is that most Shopify stores have a handful of fundamental issues that, when fixed, produce significant conversion improvements. Here are 10 changes that consistently make a real difference."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "1. Fix Mobile Page Speed"
+    },
+    {
+      "type": "paragraph",
+      "text": "If your store takes more than 3 seconds to load on mobile, you're losing sales before anyone sees your product. Go to Google PageSpeed Insights, run your homepage and top product pages, and fix whatever it flags. The most common culprits are unoptimized images, too many third-party scripts, and heavy theme code. Compressing images alone often improves load time by 1-2 seconds."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "2. Improve Product Photography"
+    },
+    {
+      "type": "paragraph",
+      "text": "Online shoppers can't touch your product. Photography is the substitute for physical inspection — it needs to answer every visual question a buyer might have. Multiple angles, lifestyle shots showing the product in use, scale references, and close-ups of key details all reduce uncertainty and increase purchase confidence. This is one of the highest-ROI investments for most Shopify stores."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "3. Put Social Proof Above the Fold"
+    },
+    {
+      "type": "paragraph",
+      "text": "Reviews are one of the strongest conversion drivers, but most stores bury them below the fold or at the bottom of the page. Put your review count and star rating near the top of your product pages — immediately below the product title works well. If you have strong reviews, feature the most compelling ones prominently. Don't make people scroll to find evidence that other people liked the product."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "4. Rewrite Your Product Descriptions"
+    },
+    {
+      "type": "paragraph",
+      "text": "Most Shopify product descriptions describe what a product is rather than why someone should buy it. Rewrite descriptions to lead with the benefit, address the top 2-3 objections buyers typically have, and end with a clear reason to buy now. Keep them scannable — use short paragraphs or bullet points for key specs, but lead with benefit-focused prose."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "5. Enable Shop Pay"
+    },
+    {
+      "type": "paragraph",
+      "text": "Shop Pay is Shopify's accelerated checkout that pre-fills payment and shipping information for returning customers. Studies show it converts at significantly higher rates than standard checkout — Shopify has reported up to 50% higher conversion rates for Shop Pay versus guest checkout. Enable it if you haven't. It's a one-click change in your payment settings."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "6. Add a Free Shipping Threshold"
+    },
+    {
+      "type": "paragraph",
+      "text": "Shipping costs are consistently cited as the top reason for cart abandonment. If you don't offer free shipping, introduce a threshold — free shipping over $X — set above your average order value to encourage customers to add another item. Display the threshold prominently on product pages: 'Add $15 more for free shipping.' This works both to reduce abandonment and to increase AOV."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "7. Simplify Your Navigation"
+    },
+    {
+      "type": "paragraph",
+      "text": "Overcomplicated navigation buries your best products and makes it harder for new visitors to find what they're looking for. Audit your main navigation and reduce it to the most important categories. Make sure your top-selling products are reachable within two clicks from the homepage. Complexity kills conversion — especially on mobile."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "8. Add Urgency and Scarcity (Honestly)"
+    },
+    {
+      "type": "paragraph",
+      "text": "Real urgency — a sale ending, low stock, a limited edition product — converts. Fake urgency — countdown timers that reset, 'only 2 left' on items with 500 in stock — erodes trust when customers figure it out. If you have genuine scarcity or time-sensitive offers, communicate them clearly. If you don't, focus on other levers rather than manufacturing false pressure."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "9. Improve Your Return Policy Communication"
+    },
+    {
+      "type": "paragraph",
+      "text": "A clear, generous return policy reduces purchase risk and increases conversion. Put it on your product pages — not just buried in the footer. 'Free returns within 30 days' right on the product page removes a significant objection for first-time buyers. If your return policy is genuinely good, make sure people know it before they decide to buy."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "10. Reduce Checkout Fields"
+    },
+    {
+      "type": "paragraph",
+      "text": "Every unnecessary field in your checkout is a drop-off risk. Review your checkout configuration and remove any fields that aren't strictly necessary for fulfillment. If you're collecting information 'just in case' or for marketing purposes, the conversion rate cost is almost certainly higher than the value of that data."
+    },
+    {
+      "type": "paragraph",
+      "text": "Better conversion rates make every ad dollar work harder. When you improve your store's conversion rate, your ROAS goes up without changing a single campaign. Metricx tracks your actual Shopify conversion data alongside your ad spend so you can measure the direct impact of CRO work on your ad performance. Try it free."
+    }
+  ]
+}

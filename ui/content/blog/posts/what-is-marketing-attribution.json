@@ -1,0 +1,92 @@
+{
+  "slug": "what-is-marketing-attribution",
+  "title": "What is Marketing Attribution? How to Know Which Ads Are Actually Working",
+  "excerpt": "Marketing attribution answers the most important question in advertising: which touchpoints actually caused a customer to buy? Here's how it works and why getting it right matters.",
+  "category": "analytics",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-02-28T10:00:00Z",
+  "updatedAt": "2026-02-28T10:00:00Z",
+  "readTime": 8,
+  "featured": false,
+  "image": "/images/blog/what-is-marketing-attribution.jpg",
+  "tags": ["Attribution", "Analytics", "Ecommerce", "Marketing", "Tracking"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "A customer sees your Meta ad on Monday, searches for your brand on Google on Wednesday, clicks a Google Shopping result, and buys on Friday. Which ad gets credit for the sale? This is the attribution problem — and how you answer it determines where you invest your budget."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What Marketing Attribution Is"
+    },
+    {
+      "type": "paragraph",
+      "text": "Marketing attribution is the process of assigning credit to the marketing touchpoints that contributed to a conversion. A touchpoint is any interaction a customer has with your brand before purchasing — an ad impression, a click, an email open, an organic visit. Attribution determines which of those touchpoints gets credit, and how much."
+    },
+    {
+      "type": "paragraph",
+      "text": "The reason it matters is simple: if you know which touchpoints drive purchases, you know where to spend your budget. If you don't, you're allocating spend based on guesswork or platform-reported numbers that are almost always wrong."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Main Attribution Models"
+    },
+    {
+      "type": "paragraph",
+      "text": "Last-click attribution gives 100% of the credit to the final touchpoint before purchase. It's the default in most ad platforms and the most misleading. If someone clicked a Google Shopping ad right before buying, Google gets full credit — even if a Meta ad three days earlier was what initially captured their attention."
+    },
+    {
+      "type": "paragraph",
+      "text": "First-click attribution gives all the credit to the first touchpoint. Better for understanding what drives awareness, but it ignores everything that helped close the sale."
+    },
+    {
+      "type": "paragraph",
+      "text": "Linear attribution splits credit equally across all touchpoints. More balanced but treats a brief ad impression the same as a product page visit, which isn't realistic."
+    },
+    {
+      "type": "paragraph",
+      "text": "Time-decay attribution gives more credit to touchpoints closer to the conversion, on the theory that recent interactions were more influential. Data-driven attribution uses machine learning to weight touchpoints based on actual conversion patterns — the most accurate model, but requires significant data volume to work well."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Platform Attribution Is Broken"
+    },
+    {
+      "type": "paragraph",
+      "text": "Here's the core problem: Meta and Google each run their own attribution models — and both of them attribute conversions to themselves. When a customer sees a Meta ad and a Google ad before buying, Meta reports it as a Meta conversion and Google reports it as a Google conversion. Your actual revenue gets double-counted across platforms."
+    },
+    {
+      "type": "paragraph",
+      "text": "This is why merchants often see platform-reported revenue that's two or three times their actual Shopify revenue. The platforms aren't lying — they're just each showing their own version of the truth. To get the real picture, you need an independent attribution layer that sits above both platforms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Role of UTM Parameters"
+    },
+    {
+      "type": "paragraph",
+      "text": "UTM parameters are the foundation of independent attribution. By tagging every ad link with UTM source, medium, campaign, and content parameters, you can track where traffic comes from in your own analytics — completely separate from what platforms report. When a purchase happens, you can trace it back to the specific campaign that drove the click."
+    },
+    {
+      "type": "paragraph",
+      "text": "UTM-based attribution isn't perfect — it's last-click by default and misses view-through conversions — but it gives you a source of truth that isn't controlled by any single ad platform."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practical Attribution for Shopify Merchants"
+    },
+    {
+      "type": "paragraph",
+      "text": "For most Shopify stores in the $10k-$100k monthly revenue range, you don't need a complex multi-touch attribution system. What you need is: UTM parameters on all your ads, server-side tracking to capture conversions that browser pixels miss, and a tool that shows you actual Shopify revenue alongside platform spend — so you can see blended ROAS and channel-level performance without relying on what Meta and Google tell you."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx was built specifically to give Shopify merchants this independent attribution layer — connecting your real order data with your ad spend so you can see what's actually working. Try it free and stop guessing."
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "slug": "how-to-improve-roas",
+  "title": "How to Improve ROAS: 8 Tactics That Work for Shopify Stores",
+  "excerpt": "Chasing higher ROAS without a systematic approach is how you waste weeks optimizing the wrong things. Here are 8 tactics that actually move the number.",
+  "category": "how-to",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-07T10:00:00Z",
+  "updatedAt": "2026-03-07T10:00:00Z",
+  "readTime": 8,
+  "featured": false,
+  "image": "/images/blog/how-to-improve-roas.jpg",
+  "tags": ["ROAS", "Optimization", "Shopify", "Meta Ads", "Google Ads"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "Before you can improve ROAS, you need to be measuring it correctly. Platform ROAS inside Meta or Google is a useful relative metric — good for comparing campaigns against each other — but your real target should be blended ROAS: total Shopify revenue divided by total ad spend. That's the number that tells you whether your advertising is actually profitable. These eight tactics are focused on improving that number."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "1. Know Your Break-Even ROAS First"
+    },
+    {
+      "type": "paragraph",
+      "text": "You can't improve ROAS without knowing what ROAS you need to be profitable. Calculate your break-even ROAS: 1 / gross margin. If your margin is 40%, break-even is 2.5x. If your margin is 60%, break-even is 1.67x. Every optimization decision should be measured against this floor — not an arbitrary industry benchmark."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "2. Cut Non-Performers Fast"
+    },
+    {
+      "type": "paragraph",
+      "text": "The fastest way to improve average ROAS is to stop spending on things that aren't working. Most ad accounts have 20-30% of spend going to campaigns, ad sets, or ads that are consistently below break-even. Identify them, pause them, and redirect that budget to what's performing. This alone can meaningfully move your blended ROAS within a week."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "3. Improve Your Creative"
+    },
+    {
+      "type": "paragraph",
+      "text": "On Meta especially, creative quality is the biggest variable in ROAS. A better ad — one that stops the scroll, communicates value clearly, and makes someone want to click — will outperform a mediocre ad with the same budget every time. Test different hooks, formats, and angles systematically. Document what the top performers have in common and brief more content in that direction."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "4. Fix Your Landing Page"
+    },
+    {
+      "type": "paragraph",
+      "text": "ROAS is a function of both click cost and conversion rate. Improving your conversion rate improves ROAS without touching your ads at all. Review the product page or landing page your ads point to. Does it answer objections? Does it load fast on mobile? Is the CTA clear? Even small improvements — 0.5% conversion rate increase — can have a significant impact on ROAS at scale."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "5. Tighten Your Audience Targeting"
+    },
+    {
+      "type": "paragraph",
+      "text": "On Meta, broad targeting often outperforms narrow targeting thanks to algorithmic optimization — but that doesn't mean audience quality is irrelevant. Custom audiences built from your customer list, website visitors, or past purchasers typically convert at much higher rates than cold audiences. Make sure you're running retargeting campaigns alongside your cold traffic campaigns and measuring their contribution separately."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "6. Improve Average Order Value"
+    },
+    {
+      "type": "paragraph",
+      "text": "ROAS = Revenue / Spend. If you can increase revenue per order without increasing spend, ROAS goes up. Bundles, upsells, cross-sells, and volume discounts all increase AOV. Even a 15% increase in average order value with the same ad spend moves ROAS significantly. This is one of the most underutilized levers in ecommerce advertising."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "7. Focus on High-Margin Products"
+    },
+    {
+      "type": "paragraph",
+      "text": "If your product catalog has different margin levels, directing ad spend toward higher-margin SKUs improves your effective ROAS even when platform-reported ROAS stays the same. A sale that looks like 3x ROAS on a 60% margin product is far more profitable than 3x ROAS on a 20% margin product. Make sure your campaign structure reflects your margin structure."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "8. Measure the Right Thing"
+    },
+    {
+      "type": "paragraph",
+      "text": "One of the most common ROAS improvement mistakes is optimizing for platform-reported ROAS rather than true business performance. If you're chasing Meta's attributed ROAS number without checking whether your Shopify revenue is actually growing proportionally, you might be optimizing for a metric that doesn't reflect reality."
+    },
+    {
+      "type": "paragraph",
+      "text": "The fix is to track blended ROAS consistently and use it as your north star. Metricx calculates this automatically by connecting your ad accounts with your actual Shopify revenue — so you always know whether your optimization efforts are moving the metric that matters. Try it free."
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+    "slug": "tiktok-ads-shopify-brands-getting-started",
+    "title": "TikTok Ads for Shopify Brands: Getting Started Without Wasting Budget",
+    "excerpt": "TikTok offers massive reach for e-commerce brands, but the creative rules are completely different. Learn how to launch your first TikTok campaign without burning through your budget.",
+    "category": "tiktok-ads",
+    "author": "alex-thompson",
+    "publishedAt": "2026-01-28T10:00:00Z",
+    "updatedAt": "2026-01-28T10:00:00Z",
+    "readTime": 9,
+    "featured": false,
+    "image": "/images/blog/tiktok-shopify.jpg",
+    "tags": [
+        "TikTok Ads",
+        "Shopify",
+        "Getting Started",
+        "Creative"
+    ],
+    "content": [
+        {
+            "type": "paragraph",
+            "text": "TikTok has emerged as a powerful advertising platform for e-commerce, with over 1 billion monthly active users and an audience that's increasingly ready to buy. But the platform demands a fundamentally different creative approach than Meta or Google."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "The TikTok Creative Mindset"
+        },
+        {
+            "type": "paragraph",
+            "text": "The golden rule of TikTok advertising: make TikToks, not ads. Content that looks like a native TikTok video outperforms polished brand ads by 3-5x. Use trending sounds, UGC-style filming, and authentic storytelling."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Setting Up Your First Campaign"
+        },
+        {
+            "type": "paragraph",
+            "text": "Start with a Conversion campaign objective, not Traffic or Video Views. Use broad targeting initially and let TikTok's algorithm find your audience. Set a daily budget of at least $50 per ad group to give the algorithm enough data to optimize."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Measuring TikTok Performance"
+        },
+        {
+            "type": "paragraph",
+            "text": "TikTok's attribution is even more challenging than Meta's. The platform tends to over-report conversions significantly. Use UTM tracking and verify with actual Shopify order data through metricx to understand your true TikTok ROAS."
+        }
+    ]
+}

@@ -1,0 +1,75 @@
+{
+  "slug": "what-is-blended-roas",
+  "title": "What is Blended ROAS and Why It's the Metric You Should Actually Track",
+  "excerpt": "Platform ROAS looks great on paper but doesn't tell you if your business is profitable. Blended ROAS cuts through the noise and shows you the truth about your ad performance.",
+  "category": "analytics",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-01T10:00:00Z",
+  "updatedAt": "2026-03-01T10:00:00Z",
+  "readTime": 6,
+  "featured": false,
+  "image": "/images/blog/what-is-blended-roas.jpg",
+  "tags": ["ROAS", "Blended ROAS", "Analytics", "Ecommerce", "Ad Performance"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "You're running Meta and Google ads. Meta reports 4.2x ROAS. Google reports 5.1x ROAS. You feel good. Then you look at your Shopify revenue and the numbers don't add up. That's because platform ROAS and blended ROAS are two completely different things — and only one of them reflects reality."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Platform ROAS vs. Blended ROAS"
+    },
+    {
+      "type": "paragraph",
+      "text": "Platform ROAS is what Meta or Google reports inside their own dashboards. It's calculated using their attribution model — which means they're taking credit for every conversion they can plausibly connect to an ad impression or click, including purchases that were already in progress and organic sales they had nothing to do with."
+    },
+    {
+      "type": "paragraph",
+      "text": "Blended ROAS is simpler and more honest: Total Shopify Revenue / Total Ad Spend. You take your actual revenue from Shopify for a given period, divide it by everything you spent on ads across all channels, and that's your blended ROAS. No attribution games, no double-counting, no optimistic modeling."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why the Gap Exists"
+    },
+    {
+      "type": "paragraph",
+      "text": "The gap between platform-reported ROAS and blended ROAS comes down to two things. First, double-counting: when a customer sees both a Meta ad and a Google ad before purchasing, both platforms claim the conversion. One sale becomes two attributed conversions across your dashboards. Second, view-through attribution: Meta in particular will claim credit for purchases made by anyone who saw an ad in the last 7 days, even if they never clicked."
+    },
+    {
+      "type": "paragraph",
+      "text": "The result is that your combined platform-reported revenue is almost always significantly higher than your actual Shopify revenue. Some merchants see a 2x or 3x gap. It doesn't mean the platforms are useless — their data is still valuable for comparing campaigns within the same platform — but you can't use it as an absolute measure of business performance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How to Calculate Your Blended ROAS"
+    },
+    {
+      "type": "paragraph",
+      "text": "Take your total Shopify revenue for a period (say, last 30 days). Take your total ad spend across Meta and Google for the same period. Divide revenue by spend. That's it. If you spent $5,000 and generated $20,000 in Shopify revenue, your blended ROAS is 4x."
+    },
+    {
+      "type": "paragraph",
+      "text": "The important thing is to use actual Shopify revenue, not platform-attributed revenue. This is why connecting your Shopify data directly to your analytics matters — it gives you the ground truth that platforms can't."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Using Blended ROAS to Make Better Decisions"
+    },
+    {
+      "type": "paragraph",
+      "text": "Once you track blended ROAS consistently, it becomes your primary health metric. You know your break-even blended ROAS (1 / gross margin), and you can see immediately whether your total ad investment is profitable or not. If blended ROAS drops below your break-even point, you need to either cut spend or fix something in the funnel."
+    },
+    {
+      "type": "paragraph",
+      "text": "Use platform-level ROAS to compare campaigns against each other and make optimization decisions within a channel. Use blended ROAS to evaluate the overall health of your advertising strategy and make budget allocation decisions across channels."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx tracks both in one place — pulling your actual Shopify revenue alongside your Meta and Google spend so you can see the real picture without building a custom spreadsheet. Try it free and make decisions based on numbers that actually mean something."
+    }
+  ]
+}

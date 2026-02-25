@@ -1,0 +1,51 @@
+{
+    "slug": "ecommerce-ad-spend-benchmarks-2026",
+    "title": "E-commerce Ad Spend Benchmarks: Where Does Your Brand Stand in 2026?",
+    "excerpt": "We analyzed thousands of e-commerce brands to bring you the definitive ad spend benchmarks for 2026. Find out how your metrics stack up across Meta, Google, and TikTok.",
+    "category": "industry-insights",
+    "author": "metricx-team",
+    "publishedAt": "2026-02-05T10:00:00Z",
+    "updatedAt": "2026-02-05T10:00:00Z",
+    "readTime": 8,
+    "featured": false,
+    "image": "/images/blog/ad-spend-benchmarks.jpg",
+    "tags": [
+        "Benchmarks",
+        "Industry Insights",
+        "Ad Spend",
+        "ROAS"
+    ],
+    "content": [
+        {
+            "type": "paragraph",
+            "text": "Understanding where your ad spend metrics fall relative to industry benchmarks is crucial for strategic planning. We've aggregated data across thousands of e-commerce brands to provide the most accurate benchmarks available."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Average ROAS by Platform"
+        },
+        {
+            "type": "paragraph",
+            "text": "In 2026, the average ROAS across all e-commerce verticals is 3.2x for Meta Ads, 4.1x for Google Ads, and 2.5x for TikTok Ads. However, top-performing brands consistently achieve 5-8x ROAS on their best-performing platforms."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Cost Per Acquisition Trends"
+        },
+        {
+            "type": "paragraph",
+            "text": "CPA has increased 15% year-over-year across all platforms. The most significant jump came in fashion and apparel (22% increase), while health and beauty saw a more modest 8% increase. Brands using multi-platform strategies saw 30% lower CPAs on average."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Budget Allocation by Brand Size"
+        },
+        {
+            "type": "paragraph",
+            "text": "Brands spending $10K-$50K/month allocate 55% to Meta, 35% to Google, and 10% to TikTok on average. Larger brands ($100K+/month) shift more budget to Google (45%), with Meta at 40% and TikTok at 15%."
+        }
+    ]
+}

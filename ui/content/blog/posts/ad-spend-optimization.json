@@ -1,0 +1,85 @@
+{
+  "slug": "ad-spend-optimization",
+  "title": "Ad Spend Optimization: How to Get More Revenue From the Same Budget",
+  "excerpt": "Most Shopify stores have 20-30% of their ad budget going to campaigns that don't work. Here's a systematic process for finding it and redirecting it to what does.",
+  "category": "how-to",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-12T10:00:00Z",
+  "updatedAt": "2026-03-12T10:00:00Z",
+  "readTime": 7,
+  "featured": false,
+  "image": "/images/blog/ad-spend-optimization.jpg",
+  "tags": ["Ad Spend", "Optimization", "ROAS", "Ecommerce", "Shopify"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "Ad spend optimization isn't about spending less — it's about getting more from what you already spend. For most Shopify stores running ads on Meta and Google, there's meaningful budget being wasted on campaigns, ad sets, or products that consistently underperform. Finding and eliminating that waste, then redirecting it to what's working, is the highest-leverage thing you can do without increasing your total budget."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Start With a Spend Audit"
+    },
+    {
+      "type": "paragraph",
+      "text": "Pull the last 30 days of spend data across all your campaigns on Meta and Google. For each campaign, calculate cost per purchase and ROAS. Rank them from best to worst. You'll almost always find a clear pattern: a small number of campaigns driving the majority of profitable results, and a long tail of campaigns either breaking even or losing money."
+    },
+    {
+      "type": "paragraph",
+      "text": "This is your starting point. The bottom 20-30% of campaigns by ROAS are your first targets. Before pausing anything, check whether they're in a learning phase (recent launch, recent changes) — learning phase underperformance is temporary and shouldn't trigger a pause. Established campaigns consistently below break-even should be paused."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Fix Attribution Before Optimizing"
+    },
+    {
+      "type": "paragraph",
+      "text": "Optimizing spend based on inaccurate data leads to wrong decisions. Before making any budget moves, make sure your conversion tracking is accurate. Compare Meta-reported purchases and Google-reported purchases against your actual Shopify orders. If the numbers are dramatically different, fix the tracking first — otherwise you're optimizing against a fiction."
+    },
+    {
+      "type": "paragraph",
+      "text": "Also check for double-counting. If both Meta and Google are claiming credit for the same orders, you might be pausing campaigns that are actually contributing, or keeping campaigns alive that look good on paper but aren't adding incremental revenue."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reallocate to Winners"
+    },
+    {
+      "type": "paragraph",
+      "text": "Once you've identified and paused underperformers, redistribute that budget to campaigns consistently above your target ROAS. Don't dump all of it at once — increase winning campaigns by 20-30% at a time and monitor blended ROAS as you go. If blended ROAS stays strong, you've found a better home for the budget. If it drops, the winning campaign has hit its efficient spend ceiling and you need to look at other options."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Optimize at the Ad Level, Not Just the Campaign Level"
+    },
+    {
+      "type": "paragraph",
+      "text": "Inside a performing campaign, there are usually individual ads doing most of the work. Pull performance by individual ad creative and pause the bottom performers. Concentration of spend on your best creatives — rather than spreading it thinly across many — typically improves efficiency significantly. Most campaigns have one or two ads that account for 60-70% of conversions. Let them run."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Product-Level Optimization"
+    },
+    {
+      "type": "paragraph",
+      "text": "For Shopping campaigns, review performance by product. Some products will have strong conversion rates and healthy ROAS. Others will get clicks but not convert, burning budget. Exclude consistently underperforming products from campaigns or move them to separate campaigns with lower bids. The goal is to concentrate Shopping spend on products that actually sell."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Build a Regular Optimization Cadence"
+    },
+    {
+      "type": "paragraph",
+      "text": "Ad spend optimization isn't a one-time exercise — it's an ongoing process. Weekly: review individual ad performance, pause clear underperformers, check blended ROAS. Monthly: audit full campaign structure, review budget allocation across channels, identify optimization opportunities. Quarterly: assess overall strategy and whether your channel mix still makes sense."
+    },
+    {
+      "type": "paragraph",
+      "text": "Having all your data in one place makes this significantly faster. Metricx consolidates your Meta and Google spend data alongside your real Shopify revenue so your weekly and monthly reviews take minutes instead of hours. Try it free."
+    }
+  ]
+}

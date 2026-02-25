@@ -1,0 +1,60 @@
+{
+    "slug": "google-performance-max-ecommerce-playbook",
+    "title": "Google Performance Max for E-commerce: The Ultimate Playbook",
+    "excerpt": "Performance Max campaigns can be a goldmine for e-commerce brands—if you know how to set them up correctly. Here's everything you need to know about PMax in 2026.",
+    "category": "google-ads",
+    "author": "david-kim",
+    "publishedAt": "2026-02-15T10:00:00Z",
+    "updatedAt": "2026-02-15T10:00:00Z",
+    "readTime": 15,
+    "featured": true,
+    "image": "/images/blog/pmax-playbook.jpg",
+    "tags": [
+        "Google Ads",
+        "Performance Max",
+        "Shopping",
+        "E-commerce"
+    ],
+    "content": [
+        {
+            "type": "paragraph",
+            "text": "Performance Max (PMax) has fundamentally changed how e-commerce brands advertise on Google. These AI-driven campaigns combine Search, Shopping, Display, YouTube, and Discovery into a single campaign type—but the black-box nature makes optimization challenging."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Understanding PMax Campaign Structure"
+        },
+        {
+            "type": "paragraph",
+            "text": "Unlike traditional campaigns, PMax uses asset groups instead of ad groups. Each asset group should target a product category or theme. Start with 3-5 asset groups, each containing at least 5 images, 3 videos, 5 headlines, and 5 descriptions."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Feed Optimization is Everything"
+        },
+        {
+            "type": "paragraph",
+            "text": "Your product feed is the foundation of PMax success. Optimize titles with search intent keywords, use high-quality images, keep pricing competitive, and ensure availability is always up to date. A well-optimized feed can improve performance by 30-50%."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Audience Signals: The Secret Weapon"
+        },
+        {
+            "type": "paragraph",
+            "text": "While Google's AI handles targeting, audience signals guide it in the right direction. Upload your customer lists, add in-market audiences, and use search themes to tell Google who your ideal customer is."
+        },
+        {
+            "type": "heading",
+            "level": 2,
+            "text": "Measuring True PMax Performance"
+        },
+        {
+            "type": "paragraph",
+            "text": "PMax reporting is notoriously opaque. Use tools like metricx to verify actual revenue attribution against platform-reported numbers. Look at incremental lift, not just reported ROAS, to understand true campaign impact."
+        }
+    ]
+}

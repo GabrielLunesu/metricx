@@ -1,0 +1,97 @@
+{
+  "slug": "what-is-cac",
+  "title": "What is CAC? Customer Acquisition Cost Explained for Ecommerce",
+  "excerpt": "CAC tells you exactly how much it costs to win a new customer — and whether your business model actually works. Here's how to calculate it, benchmark it, and improve it.",
+  "category": "analytics",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-02-26T10:00:00Z",
+  "updatedAt": "2026-02-26T10:00:00Z",
+  "readTime": 7,
+  "featured": true,
+  "image": "/images/blog/what-is-cac.jpg",
+  "tags": ["CAC", "Analytics", "Ecommerce", "Profitability", "Ad Spend"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "CAC — Customer Acquisition Cost — is the number that tells you whether your business model is viable. You can have great ROAS, healthy traffic, and strong conversion rates, and still be building a business that doesn't work if your CAC is too high relative to what your customers are worth. It's one of the most important metrics in ecommerce and one of the most undertracked."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What CAC Actually Means"
+    },
+    {
+      "type": "paragraph",
+      "text": "CAC is the total cost of acquiring a single new customer. The basic formula is: CAC = Total Marketing and Sales Spend / Number of New Customers Acquired. If you spent $10,000 on ads last month and acquired 200 new customers, your CAC is $50."
+    },
+    {
+      "type": "paragraph",
+      "text": "The key word is new customers. CAC specifically measures the cost of bringing someone into your customer base for the first time — not repeat purchases from existing customers. This distinction matters because it tells you how efficiently you're growing, separate from how well you're retaining."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "CAC vs. CPA: Not the Same Thing"
+    },
+    {
+      "type": "paragraph",
+      "text": "A lot of merchants use CAC and CPA (Cost Per Acquisition) interchangeably. They're related but different. CPA is what your ad platform reports — the cost to generate a conversion event, which could be a purchase from anyone, including existing customers. CAC is specifically about new customers only."
+    },
+    {
+      "type": "paragraph",
+      "text": "In practice, your CPA will always be lower than your true CAC, because a portion of your ad-driven purchases are from people who've already bought from you before. If you're optimizing to CPA without separating new vs. returning customers, you're probably not growing as fast as you think."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What Makes a Good CAC?"
+    },
+    {
+      "type": "paragraph",
+      "text": "There's no universal good CAC — it depends entirely on your LTV (Lifetime Value). The relationship between the two is what determines whether your business is healthy. The standard benchmark most businesses aim for is an LTV:CAC ratio of at least 3:1. That means for every dollar you spend acquiring a customer, that customer should generate at least three dollars in lifetime gross profit."
+    },
+    {
+      "type": "paragraph",
+      "text": "If your average customer spends $150 across their lifetime with you and your gross margin is 40%, your customer LTV is $60. That means your target CAC should be $20 or less. Spending more than that puts you in the red on every new customer you acquire — and you're hoping repeat purchases bail you out."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why CAC Tends to Rise Over Time"
+    },
+    {
+      "type": "paragraph",
+      "text": "One thing almost every growing Shopify store experiences: CAC increases as you scale. The reason is audience saturation. When you launch, you're targeting the most responsive, most purchase-ready people in your audience. As you exhaust that group, you reach harder-to-convert prospects, and your ad efficiency drops. This isn't a failure — it's a natural pattern — but it means you can't assume your early CAC will hold as you grow."
+    },
+    {
+      "type": "paragraph",
+      "text": "It's also why retention becomes more important over time. If you can increase LTV through repeat purchases, subscriptions, or upsells, you can afford a higher CAC and still maintain a healthy ratio."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How to Reduce CAC Without Cutting Spend"
+    },
+    {
+      "type": "paragraph",
+      "text": "Cutting your ad budget is the obvious way to lower CAC — but it also means acquiring fewer customers. The better approach is improving conversion efficiency. Better creatives improve click-through rate. Better landing pages improve conversion rate. Better audience targeting reduces wasted impressions. Each of these improves CAC without reducing volume."
+    },
+    {
+      "type": "paragraph",
+      "text": "Another lever is channel mix. Some channels naturally produce lower CAC than others depending on your product and audience. Tracking CAC by channel gives you a real picture of where your acquisition dollars are working hardest — and where to shift budget."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Tracking CAC in Practice"
+    },
+    {
+      "type": "paragraph",
+      "text": "Tracking CAC properly requires knowing two things: how much you spent, and how many net-new customers you acquired. The spend side is straightforward — pull it from Meta and Google. The new customer count requires either a CRM, a Shopify customer report filtered to first-time purchasers, or an analytics tool that tracks this automatically."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx connects your ad spend data with your Shopify order data so you can see CAC alongside ROAS and revenue in one dashboard — no manual spreadsheet work required. If you want to start tracking the metrics that actually tell you whether your business is working, give it a try free."
+    }
+  ]
+}

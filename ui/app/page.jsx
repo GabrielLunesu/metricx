@@ -121,10 +121,10 @@ function Header({ onSmoothScroll }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="relative z-10 w-full pt-4 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
+    <header className="sticky top-0 z-50 w-full pt-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl">
         {/* Floating dock container */}
-        <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl bg-white backdrop-blur-xl border border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl border border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_0_0_1px_rgba(255,255,255,0.8)_inset]">
           {/* Brand with Logo */}
           <Link href="/" className="inline-flex items-center gap-2 shrink-0">
             <Image
@@ -139,6 +139,12 @@ function Header({ onSmoothScroll }) {
 
           {/* Center Nav */}
           <nav className="hidden md:flex items-center gap-1 text-sm text-gray-600">
+            <Link
+              href="/blog"
+              className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
+            >
+              Blog
+            </Link>
             <a
               href="/#features"
               onClick={(e) => onSmoothScroll(e, 'features')}
@@ -160,23 +166,16 @@ function Header({ onSmoothScroll }) {
             >
               How it works
             </a>
-            <a
-              href="/#comparison-section"
-              onClick={(e) => onSmoothScroll(e, 'comparison-section')}
-              className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
-            >
-              Why metricx
-            </a>
           </nav>
 
           {/* Right actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link href="/login" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors font-geist px-3 py-1.5 rounded-lg hover:bg-black/5">
+            <Link href="/sign-in" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors font-geist px-3 py-1.5 rounded-lg hover:bg-black/5">
               Log in
             </Link>
             <Link
               href="/sign-up"
-              className="hidden sm:inline-flex items-center rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
+              className="inline-flex items-center rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
             >
               Start Free Trial
             </Link>
@@ -208,12 +207,12 @@ function Header({ onSmoothScroll }) {
         {mobileMenuOpen && (
           <div id="mobileMenu" className="md:hidden mt-2 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden">
             <div className="p-4 space-y-1">
+              <Link href="/blog" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Blog</Link>
               <a href="/#features" onClick={(e) => { onSmoothScroll(e, 'features'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Features</a>
               <a href="/#pricing" onClick={(e) => { onSmoothScroll(e, 'pricing'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Pricing</a>
               <a href="/#solution-section" onClick={(e) => { onSmoothScroll(e, 'solution-section'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">How it works</a>
-              <a href="/#comparison-section" onClick={(e) => { onSmoothScroll(e, 'comparison-section'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Why metricx</a>
               <div className="pt-2 mt-2 border-t border-black/5 space-y-2">
-                <Link href="/login" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 font-geist">Log in</Link>
+                <Link href="/sign-in" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 font-geist">Log in</Link>
                 <Link
                   href="/sign-up"
                   className="flex w-full items-center justify-center rounded-full bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
@@ -1202,7 +1201,7 @@ function FinalCTASection() {
 }
 
 /**
- * Footer - Site footer with logo
+ * Footer - Site footer matching marketing layout
  */
 function Footer() {
   return (
@@ -1232,19 +1231,6 @@ function Footer() {
               info@metricx.ai
             </a>
             <div className="mt-6 flex items-center gap-3">
-              {/* Twitter/X - temporarily disabled
-              <a
-                href="https://x.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Follow metricx on X"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition backdrop-blur-md border border-white/10"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-              </a>
-              */}
               {/* Discord */}
               <a
                 href="https://discord.gg/seRTSw2vAa"
@@ -1260,20 +1246,31 @@ function Footer() {
             </div>
           </div>
 
-          {/* Links Grid - Section anchors only */}
-          <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-2 gap-8 sm:gap-12 lg:justify-end">
-            <FooterColumn title="Product">
-              <FooterLink href="/#features">Features</FooterLink>
-              <FooterLink href="/#solution-section">How it works</FooterLink>
-              <FooterLink href="/#pricing">Pricing</FooterLink>
-              <FooterLink href="/#comparison-section">Why metricx</FooterLink>
-            </FooterColumn>
-            <FooterColumn title="Navigate">
-              <FooterLink href="/#problem-section">Problem</FooterLink>
-              <FooterLink href="/#solution-section">Solution</FooterLink>
-              <FooterLink href="/#features">Core Features</FooterLink>
-              <FooterLink href="/#pricing">Plans</FooterLink>
-            </FooterColumn>
+          {/* Links Grid - 3 columns matching marketing layout */}
+          <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8 sm:gap-12 lg:justify-end">
+            <div>
+              <h3 className="text-sm font-semibold text-white font-geist tracking-tight">Product</h3>
+              <ul className="mt-4 space-y-3">
+                <li><Link href="/#features" className="text-sm text-gray-400 hover:text-white transition font-geist">Features</Link></li>
+                <li><Link href="/#solution-section" className="text-sm text-gray-400 hover:text-white transition font-geist">How it works</Link></li>
+                <li><Link href="/#pricing" className="text-sm text-gray-400 hover:text-white transition font-geist">Pricing</Link></li>
+                <li><Link href="/#comparison-section" className="text-sm text-gray-400 hover:text-white transition font-geist">Why metricx</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white font-geist tracking-tight">Resources</h3>
+              <ul className="mt-4 space-y-3">
+                <li><Link href="/blog" className="text-sm text-gray-400 hover:text-white transition font-geist">Blog</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white font-geist tracking-tight">Company</h3>
+              <ul className="mt-4 space-y-3">
+                <li><Link href="/privacy" className="text-sm text-gray-400 hover:text-white transition font-geist">Privacy</Link></li>
+                <li><Link href="/terms" className="text-sm text-gray-400 hover:text-white transition font-geist">Terms</Link></li>
+                <li><a href="mailto:info@metricx.ai" className="text-sm text-gray-400 hover:text-white transition font-geist">Contact</a></li>
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -1281,49 +1278,11 @@ function Footer() {
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-400 font-geist">© {new Date().getFullYear()} metricx. All rights reserved.</p>
           <div className="flex items-center gap-6 text-xs text-gray-400">
-            <a href="mailto:info@metricx.ai" className="hover:text-white transition font-geist">info@metricx.ai</a>
+            <Link href="/privacy" className="hover:text-white transition font-geist">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white transition font-geist">Terms of Service</Link>
           </div>
         </div>
       </div>
     </footer>
-  );
-}
-
-/**
- * FooterColumn - Footer link column
- */
-function FooterColumn({ title, children }) {
-  return (
-    <div>
-      <h3 className="text-sm font-semibold text-white font-geist tracking-tight">{title}</h3>
-      <ul className="mt-4 space-y-3">
-        {children}
-      </ul>
-    </div>
-  );
-}
-
-/**
- * FooterLink - Single footer link
- */
-function FooterLink({ href, children }) {
-  const isExternal = href.startsWith('http://') || href.startsWith('https://');
-
-  if (isExternal) {
-    return (
-      <li>
-        <a href={href} className="text-sm text-gray-400 hover:text-white transition font-geist" target="_blank" rel="noopener noreferrer">
-          {children}
-        </a>
-      </li>
-    );
-  }
-
-  return (
-    <li>
-      <Link href={href} className="text-sm text-gray-400 hover:text-white transition font-geist">
-        {children}
-      </Link>
-    </li>
   );
 }

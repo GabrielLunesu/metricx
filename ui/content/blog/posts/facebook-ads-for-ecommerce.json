@@ -1,0 +1,88 @@
+{
+  "slug": "facebook-ads-for-ecommerce",
+  "title": "Facebook Ads for Ecommerce: How to Get ROAS That Actually Makes Sense",
+  "excerpt": "Meta Ads is still the most powerful demand-generation channel for Shopify stores — but the playbook has changed. Here's what's working in 2026.",
+  "category": "strategy",
+  "author": "gabriel-lunesu",
+  "publishedAt": "2026-03-05T10:00:00Z",
+  "updatedAt": "2026-03-05T10:00:00Z",
+  "readTime": 9,
+  "featured": false,
+  "image": "/images/blog/facebook-ads-for-ecommerce.jpg",
+  "tags": ["Meta Ads", "Facebook Ads", "Ecommerce", "Shopify", "ROAS"],
+  "content": [
+    {
+      "type": "paragraph",
+      "text": "Meta Ads has gone through more changes in the last five years than any other ad platform. iOS 14 gutted tracking, targeting options narrowed, costs went up, and a lot of merchants who used to print money on Facebook suddenly found their ROAS collapsing. The stores that adapted are doing better than ever. The ones still using the old playbook are struggling. This is the current approach that works."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Meta Is Still the Best Channel for Ecommerce"
+    },
+    {
+      "type": "paragraph",
+      "text": "Despite everything, Meta Ads remains the highest-leverage paid channel for most Shopify stores. The reason is reach and creative format flexibility. You can reach billions of people, show them video, carousel, or static image ads, and use Meta's algorithm to find buyers within that massive pool. No other platform gives you that combination of scale and creative control."
+    },
+    {
+      "type": "paragraph",
+      "text": "The catch is that Meta requires strong creative to work. Unlike Google Shopping, where the product speaks for itself, Meta ads need to stop someone mid-scroll and make them feel something. That's a higher creative bar — but it also means creative quality is your biggest competitive advantage."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Campaign Structure in 2026"
+    },
+    {
+      "type": "paragraph",
+      "text": "The current recommended structure for most Shopify stores is simple: one Advantage+ Shopping Campaign (ASC) for scaling proven products, and a separate testing campaign for new creative. Advantage+ lets Meta's algorithm do the heavy lifting on audience and placement optimization — which, since iOS 14 destroyed granular targeting anyway, is often better than trying to manually control it."
+    },
+    {
+      "type": "paragraph",
+      "text": "Your testing campaign should run 3-5 creatives per week, each with a different angle, hook, or format. The goal is to find winners fast and graduate them to ASC. Most creatives fail — that's normal. You're looking for the 1 in 5 that performs 3x better than the rest."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Creative Is the Variable That Moves ROAS"
+    },
+    {
+      "type": "paragraph",
+      "text": "In a world where targeting has been commoditized by iOS restrictions, creative is the primary lever for improving Meta ROAS. The best-performing creative in 2026 tends to be native-feeling content — UGC-style videos, honest product demonstrations, direct-to-camera testimonials. High-production ads often underperform because they look like ads."
+    },
+    {
+      "type": "paragraph",
+      "text": "Test your hook first — the first 3 seconds determine whether someone watches or scrolls. Once you have hooks that stop the scroll, test different body messages and CTAs. Document what works and build a creative brief that captures the patterns so you can brief new content faster."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading Your Meta ROAS Correctly"
+    },
+    {
+      "type": "paragraph",
+      "text": "The ROAS number inside Meta Ads Manager is not your real ROAS. It's Meta's attributed ROAS — the revenue Meta thinks it generated based on its own attribution model. Since iOS 14 reduced the accuracy of pixel tracking, this number is partly modeled, which means Meta is estimating some conversions rather than directly observing them."
+    },
+    {
+      "type": "paragraph",
+      "text": "Use Meta ROAS to compare campaigns against each other — it's useful for that. But to understand whether your Meta investment is actually profitable, compare your total Meta spend to your total Shopify revenue and calculate blended ROAS. That's the real number."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Scaling Without Killing ROAS"
+    },
+    {
+      "type": "paragraph",
+      "text": "The most common mistake when scaling Meta is increasing budgets too fast. Meta's algorithm resets when you make large budget changes, which can tank performance temporarily. A good rule of thumb is to increase budgets by no more than 20-30% at a time, then let the campaign stabilize for 3-5 days before scaling again."
+    },
+    {
+      "type": "paragraph",
+      "text": "Scale winners, don't save underperformers. If a campaign is consistently below your break-even ROAS after 2-3 weeks, turn it off and redirect the budget to what's working. Emotional attachment to campaigns is one of the most expensive habits in media buying."
+    },
+    {
+      "type": "paragraph",
+      "text": "Metricx gives you a clear view of your Meta performance alongside your real Shopify data, so you can make scaling decisions based on actual profitability rather than platform-reported ROAS. Try it free."
+    }
+  ]
+}
