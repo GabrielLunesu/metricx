@@ -4,19 +4,15 @@ FROM python:3.11-slim AS build
 
 WORKDIR /app
 
-# Install system dependencies with cache
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
     libpq-dev
 
 # Copy requirements and install Python dependencies
-# Use BuildKit cache mount to persist pip cache between builds
 COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt
 
 # Runtime stage
@@ -24,10 +20,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install runtime dependencies only (with cache)
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl
 
@@ -45,5 +39,6 @@ USER appuser
 # Expose FastAPI default port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command runs API; override APP_COMMAND per service when needed.
+ENV APP_COMMAND="uvicorn app.main:app --host 0.0.0.0 --port 8000"
+CMD ["sh", "-c", "${APP_COMMAND}"]

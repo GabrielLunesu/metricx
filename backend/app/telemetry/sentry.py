@@ -32,14 +32,23 @@ logger = logging.getLogger(__name__)
 # Sentry SDK import - gracefully handle if not installed
 try:
     import sentry_sdk
-    from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
     from sentry_sdk.integrations.redis import RedisIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
     SENTRY_AVAILABLE = True
 except ImportError:
     SENTRY_AVAILABLE = False
+    FASTAPI_SENTRY_AVAILABLE = False
+    FastApiIntegration = None
     sentry_sdk = None
+else:
+    # FastAPI integration can raise at import time if starlette/fastapi are absent.
+    try:
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        FASTAPI_SENTRY_AVAILABLE = True
+    except Exception:
+        FASTAPI_SENTRY_AVAILABLE = False
+        FastApiIntegration = None
 
 
 @lru_cache()
@@ -85,22 +94,28 @@ def init_sentry() -> bool:
     environment = os.environ.get("ENVIRONMENT", "development")
 
     try:
+        integrations = [
+            SqlalchemyIntegration(),
+            RedisIntegration(),
+            LoggingIntegration(
+                level=logging.INFO,        # Capture INFO+ as breadcrumbs
+                event_level=logging.ERROR,  # Send ERROR+ as events
+            ),
+        ]
+        if FASTAPI_SENTRY_AVAILABLE and FastApiIntegration:
+            integrations.insert(
+                0,
+                FastApiIntegration(
+                    transaction_style="endpoint",  # Use route paths as transaction names
+                ),
+            )
+
         sentry_sdk.init(
             dsn=dsn,
             environment=environment,
 
             # Integrations for comprehensive error capture
-            integrations=[
-                FastApiIntegration(
-                    transaction_style="endpoint",  # Use route paths as transaction names
-                ),
-                SqlalchemyIntegration(),
-                RedisIntegration(),
-                LoggingIntegration(
-                    level=logging.INFO,        # Capture INFO+ as breadcrumbs
-                    event_level=logging.ERROR,  # Send ERROR+ as events
-                ),
-            ],
+            integrations=integrations,
 
             # Performance monitoring
             traces_sample_rate=0.1,  # Sample 10% of transactions for performance

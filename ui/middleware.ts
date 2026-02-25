@@ -36,6 +36,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/login',
+  '/sitemap.xml',
   '/privacy',
   '/terms',
   '/about',
@@ -72,7 +73,7 @@ export const config = {
     // Match all routes except:
     // - Static files (_next, images, fonts, etc.)
     // - /api/* routes (these are proxied to backend which has its own auth)
-    // - .txt files (for IndexNow verification, robots.txt, etc.)
-    '/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|txt)).*)',
+    // - .txt/.xml files (for IndexNow verification, robots.txt, sitemap.xml, etc.)
+    '/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|txt|xml)).*)',
   ],
 }

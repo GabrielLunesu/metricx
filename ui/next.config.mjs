@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactCompiler: true,
+    async redirects() {
+        return [
+            {
+                source: '/signup',
+                destination: '/sign-up',
+                permanent: true,
+            },
+        ]
+    },
     async rewrites() {
         return [
             {

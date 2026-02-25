@@ -18,8 +18,7 @@
 **/docker-compose.yml
 **/node_modules
 **/Thumbs.db
-Dockerfile
-*.Dockerfile
+# Note: Dockerfiles are NOT ignored - Railway needs them in the build context
 # Ignore our own binary, but only in the root to avoid ignoring subfolders
 defang
 defang.exe

@@ -140,21 +140,33 @@ function Header({ onSmoothScroll }) {
           {/* Center Nav */}
           <nav className="hidden md:flex items-center gap-1 text-sm text-gray-600">
             <a
-              href="#features"
+              href="/#features"
               onClick={(e) => onSmoothScroll(e, 'features')}
               className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
             >
               Features
             </a>
             <a
-              href="#pricing"
+              href="/#pricing"
               onClick={(e) => onSmoothScroll(e, 'pricing')}
               className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
             >
               Pricing
             </a>
-            <Link href="#" className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist">Docs</Link>
-            <Link href="#" className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist">Blog</Link>
+            <a
+              href="/#solution-section"
+              onClick={(e) => onSmoothScroll(e, 'solution-section')}
+              className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
+            >
+              How it works
+            </a>
+            <a
+              href="/#comparison-section"
+              onClick={(e) => onSmoothScroll(e, 'comparison-section')}
+              className="px-3 py-1.5 rounded-lg hover:bg-black/5 hover:text-gray-900 transition-all font-geist"
+            >
+              Why metricx
+            </a>
           </nav>
 
           {/* Right actions */}
@@ -163,7 +175,7 @@ function Header({ onSmoothScroll }) {
               Log in
             </Link>
             <Link
-              href="/signup"
+              href="/sign-up"
               className="hidden sm:inline-flex items-center rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
             >
               Start Free Trial
@@ -196,14 +208,14 @@ function Header({ onSmoothScroll }) {
         {mobileMenuOpen && (
           <div id="mobileMenu" className="md:hidden mt-2 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] overflow-hidden">
             <div className="p-4 space-y-1">
-              <a href="#features" onClick={(e) => { onSmoothScroll(e, 'features'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Features</a>
-              <a href="#pricing" onClick={(e) => { onSmoothScroll(e, 'pricing'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Pricing</a>
-              <Link href="#" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Docs</Link>
-              <Link href="#" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Blog</Link>
+              <a href="/#features" onClick={(e) => { onSmoothScroll(e, 'features'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Features</a>
+              <a href="/#pricing" onClick={(e) => { onSmoothScroll(e, 'pricing'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Pricing</a>
+              <a href="/#solution-section" onClick={(e) => { onSmoothScroll(e, 'solution-section'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">How it works</a>
+              <a href="/#comparison-section" onClick={(e) => { onSmoothScroll(e, 'comparison-section'); setMobileMenuOpen(false); }} className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 hover:text-gray-900 font-geist">Why metricx</a>
               <div className="pt-2 mt-2 border-t border-black/5 space-y-2">
                 <Link href="/login" className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-black/5 font-geist">Log in</Link>
                 <Link
-                  href="/signup"
+                  href="/sign-up"
                   className="flex w-full items-center justify-center rounded-full bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-gray-900/20 hover:bg-black transition-colors font-geist"
                 >
                   Start Free Trial
@@ -254,7 +266,7 @@ function Hero() {
               style={{ animationDelay: '0.4s' }}
             >
               <Link
-                href="/signup"
+                href="/sign-up"
                 className="group inline-flex items-center gap-3 hover:bg-gray-800 hover:shadow-xl transition-all duration-300 transform hover:scale-105 xl:pt-4 xl:pb-4 text-sm font-medium text-white bg-gray-900 rounded-full pt-3 pr-8 pb-3 pl-8 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]"
               >
                 <span>Start Free Trial</span>
@@ -265,13 +277,13 @@ function Hero() {
                   </svg>
                 </div>
               </Link>
-              <button className="inline-flex sm:px-5 hover:bg-white/80 transition sm:w-auto text-sm font-medium text-gray-900 font-geist bg-white/60 w-full border-white/80 border rounded-full pt-3 pr-4 pb-3 pl-4 shadow-sm backdrop-blur-md gap-x-2 items-center justify-center">
+              {/* <button className="inline-flex sm:px-5 hover:bg-white/80 transition sm:w-auto text-sm font-medium text-gray-900 font-geist bg-white/60 w-full border-white/80 border rounded-full pt-3 pr-4 pb-3 pl-4 shadow-sm backdrop-blur-md gap-x-2 items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-700">
                   <path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z" />
                   <circle cx="12" cy="12" r="10" />
                 </svg>
                 Watch demo
-              </button>
+              </button> */}
             </div>
 
             {/* Divider */}
@@ -716,7 +728,7 @@ function SolutionSection() {
             {/* CTA */}
             <div className="mt-8">
               <Link
-                href="/signup"
+                href="/sign-up"
                 className="inline-flex items-center gap-2 rounded-lg bg-white text-gray-900 px-5 py-2.5 text-sm font-medium hover:bg-gray-100 transition shadow-lg font-geist"
               >
                 Connect your accounts
@@ -960,7 +972,7 @@ function PricingSection() {
               <PricingFeature>Shopify connection</PricingFeature>
             </ul>
             <Link
-              href="/signup"
+              href="/sign-up"
               className="mt-8 block w-full text-center rounded-lg bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20 transition font-geist"
             >
               Get started free
@@ -987,7 +999,7 @@ function PricingSection() {
               <PricingFeature dark>Up to 10 team members</PricingFeature>
             </ul>
             <Link
-              href="/signup"
+              href="/sign-up"
               className="mt-8 block w-full text-center rounded-lg bg-gray-900 px-4 py-3 text-sm font-medium text-white hover:bg-gray-800 transition shadow-lg font-geist"
             >
               Start 7-day free trial
@@ -1165,7 +1177,7 @@ function FinalCTASection() {
         </p>
         <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center scroll-animate opacity-0" style={{ transitionDelay: '0.2s' }}>
           <Link
-            href="/signup"
+            href="/sign-up"
             className="group inline-flex items-center justify-center gap-3 hover:bg-gray-800 hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-sm font-medium text-white bg-black rounded-full py-4 px-8 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)] font-geist"
           >
             Connect your accounts
@@ -1176,13 +1188,13 @@ function FinalCTASection() {
               </svg>
             </div>
           </Link>
-          <button className="inline-flex items-center justify-center gap-2 text-sm font-medium text-gray-900 font-geist bg-white/80 backdrop-blur-md border border-gray-200 rounded-full px-6 py-4 hover:bg-gray-100 transition shadow-sm">
+          {/* <button className="inline-flex items-center justify-center gap-2 text-sm font-medium text-gray-900 font-geist bg-white/80 backdrop-blur-md border border-gray-200 rounded-full px-6 py-4 hover:bg-gray-100 transition shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-700">
               <path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z" />
               <circle cx="12" cy="12" r="10" />
             </svg>
             Watch demo
-          </button>
+          </button> */}
         </div>
       </div>
     </section>
@@ -1216,15 +1228,31 @@ function Footer() {
             <p className="mt-4 text-sm text-gray-400 font-geist max-w-sm">
               Ad analytics for e-commerce merchants. Understand which ads make you money, cut waste, and grow profitably.
             </p>
+            <a href="mailto:info@metricx.ai" className="mt-3 inline-block text-sm text-gray-300 hover:text-white transition font-geist">
+              info@metricx.ai
+            </a>
             <div className="mt-6 flex items-center gap-3">
-              {/* Twitter/X */}
-              <a href="#" className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition backdrop-blur-md border border-white/10">
+              {/* Twitter/X - temporarily disabled
+              <a
+                href="https://x.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow metricx on X"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition backdrop-blur-md border border-white/10"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
+              */}
               {/* Discord */}
-              <a href="#" className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition backdrop-blur-md border border-white/10">
+              <a
+                href="https://discord.gg/seRTSw2vAa"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Join our Discord community"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition backdrop-blur-md border border-white/10"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z" />
                 </svg>
@@ -1232,18 +1260,19 @@ function Footer() {
             </div>
           </div>
 
-          {/* Links Grid - Only Product and Legal */}
+          {/* Links Grid - Section anchors only */}
           <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-2 gap-8 sm:gap-12 lg:justify-end">
             <FooterColumn title="Product">
-              <FooterLink href="#">Features</FooterLink>
-              <FooterLink href="#">Integrations</FooterLink>
-              <FooterLink href="#">Pricing</FooterLink>
-              <FooterLink href="#">Changelog</FooterLink>
+              <FooterLink href="/#features">Features</FooterLink>
+              <FooterLink href="/#solution-section">How it works</FooterLink>
+              <FooterLink href="/#pricing">Pricing</FooterLink>
+              <FooterLink href="/#comparison-section">Why metricx</FooterLink>
             </FooterColumn>
-            <FooterColumn title="Legal">
-              <FooterLink href="#">Privacy</FooterLink>
-              <FooterLink href="#">Terms</FooterLink>
-              <FooterLink href="#">Security</FooterLink>
+            <FooterColumn title="Navigate">
+              <FooterLink href="/#problem-section">Problem</FooterLink>
+              <FooterLink href="/#solution-section">Solution</FooterLink>
+              <FooterLink href="/#features">Core Features</FooterLink>
+              <FooterLink href="/#pricing">Plans</FooterLink>
             </FooterColumn>
           </div>
         </div>
@@ -1252,7 +1281,7 @@ function Footer() {
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-400 font-geist">© {new Date().getFullYear()} metricx. All rights reserved.</p>
           <div className="flex items-center gap-6 text-xs text-gray-400">
-            <a href="#" className="hover:text-white transition font-geist">Status</a>
+            <a href="mailto:info@metricx.ai" className="hover:text-white transition font-geist">info@metricx.ai</a>
           </div>
         </div>
       </div>
@@ -1278,11 +1307,23 @@ function FooterColumn({ title, children }) {
  * FooterLink - Single footer link
  */
 function FooterLink({ href, children }) {
+  const isExternal = href.startsWith('http://') || href.startsWith('https://');
+
+  if (isExternal) {
+    return (
+      <li>
+        <a href={href} className="text-sm text-gray-400 hover:text-white transition font-geist" target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      </li>
+    );
+  }
+
   return (
     <li>
-      <a href={href} className="text-sm text-gray-400 hover:text-white transition font-geist">
+      <Link href={href} className="text-sm text-gray-400 hover:text-white transition font-geist">
         {children}
-      </a>
+      </Link>
     </li>
   );
 }
