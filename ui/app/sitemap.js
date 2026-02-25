@@ -1,7 +1,7 @@
 /**
  * Dynamic Sitemap Generator for metricx
  *
- * WHAT: Generates sitemap.xml for search engines
+ * WHAT: Generates sitemap.xml for search engines including all blog posts
  * WHY: Helps search engines discover and index public pages
  *
  * Next.js automatically serves this at /sitemap.xml
@@ -9,17 +9,19 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  */
 
+import { getAllPosts } from "@/lib/blog";
+
 const baseUrl = "https://www.metricx.ai";
 
 /**
- * Generates sitemap entries for all public pages.
+ * Generates sitemap entries for all public pages and blog posts.
  *
  * @returns {Array<{url: string, lastModified: Date, changeFrequency: string, priority: number}>}
  */
 export default function sitemap() {
   const now = new Date();
 
-  return [
+  const staticPages = [
     {
       url: baseUrl,
       lastModified: now,
@@ -57,4 +59,13 @@ export default function sitemap() {
       priority: 0.9,
     },
   ];
+
+  const blogPosts = getAllPosts().map((post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.updatedAt ?? post.publishedAt),
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
+  return [...staticPages, ...blogPosts];
 }
