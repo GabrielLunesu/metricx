@@ -798,6 +798,82 @@ def _fetch_meta_campaign_insights_with_retry(
     )
 
 
+def _parse_meta_actions(insight: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse Meta actions array into flat metrics (shared logic).
+
+    WHAT:
+        Extracts purchase count, purchase value (revenue), leads, and installs
+        from Meta's nested actions/action_values arrays.
+
+    WHY:
+        Meta returns multiple overlapping action type variants. Using 'omni_purchase'
+        as the primary source (Meta's deduplicated metric) with 'purchase' as fallback
+        ensures accurate counts without double-counting.
+
+    CRITICAL:
+        This is the SINGLE source of truth for parsing Meta actions in the snapshot
+        pipeline. Must stay in sync with _parse_actions in meta_sync_service.py.
+
+    Args:
+        insight: Raw insight dictionary from Meta API
+
+    Returns:
+        Dictionary with purchases (int), revenue (Decimal), leads (int)
+    """
+    actions = insight.get("actions") or []
+    action_values = insight.get("action_values") or []
+
+    # Exact action type matches — avoid substring matching which double-counts.
+    # 'omni_purchase' is Meta's deduplicated purchase metric (aggregates pixel + CAPI + app).
+    # Fallback to 'purchase' if 'omni_purchase' not present.
+    PURCHASE_TYPES = ("omni_purchase", "purchase")
+    LEAD_TYPES = ("lead", "onsite_conversion.lead_grouped", "offsite_conversion.fb_pixel_lead")
+
+    purchases = 0
+    leads = 0
+    revenue = Decimal("0")
+
+    # Sort so omni_ variants come first (preferred source of truth)
+    sorted_actions = sorted(
+        actions,
+        key=lambda a: 0 if (a.get("action_type") or "").startswith("omni_") else 1,
+    )
+
+    found_purchase = False
+    found_lead = False
+    for action in sorted_actions:
+        action_type = action.get("action_type") or ""
+        try:
+            value = int(float(action.get("value", 0)))
+        except (TypeError, ValueError):
+            continue
+
+        if not found_purchase and action_type in PURCHASE_TYPES:
+            purchases = value
+            found_purchase = True
+        elif not found_lead and action_type in LEAD_TYPES:
+            leads = value
+            found_lead = True
+
+    # Parse revenue from action_values (same priority logic)
+    sorted_action_values = sorted(
+        action_values,
+        key=lambda a: 0 if (a.get("action_type") or "").startswith("omni_") else 1,
+    )
+
+    found_revenue = False
+    for av in sorted_action_values:
+        action_type = av.get("action_type") or ""
+        if not found_revenue and action_type in PURCHASE_TYPES:
+            try:
+                revenue = Decimal(str(av.get("value", 0)))
+            except Exception:
+                pass
+            found_revenue = True
+
+    return {"purchases": purchases, "revenue": revenue, "leads": leads}
+
+
 def _upsert_meta_snapshot(
     db: Session,
     entity: Entity,
@@ -809,25 +885,11 @@ def _upsert_meta_snapshot(
     Returns:
         "inserted" or "updated"
     """
-    # Parse actions to get conversions/revenue
-    actions = insight.get("actions", []) or []
-    action_values = insight.get("action_values", []) or []
-
-    purchases = 0
-    leads = 0
-    revenue = Decimal("0")
-
-    for action in actions:
-        action_type = action.get("action_type", "")
-        value = int(float(action.get("value", 0)))
-        if action_type == "omni_purchase":
-            purchases = value
-        elif action_type == "lead":
-            leads = value
-
-    for av in action_values:
-        if av.get("action_type") == "omni_purchase":
-            revenue = Decimal(str(av.get("value", 0)))
+    # Parse actions using shared logic (deduplication + fallback)
+    parsed = _parse_meta_actions(insight)
+    purchases = parsed["purchases"]
+    revenue = parsed["revenue"]
+    leads = parsed["leads"]
 
     # Parse the metrics_date from Meta's response
     # WHY: Meta returns date_stop which is the date the data represents in account timezone.
