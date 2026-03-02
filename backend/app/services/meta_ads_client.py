@@ -47,6 +47,33 @@ from facebook_business.exceptions import FacebookRequestError
 
 logger = logging.getLogger(__name__)
 
+
+def ensure_act_prefix(account_id: str) -> str:
+    """Normalize a Meta ad account ID to include the required 'act_' prefix.
+
+    WHAT:
+        Ensures the account ID starts with 'act_' — required by the Graph API
+        to correctly resolve the node as an AdAccount.
+
+    WHY:
+        Without the prefix, the Graph API interprets the numeric ID as a
+        different node type (Page, User, etc.) and returns error #100
+        'Tried accessing nonexisting field (insights)'.
+
+    Args:
+        account_id: Raw account ID (may or may not have 'act_' prefix)
+
+    Returns:
+        Account ID with 'act_' prefix (e.g., 'act_25132502539767122')
+    """
+    if not account_id:
+        raise ValueError("Meta ad account ID cannot be empty")
+    account_id = str(account_id).strip()
+    if not account_id.startswith("act_"):
+        account_id = f"act_{account_id}"
+    return account_id
+
+
 # Shared in-process limiter state.
 # Keyed by (scope, calls_per_hour), where scope is usually client token.
 _rate_limit_call_times: Dict[tuple[str, int], deque] = {}
@@ -211,8 +238,9 @@ class MetaAdsClient:
             MetaAdsClientError: Other API errors
         """
         try:
+            account_id = ensure_act_prefix(account_id)
             logger.info(f"[META_CLIENT] Fetching campaigns for account: {account_id}")
-            
+
             account = AdAccount(account_id)
             campaigns = account.get_campaigns(fields=[
                 Campaign.Field.id,
@@ -585,7 +613,7 @@ class MetaAdsClient:
             
             # Determine entity type and create appropriate object
             if level == "account":
-                entity = AdAccount(entity_id)
+                entity = AdAccount(ensure_act_prefix(entity_id))
             elif level == "campaign":
                 entity = Campaign(entity_id)
             elif level == "adset":
@@ -665,6 +693,7 @@ class MetaAdsClient:
             MetaAdsClientError: On API errors
         """
         try:
+            ad_account_id = ensure_act_prefix(ad_account_id)
             logger.info(
                 f"[META_CLIENT] Fetching ACCOUNT-LEVEL insights: {ad_account_id}, "
                 f"level={level}, {start_date} to {end_date}"

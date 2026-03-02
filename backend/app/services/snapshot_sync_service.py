@@ -44,7 +44,7 @@ from app.models import (
     ProviderEnum,
 )
 from app.security import decrypt_secret
-from app.services.meta_ads_client import MetaAdsClient, MetaAdsClientError
+from app.services.meta_ads_client import MetaAdsClient, MetaAdsClientError, ensure_act_prefix
 from app.services.google_ads_client import GAdsClient, QuotaExhaustedError
 from app.telemetry import capture_exception
 
@@ -499,8 +499,8 @@ def _sync_meta_snapshots(
             start_date = today - timedelta(days=7)
             end_date = today
 
-        # Get ad account ID from connection
-        ad_account_id = connection.external_account_id
+        # Get ad account ID from connection (MUST have act_ prefix for Meta Graph API)
+        ad_account_id = ensure_act_prefix(connection.external_account_id)
 
         logger.info(
             "[SNAPSHOT_SYNC] Fetching Meta ACCOUNT-LEVEL insights for %s, %s to %s",
@@ -672,53 +672,118 @@ def _sync_meta_snapshots(
     return result
 
 
+def _is_retryable_meta_error(error: MetaAdsClientError) -> bool:
+    """Determine if a Meta API error is worth retrying.
+
+    WHAT:
+        Classifies Meta API errors as retryable or permanent.
+
+    WHY:
+        Meta's API commonly returns transient errors (500, 503, rate limits,
+        "unknown error"). These succeed on retry. But auth errors (401),
+        permission errors (403), and validation errors (400) are permanent
+        and should fail fast.
+
+    Args:
+        error: The MetaAdsClientError to classify
+
+    Returns:
+        True if the error is transient and worth retrying
+    """
+    error_msg = str(error).lower()
+    # Rate limit errors
+    if "rate limit" in error_msg or "too many" in error_msg:
+        return True
+    # Transient server errors
+    if "http 500" in error_msg or "http 503" in error_msg:
+        return True
+    # Meta's generic transient error
+    if "unknown error" in error_msg or "service temporarily unavailable" in error_msg:
+        return True
+    # Timeout-like errors
+    if "timeout" in error_msg or "connection" in error_msg:
+        return True
+    return False
+
+
+def _fetch_meta_insights_with_retry(
+    client: MetaAdsClient,
+    ad_account_id: str,
+    start_date: date,
+    end_date: date,
+    level: str = "ad",
+) -> List[Dict[str, Any]]:
+    """Fetch Meta insights with retry and backoff for transient errors.
+
+    WHAT:
+        Fetches account-level insights with configurable breakdown level.
+        Retries on transient errors (rate limits, 500s, timeouts).
+
+    WHY:
+        Meta's API is unreliable — it frequently returns 500/503 during
+        peak hours. Retrying with backoff is essential for production sync.
+        Consolidates duplicate retry logic for campaign and ad levels.
+
+    Args:
+        client: Meta Ads client
+        ad_account_id: Ad account ID (with or without act_ prefix)
+        start_date: Start date
+        end_date: End date
+        level: Breakdown level - "ad", "campaign", or "adset"
+
+    Returns:
+        List of insight dictionaries
+    """
+    # Build fields list based on level
+    base_fields = [
+        "spend", "impressions", "clicks",
+        "actions", "action_values", "account_currency",
+    ]
+    if level == "ad":
+        base_fields.extend(["ad_id", "ad_name"])
+    elif level == "campaign":
+        base_fields.extend(["campaign_id", "campaign_name"])
+    elif level == "adset":
+        base_fields.extend(["adset_id", "adset_name"])
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            insights = client.get_account_insights(
+                ad_account_id=ad_account_id,
+                level=level,
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                time_increment=1,
+                fields=base_fields,
+            )
+            return insights or []
+
+        except MetaAdsClientError as e:
+            if _is_retryable_meta_error(e) and attempt < MAX_RETRIES - 1:
+                wait_time = RETRY_BACKOFF_SECONDS[attempt]
+                logger.warning(
+                    "[SNAPSHOT_SYNC] Retryable Meta error (level=%s), waiting %d seconds "
+                    "(attempt %d/%d): %s",
+                    level, wait_time, attempt + 1, MAX_RETRIES, e,
+                )
+                time.sleep(wait_time)
+                continue
+            # Non-retryable or exhausted retries
+            raise
+
+    return []
+
+
 def _fetch_meta_account_insights_with_retry(
     client: MetaAdsClient,
     ad_account_id: str,
     start_date: date,
     end_date: date
 ) -> List[Dict[str, Any]]:
-    """Fetch Meta insights with retry and backoff for rate limits.
-
-    Args:
-        client: Meta Ads client
-        ad_account_id: Ad account ID
-        start_date: Start date
-        end_date: End date
-
-    Returns:
-        List of insight dictionaries
-    """
-    for attempt in range(MAX_RETRIES):
-        try:
-            # Use account-level insights with ad breakdown
-            insights = client.get_account_insights(
-                ad_account_id=ad_account_id,
-                level="ad",  # Breakdown by ad
-                start_date=start_date.isoformat(),
-                end_date=end_date.isoformat(),
-                time_increment=1,  # Daily
-                fields=[
-                    "ad_id", "ad_name", "spend", "impressions", "clicks",
-                    "actions", "action_values", "account_currency"
-                ]
-            )
-            return insights or []
-
-        except MetaAdsClientError as e:
-            error_msg = str(e).lower()
-            if "rate limit" in error_msg or "too many" in error_msg:
-                if attempt < MAX_RETRIES - 1:
-                    wait_time = RETRY_BACKOFF_SECONDS[attempt]
-                    logger.warning(
-                        "[SNAPSHOT_SYNC] Rate limited, waiting %d seconds (attempt %d/%d)",
-                        wait_time, attempt + 1, MAX_RETRIES
-                    )
-                    time.sleep(wait_time)
-                    continue
-            raise
-
-    return []
+    """Fetch Meta AD-level insights with retry. Delegates to unified helper."""
+    return _fetch_meta_insights_with_retry(
+        client, ad_account_id, start_date, end_date, level="ad"
+    )
 
 
 def _fetch_meta_campaign_insights_with_retry(
@@ -727,54 +792,10 @@ def _fetch_meta_campaign_insights_with_retry(
     start_date: date,
     end_date: date
 ) -> List[Dict[str, Any]]:
-    """Fetch Meta CAMPAIGN-level insights with retry and backoff.
-
-    WHAT:
-        Fetches metrics at campaign level (SOURCE OF TRUTH for dashboard KPIs).
-
-    WHY:
-        Campaign-level ensures totals match Meta Ads dashboard exactly.
-        Ad-level metrics may not sum to campaign totals in all cases.
-
-    Args:
-        client: Meta Ads client
-        ad_account_id: Ad account ID
-        start_date: Start date
-        end_date: End date
-
-    Returns:
-        List of insight dictionaries with campaign_id field
-    """
-    for attempt in range(MAX_RETRIES):
-        try:
-            # Use account-level insights with CAMPAIGN breakdown
-            insights = client.get_account_insights(
-                ad_account_id=ad_account_id,
-                level="campaign",  # Campaign-level for accurate totals
-                start_date=start_date.isoformat(),
-                end_date=end_date.isoformat(),
-                time_increment=1,  # Daily
-                fields=[
-                    "campaign_id", "campaign_name", "spend", "impressions", "clicks",
-                    "actions", "action_values", "account_currency"
-                ]
-            )
-            return insights or []
-
-        except MetaAdsClientError as e:
-            error_msg = str(e).lower()
-            if "rate limit" in error_msg or "too many" in error_msg:
-                if attempt < MAX_RETRIES - 1:
-                    wait_time = RETRY_BACKOFF_SECONDS[attempt]
-                    logger.warning(
-                        "[SNAPSHOT_SYNC] Rate limited on campaign insights, waiting %d seconds (attempt %d/%d)",
-                        wait_time, attempt + 1, MAX_RETRIES
-                    )
-                    time.sleep(wait_time)
-                    continue
-            raise
-
-    return []
+    """Fetch Meta CAMPAIGN-level insights with retry. Delegates to unified helper."""
+    return _fetch_meta_insights_with_retry(
+        client, ad_account_id, start_date, end_date, level="campaign"
+    )
 
 
 def _upsert_meta_snapshot(

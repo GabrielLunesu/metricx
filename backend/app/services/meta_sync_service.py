@@ -50,6 +50,7 @@ from app.services.meta_ads_client import (
     MetaAdsClientError,
     MetaAdsAuthenticationError,
     MetaAdsPermissionError,
+    ensure_act_prefix,
 )
 
 logger = logging.getLogger(__name__)
@@ -166,9 +167,7 @@ def sync_meta_entities(
 
         client = MetaAdsClient(access_token=access_token)
 
-        account_id = connection.external_account_id
-        if not account_id.startswith("act_"):
-            account_id = f"act_{account_id}"
+        account_id = ensure_act_prefix(connection.external_account_id)
 
         logger.info(
             "[META_SYNC] Fetching campaigns for account: %s (mode=%s)",
@@ -760,7 +759,25 @@ def _chunk_date_range(
 
 
 def _parse_actions(insight: Dict[str, Any]) -> Dict[str, Any]:
-    """Parse Meta actions array into flat metrics."""
+    """Parse Meta actions array into flat metrics.
+
+    WHAT:
+        Extracts purchase count, purchase value, leads, and installs
+        from Meta's nested actions/action_values arrays.
+
+    WHY:
+        Meta returns multiple action type variants that can overlap
+        (e.g., 'purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase').
+        Using substring matching ('purchase' in action_type) DOUBLE-COUNTS.
+        We use 'omni_purchase' as the single source of truth — it's Meta's
+        deduplicated purchase metric that aggregates across all channels.
+
+    Args:
+        insight: Raw insight dictionary from Meta API
+
+    Returns:
+        Dictionary with purchases, purchase_value, leads, installs
+    """
     result = {
         "purchases": 0.0,
         "purchase_value": 0.0,
@@ -771,32 +788,60 @@ def _parse_actions(insight: Dict[str, Any]) -> Dict[str, Any]:
     actions = insight.get("actions") or []
     action_values = insight.get("action_values") or []
 
-    for action in actions:
-        action_type = (action.get("action_type") or "").lower()
+    # IMPORTANT: Use exact action_type matches to avoid double-counting.
+    # 'omni_purchase' is Meta's deduplicated purchase metric — it aggregates
+    # purchases across pixel, CAPI, and app events.
+    # Fallback to 'purchase' only if 'omni_purchase' is not present.
+    PURCHASE_TYPES = ("omni_purchase", "purchase")
+    LEAD_TYPES = ("lead", "onsite_conversion.lead_grouped", "offsite_conversion.fb_pixel_lead")
+    INSTALL_TYPES = ("omni_app_install", "app_install")
+
+    # Track which metric type we've already matched to avoid duplicates
+    found_purchase = False
+    found_lead = False
+    found_install = False
+
+    # Sort actions so omni_ variants come first (preferred)
+    sorted_actions = sorted(
+        actions,
+        key=lambda a: 0 if (a.get("action_type") or "").startswith("omni_") else 1,
+    )
+
+    for action in sorted_actions:
+        action_type = action.get("action_type") or ""
         raw_value = action.get("value")
         try:
             value = float(raw_value)
         except (TypeError, ValueError):
             continue
 
-        # Meta exposes many variants: purchase, omni_purchase,
-        # offsite_conversion.fb_pixel_purchase, etc.
-        if "purchase" in action_type:
-            result["purchases"] += value
-        if "lead" in action_type:
-            result["leads"] += value
-        if "install" in action_type:
-            result["installs"] += int(value)
+        if not found_purchase and action_type in PURCHASE_TYPES:
+            result["purchases"] = value
+            found_purchase = True
+        elif not found_lead and action_type in LEAD_TYPES:
+            result["leads"] = value
+            found_lead = True
+        elif not found_install and action_type in INSTALL_TYPES:
+            result["installs"] = int(value)
+            found_install = True
 
-    for action_value in action_values:
-        action_type = (action_value.get("action_type") or "").lower()
+    # Same logic for action_values (revenue)
+    found_purchase_value = False
+    sorted_action_values = sorted(
+        action_values,
+        key=lambda a: 0 if (a.get("action_type") or "").startswith("omni_") else 1,
+    )
+
+    for action_value in sorted_action_values:
+        action_type = action_value.get("action_type") or ""
         raw_value = action_value.get("value")
         try:
             value = float(raw_value)
         except (TypeError, ValueError):
             continue
 
-        if "purchase" in action_type:
-            result["purchase_value"] += value
+        if not found_purchase_value and action_type in PURCHASE_TYPES:
+            result["purchase_value"] = value
+            found_purchase_value = True
 
     return result

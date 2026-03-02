@@ -18,7 +18,7 @@ itsdangerous==2.2.0
 redis==5.0.1
 fakeredis==2.21.1
 arq>=0.26.0  # Async job queue - handles all background jobs + built-in cron scheduling
-facebook-business==19.0.0
+facebook-business>=22.0.0,<25.0.0  # Meta Marketing API - v19 deprecated Feb 2025, keep current
 cryptography==43.0.1
 google-ads>=28.0.0  # Min version - Google deprecates old API versions regularly
 anthropic>=0.39.0  # Claude API client for agent

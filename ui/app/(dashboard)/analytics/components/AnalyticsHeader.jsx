@@ -19,7 +19,9 @@
  *   - ui/components/ui/date-range-picker.jsx
  */
 
-import { Calendar, ChevronDown, Download, GitCompare, X } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Calendar, ChevronDown, Download, GitCompare, Target, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,6 +61,7 @@ export default function AnalyticsHeader({
   // Loading state
   loading = false,
 }) {
+  const pathname = usePathname();
   // Get current platform label
   const currentPlatformLabel = PLATFORM_OPTIONS.find(
     (p) => p.value === selectedPlatform
@@ -77,6 +80,23 @@ export default function AnalyticsHeader({
           <h1 className="text-lg md:text-xl font-semibold tracking-tight text-neutral-900">
             Analytics
           </h1>
+
+          {/* Attribution sub-page link */}
+          <Link href="/analytics/attribution">
+            <Button
+              variant={pathname === "/analytics/attribution" ? "default" : "outline"}
+              size="sm"
+              className={`h-8 px-2.5 text-xs gap-1.5 shrink-0 ${
+                pathname === "/analytics/attribution"
+                  ? "bg-neutral-900 text-white hover:bg-neutral-800"
+                  : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300"
+              }`}
+            >
+              <Target className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Attribution</span>
+            </Button>
+          </Link>
+
           {/* Filter badge when campaigns selected */}
           {selectedCampaigns.length > 0 && (
             <div className="filter-badge">

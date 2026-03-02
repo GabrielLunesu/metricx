@@ -635,264 +635,44 @@ async def handle_orders_paid(
         )
 
     # =================================================================
-    # ATTRIBUTION: Find journey and attribute the order
+    # ATTRIBUTION: Delegate to AttributionService
     # =================================================================
+    from app.services.attribution_service import AttributionService
 
-    journey = None
+    attribution_service = AttributionService(db)
+    attr_result = await attribution_service.attribute_order(
+        workspace_id=workspace_id,
+        order=order,
+        checkout_token=checkout_token,
+        customer_email=customer_email,
+        webhook_utms=utms,
+        referring_site=referring_site,
+    )
+
+    # Convert to dict for CAPI/Conversions and response
     attribution_result = {
-        "provider": "unknown",
-        "match_type": "none",
-        "confidence": "none",
-        "entity_id": None,
+        "provider": attr_result.provider,
+        "match_type": attr_result.match_type,
+        "confidence": attr_result.confidence,
+        "entity_id": attr_result.entity_id,
     }
 
-    # 1. Try to find journey by checkout_token (highest confidence)
-    if checkout_token:
+    # Find journey for CAPI/Conversions (service already committed)
+    journey = None
+    if attr_result.journey_id:
         journey = db.query(CustomerJourney).filter(
-            CustomerJourney.workspace_id == workspace_id,
-            CustomerJourney.checkout_token == checkout_token,
+            CustomerJourney.id == attr_result.journey_id,
         ).first()
 
-        if journey:
-            logger.info(
-                f"[ATTRIBUTION] Found journey by checkout_token",
-                extra={
-                    "journey_id": str(journey.id),
-                    "visitor_id": journey.visitor_id,
-                }
-            )
-
-    # 2. Fallback: Try to find journey by customer email
-    if not journey and customer_email:
-        journey = db.query(CustomerJourney).filter(
-            CustomerJourney.workspace_id == workspace_id,
-            CustomerJourney.customer_email == customer_email,
-        ).first()
-
-        if journey:
-            logger.info(
-                f"[ATTRIBUTION] Found journey by email",
-                extra={"journey_id": str(journey.id), "email": customer_email}
-            )
-
-    # 3. Determine attribution from journey or webhook data
-    if journey and journey.touchpoints:
-        # Use last touchpoint for last-click attribution
-        last_touchpoint = sorted(
-            journey.touchpoints,
-            key=lambda tp: tp.touched_at,
-            reverse=True
-        )[0]
-
-        # Attribution priority: gclid > utm_campaign > fbclid > utm_source > referrer
-        if last_touchpoint.gclid:
-            # Resolve gclid via Google Ads API for high-confidence attribution
-            gclid_result = await _resolve_gclid(
-                gclid=last_touchpoint.gclid,
-                workspace_id=workspace_id,
-                landed_at=last_touchpoint.touched_at,
-                db=db,
-            )
-
-            if gclid_result:
-                # Try to find matching Entity for the campaign
-                entity_id = _find_entity_by_google_campaign(
-                    db=db,
-                    workspace_id=workspace_id,
-                    campaign_id=gclid_result.campaign_id,
-                )
-
-                attribution_result = {
-                    "provider": "google",
-                    "match_type": "gclid",
-                    "confidence": "high",
-                    "entity_id": entity_id,
-                    "gclid_data": {
-                        "campaign_id": gclid_result.campaign_id,
-                        "campaign_name": gclid_result.campaign_name,
-                        "ad_group_id": gclid_result.ad_group_id,
-                        "ad_group_name": gclid_result.ad_group_name,
-                        "ad_id": gclid_result.ad_id,
-                    },
-                }
-                logger.info(
-                    f"[ATTRIBUTION] Resolved gclid to campaign: {gclid_result.campaign_name}",
-                    extra={"campaign_id": gclid_result.campaign_id}
-                )
-            else:
-                # Gclid resolution failed but we know it's Google
-                attribution_result = {
-                    "provider": "google",
-                    "match_type": "gclid",
-                    "confidence": "medium",
-                    "entity_id": last_touchpoint.entity_id,
-                }
-                logger.debug(
-                    f"[ATTRIBUTION] Gclid resolution failed, using provider-only attribution"
-                )
-        elif last_touchpoint.utm_campaign:
-            # Infer provider from utm_source
-            provider = _infer_provider(last_touchpoint.utm_source)
-            attribution_result = {
-                "provider": provider,
-                "match_type": "utm_campaign",
-                "confidence": "high",
-                "entity_id": last_touchpoint.entity_id,
-            }
-        elif last_touchpoint.fbclid:
-            attribution_result = {
-                "provider": "meta",
-                "match_type": "fbclid",
-                "confidence": "medium",
-                "entity_id": None,
-            }
-        elif last_touchpoint.utm_source:
-            provider = _infer_provider(last_touchpoint.utm_source)
-            attribution_result = {
-                "provider": provider,
-                "match_type": "utm_source",
-                "confidence": "low",
-                "entity_id": None,
-            }
-        elif last_touchpoint.referrer:
-            provider = _infer_provider_from_referrer(last_touchpoint.referrer)
-            attribution_result = {
-                "provider": provider,
-                "match_type": "referrer",
-                "confidence": "low",
-                "entity_id": None,
-            }
-    elif utms.get("gclid"):
-        # Fallback to webhook UTMs if no journey - try to resolve gclid
-        gclid_result = await _resolve_gclid(
-            gclid=utms.get("gclid"),
-            workspace_id=workspace_id,
-            landed_at=order.order_created_at,
-            db=db,
-        )
-
-        if gclid_result:
-            entity_id = _find_entity_by_google_campaign(
-                db=db,
-                workspace_id=workspace_id,
-                campaign_id=gclid_result.campaign_id,
-            )
-            attribution_result = {
-                "provider": "google",
-                "match_type": "gclid",
-                "confidence": "medium",  # Lower confidence without pixel journey
-                "entity_id": entity_id,
-                "gclid_data": {
-                    "campaign_id": gclid_result.campaign_id,
-                    "campaign_name": gclid_result.campaign_name,
-                    "ad_group_id": gclid_result.ad_group_id,
-                    "ad_group_name": gclid_result.ad_group_name,
-                    "ad_id": gclid_result.ad_id,
-                },
-            }
-        else:
-            attribution_result = {
-                "provider": "google",
-                "match_type": "gclid",
-                "confidence": "medium",
-                "entity_id": None,
-            }
-    elif utms.get("fbclid"):
-        attribution_result = {
-            "provider": "meta",
-            "match_type": "fbclid",
-            "confidence": "medium",
-            "entity_id": None,
-        }
-    elif utms.get("utm_source"):
-        provider = _infer_provider(utms.get("utm_source"))
-        attribution_result = {
-            "provider": provider,
-            "match_type": "utm_source",
-            "confidence": "low",
-            "entity_id": None,
-        }
-    elif not referring_site:
-        # No referrer, no UTMs = direct traffic
-        attribution_result = {
-            "provider": "direct",
-            "match_type": "none",
-            "confidence": "none",
-            "entity_id": None,
-        }
-    else:
-        # Has referrer but no UTMs - check if organic search
-        provider = _infer_provider_from_referrer(referring_site)
-        if provider == "organic":
-            attribution_result = {
-                "provider": "organic",
-                "match_type": "referrer",
-                "confidence": "low",
-                "entity_id": None,
-            }
-
-    # 4. Store attribution record (idempotent - one per order per model)
-    existing_attribution = db.query(Attribution).filter(
-        Attribution.shopify_order_id == order.id,
-        Attribution.attribution_model == "last_click",
-    ).first()
-
-    if existing_attribution:
-        logger.info(f"[ATTRIBUTION] Attribution already exists for order")
-    else:
-        attribution = Attribution(
-            workspace_id=workspace_id,
-            journey_id=journey.id if journey else None,
-            shopify_order_id=order.id,
-            entity_id=attribution_result["entity_id"],
-            provider=attribution_result["provider"],
-            match_type=attribution_result["match_type"],
-            confidence=attribution_result["confidence"],
-            attribution_model="last_click",
-            attribution_window_days=30,
-            attributed_revenue=Decimal(total_price),
-            currency=currency,
-            order_created_at=order.order_created_at,
-        )
-        db.add(attribution)
-
-        logger.info(
-            f"[ATTRIBUTION] Created attribution",
-            extra={
-                "order_id": str(order.id),
-                "provider": attribution_result["provider"],
-                "match_type": attribution_result["match_type"],
-                "confidence": attribution_result["confidence"],
-                "revenue": total_price,
-            }
-        )
-
-    # 5. Update journey stats if found
-    if journey:
-        journey.total_orders = (journey.total_orders or 0) + 1
-        journey.total_revenue = (journey.total_revenue or Decimal("0")) + Decimal(total_price)
-        if not journey.first_order_at:
-            journey.first_order_at = order.order_created_at
-        journey.last_order_at = order.order_created_at
-
-        # Link email if we have it
-        if customer_email and not journey.customer_email:
-            journey.customer_email = customer_email
-
-    db.commit()
-
     # =================================================================
-    # META CAPI: Send purchase event back to Meta
+    # META CAPI: Send purchase event back to Meta (fire-and-forget)
     # =================================================================
-    # WHAT: Send server-side conversion to Meta for ad optimization
     # WHY: Improves attribution accuracy, especially for iOS 14+ users
-    # NOTE: This is fire-and-forget; we don't fail the webhook if CAPI fails
     capi_result = None
-    if attribution_result["provider"] == "meta":
+    if attr_result.provider == "meta":
         try:
             from app.services.meta_capi_service import send_purchase_to_meta
 
-            # Get fbclid from journey touchpoints if available
             fbclid = None
             if journey and journey.touchpoints:
                 for tp in journey.touchpoints:
@@ -916,24 +696,20 @@ async def handle_orders_paid(
                     extra={
                         "order_id": str(order.id),
                         "events_received": capi_result.get("events_received"),
-                    }
+                    },
                 )
         except Exception as e:
-            # Don't fail the webhook if CAPI fails
             logger.warning(f"[META_CAPI] Failed to send purchase event: {e}")
 
     # =================================================================
-    # GOOGLE CONVERSIONS: Upload offline conversion to Google Ads
+    # GOOGLE CONVERSIONS: Upload offline conversion (fire-and-forget)
     # =================================================================
-    # WHAT: Send purchase conversion to Google Ads for optimization
     # WHY: Improves ROAS measurement and Smart Bidding performance
-    # NOTE: This is fire-and-forget; we don't fail the webhook if upload fails
     google_conv_result = None
-    if attribution_result["provider"] == "google":
+    if attr_result.provider == "google":
         try:
             from app.services.google_conversions_service import send_purchase_to_google
 
-            # Get gclid from journey touchpoints or webhook UTMs
             gclid = None
             if journey and journey.touchpoints:
                 for tp in journey.touchpoints:
@@ -941,7 +717,6 @@ async def handle_orders_paid(
                         gclid = tp.gclid
                         break
 
-            # Fallback to webhook UTMs if no journey
             if not gclid:
                 gclid = utms.get("gclid")
 
@@ -962,13 +737,12 @@ async def handle_orders_paid(
                         extra={
                             "order_id": str(order.id),
                             "gclid": gclid[:20] + "...",
-                        }
+                        },
                     )
             else:
                 logger.debug("[GOOGLE_CONV] No gclid available for conversion upload")
 
         except Exception as e:
-            # Don't fail the webhook if upload fails
             logger.warning(f"[GOOGLE_CONV] Failed to upload conversion: {e}")
 
     return JSONResponse(
@@ -979,168 +753,11 @@ async def handle_orders_paid(
             "attribution": attribution_result,
             "capi_sent": capi_result is not None,
             "google_conv_sent": google_conv_result is not None and google_conv_result.get("success", False),
-        }
+        },
     )
 
 
-def _infer_provider(utm_source: Optional[str]) -> str:
-    """Infer ad provider from utm_source.
 
-    WHAT: Map common utm_source values to provider names
-    WHY: Normalize source names for consistent reporting
-
-    Args:
-        utm_source: The utm_source parameter value
-
-    Returns:
-        Provider name (meta, google, tiktok, etc.) or the source itself
-    """
-    if not utm_source:
-        return "unknown"
-
-    source_lower = utm_source.lower()
-
-    # Meta/Facebook
-    if source_lower in ("facebook", "fb", "meta", "instagram", "ig"):
-        return "meta"
-
-    # Google
-    if source_lower in ("google", "gads", "google_ads", "adwords"):
-        return "google"
-
-    # TikTok
-    if source_lower in ("tiktok", "tt", "tiktok_ads"):
-        return "tiktok"
-
-    # Email
-    if source_lower in ("email", "newsletter", "klaviyo", "mailchimp"):
-        return "email"
-
-    # Organic social (not paid)
-    if source_lower in ("organic", "organic_social"):
-        return "organic_social"
-
-    return source_lower
-
-
-def _infer_provider_from_referrer(referrer: Optional[str]) -> str:
-    """Infer provider from referrer URL.
-
-    WHAT: Determine traffic source from referrer domain
-    WHY: Classify organic search vs social vs other
-
-    Args:
-        referrer: The referring URL
-
-    Returns:
-        Provider name or "unknown"
-    """
-    if not referrer:
-        return "unknown"
-
-    referrer_lower = referrer.lower()
-
-    # Search engines (organic)
-    search_engines = [
-        "google.com", "bing.com", "yahoo.com", "duckduckgo.com",
-        "baidu.com", "yandex.com"
-    ]
-    for engine in search_engines:
-        if engine in referrer_lower:
-            return "organic"
-
-    # Social platforms (organic social)
-    social_platforms = [
-        "facebook.com", "instagram.com", "twitter.com", "x.com",
-        "linkedin.com", "tiktok.com", "pinterest.com", "reddit.com"
-    ]
-    for platform in social_platforms:
-        if platform in referrer_lower:
-            return "organic_social"
-
-    return "unknown"
-
-
-# =============================================================================
-# GCLID RESOLUTION HELPERS
-# =============================================================================
-
-async def _resolve_gclid(
-    gclid: str,
-    workspace_id,
-    landed_at: Optional[datetime],
-    db: Session,
-):
-    """Resolve gclid to Google Ads campaign data.
-
-    WHAT: Wrapper for gclid resolution service
-    WHY: Provides high-confidence attribution for Google Ads clicks
-
-    Args:
-        gclid: Google Click ID
-        workspace_id: Workspace UUID
-        landed_at: Landing timestamp (used to determine click date)
-        db: Database session
-
-    Returns:
-        GclidResolutionResult or None
-    """
-    try:
-        from app.services.gclid_resolution_service import resolve_gclid_for_attribution
-
-        return await resolve_gclid_for_attribution(
-            gclid=gclid,
-            workspace_id=workspace_id,
-            landed_at=landed_at,
-            db=db,
-        )
-    except Exception as e:
-        logger.warning(f"[GCLID] Resolution error: {e}")
-        return None
-
-
-def _find_entity_by_google_campaign(
-    db: Session,
-    workspace_id,
-    campaign_id: str,
-) -> Optional[str]:
-    """Find Entity by Google Ads campaign ID.
-
-    WHAT: Look up Entity in our database by Google campaign ID
-    WHY: Link gclid attribution to existing campaign Entity
-
-    Args:
-        db: Database session
-        workspace_id: Workspace UUID
-        campaign_id: Google Ads campaign ID
-
-    Returns:
-        Entity UUID as string, or None if not found
-    """
-    try:
-        from app.models import Entity
-
-        # Try to find entity by external_id (Google campaign ID format)
-        entity = db.query(Entity).filter(
-            Entity.workspace_id == workspace_id,
-            Entity.external_id == campaign_id,
-            Entity.level == "campaign",
-        ).first()
-
-        if entity:
-            return str(entity.id)
-
-        # Also try without level filter (might be stored differently)
-        entity = db.query(Entity).filter(
-            Entity.workspace_id == workspace_id,
-            Entity.external_id == campaign_id,
-        ).first()
-
-        if entity:
-            return str(entity.id)
-
-        return None
-
-    except Exception as e:
-        logger.warning(f"[GCLID] Entity lookup error: {e}")
-        return None
+# NOTE: _infer_provider, _infer_provider_from_referrer, _resolve_gclid, and
+# _find_entity_by_google_campaign have been moved to
+# app.services.attribution_service as part of the attribution pipeline extraction.
