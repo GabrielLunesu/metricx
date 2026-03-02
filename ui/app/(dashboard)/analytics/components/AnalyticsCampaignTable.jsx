@@ -160,9 +160,9 @@ function CampaignRow({
   return (
     <tr
       className={`
-        group border-b border-neutral-100 cursor-pointer transition-colors
-        ${isSelected ? "selected bg-neutral-50" : "hover:bg-neutral-50"}
-        ${isPaused ? "opacity-60 hover:opacity-100" : ""}
+        group border-b border-neutral-200/30 cursor-pointer transition-all duration-200
+        ${isSelected ? "bg-neutral-900/[0.03]" : "hover:bg-white/60"}
+        ${isPaused ? "opacity-50 hover:opacity-80" : ""}
       `}
       onClick={onToggleSelect}
     >
@@ -241,7 +241,7 @@ function AdSetRow({ adSet, currency }) {
   const cpa = adSet.conversions > 0 ? adSet.spend / adSet.conversions : null;
 
   return (
-    <tr className="nested border-b border-neutral-100 bg-neutral-50/50">
+    <tr className="border-b border-neutral-200/30 bg-neutral-900/[0.015]">
       {/* Indent */}
       <td className="py-2.5 px-4" />
 
@@ -359,110 +359,85 @@ export default function AnalyticsCampaignTable({
   // Loading skeleton
   if (loading && campaigns.length === 0) {
     return (
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="h-10 w-72 bg-neutral-100 rounded-lg animate-pulse" />
-          <div className="flex gap-2">
-            <div className="h-8 w-20 bg-neutral-100 rounded animate-pulse" />
-            <div className="h-8 w-20 bg-neutral-100 rounded animate-pulse" />
+      <section className="space-y-3">
+        <h3 className="text-xs md:text-sm font-medium text-neutral-400 tracking-wide">Campaigns</h3>
+        <div className="bg-white/40 glass rounded-2xl border border-white/60 overflow-hidden animate-pulse">
+          <div className="p-4 border-b border-neutral-200/40">
+            <div className="h-9 w-72 bg-neutral-200/30 rounded-xl" />
           </div>
-        </div>
-        <div className="analytics-table">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-neutral-50 border-b border-neutral-200">
-                <th className="py-3 px-4 w-8" />
-                <th className="py-3 px-4 text-left text-xs font-medium text-neutral-500 uppercase">Campaign</th>
-                <th className="py-3 px-4 text-left text-xs font-medium text-neutral-500 uppercase">Status</th>
-                <th className="py-3 px-4 text-right text-xs font-medium text-neutral-500 uppercase">Spend</th>
-                <th className="py-3 px-4 text-right text-xs font-medium text-neutral-500 uppercase">Revenue</th>
-                <th className="py-3 px-4 text-right text-xs font-medium text-neutral-500 uppercase">ROAS</th>
-                <th className="py-3 px-4 text-right text-xs font-medium text-neutral-500 uppercase">Conv.</th>
-                <th className="py-3 px-4 text-right text-xs font-medium text-neutral-500 uppercase">CPA</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <tr key={i} className="border-b border-neutral-100">
-                  <td className="py-3 px-4"><div className="w-4 h-4 bg-neutral-100 rounded animate-pulse" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-48 bg-neutral-100 rounded animate-pulse" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-16 bg-neutral-100 rounded animate-pulse" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-20 bg-neutral-100 rounded animate-pulse ml-auto" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-20 bg-neutral-100 rounded animate-pulse ml-auto" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-12 bg-neutral-100 rounded animate-pulse ml-auto" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-12 bg-neutral-100 rounded animate-pulse ml-auto" /></td>
-                  <td className="py-3 px-4"><div className="h-4 w-16 bg-neutral-100 rounded animate-pulse ml-auto" /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-neutral-200/30">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+                <div className="w-4 h-4 bg-neutral-200/30 rounded" />
+                <div className="h-4 w-48 bg-neutral-200/30 rounded" />
+                <div className="h-4 w-16 bg-neutral-200/30 rounded ml-auto" />
+                <div className="h-4 w-16 bg-neutral-200/30 rounded" />
+                <div className="h-4 w-12 bg-neutral-200/30 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-          <input
-            type="text"
-            placeholder="Search campaigns..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="analytics-search"
-          />
-        </div>
-
-        {/* Actions */}
+    <section className="space-y-3">
+      {/* Section label */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h3 className="text-xs md:text-sm font-medium text-neutral-400 tracking-wide">Campaigns</h3>
         <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search campaigns..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-white/40 glass border border-white/60
+                         rounded-xl text-neutral-900 placeholder:text-neutral-400
+                         focus:outline-none focus:bg-white/60 focus:border-neutral-300
+                         transition-all duration-200"
+            />
+          </div>
           <Button
             variant="outline"
             size="sm"
-            className="btn-sm"
-            disabled
-          >
-            Columns
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="btn-sm"
+            className="h-9 px-3 text-xs bg-white/40 border-white/60 hover:bg-white/60 rounded-xl"
             onClick={onExport}
           >
+            <Download className="w-3.5 h-3.5 mr-1.5" />
             Export
           </Button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="analytics-table overflow-x-auto">
+      <div className="bg-white/40 glass rounded-2xl border border-white/60 overflow-hidden overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
-            <tr className="bg-neutral-50 border-b border-neutral-200">
+            <tr className="border-b border-neutral-200/40">
               <th className="py-3 px-4 w-8" />
-              <th className="py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wide">
+              <th className="py-3 px-4 text-xs font-medium text-neutral-400 tracking-wide">
                 Campaign
               </th>
-              <th className="py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wide">
+              <th className="py-3 px-4 text-xs font-medium text-neutral-400 tracking-wide">
                 Status
               </th>
-              <th className="py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wide text-right">
+              <th className="py-3 px-4 text-xs font-medium text-neutral-400 tracking-wide text-right">
                 Spend
               </th>
-              <th className="py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wide text-right">
+              <th className="py-3 px-4 text-xs font-medium text-neutral-400 tracking-wide text-right">
                 Revenue
               </th>
-              <th className="py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wide text-right">
+              <th className="py-3 px-4 text-xs font-medium text-neutral-400 tracking-wide text-right">
                 ROAS
               </th>
-              <th className="py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wide text-right">
+              <th className="py-3 px-4 text-xs font-medium text-neutral-400 tracking-wide text-right">
                 Conv.
               </th>
-              <th className="py-3 px-4 text-xs font-medium text-neutral-500 uppercase tracking-wide text-right">
+              <th className="py-3 px-4 text-xs font-medium text-neutral-400 tracking-wide text-right">
                 CPA
               </th>
             </tr>
@@ -493,7 +468,7 @@ export default function AnalyticsCampaignTable({
                   {expandedCampaignId === campaign.id && (
                     <>
                       {adSetsLoading ? (
-                        <tr className="nested bg-neutral-50/50">
+                        <tr className="border-b border-neutral-200/30 bg-neutral-900/[0.015]">
                           <td colSpan={8} className="py-4 text-center text-neutral-500 text-sm">
                             Loading ad sets...
                           </td>
@@ -507,7 +482,7 @@ export default function AnalyticsCampaignTable({
                           />
                         ))
                       ) : (
-                        <tr className="nested bg-neutral-50/50">
+                        <tr className="border-b border-neutral-200/30 bg-neutral-900/[0.015]">
                           <td colSpan={8} className="py-4 text-center text-neutral-500 text-sm">
                             No ad sets found
                           </td>
@@ -523,15 +498,15 @@ export default function AnalyticsCampaignTable({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
+      <div className="flex items-center justify-between px-1 pt-1">
         <span className="text-xs text-neutral-400">
-          Showing {startItem}-{endItem} of {total} campaigns
+          {startItem}–{endItem} of {total}
         </span>
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="btn-sm"
+            className="h-8 px-3 text-xs bg-white/40 border-white/60 hover:bg-white/60 rounded-lg"
             disabled={!hasPrevPage}
             onClick={() => onPageChange(page - 1)}
           >
@@ -540,7 +515,7 @@ export default function AnalyticsCampaignTable({
           <Button
             variant="outline"
             size="sm"
-            className="btn-sm"
+            className="h-8 px-3 text-xs bg-white/40 border-white/60 hover:bg-white/60 rounded-lg"
             disabled={!hasNextPage}
             onClick={() => onPageChange(page + 1)}
           >

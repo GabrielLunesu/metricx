@@ -55,6 +55,7 @@ from .routers import dashboard_kpis as dashboard_kpis_router  # Dashboard KPIs w
 from .routers import dashboard as dashboard_router  # Unified dashboard endpoint
 from .routers import clerk_webhooks as clerk_webhooks_router  # Clerk auth webhooks
 from .routers import analytics as analytics_router  # Production analytics charts
+from .routers import funnel as funnel_router  # Conversion funnel endpoint
 from .routers import onboarding as onboarding_router  # Onboarding flow
 from .routers import polar as polar_router  # Polar billing integration
 from .routers import admin as admin_router  # Admin endpoints for bulk operations
@@ -215,6 +216,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard_router.router)  # Unified dashboard endpoint
     app.include_router(clerk_webhooks_router.router)  # Clerk auth webhooks
     app.include_router(analytics_router.router)  # Production analytics charts
+    app.include_router(funnel_router.router)  # Conversion funnel endpoint
     app.include_router(onboarding_router.router)  # Onboarding flow
     app.include_router(polar_router.router)  # Polar billing endpoints
     app.include_router(polar_router.webhook_router)  # Polar webhook handler

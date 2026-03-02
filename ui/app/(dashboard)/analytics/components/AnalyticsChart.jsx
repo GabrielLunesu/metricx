@@ -156,10 +156,10 @@ export default function AnalyticsChart({
     return (
       <section className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <div className="h-10 w-80 bg-neutral-100 rounded-lg animate-pulse" />
-          <div className="h-4 w-40 bg-neutral-100 rounded animate-pulse" />
+          <div className="h-10 w-80 bg-neutral-200/30 rounded-xl animate-pulse" />
+          <div className="h-4 w-40 bg-neutral-200/30 rounded animate-pulse" />
         </div>
-        <div className="w-full h-80 bg-neutral-50 rounded-xl animate-pulse" />
+        <div className="w-full h-80 bg-neutral-100/30 rounded-xl animate-pulse" />
       </section>
     );
   }

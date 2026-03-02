@@ -34,8 +34,9 @@ import { currentUser } from '@/lib/workspace';
 import {
     fetchAttributionSummary, fetchAttributedCampaigns,
     fetchAttributionFeed, fetchCampaignWarnings,
-    fetchPixelHealth, fetchConnections
+    fetchPixelHealth, fetchConnections, fetchJourneyFlow
 } from '@/lib/api';
+import JourneyFlow from './components/JourneyFlow';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -420,6 +421,8 @@ export default function AttributionPage() {
     const [warnings, setWarnings] = useState([]);
     const [pixelHealth, setPixelHealth] = useState(null);
     const [connections, setConnections] = useState([]);
+    const [journeyFlow, setJourneyFlow] = useState(null);
+    const [journeyFlowLoading, setJourneyFlowLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -448,13 +451,14 @@ export default function AttributionPage() {
             setLoading(true);
             setError(null);
             try {
-                const [summaryData, campaignsData, feedData, warningsData, pixelData, connectionsData] = await Promise.all([
+                const [summaryData, campaignsData, feedData, warningsData, pixelData, connectionsData, journeyFlowData] = await Promise.all([
                     fetchAttributionSummary({ workspaceId: user.workspace_id, days }),
                     fetchAttributedCampaigns({ workspaceId: user.workspace_id, days, limit: 10 }),
                     fetchAttributionFeed({ workspaceId: user.workspace_id, limit: 15 }),
                     fetchCampaignWarnings({ workspaceId: user.workspace_id, days }),
                     fetchPixelHealth({ workspaceId: user.workspace_id }).catch(() => null),
                     fetchConnections({ workspaceId: user.workspace_id }).catch(() => ({ connections: [] })),
+                    fetchJourneyFlow({ workspaceId: user.workspace_id, days }).catch(() => null),
                 ]);
                 setSummary(summaryData);
                 setCampaigns(campaignsData.campaigns || []);
@@ -462,6 +466,7 @@ export default function AttributionPage() {
                 setWarnings(warningsData.warnings || []);
                 setPixelHealth(pixelData);
                 setConnections(connectionsData.connections || []);
+                setJourneyFlow(journeyFlowData);
             } catch (err) {
                 console.error('Failed to load attribution data:', err);
                 setError(err.message);
@@ -628,6 +633,9 @@ export default function AttributionPage() {
                             value={formatCurrency(summary.total_attributed_revenue / summary.total_orders)}
                         />
                     </section>
+
+                    {/* Journey Flow Visualization */}
+                    <JourneyFlow data={journeyFlow} loading={journeyFlowLoading} />
 
                     {/* Charts */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

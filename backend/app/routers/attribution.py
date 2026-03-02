@@ -30,7 +30,8 @@ from ..database import get_db
 from ..deps import get_current_user
 from ..models import (
     User, Connection, ProviderEnum, WorkspaceMember, RoleEnum,
-    PixelEvent, CustomerJourney, Attribution, ShopifyOrder, Entity, LevelEnum
+    PixelEvent, CustomerJourney, JourneyTouchpoint, Attribution,
+    ShopifyOrder, Entity, LevelEnum
 )
 from ..services.pixel_activation_service import PixelActivationService
 from ..security import decrypt_secret
@@ -1055,6 +1056,397 @@ def get_campaign_warnings(
         campaigns_with_warnings=len(warnings),
         total_campaigns=len(campaigns),
     )
+
+
+# =============================================================================
+# JOURNEY FLOW SCHEMAS
+# =============================================================================
+
+class FlowNode(BaseModel):
+    """A node in the journey flow diagram.
+
+    WHAT: Represents a channel, touchpoint stage, or outcome
+    WHY: Sankey visualization needs nodes with position and size data
+    """
+    id: str = Field(..., description="Unique node ID: source_meta, stage_page_view, outcome_purchased")
+    label: str = Field(..., description="Display label: Meta Ads, Page View, Purchased")
+    column: int = Field(..., description="Column position: 0=sources, 1-3=stages, 4=outcomes")
+    count: int = Field(0, description="Number of journeys passing through this node")
+    revenue: float = Field(0, description="Total attributed revenue for this node")
+    color: str = Field("#64748b", description="Hex color for the node")
+
+
+class FlowLink(BaseModel):
+    """A link (edge) between two nodes in the journey flow.
+
+    WHAT: Represents flow of visitors between two nodes
+    WHY: Sankey paths are sized by value (journey count)
+    """
+    source: str = Field(..., description="Source node ID")
+    target: str = Field(..., description="Target node ID")
+    value: int = Field(0, description="Number of journeys on this path")
+    revenue: float = Field(0, description="Attributed revenue on this path")
+
+
+class JourneyFlowResponse(BaseModel):
+    """Response for the journey flow Sankey diagram.
+
+    WHAT: Nodes and links for rendering a Sankey-style flow visualization
+    WHY: Users need to see how visitors flow from channels through touchpoints
+         to outcomes (purchased / dropped off)
+    """
+    nodes: List[FlowNode]
+    links: List[FlowLink]
+    total_journeys: int
+    total_revenue: float
+
+
+# =============================================================================
+# JOURNEY FLOW CONSTANTS
+# =============================================================================
+
+_SOURCE_COLORS = {
+    "meta": "#1877F2",
+    "google": "#4285F4",
+    "tiktok": "#000000",
+    "direct": "#10B981",
+    "organic": "#8B5CF6",
+    "email": "#F59E0B",
+    "referral": "#EC4899",
+    "unknown": "#9CA3AF",
+}
+
+_SOURCE_LABELS = {
+    "meta": "Meta Ads",
+    "google": "Google Ads",
+    "tiktok": "TikTok Ads",
+    "direct": "Direct",
+    "organic": "Organic",
+    "email": "Email",
+    "referral": "Referral",
+    "unknown": "Unknown",
+}
+
+# Map pixel event types to flow stage labels
+_STAGE_MAP = {
+    "page_viewed": ("stage_page_view", "Page View", 1),
+    "product_viewed": ("stage_product_view", "Product View", 1),
+    "product_added_to_cart": ("stage_atc", "Add to Cart", 2),
+    "checkout_started": ("stage_checkout", "Checkout", 2),
+    "checkout_completed": ("stage_purchase", "Purchase", 3),
+}
+
+
+# =============================================================================
+# JOURNEY FLOW ENDPOINT
+# =============================================================================
+
+@router.get(
+    "/{workspace_id}/attribution/journey-flow",
+    response_model=JourneyFlowResponse,
+    summary="Get journey flow data for Sankey visualization",
+    description="""
+    Aggregates CustomerJourney + JourneyTouchpoint into Sankey-style flow data.
+
+    Returns nodes (source channels, touchpoint stages, outcomes) and links
+    (transitions between nodes with journey counts and revenue).
+    """
+)
+def get_journey_flow(
+    workspace_id: UUID,
+    days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get journey flow data for Sankey-style visualization.
+
+    WHAT: Builds a Sankey diagram dataset from customer journeys and touchpoints.
+          Left column = source channels, middle columns = funnel stages,
+          right column = outcomes (Purchased / Dropped Off).
+
+    WHY: Users need to visualize how visitors flow from ad channels through the
+         buying journey. This is the "wow factor" visualization competing with
+         Triple Whale.
+
+    DESIGN:
+        1. Fetch all journeys with touchpoints for the period
+        2. For each journey, determine the first-touch source channel
+        3. Walk touchpoints to build transitions between stages
+        4. Group by source → stage and stage → stage transitions
+        5. Separate purchased vs dropped-off outcomes
+
+    Args:
+        workspace_id: Workspace UUID
+        days: Number of days to analyze (default 30)
+        db: Database session
+        current_user: Authenticated user
+
+    Returns:
+        JourneyFlowResponse with nodes and links
+    """
+    _require_workspace_permission(db, current_user, workspace_id)
+
+    now = datetime.utcnow()
+    period_start = now - timedelta(days=days)
+
+    # Fetch journeys with their touchpoints
+    journeys = (
+        db.query(CustomerJourney)
+        .filter(
+            CustomerJourney.workspace_id == workspace_id,
+            CustomerJourney.first_seen_at >= period_start,
+        )
+        .all()
+    )
+
+    if not journeys:
+        return JourneyFlowResponse(
+            nodes=[], links=[], total_journeys=0, total_revenue=0,
+        )
+
+    journey_ids = [j.id for j in journeys]
+
+    # Fetch all touchpoints for these journeys, ordered by time
+    touchpoints = (
+        db.query(JourneyTouchpoint)
+        .filter(JourneyTouchpoint.journey_id.in_(journey_ids))
+        .order_by(JourneyTouchpoint.journey_id, JourneyTouchpoint.touched_at)
+        .all()
+    )
+
+    # Group touchpoints by journey
+    tp_by_journey = {}
+    for tp in touchpoints:
+        tp_by_journey.setdefault(tp.journey_id, []).append(tp)
+
+    # Build flow data
+    node_counts = {}   # node_id → { count: int, revenue: float }
+    link_counts = {}   # (source_id, target_id) → { value: int, revenue: float }
+    total_revenue = 0.0
+
+    for journey in journeys:
+        journey_revenue = float(journey.total_revenue or 0)
+        total_revenue += journey_revenue
+        has_purchased = (journey.total_orders or 0) > 0
+
+        # Determine source channel from first touch
+        # WHY: journey.first_touch_source can be empty if attribution service
+        # hasn't backfilled it yet. Fall back to the first touchpoint's utm_source.
+        tps = tp_by_journey.get(journey.id, [])
+        first_tp = tps[0] if tps else None
+        source = _resolve_source(journey, first_tp)
+        source_id = f"source_{source}"
+
+        # Track source node
+        if source_id not in node_counts:
+            node_counts[source_id] = {"count": 0, "revenue": 0}
+        node_counts[source_id]["count"] += 1
+        node_counts[source_id]["revenue"] += journey_revenue
+
+        # Touchpoints already fetched above (tps variable)
+
+        if not tps:
+            # No touchpoints — link source directly to outcome
+            outcome_id = "outcome_purchased" if has_purchased else "outcome_dropped"
+            _increment_link(link_counts, source_id, outcome_id, journey_revenue)
+            _increment_node(node_counts, outcome_id, journey_revenue)
+            continue
+
+        # Walk touchpoints and build stage transitions
+        prev_node_id = source_id
+        seen_stages = set()
+
+        for tp in tps:
+            stage_info = _STAGE_MAP.get(tp.event_type)
+            if not stage_info:
+                continue
+
+            stage_id, _, _ = stage_info
+
+            # Avoid duplicate transitions within same journey (e.g. multiple page views)
+            if stage_id in seen_stages:
+                continue
+            seen_stages.add(stage_id)
+
+            # Track node
+            _increment_node(node_counts, stage_id, journey_revenue)
+
+            # Track link from previous node to this stage
+            if prev_node_id != stage_id:
+                _increment_link(link_counts, prev_node_id, stage_id, journey_revenue)
+
+            prev_node_id = stage_id
+
+        # Link final stage to outcome
+        outcome_id = "outcome_purchased" if has_purchased else "outcome_dropped"
+        _increment_node(node_counts, outcome_id, journey_revenue)
+        _increment_link(link_counts, prev_node_id, outcome_id, journey_revenue)
+
+    # Build response nodes
+    nodes = []
+    for node_id, data in node_counts.items():
+        node = _build_flow_node(node_id, data["count"], data["revenue"])
+        if node:
+            nodes.append(node)
+
+    # Build response links (filter out zero-value)
+    links = []
+    for (src, tgt), data in link_counts.items():
+        if data["value"] > 0:
+            links.append(FlowLink(
+                source=src, target=tgt,
+                value=data["value"], revenue=round(data["revenue"], 2),
+            ))
+
+    # Sort nodes by column, then by count descending
+    nodes.sort(key=lambda n: (n.column, -n.count))
+
+    # Sort links by value descending
+    links.sort(key=lambda l: -l.value)
+
+    logger.info(
+        f"[JOURNEY_FLOW] workspace={workspace_id} days={days} "
+        f"journeys={len(journeys)} nodes={len(nodes)} links={len(links)}"
+    )
+
+    return JourneyFlowResponse(
+        nodes=nodes,
+        links=links,
+        total_journeys=len(journeys),
+        total_revenue=round(total_revenue, 2),
+    )
+
+
+def _resolve_source(journey: CustomerJourney, first_touchpoint=None) -> str:
+    """Determine the source channel from a journey's first touch data.
+
+    WHAT: Maps first_touch_source / first_touch_medium to a channel key.
+          Falls back to the first touchpoint's utm_source/utm_medium when
+          journey-level fields are empty.
+    WHY: The Sankey source column groups journeys by acquisition channel.
+         Journey first_touch_source can be empty if attribution service
+         hasn't backfilled it yet, but touchpoints capture raw UTM params.
+
+    Args:
+        journey: CustomerJourney with first_touch_* fields
+        first_touchpoint: Optional JourneyTouchpoint to fall back to
+
+    Returns:
+        Channel key string (meta, google, direct, organic, etc.)
+    """
+    source = (journey.first_touch_source or "").lower()
+    medium = (journey.first_touch_medium or "").lower()
+
+    # Fall back to first touchpoint if journey-level fields are empty
+    if not source and first_touchpoint:
+        source = (first_touchpoint.utm_source or "").lower()
+        medium = medium or (first_touchpoint.utm_medium or "").lower()
+
+    # Match ad platforms
+    if source in ("facebook", "fb", "meta", "instagram", "ig") or "facebook" in source:
+        return "meta"
+    if source in ("google", "googleads", "adwords") or "google" in source:
+        return "google"
+    if source in ("tiktok",) or "tiktok" in source:
+        return "tiktok"
+    if source in ("email", "newsletter", "mailchimp", "klaviyo"):
+        return "email"
+
+    # Match by medium
+    if medium in ("cpc", "ppc", "paid", "cpm"):
+        if "facebook" in source or "meta" in source:
+            return "meta"
+        if "google" in source:
+            return "google"
+        return "unknown"
+    if medium in ("organic", "seo"):
+        return "organic"
+    if medium in ("referral",):
+        return "referral"
+    if medium in ("email",):
+        return "email"
+
+    # Direct or unknown
+    if not source or source in ("direct", "(direct)", "(none)"):
+        return "direct"
+
+    return "unknown"
+
+
+def _increment_node(node_counts: dict, node_id: str, revenue: float):
+    """Increment count and revenue for a node."""
+    if node_id not in node_counts:
+        node_counts[node_id] = {"count": 0, "revenue": 0}
+    node_counts[node_id]["count"] += 1
+    node_counts[node_id]["revenue"] += revenue
+
+
+def _increment_link(link_counts: dict, source: str, target: str, revenue: float):
+    """Increment value and revenue for a link."""
+    key = (source, target)
+    if key not in link_counts:
+        link_counts[key] = {"value": 0, "revenue": 0}
+    link_counts[key]["value"] += 1
+    link_counts[key]["revenue"] += revenue
+
+
+def _build_flow_node(node_id: str, count: int, revenue: float) -> Optional[FlowNode]:
+    """Build a FlowNode from its ID and aggregated data.
+
+    Args:
+        node_id: Node identifier (source_meta, stage_page_view, outcome_purchased)
+        count: Journey count
+        revenue: Aggregated revenue
+
+    Returns:
+        FlowNode or None if invalid
+    """
+    if node_id.startswith("source_"):
+        channel = node_id[7:]  # strip 'source_'
+        return FlowNode(
+            id=node_id,
+            label=_SOURCE_LABELS.get(channel, channel.title()),
+            column=0,
+            count=count,
+            revenue=round(revenue, 2),
+            color=_SOURCE_COLORS.get(channel, "#9CA3AF"),
+        )
+
+    if node_id.startswith("stage_"):
+        # Find matching stage info
+        for event_type, (stage_id, label, col) in _STAGE_MAP.items():
+            if stage_id == node_id:
+                return FlowNode(
+                    id=node_id,
+                    label=label,
+                    column=col,
+                    count=count,
+                    revenue=round(revenue, 2),
+                    color="#475569",
+                )
+        return None
+
+    if node_id == "outcome_purchased":
+        return FlowNode(
+            id=node_id,
+            label="Purchased",
+            column=4,
+            count=count,
+            revenue=round(revenue, 2),
+            color="#10B981",
+        )
+
+    if node_id == "outcome_dropped":
+        return FlowNode(
+            id=node_id,
+            label="Dropped Off",
+            column=4,
+            count=count,
+            revenue=round(revenue, 2),
+            color="#EF4444",
+        )
+
+    return None
 
 
 # =============================================================================

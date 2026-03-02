@@ -33,6 +33,7 @@ import {
   fetchEntityChildren,
   fetchEntityPerformance,
   fetchConnections,
+  fetchFunnelData,
 } from "@/lib/api";
 
 // New Components
@@ -40,6 +41,7 @@ import AnalyticsHeader from "./components/AnalyticsHeader";
 import AnalyticsKpiGrid from "./components/AnalyticsKpiGrid";
 import AnalyticsChart from "./components/AnalyticsChart";
 import AnalyticsCampaignTable from "./components/AnalyticsCampaignTable";
+import AnalyticsFunnel from "./components/AnalyticsFunnel";
 
 // ============================================
 // HELPERS
@@ -166,6 +168,10 @@ export default function AnalyticsPage() {
 
   // Connected platforms
   const [connectedPlatforms, setConnectedPlatforms] = useState([]);
+
+  // Funnel data
+  const [funnelData, setFunnelData] = useState(null);
+  const [funnelLoading, setFunnelLoading] = useState(false);
 
   // ============================================
   // GLOBAL FILTERS
@@ -332,6 +338,31 @@ export default function AnalyticsPage() {
         setDashboardLoading(false);
       });
   }, [workspaceId, apiParams, selectedPlatform]);
+
+  // Funnel entity: when exactly 1 campaign is selected, scope funnel to it
+  const funnelEntityId = selectedCampaignIds.length === 1
+    ? selectedCampaignIds[0]
+    : null;
+
+  // Fetch funnel data
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    setFunnelLoading(true);
+    fetchFunnelData({
+      workspaceId,
+      timeframe: apiParams.timeframe,
+      entityId: funnelEntityId,
+    })
+      .then((data) => {
+        setFunnelData(data);
+        setFunnelLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch funnel data:", err);
+        setFunnelLoading(false);
+      });
+  }, [workspaceId, apiParams.timeframe, funnelEntityId]);
 
   // Fetch campaigns
   useEffect(() => {
@@ -573,7 +604,7 @@ export default function AnalyticsPage() {
       />
 
       {/* Main Content */}
-      <main className="space-y-4 md:space-y-6 pb-16 md:pb-0">
+      <main className="space-y-6 md:space-y-8 pb-16 md:pb-0">
         {/* KPI Grid */}
         <AnalyticsKpiGrid
           data={kpiData}
@@ -581,8 +612,21 @@ export default function AnalyticsPage() {
           currency={currency}
         />
 
+        {/* Separator */}
+        <div className="border-t border-neutral-200/60" />
+
+        {/* Conversion Funnel */}
+        <AnalyticsFunnel
+          stages={funnelData?.stages}
+          kpis={funnelData?.kpis}
+          loading={funnelLoading}
+        />
+
+        {/* Separator */}
+        <div className="border-t border-neutral-200/60" />
+
         {/* Chart Section */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-3 md:p-4">
+        <div className="bg-white/40 glass rounded-2xl p-4 md:p-6 border border-white/60">
           <AnalyticsChart
             data={displayChartData}
             compareData={displayCompareData}
@@ -593,6 +637,9 @@ export default function AnalyticsPage() {
             currency={currency}
           />
         </div>
+
+        {/* Separator */}
+        <div className="border-t border-neutral-200/60" />
 
         {/* Campaign Table */}
         <AnalyticsCampaignTable

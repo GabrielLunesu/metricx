@@ -1291,6 +1291,97 @@ export async function fetchCampaignWarnings({ workspaceId, days = 30 }) {
 
 
 // =============================================================================
+// CONVERSION FUNNEL ENDPOINT
+// =============================================================================
+//
+// WHAT: Fetches unified conversion funnel combining platform metrics + pixel events
+// WHY: Users need to see the full funnel from impressions to purchases
+//
+// RESPONSE:
+// {
+//   stages: [{ key, label, count, rate_from_previous, drop_off }],
+//   kpis: [{ key, label, value, description }],
+//   period_days, generated_at
+// }
+//
+// REFERENCES:
+// - backend/app/routers/funnel.py (GET /analytics/funnel)
+
+/**
+ * Fetch conversion funnel data.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {string} params.timeframe - Period preset (last_7_days, last_30_days, etc.)
+ * @param {string} params.entityId - Optional entity UUID (campaign/adset/ad) to scope funnel
+ * @returns {Promise<Object>} Funnel stages and KPIs
+ */
+export async function fetchFunnelData({ workspaceId, timeframe = 'last_30_days', entityId = null }) {
+  const params = new URLSearchParams();
+  params.set('workspace_id', workspaceId);
+  params.set('timeframe', timeframe);
+  if (entityId) params.set('entity_id', entityId);
+
+  const res = await authFetch(`${BASE}/analytics/funnel?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch funnel data: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+
+// =============================================================================
+// JOURNEY FLOW ENDPOINT
+// =============================================================================
+//
+// WHAT: Fetches journey flow data for Sankey-style visualization
+// WHY: Users need to see how visitors flow through channels and touchpoints
+//
+// RESPONSE:
+// {
+//   nodes: [{ id, label, column, count, revenue, color }],
+//   links: [{ source, target, value, revenue }],
+//   total_journeys, total_revenue
+// }
+//
+// REFERENCES:
+// - backend/app/routers/attribution.py (GET /workspaces/{id}/attribution/journey-flow)
+
+/**
+ * Fetch journey flow data for Sankey visualization.
+ *
+ * @param {Object} params
+ * @param {string} params.workspaceId - Workspace UUID
+ * @param {number} params.days - Number of days to analyze (default 30)
+ * @returns {Promise<Object>} Nodes and links for flow diagram
+ */
+export async function fetchJourneyFlow({ workspaceId, days = 30 }) {
+  const params = new URLSearchParams();
+  params.set('days', days.toString());
+
+  const res = await authFetch(`${BASE}/workspaces/${workspaceId}/attribution/journey-flow?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch journey flow: ${res.status} ${msg}`);
+  }
+
+  return res.json();
+}
+
+
+// =============================================================================
 // UNIFIED DASHBOARD ENDPOINT
 // =============================================================================
 //
