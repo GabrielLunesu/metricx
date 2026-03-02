@@ -56,13 +56,13 @@ export default function HeroHeader({ user, lastSyncedAt, actions }) {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 border border-neutral-200/60 mb-4 md:mb-6 backdrop-blur-sm">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                 <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
-                    {relativeTime ? `Updated ${relativeTime}` : 'Live'}
+                    Live updates
                 </span>
             </div>
 
             {/* Hero Title */}
             <h1 className="text-3xl md:text-5xl lg:text-7xl font-medium text-neutral-900 tracking-tighter mb-2 md:mb-4 text-glow">
-                Let's crush it, {displayName}
+                Let's do this, {displayName}
             </h1>
 
             {/* Subtitle */}
