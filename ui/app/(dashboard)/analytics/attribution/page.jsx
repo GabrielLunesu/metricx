@@ -17,6 +17,7 @@
  * - backend/app/routers/attribution.py (data endpoints)
  * - backend/app/services/attribution_service.py (attribution pipeline)
  * - ui/app/(dashboard)/analytics/components/AnalyticsHeader.jsx (parent page header)
+ * - ui/hooks/usePixelStream.js (real-time pixel event WebSocket hook)
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -26,7 +27,7 @@ import {
     Target, TrendingUp, AlertTriangle, Activity, DollarSign,
     ShoppingCart, Percent, ArrowUpRight, ArrowDownRight, ArrowLeft,
     CheckCircle, XCircle, Eye, CreditCard,
-    HelpCircle, Radio, Minus
+    HelpCircle, Radio, Minus, Zap
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ import {
     fetchPixelHealth, fetchConnections, fetchJourneyFlow
 } from '@/lib/api';
 import JourneyFlow from './components/JourneyFlow';
+import usePixelStream from '@/hooks/usePixelStream';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -73,6 +75,19 @@ const TIMEFRAMES = [
 
 /** Live feed auto-refresh interval (ms). */
 const FEED_REFRESH_INTERVAL = 30_000;
+
+/**
+ * Pixel event type display config.
+ * WHAT: Color and label mappings for each pixel event type
+ * WHY: Color-coded badges give instant visual recognition of event types in the live feed
+ */
+const EVENT_TYPE_CONFIG = {
+    page_viewed:       { label: 'Page View',   bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200' },
+    product_viewed:    { label: 'Product',      bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200' },
+    product_added_to_cart: { label: 'Add to Cart', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+    checkout_started:  { label: 'Checkout',     bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200' },
+    checkout_completed: { label: 'Purchase',    bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -406,6 +421,164 @@ function SetupChecklist({ connections, pixelHealth, summary, loading }) {
     );
 }
 
+/**
+ * Live Feed panel — shows real-time pixel events (WebSocket) and attributions (polling).
+ *
+ * WHY: Extracted as a component so it can appear in both the empty state and
+ *      the full data view. The Events tab is always useful — even before any
+ *      orders are attributed — because it shows pixel activity in real-time.
+ */
+function LiveFeedPanel({ feedTab, setFeedTab, pixelEvents, pixelWsConnected, feed }) {
+    return (
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            {/* Header with tabs */}
+            <div className="px-4 py-3 border-b border-neutral-100">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <Activity className="w-4 h-4 text-neutral-500" />
+                            <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
+                                pixelWsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'
+                            }`} />
+                        </div>
+                        <span className="text-sm font-medium text-neutral-900">Live Feed</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 tabular-nums">
+                        {feedTab === 'events'
+                            ? `${pixelEvents.length} events`
+                            : `${feed.total_count.toLocaleString()} total`
+                        }
+                    </span>
+                </div>
+                {/* Tab buttons */}
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => setFeedTab('events')}
+                        className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                            feedTab === 'events'
+                                ? 'bg-neutral-900 text-white'
+                                : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100'
+                        }`}
+                    >
+                        <span className="flex items-center gap-1">
+                            <Zap className="w-3 h-3" />
+                            Events
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setFeedTab('attributions')}
+                        className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                            feedTab === 'attributions'
+                                ? 'bg-neutral-900 text-white'
+                                : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100'
+                        }`}
+                    >
+                        <span className="flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                            Attributions
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Tab content */}
+            <div className="max-h-[300px] overflow-y-auto">
+                {feedTab === 'events' ? (
+                    /* Events tab — real-time pixel events via WebSocket */
+                    pixelEvents.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <Zap className="w-8 h-8 mx-auto mb-2 text-neutral-200" />
+                            <p className="text-xs text-neutral-400">
+                                {pixelWsConnected ? 'Waiting for events...' : 'Connecting...'}
+                            </p>
+                        </div>
+                    ) : (
+                        pixelEvents.map((evt, idx) => {
+                            const config = EVENT_TYPE_CONFIG[evt.event_type] || {
+                                label: evt.event_type, bg: 'bg-neutral-50', text: 'text-neutral-600', border: 'border-neutral-200'
+                            };
+                            // Extract path from full URL for cleaner display
+                            let displayPath = evt.url || '';
+                            try {
+                                displayPath = new URL(evt.url).pathname;
+                            } catch { /* use raw url */ }
+
+                            return (
+                                <div
+                                    key={evt.id || idx}
+                                    className="px-4 py-2.5 border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50/50 transition-colors"
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-md border ${config.bg} ${config.text} ${config.border}`}>
+                                            {config.label}
+                                        </span>
+                                        <span className="text-[10px] text-neutral-400">
+                                            {evt.created_at ? formatRelativeTime(evt.created_at) : ''}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-neutral-600 truncate" title={evt.url}>
+                                        {displayPath || '/'}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        {evt.utm_source ? (
+                                            <span className="text-[10px] text-neutral-500 font-medium">
+                                                {evt.utm_source}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-neutral-400">Direct</span>
+                                        )}
+                                        {evt.utm_campaign && (
+                                            <span className="text-[10px] text-neutral-400 truncate max-w-[120px]">
+                                                {evt.utm_campaign}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )
+                ) : (
+                    /* Attributions tab — existing polling-based feed */
+                    feed.items.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <DollarSign className="w-8 h-8 mx-auto mb-2 text-neutral-200" />
+                            <p className="text-xs text-neutral-400">No attributions yet</p>
+                        </div>
+                    ) : (
+                        feed.items.map(item => (
+                            <div key={item.id} className="px-4 py-3 border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50/50 transition-colors">
+                                <div className="flex items-center justify-between mb-0.5">
+                                    <span className="text-sm font-medium text-neutral-900 tabular-nums">
+                                        {formatCurrency(item.revenue)}
+                                    </span>
+                                    <span className="text-[10px] text-neutral-400">
+                                        {formatRelativeTime(item.attributed_at)}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-neutral-500 truncate mb-1">
+                                    {item.campaign_name || 'Unknown Campaign'}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <span
+                                        className="px-1.5 py-0.5 text-[10px] font-medium rounded"
+                                        style={{
+                                            backgroundColor: `${PROVIDER_COLORS[item.provider] || PROVIDER_COLORS.unknown}10`,
+                                            color: PROVIDER_COLORS[item.provider] || PROVIDER_COLORS.unknown,
+                                        }}
+                                    >
+                                        {PROVIDER_NAMES[item.provider] || item.provider}
+                                    </span>
+                                    <span className="text-[10px] text-neutral-400">via {item.match_type}</span>
+                                </div>
+                            </div>
+                        ))
+                    )
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Main page component
 // ---------------------------------------------------------------------------
@@ -424,6 +597,14 @@ export default function AttributionPage() {
     const [journeyFlow, setJourneyFlow] = useState(null);
     const [journeyFlowLoading, setJourneyFlowLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    /** Tab for the Live Feed panel: 'events' (WebSocket) or 'attributions' (polling). */
+    const [feedTab, setFeedTab] = useState('events');
+
+    // Real-time pixel event stream via WebSocket
+    const { events: pixelEvents, isConnected: pixelWsConnected } = usePixelStream(
+        user?.workspace_id
+    );
 
     useEffect(() => {
         currentUser().then(setUser).catch(console.error);
@@ -591,25 +772,35 @@ export default function AttributionPage() {
             <PixelHealthSection pixelHealth={pixelHealth} loading={loading} />
 
             {!hasData ? (
-                /* Empty State — show checklist so the user knows what to do */
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="bg-white border border-neutral-200 rounded-xl p-10 text-center">
-                        <Target className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                        <h2 className="text-base font-medium text-neutral-900 mb-1">No attribution data yet</h2>
-                        <p className="text-sm text-neutral-500 max-w-sm mx-auto mb-4">
-                            Connect your Shopify store and add UTM parameters to your ad campaigns to start attributing orders.
-                        </p>
-                        <Link href="/settings?tab=connections">
-                            <Button variant="outline" size="sm">
-                                Go to Settings
-                            </Button>
-                        </Link>
+                /* Empty State — show live feed + checklist so user sees activity immediately */
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="bg-white border border-neutral-200 rounded-xl p-10 text-center">
+                            <Target className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+                            <h2 className="text-base font-medium text-neutral-900 mb-1">No attribution data yet</h2>
+                            <p className="text-sm text-neutral-500 max-w-sm mx-auto mb-4">
+                                Connect your Shopify store and add UTM parameters to your ad campaigns to start attributing orders.
+                            </p>
+                            <Link href="/settings?tab=connections">
+                                <Button variant="outline" size="sm">
+                                    Go to Settings
+                                </Button>
+                            </Link>
+                        </div>
+                        <SetupChecklist
+                            connections={connections}
+                            pixelHealth={pixelHealth}
+                            summary={summary}
+                            loading={false}
+                        />
                     </div>
-                    <SetupChecklist
-                        connections={connections}
-                        pixelHealth={pixelHealth}
-                        summary={summary}
-                        loading={false}
+                    {/* Live Feed — always visible, even without attribution data */}
+                    <LiveFeedPanel
+                        feedTab={feedTab}
+                        setFeedTab={setFeedTab}
+                        pixelEvents={pixelEvents}
+                        pixelWsConnected={pixelWsConnected}
+                        feed={feed}
                     />
                 </div>
             ) : (
@@ -718,57 +909,14 @@ export default function AttributionPage() {
 
                     {/* Bottom Grid — 3 panels */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {/* Live Attribution Feed */}
-                        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                            <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="relative">
-                                        <Activity className="w-4 h-4 text-neutral-500" />
-                                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                    </div>
-                                    <span className="text-sm font-medium text-neutral-900">Live Feed</span>
-                                </div>
-                                <span className="text-[10px] text-neutral-400 tabular-nums">
-                                    {feed.total_count.toLocaleString()} total
-                                </span>
-                            </div>
-                            <div className="max-h-[300px] overflow-y-auto">
-                                {feed.items.length === 0 ? (
-                                    <div className="p-8 text-center">
-                                        <DollarSign className="w-8 h-8 mx-auto mb-2 text-neutral-200" />
-                                        <p className="text-xs text-neutral-400">No attributions yet</p>
-                                    </div>
-                                ) : (
-                                    feed.items.map(item => (
-                                        <div key={item.id} className="px-4 py-3 border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50/50 transition-colors">
-                                            <div className="flex items-center justify-between mb-0.5">
-                                                <span className="text-sm font-medium text-neutral-900 tabular-nums">
-                                                    {formatCurrency(item.revenue)}
-                                                </span>
-                                                <span className="text-[10px] text-neutral-400">
-                                                    {formatRelativeTime(item.attributed_at)}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-neutral-500 truncate mb-1">
-                                                {item.campaign_name || 'Unknown Campaign'}
-                                            </p>
-                                            <div className="flex items-center gap-2">
-                                                <span
-                                                    className="px-1.5 py-0.5 text-[10px] font-medium rounded"
-                                                    style={{
-                                                        backgroundColor: `${PROVIDER_COLORS[item.provider] || PROVIDER_COLORS.unknown}10`,
-                                                        color: PROVIDER_COLORS[item.provider] || PROVIDER_COLORS.unknown,
-                                                    }}
-                                                >
-                                                    {PROVIDER_NAMES[item.provider] || item.provider}
-                                                </span>
-                                                <span className="text-[10px] text-neutral-400">via {item.match_type}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
+                        {/* Live Feed — reusable component */}
+                        <LiveFeedPanel
+                            feedTab={feedTab}
+                            setFeedTab={setFeedTab}
+                            pixelEvents={pixelEvents}
+                            pixelWsConnected={pixelWsConnected}
+                            feed={feed}
+                        />
 
                         {/* Campaign Warnings */}
                         <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">

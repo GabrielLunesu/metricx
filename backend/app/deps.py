@@ -7,10 +7,10 @@ REFERENCES: backend/app/routers/* (all routers use these dependencies)
 
 import logging
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Tuple
 
 import httpx
-from fastapi import Cookie, Depends, HTTPException, Request, status
+from fastapi import Cookie, Depends, HTTPException, Request, WebSocket, status
 from jose import jwt, JWTError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.orm import Session
@@ -449,6 +449,116 @@ async def _get_current_user_legacy(
         )
 
     return user
+
+
+# =============================================================================
+# WebSocket Authentication
+# =============================================================================
+# WHAT: Shared WebSocket auth used by agents and pixel event streams
+# WHY: WebSocket connections can't use standard Depends() auth flow
+# REFERENCES: backend/app/routers/agents.py, backend/app/routers/pixel_events.py
+
+
+async def authenticate_websocket(
+    websocket: WebSocket,
+    db: Session,
+) -> Tuple[Optional[User], Optional[str]]:
+    """
+    Authenticate WebSocket connection using Clerk JWT.
+
+    WHAT:
+        Validates JWT token from query params or headers and returns the user.
+
+    WHY:
+        WebSocket connections need authentication just like REST endpoints.
+        Unlike HTTP requests, WebSocket can't use the standard Depends() flow.
+
+    SECURITY:
+        - Validates JWT signature against Clerk's JWKS (RS256)
+        - Checks token expiration
+        - Returns user object for workspace access verification
+
+    Parameters:
+        websocket: The WebSocket connection
+        db: Database session
+
+    Returns:
+        Tuple of (User, None) on success, or (None, error_message) on failure
+
+    REFERENCES:
+        - backend/app/deps.py (get_current_user for HTTP)
+    """
+    settings = get_settings()
+
+    # Extract token from query params (WebSocket standard) or headers
+    token = websocket.query_params.get("token")
+
+    if not token:
+        # Try Authorization header as fallback
+        auth_header = websocket.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+    if not token:
+        return None, "Missing authentication token"
+
+    # Check if Clerk is configured
+    if not settings.CLERK_SECRET_KEY:
+        logger.warning("[WS_AUTH] Clerk not configured, rejecting WebSocket")
+        return None, "Authentication not configured"
+
+    try:
+        # Decode token header and claims without verification first
+        unverified_header = jwt.get_unverified_header(token)
+        unverified_claims = jwt.get_unverified_claims(token)
+
+        kid = unverified_header.get("kid")
+        issuer = unverified_claims.get("iss")
+
+        logger.debug(f"[WS_AUTH] Token kid={kid}, issuer={issuer}")
+
+        # Fetch Clerk's JWKS for signature verification
+        jwks = await _fetch_clerk_jwks(issuer=issuer)
+
+        # Find matching key in JWKS
+        rsa_key = None
+        for key in jwks.get("keys", []):
+            if key.get("kid") == kid:
+                rsa_key = key
+                break
+
+        if not rsa_key:
+            logger.warning(f"[WS_AUTH] No matching key found for kid={kid}")
+            return None, "Invalid token signature"
+
+        # Decode and validate JWT
+        payload = jwt.decode(
+            token,
+            rsa_key,
+            algorithms=["RS256"],
+            options={"verify_aud": False},  # Clerk doesn't require audience
+        )
+
+        clerk_user_id = payload.get("sub")
+        if not clerk_user_id:
+            return None, "Invalid token payload"
+
+        # Look up user by clerk_id
+        user = db.query(User).filter(User.clerk_id == clerk_user_id).first()
+
+        if not user:
+            logger.warning(f"[WS_AUTH] User not found for clerk_id={clerk_user_id}")
+            return None, "User not found"
+
+        logger.info(f"[WS_AUTH] Authenticated user {user.id} via WebSocket")
+        return user, None
+
+    except JWTError as e:
+        logger.warning(f"[WS_AUTH] JWT validation failed: {e}")
+        return None, "Invalid token"
+    except Exception as e:
+        logger.error(f"[WS_AUTH] Unexpected error during auth: {e}")
+        return None, "Authentication error"
 
 
 # =============================================================================

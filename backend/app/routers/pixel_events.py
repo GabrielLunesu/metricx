@@ -3,33 +3,42 @@
 WHAT:
     Receives events from the Shopify Web Pixel Extension.
     Stores events for journey tracking and attribution.
+    Streams pixel events in real-time via WebSocket to dashboard viewers.
 
 WHY:
     The Web Pixel captures customer journey events (page views, add to cart, checkout)
     that we use to attribute orders to marketing campaigns.
+    Real-time streaming lets merchants see customer activity as it happens.
 
 REFERENCES:
     - docs/living-docs/ATTRIBUTION_ENGINE.md
     - Shopify Web Pixels API: https://shopify.dev/docs/api/web-pixels-api
+    - backend/app/services/pixel_websocket_manager.py (WebSocket manager)
+    - ui/hooks/usePixelStream.js (frontend consumer)
 """
 
+import asyncio
+import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.deps import authenticate_websocket
 from app.models import (
     Workspace,
     PixelEvent,
     CustomerJourney,
     JourneyTouchpoint,
 )
+from app.services.pixel_websocket_manager import pixel_ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -424,6 +433,24 @@ async def receive_pixel_event(
     # NOTE: Do NOT trigger attribution here!
     # Attribution is triggered by orders/paid webhook
 
+    # 9. Broadcast to connected WebSocket clients (fire-and-forget)
+    # WHY: Real-time feed on attribution page — viewers see events as they arrive
+    try:
+        await pixel_ws_manager.broadcast(workspace_id, {
+            "type": "pixel_event",
+            "id": str(pixel_event.id),
+            "event_type": pixel_event.event_type,
+            "visitor_id": pixel_event.visitor_id,
+            "url": pixel_event.url,
+            "utm_source": pixel_event.utm_source,
+            "utm_medium": pixel_event.utm_medium,
+            "utm_campaign": pixel_event.utm_campaign,
+            "created_at": pixel_event.created_at.isoformat(),
+        })
+    except Exception as e:
+        # Never let broadcast failure affect pixel ingestion
+        logger.warning(f"[PIXEL] WebSocket broadcast failed: {e}")
+
     # Build response with CORS headers
     from fastapi.responses import JSONResponse
     origin = request.headers.get("origin", "*")
@@ -435,6 +462,106 @@ async def receive_pixel_event(
         }
     )
     return add_cors_headers(response, origin)
+
+
+# =============================================================================
+# WEBSOCKET ENDPOINT — Real-Time Pixel Event Stream
+# =============================================================================
+
+
+@router.websocket("/pixel-events/stream")
+async def pixel_event_stream(
+    websocket: WebSocket,
+    db: Session = Depends(get_db),
+):
+    """Stream pixel events in real-time via WebSocket.
+
+    WHAT:
+        Authenticated WebSocket endpoint that streams pixel events to
+        dashboard viewers. On connect, sends last 30 events as initial
+        payload, then pushes new events as they arrive via broadcast.
+
+    WHY:
+        The attribution page "Live Feed" panel needs instant event visibility
+        without polling. Merchants can watch customer activity in real-time.
+
+    PROTOCOL:
+        1. Client connects with ?token=<clerk_jwt>
+        2. Server authenticates and sends "connected" message with initial events
+        3. New pixel events are pushed as "pixel_event" messages (via broadcast)
+        4. Client sends {"type": "ping"} every 30s; server replies {"type": "pong"}
+        5. Server closes with 4001/4003 on auth failure
+
+    REFERENCES:
+        - backend/app/routers/agents.py (agent WebSocket endpoint pattern)
+        - backend/app/services/pixel_websocket_manager.py (connection manager)
+        - ui/hooks/usePixelStream.js (frontend consumer)
+    """
+    # 1. Authenticate
+    user, error = await authenticate_websocket(websocket, db)
+    if error or not user:
+        # Accept first so we can send close reason
+        await websocket.accept()
+        await websocket.close(code=4001, reason=error or "Authentication failed")
+        return
+
+    workspace_id = user.workspace_id
+    if not workspace_id:
+        await websocket.accept()
+        await websocket.close(code=4003, reason="No workspace assigned")
+        return
+
+    # 2. Register connection (also accepts the WebSocket)
+    await pixel_ws_manager.connect(websocket, workspace_id)
+
+    # 3. Send initial batch of recent events so feed isn't empty on page load
+    try:
+        recent_events = (
+            db.query(PixelEvent)
+            .filter(PixelEvent.workspace_id == workspace_id)
+            .order_by(desc(PixelEvent.created_at))
+            .limit(30)
+            .all()
+        )
+
+        initial_payload = [
+            {
+                "type": "pixel_event",
+                "id": str(evt.id),
+                "event_type": evt.event_type,
+                "visitor_id": evt.visitor_id,
+                "url": evt.url,
+                "utm_source": evt.utm_source,
+                "utm_medium": evt.utm_medium,
+                "utm_campaign": evt.utm_campaign,
+                "created_at": evt.created_at.isoformat() if evt.created_at else None,
+            }
+            for evt in recent_events
+        ]
+
+        await websocket.send_json({
+            "type": "initial_batch",
+            "events": initial_payload,
+        })
+    except Exception as e:
+        logger.error(f"[PIXEL_WS] Failed to send initial batch: {e}")
+
+    # 4. Keep connection alive — listen for pings and handle disconnects
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+                if message.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+            except json.JSONDecodeError:
+                pass
+    except WebSocketDisconnect:
+        logger.info(f"[PIXEL_WS] Client disconnected from workspace {workspace_id}")
+    except Exception as e:
+        logger.warning(f"[PIXEL_WS] Connection error: {e}")
+    finally:
+        await pixel_ws_manager.disconnect(websocket)
 
 
 @router.get("/pixel-events/health")
