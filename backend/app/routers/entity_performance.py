@@ -245,7 +245,7 @@ def _base_query(
             query = query.filter(connection_alias.provider == provider)
 
         if status and status.lower() != "all":
-            query = query.filter(entity.status == status)
+            query = query.filter(func.lower(entity.status) == status.lower())
 
         if parent_id and level != models.LevelEnum.campaign:
             if isinstance(parent_id, str):
@@ -337,7 +337,7 @@ def _base_query(
             query = query.filter(connection_alias.provider == provider)
 
         if status and status.lower() != "all":
-            query = query.filter(ancestor.status == status)
+            query = query.filter(func.lower(ancestor.status) == status.lower())
 
         if parent_id:
             if isinstance(parent_id, str):
@@ -511,31 +511,29 @@ def _apply_sort(query, sort_by: str, sort_dir: str):
         query.set_sort(sort_by, sort_dir)
         return query
 
-    # Use MetricSnapshot instead of deprecated MetricFact
-    MS = models.MetricSnapshot
-
-    # Build order expressions using the same aggregates as in SELECT
-    # This matches PostgreSQL's requirement for GROUP BY queries
+    # For grouped queries (adset CTE path), use literal_column references to
+    # the SELECT aliases. This avoids referencing the raw MetricSnapshot model,
+    # which would cause SQLAlchemy to implicitly cross-join metric_snapshots.
     if sort_by == "revenue":
-        order_clause = func.coalesce(func.sum(MS.revenue), 0)
+        order_clause = literal_column("revenue")
     elif sort_by == "spend":
-        order_clause = func.coalesce(func.sum(MS.spend), 0)
+        order_clause = literal_column("spend")
     elif sort_by == "conversions":
-        order_clause = func.coalesce(func.sum(MS.conversions), 0)
+        order_clause = literal_column("conversions")
     elif sort_by == "cpc":
-        # CPC = spend / clicks (nullsafe)
-        order_clause = func.coalesce(func.sum(MS.spend), 0) / func.nullif(
-            func.coalesce(func.sum(MS.clicks), 0), 0
+        # CPC = spend / clicks (use NULLIF to avoid divide-by-zero)
+        order_clause = literal_column("spend") / func.nullif(
+            literal_column("clicks"), 0
         )
     elif sort_by == "ctr":
-        # CTR = clicks / impressions (nullsafe)
-        order_clause = func.coalesce(func.sum(MS.clicks), 0) / func.nullif(
-            func.coalesce(func.sum(MS.impressions), 0), 0
+        # CTR = clicks / impressions
+        order_clause = literal_column("clicks") / func.nullif(
+            literal_column("impressions"), 0
         )
     else:  # roas
-        # ROAS = revenue / spend (nullsafe)
-        order_clause = func.coalesce(func.sum(MS.revenue), 0) / func.nullif(
-            func.coalesce(func.sum(MS.spend), 0), 0
+        # ROAS = revenue / spend
+        order_clause = literal_column("revenue") / func.nullif(
+            literal_column("spend"), 0
         )
 
     if sort_dir == "asc":
