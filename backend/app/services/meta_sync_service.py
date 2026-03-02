@@ -115,13 +115,52 @@ def _parse_url_tags(url_tags: str) -> Dict[str, Any]:
     }
 
 
+def _extract_creative_id(ad_data: Dict[str, Any]) -> Optional[str]:
+    """Extract creative ID from ad data (handles dict and SDK objects).
+
+    Args:
+        ad_data: Ad dictionary from Meta API
+
+    Returns:
+        Creative ID string, or None
+    """
+    creative_ref = ad_data.get("creative")
+    if not creative_ref:
+        return None
+    if isinstance(creative_ref, dict):
+        return creative_ref.get("id")
+    if hasattr(creative_ref, "get"):
+        return creative_ref.get("id")
+    if hasattr(creative_ref, "id"):
+        return creative_ref.id
+    return None
+
+
 def sync_meta_entities(
     db: Session,
     workspace_id: UUID,
     connection_id: UUID,
     entity_sync_mode: Literal["full", "active_only"] = "full",
 ) -> EntitySyncResponse:
-    """Sync entity hierarchy from Meta to metricx."""
+    """Sync entity hierarchy from Meta to metricx.
+
+    WHAT:
+        Fetches campaigns, adsets, and ads from Meta and upserts them.
+        Uses ACCOUNT-LEVEL endpoints (3 API calls) instead of per-entity
+        traversal (4,600+ calls for large accounts).
+
+    WHY:
+        Meta's rate limit is 200 calls/hour per account. The old N+1 pattern
+        (get_campaigns → per-campaign get_adsets → per-adset get_ads) would
+        exhaust the budget for any account with >50 campaigns.
+
+    API CALLS:
+        - 1x get_campaigns (account-level, paginated)
+        - 1x get_all_adsets (account-level, paginated)
+        - 1x get_all_ads (account-level, paginated)
+        - Nx get_creative_details (one per ad, only on FULL mode for new ads)
+        Total: ~3 + N_new_ads (vs 1+N+M+K in the old approach)
+    """
 
     start_time = datetime.utcnow()
     stats = EntitySyncStats(
@@ -136,9 +175,8 @@ def sync_meta_entities(
     errors: List[str] = []
 
     logger.info(
-        "[META_SYNC] Starting entity sync: workspace=%s, connection=%s",
-        workspace_id,
-        connection_id,
+        "[META_SYNC] Starting entity sync: workspace=%s, connection=%s, mode=%s",
+        workspace_id, connection_id, entity_sync_mode,
     )
 
     try:
@@ -164,21 +202,17 @@ def sync_meta_entities(
             )
 
         access_token = _get_access_token(connection)
-
         client = MetaAdsClient(access_token=access_token)
-
         account_id = ensure_act_prefix(connection.external_account_id)
 
-        logger.info(
-            "[META_SYNC] Fetching campaigns for account: %s (mode=%s)",
-            account_id,
-            entity_sync_mode,
-        )
+        # =====================================================================
+        # STEP 1: Fetch ALL campaigns (1 API call, paginated)
+        # =====================================================================
         campaigns = client.get_campaigns(account_id)
-        logger.info(
-            "[META_SYNC] Found %s campaigns for %s", len(campaigns), account_id
-        )
+        logger.info("[META_SYNC] Found %d campaigns for %s", len(campaigns), account_id)
 
+        # Build campaign lookup map: external_id → Entity
+        campaign_entity_map: Dict[str, Any] = {}
         for campaign_data in campaigns:
             try:
                 campaign_status = (campaign_data.get("status") or "unknown").upper()
@@ -192,143 +226,144 @@ def sync_meta_entities(
                     level=LevelEnum.campaign,
                     name=campaign_data.get("name", "Unnamed Campaign"),
                     status=campaign_data.get("status", "unknown"),
-                    goal=_map_objective_to_goal(
-                        campaign_data.get("objective")
-                    ),
+                    goal=_map_objective_to_goal(campaign_data.get("objective")),
                 )
 
+                campaign_entity_map[campaign_data["id"]] = campaign_entity
                 if campaign_created:
                     stats.campaigns_created += 1
                 else:
                     stats.campaigns_updated += 1
 
-                adsets = client.get_adsets(campaign_data["id"])
-                logger.debug(
-                    "[META_SYNC] Campaign %s has %s adsets",
-                    campaign_data["id"],
-                    len(adsets),
-                )
-
-                for adset_data in adsets:
-                    adset_status = (adset_data.get("status") or "unknown").upper()
-                    if entity_sync_mode == "active_only" and adset_status != "ACTIVE":
-                        continue
-
-                    adset_entity, adset_created = _upsert_entity(
-                        db=db,
-                        connection=connection,
-                        external_id=adset_data["id"],
-                        level=LevelEnum.adset,
-                        name=adset_data.get("name", "Unnamed Ad Set"),
-                        status=adset_data.get("status", "unknown"),
-                        parent_id=campaign_entity.id,
-                    )
-
-                    if adset_created:
-                        stats.adsets_created += 1
-                    else:
-                        stats.adsets_updated += 1
-
-                    ads = client.get_ads(adset_data["id"])
-                    logger.debug(
-                        "[META_SYNC] Adset %s has %s ads",
-                        adset_data["id"],
-                        len(ads),
-                    )
-
-                    for ad_data in ads:
-                        ad_status = (ad_data.get("status") or "unknown").upper()
-                        if entity_sync_mode == "active_only" and ad_status != "ACTIVE":
-                            continue
-
-                        # Extract creative details if available (Meta only)
-                        thumbnail_url = None
-                        image_url = None
-                        media_type = None
-                        tracking_params = None
-
-                        creative_ref = ad_data.get("creative")
-                        # Note: creative_ref can be a dict OR an AdCreative object from SDK
-                        # Both support .get("id") or have an "id" key/attribute
-                        creative_id = None
-                        if creative_ref:
-                            if isinstance(creative_ref, dict):
-                                creative_id = creative_ref.get("id")
-                            elif hasattr(creative_ref, "get"):
-                                # AdCreative object from Meta SDK
-                                creative_id = creative_ref.get("id")
-                            elif hasattr(creative_ref, "id"):
-                                creative_id = creative_ref.id
-                        if creative_id:
-                            creative_details = client.get_creative_details(creative_id)
-                            if creative_details:
-                                thumbnail_url = creative_details.get("thumbnail_url")
-                                image_url = creative_details.get("image_url")
-                                media_type_str = creative_details.get("media_type")
-                                if media_type_str:
-                                    try:
-                                        media_type = MediaTypeEnum(media_type_str)
-                                    except ValueError:
-                                        media_type = MediaTypeEnum.unknown
-
-                                # Extract tracking params from url_tags for UTM detection
-                                # WHY: Enables proactive attribution warnings
-                                # url_tags is on AdCreative, not Ad
-                                url_tags = creative_details.get("url_tags")
-                                if url_tags:
-                                    tracking_params = _parse_url_tags(url_tags)
-
-                        _, ad_created = _upsert_entity(
-                            db=db,
-                            connection=connection,
-                            external_id=ad_data["id"],
-                            level=LevelEnum.ad,
-                            name=ad_data.get("name", "Unnamed Ad"),
-                            status=ad_data.get("status", "unknown"),
-                            parent_id=adset_entity.id,
-                            thumbnail_url=thumbnail_url,
-                            image_url=image_url,
-                            media_type=media_type,
-                            tracking_params=tracking_params,
-                        )
-
-                        if ad_created:
-                            stats.ads_created += 1
-                        else:
-                            stats.ads_updated += 1
-
-            except MetaAdsPermissionError as e:
-                logger.error(
-                    "[META_SYNC] Permission error for campaign %s: %s",
-                    campaign_data.get("id"),
-                    e,
-                )
-                errors.append(
-                    f"Permission error for campaign {campaign_data.get('id')}: {e}"
-                )
             except MetaAdsClientError as e:
-                logger.error(
-                    "[META_SYNC] Error syncing campaign %s: %s",
-                    campaign_data.get("id"),
-                    e,
+                errors.append(f"Error syncing campaign {campaign_data.get('id')}: {e}")
+
+        # =====================================================================
+        # STEP 2: Fetch ALL adsets at account level (1 API call, paginated)
+        # =====================================================================
+        all_adsets = client.get_all_adsets(account_id)
+        logger.info("[META_SYNC] Found %d adsets for %s", len(all_adsets), account_id)
+
+        adset_entity_map: Dict[str, Any] = {}
+        for adset_data in all_adsets:
+            try:
+                adset_status = (adset_data.get("status") or "unknown").upper()
+                if entity_sync_mode == "active_only" and adset_status != "ACTIVE":
+                    continue
+
+                # Link to parent campaign entity
+                parent_campaign_id = adset_data.get("campaign_id")
+                parent_entity = campaign_entity_map.get(str(parent_campaign_id))
+                if not parent_entity:
+                    # Campaign was filtered by active_only or doesn't exist
+                    continue
+
+                adset_entity, adset_created = _upsert_entity(
+                    db=db,
+                    connection=connection,
+                    external_id=adset_data["id"],
+                    level=LevelEnum.adset,
+                    name=adset_data.get("name", "Unnamed Ad Set"),
+                    status=adset_data.get("status", "unknown"),
+                    parent_id=parent_entity.id,
                 )
-                errors.append(
-                    f"Error syncing campaign {campaign_data.get('id')}: {e}"
+
+                adset_entity_map[adset_data["id"]] = adset_entity
+                if adset_created:
+                    stats.adsets_created += 1
+                else:
+                    stats.adsets_updated += 1
+
+            except MetaAdsClientError as e:
+                errors.append(f"Error syncing adset {adset_data.get('id')}: {e}")
+
+        # =====================================================================
+        # STEP 3: Fetch ALL ads at account level (1 API call, paginated)
+        # =====================================================================
+        all_ads = client.get_all_ads(account_id)
+        logger.info("[META_SYNC] Found %d ads for %s", len(all_ads), account_id)
+
+        # Pre-load existing ad external IDs to skip creative fetches for known ads
+        existing_ad_ids = set(
+            str(e.external_id) for e in db.query(Entity.external_id).filter(
+                Entity.connection_id == connection.id,
+                Entity.level == LevelEnum.ad,
+            ).all()
+        )
+
+        for ad_data in all_ads:
+            try:
+                ad_status = (ad_data.get("status") or "unknown").upper()
+                if entity_sync_mode == "active_only" and ad_status != "ACTIVE":
+                    continue
+
+                # Link to parent adset entity
+                parent_adset_id = ad_data.get("adset_id")
+                parent_entity = adset_entity_map.get(str(parent_adset_id))
+                if not parent_entity:
+                    continue
+
+                # Creative details — only fetch for NEW ads to save API calls.
+                # Existing ads already have creative data from previous syncs.
+                thumbnail_url = None
+                image_url = None
+                media_type = None
+                tracking_params = None
+
+                is_new_ad = str(ad_data["id"]) not in existing_ad_ids
+                if is_new_ad and entity_sync_mode == "full":
+                    creative_id = _extract_creative_id(ad_data)
+                    if creative_id:
+                        creative_details = client.get_creative_details(creative_id)
+                        if creative_details:
+                            thumbnail_url = creative_details.get("thumbnail_url")
+                            image_url = creative_details.get("image_url")
+                            media_type_str = creative_details.get("media_type")
+                            if media_type_str:
+                                try:
+                                    media_type = MediaTypeEnum(media_type_str)
+                                except ValueError:
+                                    media_type = MediaTypeEnum.unknown
+                            url_tags = creative_details.get("url_tags")
+                            if url_tags:
+                                tracking_params = _parse_url_tags(url_tags)
+
+                _, ad_created = _upsert_entity(
+                    db=db,
+                    connection=connection,
+                    external_id=ad_data["id"],
+                    level=LevelEnum.ad,
+                    name=ad_data.get("name", "Unnamed Ad"),
+                    status=ad_data.get("status", "unknown"),
+                    parent_id=parent_entity.id,
+                    thumbnail_url=thumbnail_url,
+                    image_url=image_url,
+                    media_type=media_type,
+                    tracking_params=tracking_params,
                 )
+
+                if ad_created:
+                    stats.ads_created += 1
+                else:
+                    stats.ads_updated += 1
+
+            except MetaAdsClientError as e:
+                errors.append(f"Error syncing ad {ad_data.get('id')}: {e}")
 
         db.commit()
 
-        stats.duration_seconds = (
-            datetime.utcnow() - start_time
-        ).total_seconds()
-
+        stats.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
         success = len(errors) == 0
 
         logger.info(
-            "[META_SYNC] Entity sync completed: workspace=%s, connection=%s, success=%s",
-            workspace_id,
-            connection_id,
-            success,
+            "[META_SYNC] Entity sync completed: workspace=%s, success=%s, "
+            "campaigns=%d, adsets=%d, ads=%d, duration=%.1fs, api_calls=~%d",
+            workspace_id, success,
+            stats.campaigns_created + stats.campaigns_updated,
+            stats.adsets_created + stats.adsets_updated,
+            stats.ads_created + stats.ads_updated,
+            stats.duration_seconds,
+            3 + stats.ads_created,  # 3 account-level + creative fetches for new ads
         )
 
         return EntitySyncResponse(success=success, synced=stats, errors=errors)

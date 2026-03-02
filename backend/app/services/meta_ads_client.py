@@ -262,40 +262,105 @@ class MetaAdsClient:
             
         except FacebookRequestError as e:
             return self._handle_api_error(e, f"fetching campaigns for {account_id}")
-    
+
+    @rate_limit(calls_per_hour=200)
+    def get_all_adsets(self, account_id: str) -> List[Dict[str, Any]]:
+        """Fetch ALL adsets for an ad account in a single API call.
+
+        WHAT:
+            Retrieves all adsets across all campaigns at the account level.
+            Uses /act_{id}/adsets instead of per-campaign /campaign_id/adsets.
+
+        WHY:
+            Reduces API calls from N (one per campaign) to 1 (one per account).
+            Critical for accounts with 100+ campaigns to stay within 200 calls/hour.
+
+        Args:
+            account_id: Meta ad account ID (with or without act_ prefix)
+
+        Returns:
+            List of adset dictionaries with campaign_id for parent linking.
+        """
+        try:
+            account_id = ensure_act_prefix(account_id)
+            logger.info(f"[META_CLIENT] Fetching ALL adsets for account: {account_id}")
+
+            account = AdAccount(account_id)
+            adsets = account.get_ad_sets(fields=[
+                AdSet.Field.id,
+                AdSet.Field.name,
+                AdSet.Field.status,
+                AdSet.Field.campaign_id,
+                AdSet.Field.daily_budget,
+                AdSet.Field.lifetime_budget,
+            ])
+
+            result = []
+            for adset in adsets:
+                result.append(dict(adset))
+
+            logger.info(f"[META_CLIENT] Fetched {len(result)} adsets (account-level)")
+            return result
+
+        except FacebookRequestError as e:
+            return self._handle_api_error(e, f"fetching adsets for account {account_id}")
+
+    @rate_limit(calls_per_hour=200)
+    def get_all_ads(self, account_id: str) -> List[Dict[str, Any]]:
+        """Fetch ALL ads for an ad account in a single API call.
+
+        WHAT:
+            Retrieves all ads across all adsets at the account level.
+            Uses /act_{id}/ads instead of per-adset /adset_id/ads.
+
+        WHY:
+            Reduces API calls from M (one per adset) to 1 (one per account).
+            Critical for accounts with 1000+ ads to stay within 200 calls/hour.
+
+        Args:
+            account_id: Meta ad account ID (with or without act_ prefix)
+
+        Returns:
+            List of ad dictionaries with adset_id for parent linking.
+        """
+        try:
+            account_id = ensure_act_prefix(account_id)
+            logger.info(f"[META_CLIENT] Fetching ALL ads for account: {account_id}")
+
+            account = AdAccount(account_id)
+            ads = account.get_ads(fields=[
+                Ad.Field.id,
+                Ad.Field.name,
+                Ad.Field.status,
+                Ad.Field.adset_id,
+                Ad.Field.creative,
+            ])
+
+            result = []
+            for ad in ads:
+                result.append(dict(ad))
+
+            logger.info(f"[META_CLIENT] Fetched {len(result)} ads (account-level)")
+            return result
+
+        except FacebookRequestError as e:
+            return self._handle_api_error(e, f"fetching ads for account {account_id}")
+
     @rate_limit(calls_per_hour=200)
     def get_adsets(self, campaign_id: str) -> List[Dict[str, Any]]:
-        """Fetch all adsets for a campaign.
-        
-        WHAT:
-            Retrieves all adsets belonging to a campaign.
-            Returns adset metadata (id, name, status, targeting, etc.)
-        
-        WHY:
-            Second level of entity hierarchy - adsets belong to campaigns.
-        
+        """Fetch all adsets for a campaign (legacy per-campaign method).
+
+        NOTE: Prefer get_all_adsets() for bulk sync — uses 1 API call instead of N.
+
         Args:
             campaign_id: Meta campaign ID
-            
+
         Returns:
-            List of adset dictionaries with fields:
-                - id: AdSet ID
-                - name: AdSet name
-                - status: ACTIVE, PAUSED, DELETED, ARCHIVED
-                - campaign_id: Parent campaign ID
-                - daily_budget: Daily budget in cents (optional)
-                - lifetime_budget: Lifetime budget in cents (optional)
-                - targeting: Targeting configuration
-                
-        Raises:
-            MetaAdsAuthenticationError: Invalid or expired token
-            MetaAdsPermissionError: Insufficient permissions
-            MetaAdsValidationError: Invalid campaign ID
-            MetaAdsClientError: Other API errors
+            List of adset dictionaries.
         """
         try:
             logger.info(f"[META_CLIENT] Fetching adsets for campaign: {campaign_id}")
-            
+
             campaign = Campaign(campaign_id)
             adsets = campaign.get_ad_sets(fields=[
                 AdSet.Field.id,
@@ -306,14 +371,14 @@ class MetaAdsClient:
                 AdSet.Field.lifetime_budget,
                 AdSet.Field.targeting,
             ])
-            
+
             result = []
             for adset in adsets:
                 result.append(dict(adset))
-            
+
             logger.info(f"[META_CLIENT] Fetched {len(result)} adsets")
             return result
-            
+
         except FacebookRequestError as e:
             return self._handle_api_error(e, f"fetching adsets for campaign {campaign_id}")
     
