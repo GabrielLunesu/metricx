@@ -612,32 +612,44 @@ async def connect_shop(
         # REFERENCES: docs/living-docs/ATTRIBUTION_ENGINE.md
         pixel_id = None
         pixel_error = None
-        try:
-            pixel_id = await activate_pixel_for_connection(
-                connection=connection,
-                access_token=access_token,
-                workspace_id=workspace_id,
+
+        # Check if write_pixels scope was granted before attempting activation
+        # WHY: Stores connected before this scope was added won't have permission
+        granted_scopes = scope.split(",") if scope else []
+        if "write_pixels" not in granted_scopes:
+            pixel_error = (
+                "write_pixels scope not granted — store must re-authorize. "
+                f"Granted scopes: {scope}"
             )
-            if pixel_id:
-                # Store pixel ID on connection
-                connection.web_pixel_id = pixel_id
-                db.commit()
-                logger.info(
-                    f"[SHOPIFY_OAUTH] Activated pixel for {shop_domain}",
-                    extra={"pixel_id": pixel_id}
-                )
-            else:
-                pixel_error = "Pixel activation returned no ID"
-                logger.warning(
-                    f"[SHOPIFY_OAUTH] Pixel activation failed for {shop_domain}: {pixel_error}"
-                )
-        except Exception as e:
-            # Don't fail the connection if pixel activation fails
-            # The pixel can be activated later
-            pixel_error = str(e)
             logger.warning(
-                f"[SHOPIFY_OAUTH] Pixel activation error for {shop_domain}: {e}"
+                f"[SHOPIFY_OAUTH] {pixel_error} for {shop_domain}"
             )
+        else:
+            try:
+                pixel_id, pixel_error = await activate_pixel_for_connection(
+                    connection=connection,
+                    access_token=access_token,
+                    workspace_id=workspace_id,
+                )
+                if pixel_id:
+                    # Store pixel ID on connection
+                    connection.web_pixel_id = pixel_id
+                    db.commit()
+                    logger.info(
+                        f"[SHOPIFY_OAUTH] Activated pixel for {shop_domain}",
+                        extra={"pixel_id": pixel_id}
+                    )
+                else:
+                    logger.warning(
+                        f"[SHOPIFY_OAUTH] Pixel activation failed for {shop_domain}: {pixel_error}"
+                    )
+            except Exception as e:
+                # Don't fail the connection if pixel activation fails
+                # The pixel can be activated later
+                pixel_error = f"Unexpected error: {str(e)}"
+                logger.warning(
+                    f"[SHOPIFY_OAUTH] Pixel activation error for {shop_domain}: {e}"
+                )
 
         # =====================================================================
         # WEBHOOK SUBSCRIPTION (Attribution Engine)

@@ -17,7 +17,7 @@ REFERENCES:
 
 import os
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 
 import httpx
 
@@ -152,7 +152,7 @@ class PixelActivationService:
         shop_domain: str,
         access_token: str,
         workspace_id: str,
-    ) -> Optional[str]:
+    ) -> Tuple[Optional[str], Optional[str]]:
         """Create and activate web pixel for a shop.
 
         WHAT: Creates a web pixel via Shopify GraphQL API
@@ -164,8 +164,9 @@ class PixelActivationService:
             workspace_id: Metricx workspace ID to pass to pixel
 
         Returns:
-            str: The created web pixel ID (gid://shopify/WebPixel/xxx)
-            None: If creation failed
+            Tuple of (pixel_id, error_message):
+            - (str, None) on success
+            - (None, str) on failure with descriptive error
 
         Note:
             The pixel settings (workspaceId, apiEndpoint) are passed to the
@@ -180,7 +181,7 @@ class PixelActivationService:
                 logger.info(
                     f"[PIXEL_ACTIVATION] Pixel already exists for {shop_domain}: {existing_pixel_id}"
                 )
-                return existing_pixel_id
+                return existing_pixel_id, None
 
             # Create the pixel with settings
             # NOTE: The settings schema must match what's defined in shopify.extension.toml
@@ -201,31 +202,37 @@ class PixelActivationService:
             )
 
             # Log full response for debugging
-            logger.info(f"[PIXEL_ACTIVATION] GraphQL response: {result}")
+            logger.debug(f"[PIXEL_ACTIVATION] GraphQL response: {result}")
 
             # Check for GraphQL-level errors first
             if result.get("errors"):
-                for error in result["errors"]:
-                    logger.error(
-                        f"[PIXEL_ACTIVATION] GraphQL error: {error.get('message')}",
-                        extra={"shop_domain": shop_domain}
-                    )
-                return None
+                error_msgs = [e.get("message", "Unknown error") for e in result["errors"]]
+                combined = "; ".join(error_msgs)
+                logger.warning(
+                    f"[PIXEL_ACTIVATION] GraphQL errors for {shop_domain}: {combined}",
+                    extra={"shop_domain": shop_domain}
+                )
+                return None, f"GraphQL errors: {combined}"
 
             data = result.get("data", {}).get("webPixelCreate")
             if data is None:
-                logger.error(f"[PIXEL_ACTIVATION] No webPixelCreate in response for {shop_domain}")
-                return None
+                error_msg = "No webPixelCreate data in Shopify response — extension may not be deployed"
+                logger.warning(f"[PIXEL_ACTIVATION] {error_msg} for {shop_domain}")
+                return None, error_msg
 
             user_errors = data.get("userErrors", [])
 
             if user_errors:
-                for error in user_errors:
-                    logger.error(
-                        f"[PIXEL_ACTIVATION] Error creating pixel: {error.get('message')}",
-                        extra={"field": error.get("field"), "shop_domain": shop_domain}
-                    )
-                return None
+                error_msgs = [
+                    f"{e.get('field', 'unknown')}: {e.get('message', 'Unknown error')}"
+                    for e in user_errors
+                ]
+                combined = "; ".join(error_msgs)
+                logger.warning(
+                    f"[PIXEL_ACTIVATION] userErrors creating pixel for {shop_domain}: {combined}",
+                    extra={"shop_domain": shop_domain}
+                )
+                return None, f"Shopify userErrors: {combined}"
 
             pixel = data.get("webPixel", {})
             pixel_id = pixel.get("id")
@@ -235,21 +242,24 @@ class PixelActivationService:
                     f"[PIXEL_ACTIVATION] Successfully created pixel for {shop_domain}",
                     extra={"pixel_id": pixel_id, "workspace_id": workspace_id}
                 )
-                return pixel_id
+                return pixel_id, None
             else:
-                logger.error(f"[PIXEL_ACTIVATION] No pixel ID in response for {shop_domain}")
-                return None
+                error_msg = "Shopify returned success but no pixel ID"
+                logger.warning(f"[PIXEL_ACTIVATION] {error_msg} for {shop_domain}")
+                return None, error_msg
 
         except httpx.HTTPStatusError as e:
-            logger.exception(
-                f"[PIXEL_ACTIVATION] HTTP error activating pixel for {shop_domain}: {e}"
+            error_msg = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
+            logger.warning(
+                f"[PIXEL_ACTIVATION] HTTP error activating pixel for {shop_domain}: {error_msg}"
             )
-            return None
+            return None, error_msg
         except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
             logger.exception(
                 f"[PIXEL_ACTIVATION] Failed to activate pixel for {shop_domain}: {e}"
             )
-            return None
+            return None, error_msg
 
     async def get_existing_pixel(
         self,
@@ -357,7 +367,7 @@ async def activate_pixel_for_connection(
     connection: Connection,
     access_token: str,
     workspace_id: str,
-) -> Optional[str]:
+) -> Tuple[Optional[str], Optional[str]]:
     """Convenience function to activate pixel for a connection.
 
     WHAT: Activates pixel and updates connection with pixel ID
@@ -369,17 +379,16 @@ async def activate_pixel_for_connection(
         workspace_id: Workspace ID string
 
     Returns:
-        str: Pixel ID if successful
-        None: If activation failed
+        Tuple of (pixel_id, error_message):
+        - (str, None) on success
+        - (None, str) on failure with descriptive error
     """
     service = PixelActivationService()
 
     shop_domain = connection.external_account_id  # shop_domain stored here
 
-    pixel_id = await service.activate_pixel(
+    return await service.activate_pixel(
         shop_domain=shop_domain,
         access_token=access_token,
         workspace_id=workspace_id,
     )
-
-    return pixel_id
