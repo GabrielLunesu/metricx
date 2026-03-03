@@ -232,8 +232,8 @@ def sync_snapshots_for_connection(
         result = _sync_google_snapshots(db, connection, mode)
     elif connection.provider == ProviderEnum.shopify:
         # Shopify connections don't have ad metrics to sync — skip gracefully
+        # NOTE: result.success is a derived property (True when errors list is empty)
         logger.debug(f"[SYNC] Skipping metric sync for Shopify connection {connection.id}")
-        result.success = True
         return result
     else:
         result.errors.append(f"Unsupported provider: {connection.provider}")

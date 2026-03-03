@@ -228,6 +228,20 @@ class PixelActivationService:
                     for e in user_errors
                 ]
                 combined = "; ".join(error_msgs)
+
+                # Handle "already set" — pixel exists but wasn't found by our query
+                # WHY: Can happen if pixel was created by a previous app version or
+                # if get_existing_pixel query failed silently
+                if any("already been set" in (e.get("message") or "") for e in user_errors):
+                    logger.info(
+                        f"[PIXEL_ACTIVATION] Pixel already exists for {shop_domain}, fetching ID"
+                    )
+                    existing_id = await self.get_existing_pixel(shop_domain, access_token)
+                    if existing_id:
+                        return existing_id, None
+                    # If we still can't find it, fall through to error
+                    return None, f"Pixel already exists but could not retrieve ID: {combined}"
+
                 logger.warning(
                     f"[PIXEL_ACTIVATION] userErrors creating pixel for {shop_domain}: {combined}",
                     extra={"shop_domain": shop_domain}
