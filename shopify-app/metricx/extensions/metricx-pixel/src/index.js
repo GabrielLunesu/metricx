@@ -17,12 +17,13 @@ register(async ({ analytics, browser, settings, init }) => {
 
   // ─── RESPECT PRIVACY/CONSENT ───
   // In strict mode, Shopify handles consent. Events only fire if allowed.
-  // But we can also check explicitly:
+  // Only block if consent is explicitly denied (=== false).
+  // undefined means no consent banner configured — default to allowed.
   const analyticsAllowed = init.customerPrivacy?.analyticsProcessingAllowed;
   const marketingAllowed = init.customerPrivacy?.marketingAllowed;
 
-  if (!analyticsAllowed && !marketingAllowed) {
-    // User has not consented - don't track
+  if (analyticsAllowed === false && marketingAllowed === false) {
+    // User has explicitly denied all consent - don't track
     return;
   }
 
