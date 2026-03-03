@@ -225,11 +225,16 @@ def sync_snapshots_for_connection(
                 return result
             # Don't fail the whole sync if entity sync fails
 
-    # STEP 2: Sync metrics
+    # STEP 2: Sync metrics (ad platforms only — Shopify is for orders/attribution, not ad metrics)
     if connection.provider == ProviderEnum.meta:
         result = _sync_meta_snapshots(db, connection, mode)
     elif connection.provider == ProviderEnum.google:
         result = _sync_google_snapshots(db, connection, mode)
+    elif connection.provider == ProviderEnum.shopify:
+        # Shopify connections don't have ad metrics to sync — skip gracefully
+        logger.debug(f"[SYNC] Skipping metric sync for Shopify connection {connection.id}")
+        result.success = True
+        return result
     else:
         result.errors.append(f"Unsupported provider: {connection.provider}")
         return result
