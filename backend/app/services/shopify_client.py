@@ -29,7 +29,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 # Default API version
-DEFAULT_API_VERSION = "2024-07"
+DEFAULT_API_VERSION = "2026-01"
 
 # Rate limiting: Shopify allows 2 requests/second for regular apps
 # We use a simple semaphore-based rate limiter

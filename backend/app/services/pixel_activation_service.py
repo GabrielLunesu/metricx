@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # =============================================================================
 
-SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-07")
+SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2026-01")
 PIXEL_ENDPOINT = os.getenv("PIXEL_ENDPOINT", "https://api.metricx.ai/v1/pixel-events")
 
 
@@ -70,15 +70,15 @@ mutation webPixelDelete($id: ID!) {
 }
 """
 
-# Query to get existing web pixels
-WEB_PIXELS_QUERY = """
+# Query to get the current app's web pixel
+# WHAT: Singular webPixel query (no ID) returns this app's pixel
+# WHY: Each app has at most one web pixel per store
+# REFERENCES: https://shopify.dev/docs/api/admin-graphql/2024-07/queries/webPixel
+WEB_PIXEL_QUERY = """
 query {
-    webPixels(first: 10) {
-        edges {
-            node {
-                id
-            }
-        }
+    webPixel {
+        id
+        settings
     }
 }
 """
@@ -282,8 +282,9 @@ class PixelActivationService:
     ) -> Optional[str]:
         """Get existing web pixel for a shop.
 
-        WHAT: Queries for existing web pixels
+        WHAT: Queries the singular webPixel for the current app
         WHY: Avoid creating duplicates; reuse existing pixel
+        REFERENCES: https://shopify.dev/docs/api/admin-graphql/2024-07/queries/webPixel
 
         Args:
             shop_domain: The Shopify store domain
@@ -297,18 +298,14 @@ class PixelActivationService:
             result = await self._execute_graphql(
                 shop_domain=shop_domain,
                 access_token=access_token,
-                query=WEB_PIXELS_QUERY,
+                query=WEB_PIXEL_QUERY,
             )
 
-            edges = (
-                result.get("data", {})
-                .get("webPixels", {})
-                .get("edges", [])
-            )
+            logger.debug(f"[PIXEL_ACTIVATION] webPixel query response for {shop_domain}: {result}")
 
-            if edges:
-                # Return first pixel (should only be one per app)
-                return edges[0].get("node", {}).get("id")
+            pixel = result.get("data", {}).get("webPixel")
+            if pixel and pixel.get("id"):
+                return pixel["id"]
 
             return None
 

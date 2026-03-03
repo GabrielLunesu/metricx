@@ -14,7 +14,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-07")
+SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2026-01")
 
 
 async def subscribe_to_webhooks(

@@ -88,7 +88,7 @@ def _validate_shopify_config() -> None:
 # WHAT: Shopify API version string
 # WHY: Shopify requires explicit version in all API calls
 # REFERENCES: https://shopify.dev/docs/api/usage/versioning
-SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2024-07")
+SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2026-01")
 
 # OAuth scopes for full analytics access
 # WHAT: Permissions requested during OAuth
