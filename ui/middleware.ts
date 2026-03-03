@@ -51,6 +51,7 @@ const isPublicRoute = createRouteMatcher([
   '/integrations(.*)',
   '/use-cases(.*)',
   '/blog(.*)',
+  '/shopify(.*)',  // Shopify embedded app page (handles its own auth via Clerk components)
 ])
 
 export default clerkMiddleware(async (auth, request) => {

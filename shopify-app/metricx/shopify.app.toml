@@ -2,7 +2,7 @@
 
 client_id = "3cd42321fabca39e5c4e9cc29b619aca"
 name = "metricx"
-application_url = "https://www.metricx.ai"
+application_url = "https://www.metricx.ai/shopify"
 embedded = true
 
 [build]

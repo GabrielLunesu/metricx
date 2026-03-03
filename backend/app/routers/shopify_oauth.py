@@ -186,6 +186,7 @@ def extract_utms(landing_site: Optional[str]) -> dict:
 @router.get("/authorize")
 async def shopify_authorize(
     shop: str = Query(..., description="Shopify store domain (e.g., 'mystore' or 'mystore.myshopify.com')"),
+    redirect_path: Optional[str] = Query(None, description="Frontend path to redirect after OAuth (e.g., '/shopify')"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -215,9 +216,15 @@ async def shopify_authorize(
     # Build state parameter (contains workspace_id and shop_domain for callback)
     # WHAT: Encode workspace_id and shop in state for callback validation
     # WHY: Need both to create connection after OAuth completes
+    # Validate redirect_path is a safe relative path (prevent open redirect)
+    safe_redirect = "/settings"
+    if redirect_path and redirect_path.startswith("/") and not redirect_path.startswith("//"):
+        safe_redirect = redirect_path
+
     state_data = {
         "workspace_id": str(current_user.workspace_id),
         "shop_domain": shop_domain,
+        "redirect_path": safe_redirect,
     }
     state = json.dumps(state_data)
 
@@ -292,6 +299,7 @@ async def shopify_callback(
         state_data = json.loads(state)
         workspace_id = state_data.get("workspace_id")
         expected_shop = state_data.get("shop_domain")
+        redirect_path = state_data.get("redirect_path", "/settings")
     except (json.JSONDecodeError, KeyError) as e:
         logger.error(f"[SHOPIFY_OAUTH] Invalid state parameter: {e}")
         return RedirectResponse(
@@ -419,7 +427,7 @@ async def shopify_callback(
 
     # Redirect to frontend for confirmation
     return RedirectResponse(
-        url=f"{FRONTEND_URL}/settings?shopify_oauth=confirm&session_id={session_id}"
+        url=f"{FRONTEND_URL}{redirect_path}?shopify_oauth=confirm&session_id={session_id}"
     )
 
 
