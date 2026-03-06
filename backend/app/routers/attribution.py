@@ -526,7 +526,7 @@ async def reinstall_pixel(
 
     # Create new pixel
     logger.info(f"[PIXEL_REINSTALL] Creating new pixel for {shop_domain}")
-    new_pixel_id = await service.activate_pixel(
+    new_pixel_id, pixel_error = await service.activate_pixel(
         shop_domain=shop_domain,
         access_token=access_token,
         workspace_id=str(workspace_id),
@@ -546,13 +546,15 @@ async def reinstall_pixel(
             message="Pixel reinstalled successfully",
         )
     else:
-        logger.error(f"[PIXEL_REINSTALL] Failed to create new pixel for {shop_domain}")
+        logger.error(
+            f"[PIXEL_REINSTALL] Failed to create new pixel for {shop_domain}: {pixel_error}"
+        )
 
         return PixelReinstallResponse(
             success=False,
             old_pixel_id=old_pixel_id,
             new_pixel_id=None,
-            message="Failed to create new pixel. Check Shopify connection.",
+            message=pixel_error or "Failed to create new pixel. Check Shopify connection.",
         )
 
 
