@@ -1,7 +1,9 @@
 """Shopify webhook subscription service.
 
-WHAT: Manages webhook subscriptions for Shopify stores
-WHY: Webhooks must be registered via GraphQL API after OAuth
+WHAT: Manages shop-specific webhook subscriptions for Shopify stores
+WHY:
+    - Event topics like orders/paid can be registered via GraphQL after OAuth
+    - Mandatory compliance topics must be declared in shopify.app.toml
 REFERENCES:
     - https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/webhookSubscriptionCreate
     - docs/living-docs/ATTRIBUTION_ENGINE.md
@@ -23,8 +25,10 @@ async def subscribe_to_webhooks(
 ) -> dict:
     """Subscribe to required webhooks for a Shopify store.
 
-    WHAT: Register webhook subscriptions via GraphQL API
-    WHY: Attribution engine needs orders/paid webhook to trigger
+    WHAT: Register shop-specific webhook subscriptions via GraphQL API
+    WHY:
+        - Attribution engine needs orders/paid webhook to trigger
+        - Compliance webhooks are app-specific and are configured in shopify.app.toml
 
     Args:
         shop_domain: The shop's domain (e.g., "mystore.myshopify.com")
@@ -48,7 +52,8 @@ async def subscribe_to_webhooks(
         backend_url = backend_url.replace("http://", "https://")
         logger.info(f"[WEBHOOK_SUB] Upgraded to HTTPS: {backend_url}")
 
-    # Webhooks to subscribe
+    # Shop-specific webhook subscriptions created after install.
+    # Compliance topics are config-managed in shopify.app.toml for App Store review.
     webhooks = [
         {
             "topic": "ORDERS_PAID",

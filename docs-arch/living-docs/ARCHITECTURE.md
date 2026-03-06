@@ -586,7 +586,8 @@ pytest
 ### Shopify
 - **API**: Admin GraphQL API
 - **Features**: Products, customers, orders, attribution
-- **Webhooks**: GDPR compliance
+- **Webhooks**: GDPR compliance + orders/paid attribution trigger
+- **Compliance Subscription Model**: `customers/data_request`, `customers/redact`, and `shop/redact` are declared in `shopify-app/metricx/shopify.app.toml` and point to backend HTTPS endpoints on `api.metricx.ai`; runtime handling and HMAC verification live in `backend/app/routers/shopify_webhooks.py`
 
 ### Clerk
 - **Features**: OAuth, email/password, webhooks

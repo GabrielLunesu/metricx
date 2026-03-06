@@ -28,6 +28,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopifyShopModal from '@/components/ShopifyShopModal';
 import { getApiBase } from '@/lib/config';
+import {
+  buildShopifyReturnPath,
+  isShopifyEmbeddedContext,
+  verifyEmbeddedShopifySession,
+} from '@/lib/shopifyEmbedded';
 
 // Clerk appearance matching existing sign-in page style
 const clerkAppearance = {
@@ -62,10 +67,14 @@ export default function ShopifyEmbeddedPage() {
   const [sessionId, setSessionId] = useState(null);
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState(null);
+  const [embeddedReturnUrl, setEmbeddedReturnUrl] = useState('/shopify');
 
   // Extract Shopify params and handle OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const returnUrl = buildShopifyReturnPath('/shopify', window.location.search);
+
+    setEmbeddedReturnUrl(returnUrl);
 
     // Pre-fill shop domain from Shopify embed params
     const shop = params.get('shop');
@@ -81,11 +90,17 @@ export default function ShopifyEmbeddedPage() {
     if (oauthStatus === 'confirm' && sessionIdParam) {
       setSessionId(sessionIdParam);
       setShowConfirmModal(true);
-      window.history.replaceState({}, '', '/shopify');
+      window.history.replaceState({}, '', returnUrl);
     } else if (oauthStatus === 'error') {
       setMessage(`Connection failed: ${errorMessage || 'Unknown error'}`);
       setMessageType('error');
-      window.history.replaceState({}, '', '/shopify');
+      window.history.replaceState({}, '', returnUrl);
+    }
+
+    if (isShopifyEmbeddedContext(window.location.search)) {
+      verifyEmbeddedShopifySession({ search: window.location.search }).catch((error) => {
+        console.error('[shopify] Embedded session verification failed:', error);
+      });
     }
   }, []);
 
@@ -99,10 +114,11 @@ export default function ShopifyEmbeddedPage() {
     setConnecting(true);
     const baseUrl = getApiBase();
     const encodedShop = encodeURIComponent(shopDomain.trim());
+    const redirectPath = encodeURIComponent(embeddedReturnUrl);
 
     // Use top-level navigation to break out of Shopify iframe for OAuth
     // Pass redirect_path so callback returns to /shopify (not /settings)
-    window.top.location.href = `${baseUrl}/auth/shopify/authorize?shop=${encodedShop}&redirect_path=/shopify`;
+    window.top.location.href = `${baseUrl}/auth/shopify/authorize?shop=${encodedShop}&redirect_path=${redirectPath}`;
   };
 
   // Loading state while Clerk initializes
@@ -154,14 +170,14 @@ export default function ShopifyEmbeddedPage() {
 
             {authMode === 'sign-in' ? (
               <SignIn
-                signUpUrl="/shopify"
-                forceRedirectUrl="/shopify"
+                signUpUrl={embeddedReturnUrl}
+                forceRedirectUrl={embeddedReturnUrl}
                 appearance={clerkAppearance}
               />
             ) : (
               <SignUp
-                signInUrl="/shopify"
-                forceRedirectUrl="/shopify"
+                signInUrl={embeddedReturnUrl}
+                forceRedirectUrl={embeddedReturnUrl}
                 appearance={clerkAppearance}
               />
             )}
