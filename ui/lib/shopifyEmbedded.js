@@ -106,7 +106,7 @@ function getHostParam(search) {
   return params.get("host");
 }
 
-async function getEmbeddedSessionToken(search) {
+export async function getEmbeddedSessionToken(search) {
   const host = getHostParam(search);
 
   if (!host) {

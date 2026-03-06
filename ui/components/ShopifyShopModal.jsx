@@ -26,6 +26,7 @@ import {
  * - Similar pattern: MetaAccountSelectionModal.jsx
  */
 export default function ShopifyShopModal({
+  handoffId,
   open,
   onClose,
   sessionId,
@@ -49,6 +50,7 @@ export default function ShopifyShopModal({
         const response = await shopifyFlowFetch(
           `${baseUrl}/auth/shopify/shop?session_id=${sessionId}`,
           {
+            handoffId,
             method: 'GET',
           }
         );
@@ -72,7 +74,7 @@ export default function ShopifyShopModal({
     };
 
     fetchShop();
-  }, [open, sessionId]);
+  }, [handoffId, onAuthExpired, open, sessionId]);
 
   const handleConnect = async () => {
     try {
@@ -80,6 +82,7 @@ export default function ShopifyShopModal({
       setError(null);
       const baseUrl = getApiBase();
       const response = await shopifyFlowFetch(`${baseUrl}/auth/shopify/connect`, {
+        handoffId,
         method: 'POST',
         body: JSON.stringify({
           session_id: sessionId,

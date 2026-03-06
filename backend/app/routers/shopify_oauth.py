@@ -244,6 +244,10 @@ def _shopify_auth_handoff_key(handoff_id: str) -> str:
     return f"shopify_auth_handoff:{handoff_id}"
 
 
+def _shopify_auth_handoff_session_key(session_key: str) -> str:
+    return f"shopify_auth_handoff_session:{session_key}"
+
+
 async def get_shopify_flow_user(
     request: Request,
     db: Session = Depends(get_db),
@@ -349,25 +353,136 @@ def build_shopify_authorize_url(
 # OAUTH ENDPOINTS
 # =============================================================================
 
+class ShopifyAuthHandoffRequest(BaseModel):
+    """Request body for creating a Shopify iframe auth handoff."""
+    session_key: str
+    shop: Optional[str] = None
+
+
+class ResolveShopifyAuthHandoffRequest(BaseModel):
+    """Request body for resolving a Shopify iframe auth handoff."""
+    session_key: str
+
+
 @router.post("/handoff")
 async def create_shopify_auth_handoff(
+    request: ShopifyAuthHandoffRequest,
     current_user: User = Depends(get_current_user),
 ):
     """Create a short-lived auth handoff for the embedded Shopify iframe."""
+    if not request.session_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing Shopify session key",
+        )
+
+    shop_domain = None
+    if request.shop:
+        shop_domain = normalize_shop_domain(request.shop)
+        if not validate_shop_domain(shop_domain):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid Shopify store domain: {shop_domain}. Expected format: mystore.myshopify.com"
+            )
+
     handoff_id = str(uuid.uuid4())
     handoff_data = {
         "user_id": str(current_user.id),
         "workspace_id": str(current_user.workspace_id),
+        "session_key": request.session_key,
+        "shop_domain": shop_domain,
     }
 
-    _get_shopify_redis_client().setex(
+    redis_client = _get_shopify_redis_client()
+    redis_client.setex(
         _shopify_auth_handoff_key(handoff_id),
         SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
         json.dumps(handoff_data),
     )
+    redis_client.setex(
+        _shopify_auth_handoff_session_key(request.session_key),
+        SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
+        handoff_id,
+    )
 
     return {
         "handoff_id": handoff_id,
+        "expires_in": SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
+    }
+
+
+@router.post("/handoff/resolve")
+async def resolve_shopify_auth_handoff(
+    payload: ResolveShopifyAuthHandoffRequest,
+    request: Request,
+):
+    """Resolve a pending handoff using a fresh Shopify session token."""
+    if not payload.session_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing Shopify session key",
+        )
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Shopify session token",
+        )
+
+    claims = verify_shopify_session_token(auth_header[7:])
+    shop_domain = urlparse(claims.get("dest", "")).hostname
+    redis_client = _get_shopify_redis_client()
+
+    handoff_id = redis_client.get(
+        _shopify_auth_handoff_session_key(payload.session_key)
+    )
+    if not handoff_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Shopify auth handoff expired",
+        )
+
+    if isinstance(handoff_id, bytes):
+        handoff_id = handoff_id.decode("utf-8")
+
+    handoff_payload = redis_client.get(_shopify_auth_handoff_key(handoff_id))
+    if not handoff_payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Shopify auth handoff expired",
+        )
+
+    try:
+        handoff_data = json.loads(handoff_payload)
+    except json.JSONDecodeError as exc:
+        logger.warning("[SHOPIFY_OAUTH] Invalid auth handoff payload: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Shopify auth handoff",
+        ) from exc
+
+    expected_shop_domain = handoff_data.get("shop_domain")
+    if expected_shop_domain and expected_shop_domain != shop_domain:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Shopify auth handoff",
+        )
+
+    redis_client.setex(
+        _shopify_auth_handoff_key(handoff_id),
+        SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
+        json.dumps(handoff_data),
+    )
+    redis_client.setex(
+        _shopify_auth_handoff_session_key(payload.session_key),
+        SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
+        handoff_id,
+    )
+
+    return {
+        "handoff_id": handoff_id,
+        "shop": shop_domain,
         "expires_in": SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
     }
 

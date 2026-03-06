@@ -1,4 +1,5 @@
 import { getApiBase } from "./config";
+import { getEmbeddedSessionToken } from "./shopifyEmbedded";
 
 export const SHOPIFY_AUTH_HANDOFF_QUERY_KEY = "shopify_handoff";
 
@@ -15,6 +16,17 @@ function getCurrentSearch(search) {
   }
 
   return window.location.search;
+}
+
+function decodeBase64Url(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+
+  if (typeof window !== "undefined" && typeof window.atob === "function") {
+    return window.atob(padded);
+  }
+
+  return Buffer.from(padded, "base64").toString("utf-8");
 }
 
 function readStoredHandoff() {
@@ -83,18 +95,29 @@ export function getShopifyAuthHandoff(search) {
   return readStoredHandoff();
 }
 
-export function appendShopifyAuthHandoff(path, handoffId) {
-  if (!handoffId || typeof path !== "string" || !path) {
-    return path;
+export function getShopifySessionKey(search) {
+  const params = new URLSearchParams(getCurrentSearch(search));
+  const sessionKey = params.get("session");
+  if (sessionKey) {
+    return sessionKey;
   }
 
-  const baseOrigin =
-    typeof window !== "undefined" ? window.location.origin : "https://www.metricx.ai";
-  const url = new URL(path, baseOrigin);
+  const idToken = params.get("id_token");
+  if (!idToken) {
+    return null;
+  }
 
-  url.searchParams.set(SHOPIFY_AUTH_HANDOFF_QUERY_KEY, handoffId);
+  try {
+    const [, payload] = idToken.split(".");
+    if (!payload) {
+      return null;
+    }
 
-  return `${url.pathname}${url.search}${url.hash}`;
+    const claims = JSON.parse(decodeBase64Url(payload));
+    return claims?.sid || null;
+  } catch {
+    return null;
+  }
 }
 
 async function getClerkToken() {
@@ -121,13 +144,18 @@ async function getClerkToken() {
 }
 
 export async function shopifyFlowFetch(path, options = {}) {
+  const {
+    handoffId: explicitHandoffId,
+    headers: optionHeaders,
+    ...fetchOptions
+  } = options;
   const token = await getClerkToken();
-  const handoffId = getShopifyAuthHandoff();
+  const handoffId = explicitHandoffId || getShopifyAuthHandoff();
   const headers = {
-    ...options.headers,
+    ...optionHeaders,
   };
 
-  if (!headers["Content-Type"] && !(options.body instanceof FormData)) {
+  if (!headers["Content-Type"] && !(fetchOptions.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -140,21 +168,59 @@ export async function shopifyFlowFetch(path, options = {}) {
   const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
 
   return fetch(url, {
-    ...options,
+    ...fetchOptions,
     headers,
     credentials: "include",
   });
 }
 
-export async function createShopifyAuthHandoff() {
+export async function createShopifyAuthHandoff({ sessionKey, shop } = {}) {
+  if (!sessionKey) {
+    throw new Error("Missing Shopify session key");
+  }
+
   const response = await shopifyFlowFetch("/auth/shopify/handoff", {
     method: "POST",
+    body: JSON.stringify({
+      session_key: sessionKey,
+      shop,
+    }),
   });
 
   if (!response.ok) {
     const message = await response.text();
     throw new Error(
       `Shopify auth handoff failed: ${response.status} ${message}`
+    );
+  }
+
+  const data = await response.json();
+  persistShopifyAuthHandoff(data.handoff_id);
+  return data.handoff_id;
+}
+
+export async function resolveShopifyAuthHandoff({ sessionKey, search } = {}) {
+  if (!sessionKey) {
+    throw new Error("Missing Shopify session key");
+  }
+
+  const token = await getEmbeddedSessionToken(search);
+  const response = await fetch(`${getApiBase()}/auth/shopify/handoff/resolve`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    credentials: "include",
+    body: JSON.stringify({
+      session_key: sessionKey,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(
+      `Shopify auth handoff resolve failed: ${response.status} ${message}`
     );
   }
 

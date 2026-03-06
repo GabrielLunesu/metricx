@@ -8,10 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopifyShopModal from '@/components/ShopifyShopModal';
 import { buildAuthRedirectUrl } from '@/lib/authRedirect';
 import {
-  appendShopifyAuthHandoff,
   clearShopifyAuthHandoff,
   createShopifyAuthHandoff,
   getShopifyAuthHandoff,
+  getShopifySessionKey,
+  resolveShopifyAuthHandoff,
   shopifyFlowFetch,
 } from '@/lib/shopifyAuthHandoff';
 import {
@@ -35,6 +36,8 @@ export default function ShopifyEmbeddedPage() {
   const [embeddedReturnBase, setEmbeddedReturnBase] = useState('/shopify');
   const [embeddedSearch, setEmbeddedSearch] = useState('');
   const [handoffId, setHandoffId] = useState(null);
+  const [shopParam, setShopParam] = useState(null);
+  const [sessionKey, setSessionKey] = useState(null);
   const [topLevelWindow, setTopLevelWindow] = useState(false);
   const [bootstrappingEmbeddedSession, setBootstrappingEmbeddedSession] = useState(false);
   const sessionBootstrapRef = useRef(false);
@@ -56,9 +59,11 @@ export default function ShopifyEmbeddedPage() {
     setEmbeddedReturnBase(authReturnUrl);
     setEmbeddedSearch(new URL(appReturnUrl, window.location.origin).search);
     setHandoffId(getShopifyAuthHandoff(search));
+    setSessionKey(getShopifySessionKey(search));
 
     const shop = params.get('shop');
     if (shop) {
+      setShopParam(shop);
       setShopDomain(shop.replace('.myshopify.com', ''));
     }
 
@@ -97,25 +102,32 @@ export default function ShopifyEmbeddedPage() {
 
     const bootstrapEmbeddedSession = async () => {
       try {
-        if (topLevelWindow) {
-          setBootstrappingEmbeddedSession(true);
+        setBootstrappingEmbeddedSession(true);
 
-          const activeHandoffId = handoffId || await createShopifyAuthHandoff();
+        if (topLevelWindow) {
+          const activeHandoffId = handoffId || await createShopifyAuthHandoff({
+            sessionKey,
+            shop: shopParam,
+          });
           if (cancelled) {
             return;
           }
 
           setHandoffId(activeHandoffId);
+          await verifyEmbeddedShopifySession({ search: embeddedSearch });
+          return;
+        }
 
-          const currentPath = appendShopifyAuthHandoff(
-            `${window.location.pathname}${window.location.search}`,
-            activeHandoffId
-          );
-          window.history.replaceState({}, '', currentPath);
-
-          await verifyEmbeddedShopifySession({
-            search: new URL(currentPath, window.location.origin).search,
+        if (!handoffId) {
+          const resolvedHandoffId = await resolveShopifyAuthHandoff({
+            sessionKey,
+            search: embeddedSearch,
           });
+          if (cancelled) {
+            return;
+          }
+
+          setHandoffId(resolvedHandoffId);
           return;
         }
 
@@ -142,9 +154,9 @@ export default function ShopifyEmbeddedPage() {
     return () => {
       cancelled = true;
     };
-  }, [embeddedSearch, handoffId, isLoaded, isSignedIn, topLevelWindow]);
+  }, [embeddedSearch, handoffId, isLoaded, isSignedIn, sessionKey, shopParam, topLevelWindow]);
 
-  const embeddedReturnUrl = appendShopifyAuthHandoff(embeddedReturnBase, handoffId);
+  const embeddedReturnUrl = embeddedReturnBase;
   const isAuthenticatedForShopify = isSignedIn || Boolean(handoffId);
 
   const handleAuthExpired = () => {
@@ -168,6 +180,7 @@ export default function ShopifyEmbeddedPage() {
 
     try {
       const response = await shopifyFlowFetch('/auth/shopify/authorize-url', {
+        handoffId,
         method: 'POST',
         body: JSON.stringify({
           shop: shopDomain.trim(),
@@ -345,6 +358,7 @@ export default function ShopifyEmbeddedPage() {
         )}
 
         <ShopifyShopModal
+          handoffId={handoffId}
           open={showConfirmModal}
           onClose={() => {
             setShowConfirmModal(false);
