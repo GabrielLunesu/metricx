@@ -57,7 +57,6 @@ SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET")
 SHOPIFY_REDIRECT_URI = os.getenv("SHOPIFY_OAUTH_REDIRECT_URI")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
-SHOPIFY_AUTH_HANDOFF_TTL_SECONDS = 600
 
 
 def _validate_shopify_config() -> None:
@@ -227,86 +226,42 @@ def verify_shopify_session_token(token: str) -> dict:
     return claims
 
 
-def _get_shopify_redis_client():
-    """Return the Redis client used by Shopify OAuth flow state."""
-    from app import state as app_state
+def build_shopify_frontend_redirect(
+    redirect_path: Optional[str],
+    *,
+    status_value: str,
+    message: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> str:
+    """Build a safe frontend redirect URL for Shopify OAuth completion."""
+    safe_redirect = "/settings"
+    if redirect_path and redirect_path.startswith("/") and not redirect_path.startswith("//"):
+        safe_redirect = redirect_path
 
-    if not app_state.context_manager:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Redis is required for Shopify auth flow but is currently unavailable.",
-        )
+    params = {"shopify_oauth": status_value}
+    if message:
+        params["message"] = message
+    if session_id:
+        params["session_id"] = session_id
 
-    return app_state.context_manager.redis_client
-
-
-def _shopify_auth_handoff_key(handoff_id: str) -> str:
-    return f"shopify_auth_handoff:{handoff_id}"
+    return append_query_params(f"{FRONTEND_URL}{safe_redirect}", params)
 
 
-def _shopify_auth_handoff_session_key(session_key: str) -> str:
-    return f"shopify_auth_handoff_session:{session_key}"
-
-
-async def get_shopify_flow_user(
-    request: Request,
-    db: Session = Depends(get_db),
-) -> User:
-    """Resolve the current user for embedded Shopify flows.
-
-    Falls back to a short-lived handoff token when the Clerk browser session is
-    not visible inside Shopify's iframe after top-level auth.
-    """
-    try:
-        return await get_current_user(request, db)
-    except HTTPException as exc:
-        if exc.status_code != status.HTTP_401_UNAUTHORIZED:
-            raise
-
-    handoff_id = (
-        request.headers.get("X-Shopify-Auth-Handoff")
-        or request.query_params.get("shopify_handoff")
-    )
-    if not handoff_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
-
-    handoff_payload = _get_shopify_redis_client().get(
-        _shopify_auth_handoff_key(handoff_id)
-    )
-    if not handoff_payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Shopify auth handoff expired",
-        )
+def extract_redirect_path_from_state(state: Optional[str]) -> str:
+    """Best-effort redirect path extraction for Shopify OAuth callbacks."""
+    if not state:
+        return "/settings"
 
     try:
-        handoff_data = json.loads(handoff_payload)
-    except json.JSONDecodeError as exc:
-        logger.warning("[SHOPIFY_OAUTH] Invalid auth handoff payload: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Shopify auth handoff",
-        ) from exc
+        state_data = json.loads(state)
+    except (json.JSONDecodeError, TypeError):
+        return "/settings"
 
-    try:
-        user_id = uuid.UUID(handoff_data.get("user_id", ""))
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Shopify auth handoff",
-        ) from exc
+    redirect_path = state_data.get("redirect_path")
+    if isinstance(redirect_path, str) and redirect_path.startswith("/") and not redirect_path.startswith("//"):
+        return redirect_path
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user or str(user.workspace_id) != handoff_data.get("workspace_id"):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Shopify auth handoff",
-        )
-
-    return user
+    return "/settings"
 
 
 def build_shopify_authorize_url(
@@ -353,76 +308,8 @@ def build_shopify_authorize_url(
 # OAUTH ENDPOINTS
 # =============================================================================
 
-class ShopifyAuthHandoffRequest(BaseModel):
-    """Request body for creating a Shopify iframe auth handoff."""
-    session_key: str
-    shop: Optional[str] = None
-
-
-class ResolveShopifyAuthHandoffRequest(BaseModel):
-    """Request body for resolving a Shopify iframe auth handoff."""
-    session_key: str
-
-
-@router.post("/handoff")
-async def create_shopify_auth_handoff(
-    request: ShopifyAuthHandoffRequest,
-    current_user: User = Depends(get_current_user),
-):
-    """Create a short-lived auth handoff for the embedded Shopify iframe."""
-    if not request.session_key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing Shopify session key",
-        )
-
-    shop_domain = None
-    if request.shop:
-        shop_domain = normalize_shop_domain(request.shop)
-        if not validate_shop_domain(shop_domain):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid Shopify store domain: {shop_domain}. Expected format: mystore.myshopify.com"
-            )
-
-    handoff_id = str(uuid.uuid4())
-    handoff_data = {
-        "user_id": str(current_user.id),
-        "workspace_id": str(current_user.workspace_id),
-        "session_key": request.session_key,
-        "shop_domain": shop_domain,
-    }
-
-    redis_client = _get_shopify_redis_client()
-    redis_client.setex(
-        _shopify_auth_handoff_key(handoff_id),
-        SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
-        json.dumps(handoff_data),
-    )
-    redis_client.setex(
-        _shopify_auth_handoff_session_key(request.session_key),
-        SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
-        handoff_id,
-    )
-
-    return {
-        "handoff_id": handoff_id,
-        "expires_in": SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
-    }
-
-
-@router.post("/handoff/resolve")
-async def resolve_shopify_auth_handoff(
-    payload: ResolveShopifyAuthHandoffRequest,
-    request: Request,
-):
-    """Resolve a pending handoff using a fresh Shopify session token."""
-    if not payload.session_key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing Shopify session key",
-        )
-
+def get_shopify_session_claims(request: Request) -> tuple[dict, str]:
+    """Return verified Shopify session claims and the normalized shop domain."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         raise HTTPException(
@@ -432,59 +319,13 @@ async def resolve_shopify_auth_handoff(
 
     claims = verify_shopify_session_token(auth_header[7:])
     shop_domain = urlparse(claims.get("dest", "")).hostname
-    redis_client = _get_shopify_redis_client()
-
-    handoff_id = redis_client.get(
-        _shopify_auth_handoff_session_key(payload.session_key)
-    )
-    if not handoff_id:
+    if not shop_domain:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Shopify auth handoff expired",
+            detail="Invalid Shopify session token",
         )
 
-    if isinstance(handoff_id, bytes):
-        handoff_id = handoff_id.decode("utf-8")
-
-    handoff_payload = redis_client.get(_shopify_auth_handoff_key(handoff_id))
-    if not handoff_payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Shopify auth handoff expired",
-        )
-
-    try:
-        handoff_data = json.loads(handoff_payload)
-    except json.JSONDecodeError as exc:
-        logger.warning("[SHOPIFY_OAUTH] Invalid auth handoff payload: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Shopify auth handoff",
-        ) from exc
-
-    expected_shop_domain = handoff_data.get("shop_domain")
-    if expected_shop_domain and expected_shop_domain != shop_domain:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Shopify auth handoff",
-        )
-
-    redis_client.setex(
-        _shopify_auth_handoff_key(handoff_id),
-        SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
-        json.dumps(handoff_data),
-    )
-    redis_client.setex(
-        _shopify_auth_handoff_session_key(payload.session_key),
-        SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
-        handoff_id,
-    )
-
-    return {
-        "handoff_id": handoff_id,
-        "shop": shop_domain,
-        "expires_in": SHOPIFY_AUTH_HANDOFF_TTL_SECONDS,
-    }
+    return claims, shop_domain
 
 
 @router.get("/session")
@@ -494,16 +335,7 @@ async def verify_embedded_session(request: Request):
     WHAT: Validates the session token generated by Shopify App Bridge
     WHY: Embedded apps must authenticate backend requests with session tokens
     """
-    auth_header = request.headers.get("Authorization", "")
-
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Shopify session token",
-        )
-
-    claims = verify_shopify_session_token(auth_header[7:])
-    shop_domain = urlparse(claims.get("dest", "")).hostname
+    claims, shop_domain = get_shopify_session_claims(request)
 
     return {
         "authenticated": True,
@@ -512,6 +344,50 @@ async def verify_embedded_session(request: Request):
         "session_id": claims.get("sid"),
         "expires_at": claims.get("exp"),
     }
+
+
+@router.get("/embedded-status")
+async def get_embedded_shop_status(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Return Shopify-session-authenticated link status for the embedded app."""
+    claims, shop_domain = get_shopify_session_claims(request)
+
+    linked_shop = (
+        db.query(ShopifyShop, Connection, Workspace)
+        .join(Connection, ShopifyShop.connection_id == Connection.id)
+        .join(Workspace, ShopifyShop.workspace_id == Workspace.id)
+        .filter(
+            ShopifyShop.shop_domain == shop_domain,
+            Connection.provider == ProviderEnum.shopify,
+        )
+        .order_by(Connection.connected_at.desc())
+        .first()
+    )
+
+    response = {
+        "authenticated": True,
+        "shop": shop_domain,
+        "user_id": claims.get("sub"),
+        "session_id": claims.get("sid"),
+        "expires_at": claims.get("exp"),
+        "linked": bool(linked_shop),
+    }
+
+    if linked_shop:
+        shop, connection, workspace = linked_shop
+        response.update(
+            {
+                "connection_id": str(connection.id),
+                "connection_name": connection.name,
+                "workspace_id": str(workspace.id),
+                "workspace_name": workspace.name,
+                "shop_name": shop.shop_name,
+            }
+        )
+
+    return response
 
 
 @router.get("/authorize")
@@ -562,31 +438,40 @@ async def shopify_callback(
     """
     # Validate configuration at runtime
     _validate_shopify_config()
+    redirect_path = extract_redirect_path_from_state(state)
 
     # Handle errors from Shopify
     if error:
         logger.error(f"[SHOPIFY_OAUTH] OAuth error: {error} - {error_description}")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message={error}"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message=error,
+        ))
 
     if not code:
         logger.error("[SHOPIFY_OAUTH] Missing authorization code")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=missing_code"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="missing_code",
+        ))
 
     if not shop:
         logger.error("[SHOPIFY_OAUTH] Missing shop parameter")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=missing_shop"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="missing_shop",
+        ))
 
     if not state:
         logger.error("[SHOPIFY_OAUTH] Missing state parameter")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=missing_state"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="missing_state",
+        ))
 
     # Parse and validate state
     try:
@@ -596,9 +481,11 @@ async def shopify_callback(
         redirect_path = state_data.get("redirect_path", "/settings")
     except (json.JSONDecodeError, KeyError) as e:
         logger.error(f"[SHOPIFY_OAUTH] Invalid state parameter: {e}")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=invalid_state"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="invalid_state",
+        ))
 
     # Normalize shop from callback
     shop_domain = normalize_shop_domain(shop)
@@ -606,17 +493,21 @@ async def shopify_callback(
     # Verify shop matches what we expected (CSRF protection)
     if shop_domain != expected_shop:
         logger.error(f"[SHOPIFY_OAUTH] Shop mismatch: expected {expected_shop}, got {shop_domain}")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=shop_mismatch"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="shop_mismatch",
+        ))
 
     # Verify workspace exists
     workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
     if not workspace:
         logger.error(f"[SHOPIFY_OAUTH] Invalid workspace ID: {workspace_id}")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=invalid_workspace"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="invalid_workspace",
+        ))
 
     # Exchange code for access token
     # WHAT: POST request to Shopify token endpoint
@@ -635,23 +526,29 @@ async def shopify_callback(
             token_data = token_response.json()
     except httpx.HTTPStatusError as e:
         logger.exception(f"[SHOPIFY_OAUTH] Token exchange failed: {e.response.text}")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=token_exchange_failed"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="token_exchange_failed",
+        ))
     except Exception as e:
         logger.exception(f"[SHOPIFY_OAUTH] Token exchange failed: {e}")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=token_exchange_failed"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="token_exchange_failed",
+        ))
 
     access_token = token_data.get("access_token")
     scope = token_data.get("scope", "")  # Granted scopes
 
     if not access_token:
         logger.error("[SHOPIFY_OAUTH] Missing access token in response")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=missing_token"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="missing_token",
+        ))
 
     logger.info(f"[SHOPIFY_OAUTH] Token exchange successful for {shop_domain}")
     logger.info(f"[SHOPIFY_OAUTH] Granted scopes: {scope}")
@@ -672,9 +569,11 @@ async def shopify_callback(
             shop_data = shop_response.json().get("shop", {})
     except Exception as e:
         logger.exception(f"[SHOPIFY_OAUTH] Failed to fetch shop info: {e}")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=shop_fetch_failed"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="shop_fetch_failed",
+        ))
 
     shop_info = {
         "id": str(shop_data.get("id")),
@@ -697,9 +596,11 @@ async def shopify_callback(
 
     if not app_state.context_manager:
         logger.error("[SHOPIFY_OAUTH] Redis not available")
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?shopify_oauth=error&message=redis_unavailable"
-        )
+        return RedirectResponse(url=build_shopify_frontend_redirect(
+            redirect_path,
+            status_value="error",
+            message="redis_unavailable",
+        ))
 
     session_id = str(uuid.uuid4())
 
@@ -720,21 +621,17 @@ async def shopify_callback(
     logger.info(f"[SHOPIFY_OAUTH] Stored OAuth session: {session_id}")
 
     # Redirect to frontend for confirmation
-    redirect_url = append_query_params(
-        f"{FRONTEND_URL}{redirect_path}",
-        {
-            "shopify_oauth": "confirm",
-            "session_id": session_id,
-        },
-    )
-
-    return RedirectResponse(url=redirect_url)
+    return RedirectResponse(url=build_shopify_frontend_redirect(
+        redirect_path,
+        status_value="confirm",
+        session_id=session_id,
+    ))
 
 
 @router.get("/shop")
 async def get_oauth_shop(
     session_id: str = Query(..., description="OAuth session ID from callback"),
-    current_user: User = Depends(get_shopify_flow_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get shop info available for connection from OAuth flow.
 
@@ -780,37 +677,11 @@ class ConnectShopRequest(BaseModel):
     session_id: str
 
 
-class AuthorizeShopRequest(BaseModel):
-    """Request body for building a Shopify OAuth URL in embedded flows."""
-    shop: str
-    redirect_path: Optional[str] = None
-
-
-@router.post("/authorize-url")
-async def shopify_authorize_url(
-    request: AuthorizeShopRequest,
-    current_user: User = Depends(get_shopify_flow_user),
-):
-    """Return the Shopify OAuth URL without depending on browser cookies."""
-    auth_url = build_shopify_authorize_url(
-        shop=request.shop,
-        redirect_path=request.redirect_path,
-        current_user=current_user,
-    )
-
-    logger.info(
-        "[SHOPIFY_OAUTH] Generated embedded auth URL for user %s",
-        current_user.id,
-    )
-
-    return {"auth_url": auth_url}
-
-
 @router.post("/connect")
 async def connect_shop(
     request: ConnectShopRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_shopify_flow_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Create connection for the Shopify shop.
 
@@ -857,6 +728,15 @@ async def connect_shop(
     shop_id = shop_info["id"]
 
     try:
+        existing_shop_link = db.query(ShopifyShop).filter(
+            ShopifyShop.shop_domain == shop_domain
+        ).first()
+        if existing_shop_link and str(existing_shop_link.workspace_id) != workspace_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This Shopify store is already linked to another workspace.",
+            )
+
         # Check if connection already exists for this shop
         existing_connection = db.query(Connection).filter(
             Connection.workspace_id == workspace_id,
@@ -1042,6 +922,9 @@ async def connect_shop(
             "webhook_error": webhook_error,
         }
 
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.exception(f"[SHOPIFY_OAUTH] Failed to create connection: {e}")

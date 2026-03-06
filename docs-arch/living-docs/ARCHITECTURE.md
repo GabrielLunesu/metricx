@@ -587,6 +587,7 @@ pytest
 - **API**: Admin GraphQL API
 - **Features**: Products, customers, orders, attribution
 - **Webhooks**: GDPR compliance + orders/paid attribution trigger
+- **Embedded Auth Model**: `/shopify` authenticates backend calls with Shopify App Bridge session tokens only; Metricx account linking happens on a separate top-level `/shopify/link` page that uses normal Clerk auth and then returns the merchant to Shopify admin
 - **Compliance Subscription Model**: `customers/data_request`, `customers/redact`, and `shop/redact` are declared in `shopify-app/metricx/shopify.app.toml` and point to backend HTTPS endpoints on `api.metricx.ai`; runtime handling and HMAC verification live in `backend/app/routers/shopify_webhooks.py`
 
 ### Clerk

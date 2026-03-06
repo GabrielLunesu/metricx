@@ -1,20 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Store, ExternalLink, CheckCircle, ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { ArrowRight, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import ShopifyShopModal from '@/components/ShopifyShopModal';
-import { buildAuthRedirectUrl } from '@/lib/authRedirect';
-import {
-  clearShopifyAuthHandoff,
-  createShopifyAuthHandoff,
-  getShopifyAuthHandoff,
-  getShopifySessionKey,
-  resolveShopifyAuthHandoff,
-  shopifyFlowFetch,
-} from '@/lib/shopifyAuthHandoff';
 import {
   buildShopifyReturnPath,
   isShopifyEmbeddedContext,
@@ -24,215 +13,114 @@ import {
 
 const SHOPIFY_URL_STRIP_PARAMS = ['shopify_oauth', 'session_id', 'message'];
 
+function buildShopifyLinkUrl(shop, returnTo) {
+  const params = new URLSearchParams();
+
+  if (shop) {
+    params.set('shop', shop);
+  }
+
+  if (returnTo) {
+    params.set('return_to', returnTo);
+  }
+
+  const query = params.toString();
+  return query ? `/shopify/link?${query}` : '/shopify/link';
+}
+
 export default function ShopifyEmbeddedPage() {
-  const { isLoaded, isSignedIn } = useUser();
-  const [shopDomain, setShopDomain] = useState('');
-  const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [sessionId, setSessionId] = useState(null);
-  const [message, setMessage] = useState(null);
-  const [messageType, setMessageType] = useState(null);
-  const [embeddedReturnBase, setEmbeddedReturnBase] = useState('/shopify');
-  const [embeddedSearch, setEmbeddedSearch] = useState('');
-  const [handoffId, setHandoffId] = useState(null);
-  const [shopParam, setShopParam] = useState(null);
-  const [sessionKey, setSessionKey] = useState(null);
-  const [topLevelWindow, setTopLevelWindow] = useState(false);
-  const [bootstrappingEmbeddedSession, setBootstrappingEmbeddedSession] = useState(false);
-  const sessionBootstrapRef = useRef(false);
+  const [state, setState] = useState({
+    status: 'loading',
+    error: null,
+    embeddedStatus: null,
+    linkUrl: '/shopify/link',
+  });
 
   useEffect(() => {
     const search = window.location.search;
     const params = new URLSearchParams(search);
-    const appPathname = window.location.pathname;
-    const currentUrl = `${appPathname}${search}`;
-    const appReturnUrl = buildShopifyReturnPath(appPathname, search, {
+    const returnTo = buildShopifyReturnPath('/shopify', search, {
       stripParams: SHOPIFY_URL_STRIP_PARAMS,
     });
-    const authReturnUrl = buildShopifyReturnPath('/shopify', search, {
-      stripParams: SHOPIFY_URL_STRIP_PARAMS,
-    });
+    const shopParam = params.get('shop');
 
     persistShopifyEmbeddedContext(search);
-    setTopLevelWindow(window.top === window.self);
-    setEmbeddedReturnBase(authReturnUrl);
-    setEmbeddedSearch(new URL(appReturnUrl, window.location.origin).search);
-    setHandoffId(getShopifyAuthHandoff(search));
-    setSessionKey(getShopifySessionKey(search));
+    setState((current) => ({
+      ...current,
+      linkUrl: buildShopifyLinkUrl(shopParam, returnTo),
+    }));
 
-    const shop = params.get('shop');
-    if (shop) {
-      setShopParam(shop);
-      setShopDomain(shop.replace('.myshopify.com', ''));
-    }
-
-    const oauthStatus = params.get('shopify_oauth');
-    const sessionIdParam = params.get('session_id');
-    const errorMessage = params.get('message');
-
-    if (oauthStatus === 'confirm' && sessionIdParam) {
-      setSessionId(sessionIdParam);
-      setShowConfirmModal(true);
-      window.history.replaceState({}, '', appReturnUrl);
-    } else if (oauthStatus === 'error') {
-      setMessage(`Connection failed: ${errorMessage || 'Unknown error'}`);
-      setMessageType('error');
-      window.history.replaceState({}, '', appReturnUrl);
-    } else if (appReturnUrl !== currentUrl) {
-      window.history.replaceState({}, '', appReturnUrl);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded || !embeddedSearch || !isShopifyEmbeddedContext(embeddedSearch)) {
-      return;
-    }
-
-    if (topLevelWindow && !isSignedIn) {
-      return;
-    }
-
-    if (sessionBootstrapRef.current) {
+    if (!isShopifyEmbeddedContext(search)) {
+      setState((current) => ({
+        ...current,
+        status: 'error',
+        error: 'Open this app from Shopify admin to continue.',
+      }));
       return;
     }
 
     let cancelled = false;
-    sessionBootstrapRef.current = true;
 
-    const bootstrapEmbeddedSession = async () => {
+    const loadEmbeddedStatus = async () => {
       try {
-        setBootstrappingEmbeddedSession(true);
+        const embeddedStatus = await verifyEmbeddedShopifySession({
+          endpoint: '/api/auth/shopify/embedded-status',
+          search,
+        });
 
-        if (topLevelWindow) {
-          const activeHandoffId = await createShopifyAuthHandoff({
-            sessionKey,
-            shop: shopParam,
-          });
-          if (cancelled) {
-            return;
-          }
-
-          setHandoffId(activeHandoffId);
-          await verifyEmbeddedShopifySession({ search: embeddedSearch });
+        if (cancelled) {
           return;
         }
 
-        if (!handoffId) {
-          const resolvedHandoffId = await resolveShopifyAuthHandoff({
-            sessionKey,
-            search: embeddedSearch,
-          });
-          if (cancelled) {
-            return;
-          }
-
-          setHandoffId(resolvedHandoffId);
-          return;
-        }
-
-        await verifyEmbeddedShopifySession({ search: embeddedSearch });
+        setState({
+          status: 'ready',
+          error: null,
+          embeddedStatus,
+          linkUrl: buildShopifyLinkUrl(embeddedStatus.shop || shopParam, returnTo),
+        });
       } catch (error) {
-        console.error('[shopify] Embedded session bootstrap failed:', error);
-        sessionBootstrapRef.current = false;
-        clearShopifyAuthHandoff();
+        if (cancelled) {
+          return;
+        }
 
-        if (!cancelled) {
-          setHandoffId(null);
-          setMessage('Unable to resume your Shopify session. Please sign in again.');
-          setMessageType('error');
-        }
-      } finally {
-        if (!cancelled) {
-          setBootstrappingEmbeddedSession(false);
-        }
+        setState((current) => ({
+          ...current,
+          status: 'error',
+          error: error.message || 'Unable to verify your Shopify session.',
+        }));
       }
     };
 
-    bootstrapEmbeddedSession();
+    loadEmbeddedStatus();
 
     return () => {
       cancelled = true;
     };
-  }, [embeddedSearch, handoffId, isLoaded, isSignedIn, sessionKey, shopParam, topLevelWindow]);
+  }, []);
 
-  const embeddedReturnUrl = embeddedReturnBase;
-  const isAuthenticatedForShopify = isSignedIn || Boolean(handoffId);
+  const { status, error, embeddedStatus, linkUrl } = state;
+  const shopLabel =
+    embeddedStatus?.shop_name ||
+    embeddedStatus?.shop ||
+    'your Shopify store';
 
-  const handleAuthExpired = () => {
-    clearShopifyAuthHandoff();
-    setConnecting(false);
-    setHandoffId(null);
-    setMessage('Your session expired. Please sign in again to continue.');
-    setMessageType('error');
-  };
-
-  const handleConnect = async () => {
-    if (!shopDomain.trim()) {
-      setMessage('Please enter your Shopify store domain');
-      setMessageType('error');
-      return;
-    }
-
-    setConnecting(true);
-    setMessage(null);
-    setMessageType(null);
-
-    try {
-      const response = await shopifyFlowFetch('/auth/shopify/authorize-url', {
-        handoffId,
-        method: 'POST',
-        body: JSON.stringify({
-          shop: shopDomain.trim(),
-          redirect_path: embeddedReturnUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          handleAuthExpired();
-          setConnecting(false);
-          return;
-        }
-
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to start Shopify authorization');
-      }
-
-      const data = await response.json();
-      window.top.location.href = data.auth_url;
-    } catch (error) {
-      setConnecting(false);
-      setMessage(error.message || 'Failed to start Shopify authorization');
-      setMessageType('error');
-    }
-  };
-
-  const handleAuthRedirect = (path) => {
-    const handoffReturnUrl = buildAuthRedirectUrl('/shopify-auth-return', embeddedReturnUrl);
-    const authUrl = buildAuthRedirectUrl(path, handoffReturnUrl);
-    window.top.location.href = authUrl;
-  };
-
-  if (!isLoaded || bootstrappingEmbeddedSession) {
+  if (status === 'loading') {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 via-white to-gray-50/50">
-        <div className="flex flex-col items-center gap-3 text-center px-6">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-          {bootstrappingEmbeddedSession ? (
-            <p className="text-sm text-gray-500">Returning you to the embedded Shopify app...</p>
-          ) : null}
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 via-white to-gray-50/50">
+        <div className="flex flex-col items-center gap-3 px-6 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <p className="text-sm text-gray-500">Checking your Shopify connection...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 via-white to-gray-50/50 relative overflow-hidden">
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-br from-blue-100/40 via-cyan-100/30 to-transparent rounded-full blur-3xl pointer-events-none" />
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 via-white to-gray-50/50 p-6">
+      <div className="pointer-events-none absolute left-1/2 top-1/4 h-[800px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-br from-blue-100/40 via-cyan-100/30 to-transparent blur-3xl" />
 
       <div className="relative z-10 w-full max-w-md">
-        <div className="flex justify-center mb-8">
+        <div className="mb-8 flex justify-center">
           <Image
             src="/logo.png"
             alt="metricx"
@@ -243,138 +131,58 @@ export default function ShopifyEmbeddedPage() {
           />
         </div>
 
-        {message && (
-          <div
-            className={`mb-6 p-3 rounded-lg text-sm ${
-              messageType === 'error'
-                ? 'bg-red-50 text-red-800 border border-red-200'
-                : 'bg-blue-50 text-blue-800 border border-blue-200'
-            }`}
-          >
-            {message}
+        {error ? (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {error}
           </div>
-        )}
+        ) : null}
 
-        {!isAuthenticatedForShopify && (
+        {embeddedStatus?.linked ? (
           <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-xl font-semibold text-gray-900">
-                Sign In To Continue
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                Continue in a full browser tab, then we&apos;ll send you back to Shopify.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                onClick={() => handleAuthRedirect('/sign-in')}
-                className="w-full rounded-xl"
-              >
-                <LogIn className="w-4 h-4 mr-2" />
-                Open Sign In
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleAuthRedirect('/sign-up')}
-                className="w-full rounded-xl"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Create Account
-              </Button>
-              <p className="text-xs text-neutral-400 text-center">
-                Social login runs top-level to avoid Shopify iframe auth failures.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {isAuthenticatedForShopify && !connected && (
-          <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-xl font-semibold text-gray-900">
-                Connect Your Store
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                Link your Shopify store to start tracking your ad performance
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Store className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                  <input
-                    type="text"
-                    value={shopDomain}
-                    onChange={(event) => setShopDomain(event.target.value)}
-                    onKeyDown={(event) => event.key === 'Enter' && handleConnect()}
-                    placeholder="mystore"
-                    disabled={connecting}
-                    className="w-full pl-10 pr-4 py-2.5 border border-neutral-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:opacity-50 disabled:bg-neutral-50"
-                  />
-                </div>
-                <Button
-                  onClick={handleConnect}
-                  disabled={connecting || !shopDomain.trim()}
-                  className="rounded-xl"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  {connecting ? 'Connecting...' : 'Connect'}
-                </Button>
-              </div>
-
-              {shopDomain.trim() && (
-                <p className="text-xs text-neutral-500">
-                  Will connect: <span className="font-mono">{shopDomain.trim().toLowerCase().replace('.myshopify.com', '')}.myshopify.com</span>
-                </p>
-              )}
-
-              <p className="text-xs text-neutral-400 text-center">
-                You&apos;ll be redirected to Shopify to authorize access
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {isAuthenticatedForShopify && connected && (
-          <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
-            <CardContent className="text-center py-8 space-y-4">
-              <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
+            <CardContent className="space-y-4 py-8 text-center">
+              <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Store Connected</h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Your Shopify store is now linked to metricx
+                <h2 className="text-xl font-semibold text-gray-900">{shopLabel} is connected</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Linked to {embeddedStatus.workspace_name || 'your Metricx workspace'}.
                 </p>
               </div>
-              <Button
-                asChild
-                className="rounded-xl"
-              >
+              <Button asChild className="w-full rounded-xl">
                 <Link href="/dashboard" target="_top">
-                  Go to Dashboard
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  Open Metricx
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full rounded-xl">
+                <Link href={linkUrl} target="_top">
+                  Manage account link
                 </Link>
               </Button>
             </CardContent>
           </Card>
+        ) : (
+          <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
+            <CardHeader className="pb-2 text-center">
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Finish Setup In Browser
+              </CardTitle>
+              <p className="mt-1 text-sm text-gray-500">
+                Sign in to Metricx and link {shopLabel} in a full browser tab, then return here.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button asChild className="w-full rounded-xl">
+                <Link href={linkUrl} target="_top">
+                  Continue setup
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <p className="text-center text-xs text-neutral-400">
+                The embedded app now uses Shopify session tokens only. Account linking happens outside the iframe.
+              </p>
+            </CardContent>
+          </Card>
         )}
-
-        <ShopifyShopModal
-          handoffId={handoffId}
-          open={showConfirmModal}
-          onClose={() => {
-            setShowConfirmModal(false);
-            setSessionId(null);
-          }}
-          sessionId={sessionId}
-          onAuthExpired={handleAuthExpired}
-          onSuccess={() => {
-            setShowConfirmModal(false);
-            setSessionId(null);
-            setConnected(true);
-            setMessage('Store connected successfully');
-            setMessageType('info');
-          }}
-        />
       </div>
     </main>
   );

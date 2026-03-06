@@ -19,7 +19,6 @@ import { UserProfile, useClerk } from '@clerk/nextjs';
 import { AlertTriangle, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { deleteUserAccount } from '@/lib/api';
-import { clearShopifyAuthHandoff } from '@/lib/shopifyAuthHandoff';
 
 export default function ProfileTab() {
   const { user, signOut } = useClerk();
@@ -58,7 +57,6 @@ export default function ProfileTab() {
       }
 
       // Sign out and redirect (user data is deleted regardless of Clerk deletion)
-      clearShopifyAuthHandoff();
       await signOut();
       toast.success('Account deleted successfully');
       window.location.href = '/';
