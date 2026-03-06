@@ -10,7 +10,7 @@
  * - No client-side auth state management needed (Clerk handles it)
  *
  * REFERENCES:
- *   - ui/middleware.ts (route protection)
+ *   - ui/proxy.ts (route protection)
  *   - ui/app/layout.jsx (ClerkProvider)
  */
 

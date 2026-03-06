@@ -1,11 +1,12 @@
 /**
- * Clerk Middleware - Server-side route protection.
+ * Clerk Proxy - Server-side route protection.
  *
- * WHAT: Validates Clerk session before allowing access to protected routes
- * WHY: Server-side auth check prevents flash of unauthenticated content
+ * WHAT: Validates Clerk session before allowing access to protected routes.
+ * WHY: Next.js 16 uses proxy.ts as the request interception entrypoint that
+ * Clerk relies on to make auth() available in Server Components.
  *
  * REFERENCES:
- *   - https://clerk.com/docs/references/nextjs/clerk-middleware
+ *   - https://clerk.com/docs/reference/nextjs/clerk-middleware
  *   - ui/app/(dashboard)/layout.jsx (dashboard routes)
  */
 
@@ -51,7 +52,7 @@ const isPublicRoute = createRouteMatcher([
   '/integrations(.*)',
   '/use-cases(.*)',
   '/blog(.*)',
-  '/shopify(.*)',  // Shopify embedded app page (handles its own auth via Clerk components)
+  '/shopify(.*)', // Shopify embedded app page handles sign-in separately
 ])
 
 export default clerkMiddleware(async (auth, request) => {

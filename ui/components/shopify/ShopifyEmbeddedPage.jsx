@@ -1,25 +1,4 @@
-/**
- * Shopify Embedded App Page
- *
- * WHAT: Landing page when merchants open metricx from Shopify admin.
- * WHY: Shopify embeds this in an iframe. Must show login/register (not homepage)
- *      for app review approval. After auth, handles store connection.
- *
- * FLOW:
- *   1. Merchant installs app -> Shopify opens this page in admin iframe
- *   2. Not signed in -> Show Clerk SignIn/SignUp
- *   3. Signed in -> Show Shopify connect flow (or auto-detect shop from params)
- *   4. After connection -> Show success + link to dashboard
- *
- * REFERENCES:
- *   - shopify-app/metricx/shopify.app.toml (application_url points here)
- *   - ui/components/ShopifyConnectButton.jsx (reuses OAuth flow)
- *   - backend/app/routers/shopify_oauth.py (handles OAuth)
- */
-
-'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -27,14 +6,22 @@ import { Store, ExternalLink, CheckCircle, ArrowRight, Loader2, LogIn, UserPlus 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopifyShopModal from '@/components/ShopifyShopModal';
-import { getApiBase } from '@/lib/config';
 import { buildAuthRedirectUrl } from '@/lib/authRedirect';
+import {
+  appendShopifyAuthHandoff,
+  clearShopifyAuthHandoff,
+  createShopifyAuthHandoff,
+  getShopifyAuthHandoff,
+  shopifyFlowFetch,
+} from '@/lib/shopifyAuthHandoff';
 import {
   buildShopifyReturnPath,
   isShopifyEmbeddedContext,
   persistShopifyEmbeddedContext,
   verifyEmbeddedShopifySession,
 } from '@/lib/shopifyEmbedded';
+
+const SHOPIFY_URL_STRIP_PARAMS = ['shopify_oauth', 'session_id', 'message'];
 
 export default function ShopifyEmbeddedPage() {
   const { isLoaded, isSignedIn } = useUser();
@@ -45,27 +32,36 @@ export default function ShopifyEmbeddedPage() {
   const [sessionId, setSessionId] = useState(null);
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState(null);
-  const [embeddedReturnUrl, setEmbeddedReturnUrl] = useState('/shopify');
+  const [embeddedReturnBase, setEmbeddedReturnBase] = useState('/shopify');
+  const [embeddedSearch, setEmbeddedSearch] = useState('');
+  const [handoffId, setHandoffId] = useState(null);
+  const [topLevelWindow, setTopLevelWindow] = useState(false);
+  const [bootstrappingEmbeddedSession, setBootstrappingEmbeddedSession] = useState(false);
+  const sessionBootstrapRef = useRef(false);
 
-  // Extract Shopify params and handle OAuth callback
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const currentUrl = `${window.location.pathname}${window.location.search}`;
-
-    persistShopifyEmbeddedContext(window.location.search);
-    const returnUrl = buildShopifyReturnPath('/shopify', window.location.search, {
-      stripParams: ['shopify_oauth', 'session_id', 'message'],
+    const search = window.location.search;
+    const params = new URLSearchParams(search);
+    const appPathname = window.location.pathname;
+    const currentUrl = `${appPathname}${search}`;
+    const appReturnUrl = buildShopifyReturnPath(appPathname, search, {
+      stripParams: SHOPIFY_URL_STRIP_PARAMS,
+    });
+    const authReturnUrl = buildShopifyReturnPath('/shopify', search, {
+      stripParams: SHOPIFY_URL_STRIP_PARAMS,
     });
 
-    setEmbeddedReturnUrl(returnUrl);
+    persistShopifyEmbeddedContext(search);
+    setTopLevelWindow(window.top === window.self);
+    setEmbeddedReturnBase(authReturnUrl);
+    setEmbeddedSearch(new URL(appReturnUrl, window.location.origin).search);
+    setHandoffId(getShopifyAuthHandoff(search));
 
-    // Pre-fill shop domain from Shopify embed params
     const shop = params.get('shop');
     if (shop) {
       setShopDomain(shop.replace('.myshopify.com', ''));
     }
 
-    // Handle OAuth callback (redirect comes back here)
     const oauthStatus = params.get('shopify_oauth');
     const sessionIdParam = params.get('session_id');
     const errorMessage = params.get('message');
@@ -73,25 +69,93 @@ export default function ShopifyEmbeddedPage() {
     if (oauthStatus === 'confirm' && sessionIdParam) {
       setSessionId(sessionIdParam);
       setShowConfirmModal(true);
-      window.history.replaceState({}, '', returnUrl);
+      window.history.replaceState({}, '', appReturnUrl);
     } else if (oauthStatus === 'error') {
       setMessage(`Connection failed: ${errorMessage || 'Unknown error'}`);
       setMessageType('error');
-      window.history.replaceState({}, '', returnUrl);
-    } else if (returnUrl !== currentUrl) {
-      window.history.replaceState({}, '', returnUrl);
-    }
-
-    const embeddedSearch = new URL(returnUrl, window.location.origin).search;
-
-    if (isShopifyEmbeddedContext(embeddedSearch)) {
-      verifyEmbeddedShopifySession({ search: embeddedSearch }).catch((error) => {
-        console.error('[shopify] Embedded session verification failed:', error);
-      });
+      window.history.replaceState({}, '', appReturnUrl);
+    } else if (appReturnUrl !== currentUrl) {
+      window.history.replaceState({}, '', appReturnUrl);
     }
   }, []);
 
-  const handleConnect = () => {
+  useEffect(() => {
+    if (!isLoaded || !embeddedSearch || !isShopifyEmbeddedContext(embeddedSearch)) {
+      return;
+    }
+
+    if (topLevelWindow && !isSignedIn) {
+      return;
+    }
+
+    if (sessionBootstrapRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    sessionBootstrapRef.current = true;
+
+    const bootstrapEmbeddedSession = async () => {
+      try {
+        if (topLevelWindow) {
+          setBootstrappingEmbeddedSession(true);
+
+          const activeHandoffId = handoffId || await createShopifyAuthHandoff();
+          if (cancelled) {
+            return;
+          }
+
+          setHandoffId(activeHandoffId);
+
+          const currentPath = appendShopifyAuthHandoff(
+            `${window.location.pathname}${window.location.search}`,
+            activeHandoffId
+          );
+          window.history.replaceState({}, '', currentPath);
+
+          await verifyEmbeddedShopifySession({
+            search: new URL(currentPath, window.location.origin).search,
+          });
+          return;
+        }
+
+        await verifyEmbeddedShopifySession({ search: embeddedSearch });
+      } catch (error) {
+        console.error('[shopify] Embedded session bootstrap failed:', error);
+        sessionBootstrapRef.current = false;
+        clearShopifyAuthHandoff();
+
+        if (!cancelled) {
+          setHandoffId(null);
+          setMessage('Unable to resume your Shopify session. Please sign in again.');
+          setMessageType('error');
+        }
+      } finally {
+        if (!cancelled) {
+          setBootstrappingEmbeddedSession(false);
+        }
+      }
+    };
+
+    bootstrapEmbeddedSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [embeddedSearch, handoffId, isLoaded, isSignedIn, topLevelWindow]);
+
+  const embeddedReturnUrl = appendShopifyAuthHandoff(embeddedReturnBase, handoffId);
+  const isAuthenticatedForShopify = isSignedIn || Boolean(handoffId);
+
+  const handleAuthExpired = () => {
+    clearShopifyAuthHandoff();
+    setConnecting(false);
+    setHandoffId(null);
+    setMessage('Your session expired. Please sign in again to continue.');
+    setMessageType('error');
+  };
+
+  const handleConnect = async () => {
     if (!shopDomain.trim()) {
       setMessage('Please enter your Shopify store domain');
       setMessageType('error');
@@ -99,13 +163,36 @@ export default function ShopifyEmbeddedPage() {
     }
 
     setConnecting(true);
-    const baseUrl = getApiBase();
-    const encodedShop = encodeURIComponent(shopDomain.trim());
-    const redirectPath = encodeURIComponent(embeddedReturnUrl);
+    setMessage(null);
+    setMessageType(null);
 
-    // Use top-level navigation to break out of Shopify iframe for OAuth
-    // Pass redirect_path so callback returns to /shopify (not /settings)
-    window.top.location.href = `${baseUrl}/auth/shopify/authorize?shop=${encodedShop}&redirect_path=${redirectPath}`;
+    try {
+      const response = await shopifyFlowFetch('/auth/shopify/authorize-url', {
+        method: 'POST',
+        body: JSON.stringify({
+          shop: shopDomain.trim(),
+          redirect_path: embeddedReturnUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          handleAuthExpired();
+          setConnecting(false);
+          return;
+        }
+
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to start Shopify authorization');
+      }
+
+      const data = await response.json();
+      window.top.location.href = data.auth_url;
+    } catch (error) {
+      setConnecting(false);
+      setMessage(error.message || 'Failed to start Shopify authorization');
+      setMessageType('error');
+    }
   };
 
   const handleAuthRedirect = (path) => {
@@ -113,22 +200,24 @@ export default function ShopifyEmbeddedPage() {
     window.top.location.href = authUrl;
   };
 
-  // Loading state while Clerk initializes
-  if (!isLoaded) {
+  if (!isLoaded || bootstrappingEmbeddedSession) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 via-white to-gray-50/50">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <div className="flex flex-col items-center gap-3 text-center px-6">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          {bootstrappingEmbeddedSession ? (
+            <p className="text-sm text-gray-500">Returning you to the embedded Shopify app...</p>
+          ) : null}
+        </div>
       </main>
     );
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 via-white to-gray-50/50 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-br from-blue-100/40 via-cyan-100/30 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <Image
             src="/logo.png"
@@ -140,7 +229,6 @@ export default function ShopifyEmbeddedPage() {
           />
         </div>
 
-        {/* Status messages */}
         {message && (
           <div
             className={`mb-6 p-3 rounded-lg text-sm ${
@@ -153,8 +241,7 @@ export default function ShopifyEmbeddedPage() {
           </div>
         )}
 
-        {/* ─── NOT SIGNED IN: Show Auth ─── */}
-        {!isSignedIn && (
+        {!isAuthenticatedForShopify && (
           <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-xl font-semibold text-gray-900">
@@ -187,8 +274,7 @@ export default function ShopifyEmbeddedPage() {
           </Card>
         )}
 
-        {/* ─── SIGNED IN + NOT CONNECTED: Show Connect Flow ─── */}
-        {isSignedIn && !connected && (
+        {isAuthenticatedForShopify && !connected && (
           <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-xl font-semibold text-gray-900">
@@ -205,8 +291,8 @@ export default function ShopifyEmbeddedPage() {
                   <input
                     type="text"
                     value={shopDomain}
-                    onChange={(e) => setShopDomain(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                    onChange={(event) => setShopDomain(event.target.value)}
+                    onKeyDown={(event) => event.key === 'Enter' && handleConnect()}
                     placeholder="mystore"
                     disabled={connecting}
                     className="w-full pl-10 pr-4 py-2.5 border border-neutral-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 disabled:opacity-50 disabled:bg-neutral-50"
@@ -235,8 +321,7 @@ export default function ShopifyEmbeddedPage() {
           </Card>
         )}
 
-        {/* ─── CONNECTED: Show Success ─── */}
-        {isSignedIn && connected && (
+        {isAuthenticatedForShopify && connected && (
           <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
             <CardContent className="text-center py-8 space-y-4">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
@@ -259,17 +344,6 @@ export default function ShopifyEmbeddedPage() {
           </Card>
         )}
 
-        {/* Terms footer */}
-        <p className="text-xs text-gray-400 text-center mt-6">
-          By continuing, you agree to our{' '}
-          <Link href="/terms" className="text-gray-500 hover:text-gray-700 underline">Terms</Link>
-          {' '}and{' '}
-          <Link href="/privacy" className="text-gray-500 hover:text-gray-700 underline">Privacy Policy</Link>
-        </p>
-      </div>
-
-      {/* Shop Confirmation Modal */}
-      {showConfirmModal && (
         <ShopifyShopModal
           open={showConfirmModal}
           onClose={() => {
@@ -277,13 +351,16 @@ export default function ShopifyEmbeddedPage() {
             setSessionId(null);
           }}
           sessionId={sessionId}
+          onAuthExpired={handleAuthExpired}
           onSuccess={() => {
             setShowConfirmModal(false);
             setSessionId(null);
             setConnected(true);
+            setMessage('Store connected successfully');
+            setMessageType('info');
           }}
         />
-      )}
+      </div>
     </main>
   );
 }

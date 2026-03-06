@@ -20,6 +20,16 @@ import { ClerkProvider } from '@clerk/nextjs';
 import "./globals.css";
 import AppProviders from "./providers";
 
+const signInFallbackRedirectUrl =
+  process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL ||
+  process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL ||
+  "/dashboard";
+
+const signUpFallbackRedirectUrl =
+  process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL ||
+  process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL ||
+  "/onboarding";
+
 /**
  * Site-wide metadata configuration for SEO and social sharing.
  *
@@ -120,7 +130,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      signInFallbackRedirectUrl={signInFallbackRedirectUrl}
+      signUpFallbackRedirectUrl={signUpFallbackRedirectUrl}
+    >
       <html lang="en">
         <head>
           {/* Google Fonts - Inter for body text */}

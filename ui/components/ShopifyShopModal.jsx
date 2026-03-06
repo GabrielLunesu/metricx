@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Store, Globe, Mail, DollarSign } from 'lucide-react';
 import { getApiBase } from '../lib/config';
+import {
+  clearShopifyAuthHandoff,
+  shopifyFlowFetch,
+} from '../lib/shopifyAuthHandoff';
 
 /**
  * ShopifyShopModal Component
@@ -21,7 +25,13 @@ import { getApiBase } from '../lib/config';
  * - backend/app/routers/shopify_oauth.py (get_oauth_shop, connect_shop)
  * - Similar pattern: MetaAccountSelectionModal.jsx
  */
-export default function ShopifyShopModal({ open, onClose, sessionId, onSuccess }) {
+export default function ShopifyShopModal({
+  open,
+  onClose,
+  sessionId,
+  onSuccess,
+  onAuthExpired,
+}) {
   const [shop, setShop] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -36,11 +46,18 @@ export default function ShopifyShopModal({ open, onClose, sessionId, onSuccess }
         setLoading(true);
         setError(null);
         const baseUrl = getApiBase();
-        const response = await fetch(`${baseUrl}/auth/shopify/shop?session_id=${sessionId}`, {
-          credentials: 'include',
-        });
+        const response = await shopifyFlowFetch(
+          `${baseUrl}/auth/shopify/shop?session_id=${sessionId}`,
+          {
+            method: 'GET',
+          }
+        );
 
         if (!response.ok) {
+          if (response.status === 401) {
+            clearShopifyAuthHandoff();
+            onAuthExpired?.();
+          }
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.detail || 'Failed to fetch shop info');
         }
@@ -62,18 +79,18 @@ export default function ShopifyShopModal({ open, onClose, sessionId, onSuccess }
       setSubmitting(true);
       setError(null);
       const baseUrl = getApiBase();
-      const response = await fetch(`${baseUrl}/auth/shopify/connect`, {
+      const response = await shopifyFlowFetch(`${baseUrl}/auth/shopify/connect`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({
           session_id: sessionId,
         }),
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          clearShopifyAuthHandoff();
+          onAuthExpired?.();
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || 'Failed to connect store');
       }

@@ -191,7 +191,7 @@ If you need to rotate the key:
 
 ### Middleware Note
 
-The Clerk middleware is configured to allow `.txt` files through without authentication (for IndexNow verification). This is set in `/middleware.ts`.
+The Clerk proxy is configured to allow `.txt` files through without authentication (for IndexNow verification). This is set in `/proxy.ts`.
 
 ---
 
@@ -206,7 +206,7 @@ The Clerk middleware is configured to allow `.txt` files through without authent
 | `/scripts/submit-to-indexnow.js` | Bulk URL submission script |
 | `/lib/seo/content-loader.js` | JSON content loading utilities |
 | `/lib/seo/schemas.js` | Schema.org structured data generators |
-| `/middleware.ts` | Clerk auth (allows .txt files through) |
+| `/proxy.ts` | Clerk auth (allows .txt files through) |
 
 ### Page Templates
 

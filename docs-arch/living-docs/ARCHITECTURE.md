@@ -239,7 +239,7 @@ See [QA_SYSTEM_ARCHITECTURE.md](./QA_SYSTEM_ARCHITECTURE.md)
 ui/
 ├── app/                        # Next.js App Router
 │   ├── layout.jsx              # Root layout + ClerkProvider
-│   ├── middleware.ts           # Clerk route protection (NEW)
+│   ├── proxy.ts                # Clerk route protection (NEW)
 │   ├── sign-in/                # Clerk sign-in page (NEW)
 │   ├── sign-up/                # Clerk sign-up page (NEW)
 │   ├── (dashboard)/            # Dashboard route group
@@ -273,7 +273,7 @@ ui/
 ```
 1. User visits protected route
        ↓
-2. middleware.ts checks auth
+2. proxy.ts checks auth
        ↓
 3. Unauthenticated → Redirect to /sign-in
        ↓

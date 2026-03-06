@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../components/ui/popover";
 import { Button } from "../../../../components/ui/button";
 import { fetchWorkspaces, switchWorkspace } from "../../../../lib/api";
+import { clearShopifyAuthHandoff } from "../../../../lib/shopifyAuthHandoff";
 import { getBillingStatus } from "../../../../lib/workspace";
 import NavItem from "./NavItem";
 import { UpgradeModal } from "../../../../components/UpgradeModal";
@@ -282,7 +283,10 @@ export default function Sidebar() {
                                     variant="ghost"
                                     size="sm"
                                     className="w-full justify-start flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => signOut({ redirectUrl: '/' })}
+                                    onClick={() => {
+                                        clearShopifyAuthHandoff();
+                                        signOut({ redirectUrl: '/' });
+                                    }}
                                 >
                                     <LogOut className="w-4 h-4" />
                                     Logout

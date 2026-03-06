@@ -10,7 +10,7 @@ export default function PrivacyPolicy() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-neutral-200/40 bg-white/80 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center">
-            <img src="/metricx.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
+            <img src="/logo.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
           </a>
           <div className="flex items-center gap-8">
             <a href="/#features" className="text-sm font-medium text-neutral-600 hover:text-cyan-600 transition-colors">Features</a>
@@ -327,7 +327,7 @@ export default function PrivacyPolicy() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between flex-wrap gap-8">
             <a href="/" className="flex items-center">
-              <img src="/metricx.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
+              <img src="/logo.png" alt="metricx" className="h-12 w-auto" style={{ maxHeight: '48px' }} />
             </a>
             <nav className="flex items-center gap-8 flex-wrap">
               <a href="/#features" className="text-sm font-medium text-neutral-500 hover:text-cyan-600 transition-colors">Features</a>
@@ -349,4 +349,3 @@ export default function PrivacyPolicy() {
     </div>
   );
 }
-
