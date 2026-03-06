@@ -209,7 +209,8 @@ export default function ShopifyEmbeddedPage() {
   };
 
   const handleAuthRedirect = (path) => {
-    const authUrl = buildAuthRedirectUrl(path, embeddedReturnUrl);
+    const handoffReturnUrl = buildAuthRedirectUrl('/shopify-auth-return', embeddedReturnUrl);
+    const authUrl = buildAuthRedirectUrl(path, handoffReturnUrl);
     window.top.location.href = authUrl;
   };
 
