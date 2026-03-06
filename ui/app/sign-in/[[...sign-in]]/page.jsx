@@ -20,8 +20,13 @@ import { SignIn } from '@clerk/nextjs';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { buildAuthRedirectUrl, getSafeRedirectPath } from '@/lib/authRedirect';
 
-export default function SignInPage() {
+export default async function SignInPage({ searchParams }) {
+  const params = await searchParams;
+  const forceRedirectUrl = getSafeRedirectPath(params?.redirect_url, '/dashboard');
+  const signUpUrl = buildAuthRedirectUrl('/sign-up', forceRedirectUrl);
+
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 via-white to-gray-50/50 relative overflow-hidden">
       {/* Background decoration */}
@@ -51,8 +56,8 @@ export default function SignInPage() {
 
         {/* Clerk SignIn Component */}
         <SignIn
-          signUpUrl="/sign-up"
-          forceRedirectUrl="/dashboard"
+          signUpUrl={signUpUrl}
+          forceRedirectUrl={forceRedirectUrl}
           appearance={{
             elements: {
               rootBox: 'w-full',

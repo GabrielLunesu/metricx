@@ -20,14 +20,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser, SignIn, SignUp } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Store, ExternalLink, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { Store, ExternalLink, CheckCircle, ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopifyShopModal from '@/components/ShopifyShopModal';
 import { getApiBase } from '@/lib/config';
+import { buildAuthRedirectUrl } from '@/lib/authRedirect';
 import {
   buildShopifyReturnPath,
   isShopifyEmbeddedContext,
@@ -35,32 +36,8 @@ import {
   verifyEmbeddedShopifySession,
 } from '@/lib/shopifyEmbedded';
 
-// Clerk appearance matching existing sign-in page style
-const clerkAppearance = {
-  elements: {
-    rootBox: 'w-full',
-    card: 'bg-white/80 backdrop-blur-xl border border-gray-200/60 rounded-3xl shadow-xl shadow-gray-200/40 p-0',
-    headerTitle: 'text-gray-900 text-xl font-semibold',
-    headerSubtitle: 'text-gray-500',
-    formButtonPrimary: 'bg-gradient-to-b from-gray-800 to-gray-950 hover:shadow-lg hover:shadow-gray-900/20 transition-all rounded-xl',
-    formFieldInput: 'rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20',
-    formFieldLabel: 'text-gray-700 font-medium',
-    footerActionLink: 'text-blue-600 hover:text-blue-700 font-medium',
-    socialButtonsBlockButton: 'border-gray-200 hover:bg-gray-50 rounded-xl',
-    socialButtonsBlockButtonText: 'text-gray-700 font-medium',
-    dividerLine: 'bg-gray-200',
-    dividerText: 'text-gray-400 text-sm',
-    footer: 'hidden',
-  },
-  layout: {
-    socialButtonsPlacement: 'top',
-    socialButtonsVariant: 'blockButton',
-  },
-};
-
 export default function ShopifyEmbeddedPage() {
   const { isLoaded, isSignedIn } = useUser();
-  const [authMode, setAuthMode] = useState('sign-in'); // 'sign-in' | 'sign-up'
   const [shopDomain, setShopDomain] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -131,6 +108,11 @@ export default function ShopifyEmbeddedPage() {
     window.top.location.href = `${baseUrl}/auth/shopify/authorize?shop=${encodedShop}&redirect_path=${redirectPath}`;
   };
 
+  const handleAuthRedirect = (path) => {
+    const authUrl = buildAuthRedirectUrl(path, embeddedReturnUrl);
+    window.top.location.href = authUrl;
+  };
+
   // Loading state while Clerk initializes
   if (!isLoaded) {
     return (
@@ -173,47 +155,36 @@ export default function ShopifyEmbeddedPage() {
 
         {/* ─── NOT SIGNED IN: Show Auth ─── */}
         {!isSignedIn && (
-          <>
-            <p className="text-center text-gray-600 mb-6">
-              Sign in to connect your Shopify store to metricx
-            </p>
-
-            {authMode === 'sign-in' ? (
-              <SignIn
-                forceRedirectUrl="/shopify"
-                appearance={clerkAppearance}
-              />
-            ) : (
-              <SignUp
-                forceRedirectUrl="/shopify"
-                appearance={clerkAppearance}
-              />
-            )}
-
-            <p className="text-center text-sm text-gray-500 mt-4">
-              {authMode === 'sign-in' ? (
-                <>
-                  Don&apos;t have an account?{' '}
-                  <button
-                    onClick={() => setAuthMode('sign-up')}
-                    className="text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    Sign up
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{' '}
-                  <button
-                    onClick={() => setAuthMode('sign-in')}
-                    className="text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    Sign in
-                  </button>
-                </>
-              )}
-            </p>
-          </>
+          <Card className="border-gray-200/60 shadow-xl shadow-gray-200/40">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Sign In To Continue
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                Continue in a full browser tab, then we&apos;ll send you back to Shopify.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={() => handleAuthRedirect('/sign-in')}
+                className="w-full rounded-xl"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Open Sign In
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleAuthRedirect('/sign-up')}
+                className="w-full rounded-xl"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Create Account
+              </Button>
+              <p className="text-xs text-neutral-400 text-center">
+                Social login runs top-level to avoid Shopify iframe auth failures.
+              </p>
+            </CardContent>
+          </Card>
         )}
 
         {/* ─── SIGNED IN + NOT CONNECTED: Show Connect Flow ─── */}
