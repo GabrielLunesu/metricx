@@ -6,6 +6,8 @@ import {
   SHOPIFY_EMBEDDED_QUERY_KEYS,
 } from "./shopifyConfig";
 
+const SHOPIFY_EMBEDDED_STORAGE_KEY = "shopify:embedded-query";
+
 function getCurrentSearch(search) {
   if (typeof search === "string") {
     return search;
@@ -27,7 +29,17 @@ export function isShopifyEmbeddedContext(search) {
   );
 }
 
-export function buildShopifyReturnPath(pathname = "/shopify", search) {
+function getStoredEmbeddedParams() {
+  if (typeof window === "undefined") {
+    return new URLSearchParams();
+  }
+
+  return new URLSearchParams(
+    window.sessionStorage.getItem(SHOPIFY_EMBEDDED_STORAGE_KEY) || ""
+  );
+}
+
+export function persistShopifyEmbeddedContext(search) {
   const params = new URLSearchParams(getCurrentSearch(search));
   const preserved = new URLSearchParams();
 
@@ -38,7 +50,54 @@ export function buildShopifyReturnPath(pathname = "/shopify", search) {
     }
   }
 
-  const query = preserved.toString();
+  if (typeof window !== "undefined" && preserved.toString()) {
+    window.sessionStorage.setItem(
+      SHOPIFY_EMBEDDED_STORAGE_KEY,
+      preserved.toString()
+    );
+  }
+}
+
+export function buildShopifyReturnPath(
+  pathname = "/shopify",
+  search,
+  { stripParams = [] } = {}
+) {
+  const params = new URLSearchParams(getCurrentSearch(search));
+  const stored = getStoredEmbeddedParams();
+  const merged = new URLSearchParams(params);
+
+  for (const key of stripParams) {
+    merged.delete(key);
+  }
+
+  for (const key of SHOPIFY_EMBEDDED_QUERY_KEYS) {
+    if (!merged.has(key)) {
+      const storedValue = stored.get(key);
+      if (storedValue) {
+        merged.set(key, storedValue);
+      }
+    }
+  }
+
+  if (isShopifyEmbeddedContext(merged.toString())) {
+    const preserved = new URLSearchParams();
+    for (const key of SHOPIFY_EMBEDDED_QUERY_KEYS) {
+      const value = merged.get(key);
+      if (value) {
+        preserved.set(key, value);
+      }
+    }
+
+    if (typeof window !== "undefined" && preserved.toString()) {
+      window.sessionStorage.setItem(
+        SHOPIFY_EMBEDDED_STORAGE_KEY,
+        preserved.toString()
+      );
+    }
+  }
+
+  const query = merged.toString();
   return query ? `${pathname}?${query}` : pathname;
 }
 

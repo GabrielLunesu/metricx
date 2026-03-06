@@ -31,6 +31,7 @@ import { getApiBase } from '@/lib/config';
 import {
   buildShopifyReturnPath,
   isShopifyEmbeddedContext,
+  persistShopifyEmbeddedContext,
   verifyEmbeddedShopifySession,
 } from '@/lib/shopifyEmbedded';
 
@@ -72,7 +73,12 @@ export default function ShopifyEmbeddedPage() {
   // Extract Shopify params and handle OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const returnUrl = buildShopifyReturnPath('/shopify', window.location.search);
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+
+    persistShopifyEmbeddedContext(window.location.search);
+    const returnUrl = buildShopifyReturnPath('/shopify', window.location.search, {
+      stripParams: ['shopify_oauth', 'session_id', 'message'],
+    });
 
     setEmbeddedReturnUrl(returnUrl);
 
@@ -95,10 +101,14 @@ export default function ShopifyEmbeddedPage() {
       setMessage(`Connection failed: ${errorMessage || 'Unknown error'}`);
       setMessageType('error');
       window.history.replaceState({}, '', returnUrl);
+    } else if (returnUrl !== currentUrl) {
+      window.history.replaceState({}, '', returnUrl);
     }
 
-    if (isShopifyEmbeddedContext(window.location.search)) {
-      verifyEmbeddedShopifySession({ search: window.location.search }).catch((error) => {
+    const embeddedSearch = new URL(returnUrl, window.location.origin).search;
+
+    if (isShopifyEmbeddedContext(embeddedSearch)) {
+      verifyEmbeddedShopifySession({ search: embeddedSearch }).catch((error) => {
         console.error('[shopify] Embedded session verification failed:', error);
       });
     }
@@ -170,14 +180,12 @@ export default function ShopifyEmbeddedPage() {
 
             {authMode === 'sign-in' ? (
               <SignIn
-                signUpUrl={embeddedReturnUrl}
-                forceRedirectUrl={embeddedReturnUrl}
+                forceRedirectUrl="/shopify"
                 appearance={clerkAppearance}
               />
             ) : (
               <SignUp
-                signInUrl={embeddedReturnUrl}
-                forceRedirectUrl={embeddedReturnUrl}
+                forceRedirectUrl="/shopify"
                 appearance={clerkAppearance}
               />
             )}
