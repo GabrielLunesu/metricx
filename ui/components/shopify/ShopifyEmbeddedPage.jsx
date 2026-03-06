@@ -105,7 +105,7 @@ export default function ShopifyEmbeddedPage() {
         setBootstrappingEmbeddedSession(true);
 
         if (topLevelWindow) {
-          const activeHandoffId = handoffId || await createShopifyAuthHandoff({
+          const activeHandoffId = await createShopifyAuthHandoff({
             sessionKey,
             shop: shopParam,
           });

@@ -29,7 +29,7 @@ function decodeBase64Url(value) {
   return Buffer.from(padded, "base64").toString("utf-8");
 }
 
-function readStoredHandoff() {
+function readStoredHandoff(sessionKey) {
   if (typeof window === "undefined") {
     return null;
   }
@@ -41,12 +41,17 @@ function readStoredHandoff() {
     }
 
     const parsed = JSON.parse(raw);
-    if (!parsed?.handoffId || !parsed?.expiresAt) {
+    if (!parsed?.handoffId || !parsed?.expiresAt || !parsed?.sessionKey) {
       window.localStorage.removeItem(SHOPIFY_AUTH_HANDOFF_STORAGE_KEY);
       return null;
     }
 
     if (parsed.expiresAt <= Date.now()) {
+      window.localStorage.removeItem(SHOPIFY_AUTH_HANDOFF_STORAGE_KEY);
+      return null;
+    }
+
+    if (!sessionKey || parsed.sessionKey !== sessionKey) {
       window.localStorage.removeItem(SHOPIFY_AUTH_HANDOFF_STORAGE_KEY);
       return null;
     }
@@ -58,13 +63,14 @@ function readStoredHandoff() {
   }
 }
 
-export function persistShopifyAuthHandoff(handoffId) {
-  if (typeof window === "undefined" || !handoffId) {
+export function persistShopifyAuthHandoff(handoffId, sessionKey) {
+  if (typeof window === "undefined" || !handoffId || !sessionKey) {
     return null;
   }
 
   const payload = {
     handoffId,
+    sessionKey,
     expiresAt: Date.now() + SHOPIFY_AUTH_HANDOFF_TTL_MS,
   };
 
@@ -87,12 +93,13 @@ export function clearShopifyAuthHandoff() {
 export function getShopifyAuthHandoff(search) {
   const params = new URLSearchParams(getCurrentSearch(search));
   const handoffId = params.get(SHOPIFY_AUTH_HANDOFF_QUERY_KEY);
+  const sessionKey = getShopifySessionKey(search);
 
   if (handoffId) {
-    return persistShopifyAuthHandoff(handoffId);
+    return persistShopifyAuthHandoff(handoffId, sessionKey);
   }
 
-  return readStoredHandoff();
+  return readStoredHandoff(sessionKey);
 }
 
 export function getShopifySessionKey(search) {
@@ -195,7 +202,7 @@ export async function createShopifyAuthHandoff({ sessionKey, shop } = {}) {
   }
 
   const data = await response.json();
-  persistShopifyAuthHandoff(data.handoff_id);
+  persistShopifyAuthHandoff(data.handoff_id, sessionKey);
   return data.handoff_id;
 }
 
@@ -225,6 +232,6 @@ export async function resolveShopifyAuthHandoff({ sessionKey, search } = {}) {
   }
 
   const data = await response.json();
-  persistShopifyAuthHandoff(data.handoff_id);
+  persistShopifyAuthHandoff(data.handoff_id, sessionKey);
   return data.handoff_id;
 }

@@ -6,4 +6,10 @@ export const SHOPIFY_API_KEY =
 export const SHOPIFY_APP_BRIDGE_CDN_URL =
   "https://cdn.shopify.com/shopifycloud/app-bridge.js";
 
-export const SHOPIFY_EMBEDDED_QUERY_KEYS = ["embedded", "host", "locale", "shop"];
+export const SHOPIFY_EMBEDDED_QUERY_KEYS = [
+  "embedded",
+  "host",
+  "locale",
+  "shop",
+  "session",
+];
