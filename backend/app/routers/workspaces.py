@@ -596,7 +596,7 @@ def create_invite(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _require_membership(db, current_user, workspace_id, roles=[RoleEnum.owner])
+    _require_membership(db, current_user, workspace_id, roles=[RoleEnum.owner, RoleEnum.admin])
 
     # Check free tier restriction - no team invites on free plan
     workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
